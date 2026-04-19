@@ -137,36 +137,6 @@
   .radio-group { display: flex; gap: 12px; margin-top: 4px; }
   .radio-label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; }
   .radio-label input { width: auto; margin: 0; }
-
-  /* Tallas marcadas */
-  .talla-marcada-row { display: grid; grid-template-columns: 56px 1fr 1fr 80px 40px; gap: 8px; align-items: end; margin-bottom: 8px; padding: 8px; background: #FFF8E1; border: 1px solid #FFD54F; border-radius: 8px; }
-  .talla-marcada-row label { font-size: 10px; }
-  .talla-marcada-row input { padding: 6px 8px; font-size: 13px; }
-  .letra-input { text-align: center; font-weight: 700; font-size: 16px !important; text-transform: uppercase; color: var(--azul); }
-  .letra-warning { background: #FFF3CD; border-color: #FFC107; }
-  .letra-hint { font-size: 10px; color: #856404; margin-top: 2px; }
-
-  /* Salidas por rollo */
-  .salidas-block { background: white; border: 1px solid var(--borde); border-radius: 8px; padding: 10px; margin-top: 10px; }
-  .salidas-title { font-size: 12px; font-weight: 700; color: var(--azul); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .salida-row { display: grid; grid-template-columns: 32px 1fr; gap: 8px; align-items: start; margin-bottom: 8px; }
-  .salida-letra { background: var(--azul); color: white; border-radius: 6px; padding: 6px 0; text-align: center; font-weight: 700; font-size: 13px; }
-  .salida-partidas { display: flex; flex-direction: column; gap: 6px; }
-  .partida-row { display: grid; grid-template-columns: 70px 1fr 28px; gap: 6px; align-items: center; }
-  .partida-row input { padding: 5px 8px; font-size: 12px; }
-  .partida-row input[type=number] { text-align: right; }
-  .btn-mini { padding: 4px 8px; font-size: 11px; border-radius: 4px; border: 1px solid var(--borde); background: white; cursor: pointer; color: var(--texto); }
-  .btn-mini:hover { background: var(--gris); }
-  .btn-mini-danger { color: var(--rojo); border-color: #F5C2C7; }
-  .partida-original-hint { font-size: 10px; color: #666; padding-left: 40px; font-style: italic; }
-
-  /* Bultos preview */
-  .bultos-preview { background: #E8F5E9; border: 1px solid #81C784; border-radius: 8px; padding: 10px; margin-top: 10px; }
-  .bulto-chip { display: inline-block; background: white; border: 1px solid #66BB6A; color: #2E7D32; padding: 4px 8px; margin: 3px; border-radius: 6px; font-size: 12px; font-weight: 600; font-family: 'Courier New', monospace; }
-  .bulto-chip.sub { background: #FFF8E1; border-color: #FFB300; color: #E65100; }
-  .validacion-row { display: flex; justify-content: space-between; font-size: 11px; padding: 3px 0; }
-  .validacion-ok { color: #2E7D32; }
-  .validacion-warn { color: #C62828; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -288,40 +258,17 @@
     <div class="card-title">📋 Nuevo Registro de Tendido</div>
     <div class="row2">
       <div class="field"><label>Fecha</label><input type="date" id="td-fecha"></div>
-      <div class="field"><label>Código de corte</label><input type="text" id="td-codigo" placeholder="Ej: C-01-A" oninput="actualizarPreviewBultos()"></div>
+      <div class="field"><label>Código de corte</label><input type="text" id="td-codigo" placeholder="Ej: C-01-A"></div>
     </div>
-    <div class="row2">
-      <div class="field">
-        <label>Letra del corte (bulto)</label>
-        <input type="text" id="td-letra-corte" class="letra-input" maxlength="1" placeholder="A" oninput="this.value=this.value.toUpperCase();actualizarPreviewBultos();sugerirLetrasTallas()">
-        <div class="letra-hint">Una sola letra. Va en el código de bulto.</div>
-      </div>
-      <div class="field"><label>Prenda(s)</label><input type="text" id="td-prendas" placeholder="Ej: Pantalón / Falda"></div>
-    </div>
+    <div class="field"><label>Prenda(s)</label><input type="text" id="td-prendas" placeholder="Ej: Pantalón / Falda"></div>
     <div class="field"><label>Equipo del día</label><input type="text" id="td-equipo" placeholder="Ej: Sandra, Blanky, Tere, Paty"></div>
-  </div>
-
-  <!-- Tallas marcadas en el trazo -->
-  <div class="card">
-    <div class="card-title">🏷️ Tallas marcadas en el trazo</div>
-    <div class="alert alert-info" style="font-size:12px;margin-bottom:12px">💡 Una fila por cada talla dibujada dentro del trazo físico. La letra (A, B, C...) identifica la talla original en el código del bulto.</div>
-    <div id="td-tallas-container"></div>
-    <button class="btn btn-ghost btn-sm mt8" onclick="agregarTallaMarcada()">+ Agregar talla marcada</button>
   </div>
 
   <div class="card">
     <div class="card-title">🧻 Registro de rollos</div>
-    <div class="alert alert-info" style="font-size:12px;margin-bottom:12px">💡 Llenar rollo por rollo. El N° se asigna al terminar — el último tendido = N° 1. Dentro de cada rollo se registra lo que salió de cada talla marcada.</div>
+    <div class="alert alert-info" style="font-size:12px;margin-bottom:12px">💡 Llenar rollo por rollo. El N° se asigna al terminar — el último tendido = N° 1.</div>
     <div id="td-rollos-container"></div>
     <button class="btn btn-ghost btn-sm mt8" onclick="agregarRollo()">+ Agregar rollo</button>
-  </div>
-
-  <!-- Preview de bultos derivados -->
-  <div class="card">
-    <div class="card-title">📦 Bultos que se derivarán</div>
-    <div id="bultos-preview-container">
-      <p class="text-muted">Agregá tallas marcadas y salidas por rollo para ver los códigos de bulto.</p>
-    </div>
   </div>
 
   <div class="card">
@@ -697,302 +644,37 @@ async function guardarTrazo() {
 }
 
 // ── TENDIDO ───────────────────────────────────────────────────────────────
-let tallasMarcadasCount = 0;
-
 function initTendido() {
   document.getElementById('td-fecha').value = new Date().toISOString().split('T')[0];
   rollosCount = 0;
-  tallasMarcadasCount = 0;
   document.getElementById('td-rollos-container').innerHTML = '';
-  document.getElementById('td-tallas-container').innerHTML = '';
-  ['td-codigo','td-prendas','td-equipo','td-observaciones','td-letra-corte'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
+  ['td-codigo','td-prendas','td-equipo','td-observaciones'].forEach(id => document.getElementById(id).value = '');
   agregarRollo();
-  actualizarPreviewBultos();
 }
 
-// ── TALLAS MARCADAS ──────────────────────────────────────────────────────
-function letraParaTalla(idxCero) {
-  // Sugiere letra local: A, B, C... saltando la letra del corte si coincide
-  const corte = (document.getElementById('td-letra-corte').value || '').toUpperCase();
-  const usadas = new Set();
-  document.querySelectorAll('[data-tm-letra]').forEach(el => {
-    const v = el.value.toUpperCase();
-    if (v) usadas.add(v);
-  });
-  const alfabeto = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  for (const l of alfabeto) {
-    if (!usadas.has(l) && l !== corte) return l;
-  }
-  // Si ya no hay letras que no coincidan, permitir la del corte
-  for (const l of alfabeto) {
-    if (!usadas.has(l)) return l;
-  }
-  return '';
-}
-
-function sugerirLetrasTallas() {
-  // Cuando cambia la letra del corte, re-sugiere letras vacías pero no sobrescribe
-  document.querySelectorAll('[data-tm-letra]').forEach(el => {
-    if (!el.value.trim()) {
-      el.value = letraParaTalla();
-    }
-    marcarColisionLetra(el);
-  });
-  actualizarPreviewBultos();
-}
-
-function marcarColisionLetra(input) {
-  const corte = (document.getElementById('td-letra-corte').value || '').toUpperCase();
-  const val = (input.value || '').toUpperCase();
-  const parent = input.closest('.talla-marcada-row');
-  if (!parent) return;
-  if (val && val === corte) {
-    parent.classList.add('letra-warning');
-  } else {
-    parent.classList.remove('letra-warning');
-  }
-}
-
-function agregarTallaMarcada() {
-  tallasMarcadasCount++;
-  const id = tallasMarcadasCount;
-  const letraSugerida = letraParaTalla();
-  const div = document.createElement('div');
-  div.className = 'talla-marcada-row';
-  div.id = `tm-${id}`;
-  div.innerHTML = `
-    <div>
-      <label>Letra</label>
-      <input type="text" class="letra-input" maxlength="1" data-tm-id="${id}" data-tm-letra="1" value="${letraSugerida}" oninput="this.value=this.value.toUpperCase();marcarColisionLetra(this);onTallaMarcadaChange()">
-    </div>
-    <div>
-      <label>Talla original (KEY)</label>
-      <input type="text" data-tm-id="${id}" data-tm-key="1" placeholder="Ej: P1595" oninput="onTallaMarcadaChange()">
-    </div>
-    <div>
-      <label>Notas (opcional)</label>
-      <input type="text" data-tm-id="${id}" data-tm-notas="1" placeholder="Prenda/descripción">
-    </div>
-    <div>
-      <label>Multiplic.</label>
-      <input type="number" min="1" value="1" data-tm-id="${id}" data-tm-mult="1" oninput="onTallaMarcadaChange()">
-    </div>
-    <div>
-      <button class="btn-mini btn-mini-danger" onclick="eliminarTallaMarcada(${id})" title="Eliminar">✕</button>
-    </div>
-  `;
-  document.getElementById('td-tallas-container').appendChild(div);
-  marcarColisionLetra(div.querySelector('[data-tm-letra]'));
-  // Agregar la talla a todos los rollos existentes
-  document.querySelectorAll('[data-rollo-id]').forEach(rc => {
-    agregarSalidaARollo(parseInt(rc.dataset.rolloId), id);
-  });
-  actualizarPreviewBultos();
-}
-
-function eliminarTallaMarcada(id) {
-  document.getElementById(`tm-${id}`)?.remove();
-  document.querySelectorAll(`[data-salida-tm="${id}"]`).forEach(el => el.remove());
-  actualizarPreviewBultos();
-}
-
-function onTallaMarcadaChange() {
-  // Cuando cambia una talla marcada, actualizar los "hints" en las salidas y el preview
-  document.querySelectorAll('[data-tm-id]').forEach(input => {
-    if (!input.dataset.tmKey) return;
-    const tmId = input.dataset.tmId;
-    const key = input.value.trim();
-    // Actualizar hints de "original" en salidas de este tm en todos los rollos
-    document.querySelectorAll(`[data-salida-tm="${tmId}"]`).forEach(block => {
-      const hint = block.querySelector('.partida-original-hint');
-      if (hint) hint.textContent = key ? `Default: ${key} (sin sustitución)` : '';
-      // Prellenar primera partida vacía con el KEY original
-      const primerKey = block.querySelector(`[data-partida-talla]`);
-      if (primerKey && !primerKey.value.trim() && key) primerKey.value = key;
-    });
-  });
-  actualizarPreviewBultos();
-}
-
-// ── ROLLOS ───────────────────────────────────────────────────────────────
 function agregarRollo() {
   rollosCount++;
   const id = rollosCount;
   const div = document.createElement('div');
   div.className = 'rollo-card';
   div.id = `rollo-${id}`;
-  div.dataset.rolloId = id;
   div.innerHTML = `
     <div class="rollo-header">
       <span class="rollo-num">Rollo #${id}</span>
-      ${id>1?`<button class="btn btn-danger" onclick="document.getElementById('rollo-${id}').remove();calcularTotales();actualizarPreviewBultos()">✕</button>`:''}
+      ${id>1?`<button class="btn btn-danger" onclick="document.getElementById('rollo-${id}').remove();calcularTotales()">✕</button>`:''}
     </div>
     <div class="row2">
       <div class="field"><label>Código del rollo</label><input type="text" data-rollo="${id}" data-field="codigo_rollo" oninput="calcularTotales()"></div>
       <div class="field"><label>Yardas del rollo</label><input type="number" step="0.5" data-rollo="${id}" data-field="yardas_rollo" oninput="calcularTotales()"></div>
     </div>
     <div class="row3">
-      <div class="field"><label>Capas (lienzos)</label><input type="number" data-rollo="${id}" data-field="lienzos_salidos" oninput="calcularTotales();actualizarPreviewBultos()"></div>
+      <div class="field"><label>Lienzos</label><input type="number" data-rollo="${id}" data-field="lienzos_salidos" oninput="calcularTotales()"></div>
       <div class="field"><label>Pares</label><input type="number" data-rollo="${id}" data-field="pares" oninput="calcularTotales()"></div>
       <div class="field"><label>Yardas sobrantes</label><input type="number" step="0.5" data-rollo="${id}" data-field="yardas_sobrantes" oninput="calcularTotales()"></div>
     </div>
     <div class="field"><label>Obs. de tono</label><input type="text" data-rollo="${id}" data-field="observacion_tono"></div>
-
-    <div class="salidas-block">
-      <div class="salidas-title">📦 Salidas de este rollo por talla marcada</div>
-      <div class="salidas-rollo-container" id="salidas-rollo-${id}"></div>
-      <p class="text-muted" id="salidas-empty-${id}" style="font-size:11px">Agregá tallas marcadas arriba para capturar salidas aquí.</p>
-    </div>
   `;
   document.getElementById('td-rollos-container').appendChild(div);
-  // Agregar filas de salida para cada talla marcada existente
-  document.querySelectorAll('[data-tm-id][data-tm-letra]').forEach(inp => {
-    agregarSalidaARollo(id, parseInt(inp.dataset.tmId));
-  });
-}
-
-function agregarSalidaARollo(rolloId, tmId) {
-  const container = document.getElementById(`salidas-rollo-${rolloId}`);
-  if (!container) return;
-  // Ocultar mensaje "vacío"
-  const empty = document.getElementById(`salidas-empty-${rolloId}`);
-  if (empty) empty.style.display = 'none';
-  // Si ya existe, no duplicar
-  if (container.querySelector(`[data-salida-tm="${tmId}"]`)) return;
-
-  const letra = document.querySelector(`[data-tm-id="${tmId}"][data-tm-letra]`)?.value || '?';
-  const keyOriginal = document.querySelector(`[data-tm-id="${tmId}"][data-tm-key]`)?.value || '';
-
-  const block = document.createElement('div');
-  block.className = 'salida-row';
-  block.dataset.salidaTm = tmId;
-  block.dataset.salidaRollo = rolloId;
-  block.innerHTML = `
-    <div class="salida-letra" data-salida-letra="${tmId}">${letra}</div>
-    <div class="salida-partidas" id="partidas-${rolloId}-${tmId}">
-      <!-- filas dinámicas -->
-    </div>
-  `;
-  container.appendChild(block);
-  // Agregar primera partida con la talla original prellenada
-  agregarPartida(rolloId, tmId, keyOriginal);
-}
-
-function agregarPartida(rolloId, tmId, tallaDefault='') {
-  const cont = document.getElementById(`partidas-${rolloId}-${tmId}`);
-  if (!cont) return;
-  const row = document.createElement('div');
-  row.className = 'partida-row';
-  row.innerHTML = `
-    <input type="number" min="1" placeholder="pz" data-partida-rollo="${rolloId}" data-partida-tm="${tmId}" data-partida-qty="1" oninput="actualizarPreviewBultos()">
-    <input type="text" placeholder="Talla (KEY)" value="${tallaDefault}" data-partida-rollo="${rolloId}" data-partida-tm="${tmId}" data-partida-talla="1" oninput="actualizarPreviewBultos()">
-    <button class="btn-mini btn-mini-danger" onclick="this.parentElement.remove();actualizarPreviewBultos()" title="Eliminar partida">✕</button>
-  `;
-  cont.appendChild(row);
-  // Botón "agregar partida" (si es la primera, lo agregamos al final)
-  if (!cont.querySelector('.btn-add-partida')) {
-    const btn = document.createElement('button');
-    btn.className = 'btn-mini btn-add-partida';
-    btn.textContent = '+ partida (sustitución parcial)';
-    btn.style.marginTop = '2px';
-    btn.style.alignSelf = 'flex-start';
-    btn.onclick = () => { agregarPartida(rolloId, tmId); };
-    cont.appendChild(btn);
-  } else {
-    // mover el botón al final
-    const btn = cont.querySelector('.btn-add-partida');
-    cont.appendChild(btn);
-  }
-}
-
-// ── PREVIEW DE BULTOS DERIVADOS ──────────────────────────────────────────
-function actualizarPreviewBultos() {
-  const cont = document.getElementById('bultos-preview-container');
-  if (!cont) return;
-  const corte = (document.getElementById('td-letra-corte').value || '').toUpperCase();
-  const bultos = [];
-  const validaciones = [];
-
-  // Agrupar tallas marcadas
-  const tm = {};
-  document.querySelectorAll('[data-tm-id]').forEach(el => {
-    const id = el.dataset.tmId;
-    if (!tm[id]) tm[id] = {};
-    if (el.dataset.tmLetra) tm[id].letra = (el.value||'').toUpperCase();
-    if (el.dataset.tmKey) tm[id].key = el.value.trim();
-    if (el.dataset.tmMult) tm[id].mult = parseInt(el.value) || 1;
-  });
-
-  // Rollos
-  const rollos = {};
-  document.querySelectorAll('[data-rollo]').forEach(el => {
-    const id = el.dataset.rollo;
-    if (!rollos[id]) rollos[id] = {};
-    if (el.dataset.field === 'lienzos_salidos') rollos[id].capas = parseInt(el.value) || 0;
-  });
-
-  // Recorrer rollos × tallas
-  Object.entries(rollos).forEach(([rolloId, r]) => {
-    Object.entries(tm).forEach(([tmId, t]) => {
-      if (!t.letra || !t.key) return;
-      const esperado = r.capas * (t.mult || 1);
-      let registrado = 0;
-      const cellBultos = [];
-      document.querySelectorAll(`[data-partida-rollo="${rolloId}"][data-partida-tm="${tmId}"]`).forEach(el => {
-        // Emparejar qty + talla
-        const partidaRow = el.closest('.partida-row');
-        const qtyInp = partidaRow.querySelector('[data-partida-qty]');
-        const tallaInp = partidaRow.querySelector('[data-partida-talla]');
-        if (el === qtyInp) {
-          const qty = parseInt(qtyInp.value) || 0;
-          const talla = tallaInp.value.trim();
-          if (qty > 0 && talla) {
-            registrado += qty;
-            const cod = `${rolloId}${corte || '?'}${t.letra}${qty}-${talla}`;
-            cellBultos.push({ cod, sustitucion: talla !== t.key });
-          }
-        }
-      });
-      cellBultos.forEach(b => bultos.push(b));
-      if (esperado > 0 || registrado > 0) {
-        validaciones.push({
-          rollo: rolloId, letra: t.letra, key: t.key,
-          esperado, registrado, 
-          estado: esperado === registrado ? 'ok' : (registrado === 0 ? 'vacio' : 'revisar')
-        });
-      }
-    });
-  });
-
-  if (!bultos.length) {
-    cont.innerHTML = '<p class="text-muted">Agregá tallas marcadas y salidas por rollo para ver los códigos de bulto.</p>';
-    return;
-  }
-
-  const bultosHtml = bultos.map(b => 
-    `<span class="bulto-chip ${b.sustitucion?'sub':''}">${b.cod}</span>`
-  ).join('');
-
-  const validHtml = validaciones.length ? `
-    <div class="divider" style="margin:10px 0 8px"></div>
-    <div class="salidas-title" style="color:#555">Validación (capas × multiplic. vs suma de salidas)</div>
-    ${validaciones.map(v => {
-      const cls = v.estado==='ok'?'validacion-ok':'validacion-warn';
-      const msg = v.estado==='ok'?'✓':(v.estado==='vacio'?'sin salidas':`⚠ falta ${v.esperado-v.registrado}`);
-      return `<div class="validacion-row ${cls}"><span>Rollo ${v.rollo} · Talla ${v.letra} (${v.key})</span><span>${v.registrado}/${v.esperado} ${msg}</span></div>`;
-    }).join('')}
-  ` : '';
-
-  cont.innerHTML = `
-    <div class="bultos-preview">
-      <div class="salidas-title">Total: ${bultos.length} bulto(s) · ${bultos.filter(b=>b.sustitucion).length} con sustitución</div>
-      ${bultosHtml}
-      ${validHtml}
-    </div>
-  `;
 }
 
 function calcularTotales() {
@@ -1019,93 +701,27 @@ async function guardarTendido() {
   if(!fecha||!codigo){mostrarAlerta('tendido','error','Fecha y código son obligatorios.');return;}
   try {
     const completo=document.getElementById('td-completo').value==='true';
-    const letraCorte = (document.getElementById('td-letra-corte').value || '').toUpperCase().trim() || null;
-
     const [tendido]=await supaFetch('tendido','POST',{
       fecha,codigo_corte:codigo,
-      letra_corte: letraCorte,
       prendas:document.getElementById('td-prendas').value||null,
       equipo:document.getElementById('td-equipo').value||null,
       completo_en_un_dia:completo,
       fecha_continuacion:(!completo&&document.getElementById('td-continuacion').value)?document.getElementById('td-continuacion').value:null,
       observaciones_generales:document.getElementById('td-observaciones').value||null
     });
-
-    // Tallas marcadas: construir mapa {tmId_local -> id_remoto}
-    const tmMap = {};   // id_local (string) -> id_remoto (uuid)
-    const tmData = {};  // id_local -> {letra, key, mult}
-    document.querySelectorAll('[data-tm-id]').forEach(el => {
-      const id = el.dataset.tmId;
-      if (!tmData[id]) tmData[id] = {};
-      if (el.dataset.tmLetra) tmData[id].letra = (el.value||'').toUpperCase();
-      if (el.dataset.tmKey) tmData[id].key = el.value.trim();
-      if (el.dataset.tmNotas) tmData[id].notas = el.value.trim();
-      if (el.dataset.tmMult) tmData[id].mult = parseInt(el.value) || 1;
-    });
-
-    let orden = 1;
-    for (const [idLocal, t] of Object.entries(tmData)) {
-      if (!t.letra || !t.key) continue;
-      const [tm] = await supaFetch('tendido_talla_marcada','POST',{
-        tendido_id: tendido.id,
-        letra_local: t.letra,
-        talla_key_original: t.key,
-        multiplicidad: t.mult || 1,
-        orden: orden++,
-      });
-      tmMap[idLocal] = tm.id;
-    }
-
-    // Rollos: primero crearlos, guardar mapping id_local -> id_remoto
-    const rolloMap = {};
-    const rollosData = {};
+    const rollosMap={};
     document.querySelectorAll('[data-rollo]').forEach(el=>{
       const id=el.dataset.rollo;
-      if(!rollosData[id]) rollosData[id]={numero_rollo:parseInt(id)};
+      if(!rollosMap[id]) rollosMap[id]={numero_rollo:parseInt(id)};
       const v=el.value;
       const f=el.dataset.field;
-      rollosData[id][f]=['yardas_rollo','lienzos_salidos','pares','yardas_sobrantes'].includes(f)?(v?parseFloat(v):null):(v||null);
+      rollosMap[id][f]=['yardas_rollo','lienzos_salidos','pares','yardas_sobrantes'].includes(f)?(v?parseFloat(v):null):(v||null);
     });
-    for(const[idLocal,rollo] of Object.entries(rollosData)){
-      const [r] = await supaFetch('tendido_rollo','POST',{tendido_id:tendido.id,...rollo});
-      rolloMap[idLocal] = r.id;
+    for(const[,rollo] of Object.entries(rollosMap)){
+      await supaFetch('tendido_rollo','POST',{tendido_id:tendido.id,...rollo});
     }
-
-    // Salidas por (rollo × talla)
-    const partidasMap = {}; // "rolloId_tmId" -> [{qty, talla}, ...]
-    document.querySelectorAll('.partida-row').forEach(row => {
-      const qtyInp = row.querySelector('[data-partida-qty]');
-      const tallaInp = row.querySelector('[data-partida-talla]');
-      if (!qtyInp || !tallaInp) return;
-      const rolloId = qtyInp.dataset.partidaRollo;
-      const tmId = qtyInp.dataset.partidaTm;
-      const qty = parseInt(qtyInp.value) || 0;
-      const talla = tallaInp.value.trim();
-      if (qty <= 0 || !talla) return;
-      const key = `${rolloId}_${tmId}`;
-      if (!partidasMap[key]) partidasMap[key] = [];
-      partidasMap[key].push({ qty, talla, rolloId, tmId });
-    });
-
-    for (const [,partidas] of Object.entries(partidasMap)) {
-      let ord = 1;
-      for (const p of partidas) {
-        const rolloRemoto = rolloMap[p.rolloId];
-        const tmRemoto = tmMap[p.tmId];
-        if (!rolloRemoto || !tmRemoto) continue;
-        await supaFetch('tendido_rollo_salida','POST',{
-          tendido_rollo_id: rolloRemoto,
-          tendido_talla_marcada_id: tmRemoto,
-          talla_key_salida: p.talla,
-          cantidad: p.qty,
-          orden: ord++,
-        });
-      }
-    }
-
-    const nBultos = Object.values(partidasMap).reduce((s,arr)=>s+arr.length,0);
-    mostrarAlerta('tendido','success',`✅ Tendido ${codigo} guardado. ${nBultos} bulto(s) derivado(s).`);
-    setTimeout(()=>initTendido(),2000);
+    mostrarAlerta('tendido','success',`✅ Tendido ${codigo} guardado.`);
+    setTimeout(()=>initTendido(),1500);
   } catch(e){mostrarAlerta('tendido','error','Error: '+e.message);}
 }
 
@@ -1224,15 +840,7 @@ async function verDetalle(tipo, id) {
     } else {
       const [tend] = await supaFetch('tendido','GET',null,`?id=eq.${id}`);
       const rollos = await supaFetch('tendido_rollo','GET',null,`?tendido_id=eq.${id}&order=numero_rollo`);
-      // Nuevo: tallas marcadas y bultos derivados
-      let tallasMarcadas = [];
-      let bultosDerivados = [];
-      try {
-        tallasMarcadas = await supaFetch('tendido_talla_marcada','GET',null,`?tendido_id=eq.${id}&order=orden`);
-        bultosDerivados = await supaFetch('vw_bulto_derivado','GET',null,`?tendido_id=eq.${id}&order=numero_rollo,letra_talla`);
-      } catch(e) { console.warn('Sin tablas nuevas todavía:', e.message); }
-
-      document.getElementById('det-titulo').textContent = `Tendido ${tend.codigo_corte}${tend.letra_corte?' · Corte '+tend.letra_corte:''}`;
+      document.getElementById('det-titulo').textContent = `Tendido ${tend.codigo_corte}`;
 
       let totalL=0,totalP=0,totalYC=0,totalYS=0;
       rollos.forEach(r=>{totalL+=r.lienzos_salidos||0;totalP+=r.pares||0;totalYC+=parseFloat(r.yardas_rollo)||0;totalYS+=parseFloat(r.yardas_sobrantes)||0;});
@@ -1242,7 +850,6 @@ async function verDetalle(tipo, id) {
           <div class="detalle-seccion-titulo">Datos generales</div>
           <div class="detalle-campo"><span class="detalle-campo-label">Fecha</span><span class="detalle-campo-valor">${tend.fecha}</span></div>
           <div class="detalle-campo"><span class="detalle-campo-label">Código</span><span class="detalle-campo-valor">${tend.codigo_corte}</span></div>
-          ${tend.letra_corte?`<div class="detalle-campo"><span class="detalle-campo-label">Letra de corte</span><span class="detalle-campo-valor"><strong>${tend.letra_corte}</strong></span></div>`:''}
           <div class="detalle-campo"><span class="detalle-campo-label">Prendas</span><span class="detalle-campo-valor">${tend.prendas||'—'}</span></div>
           <div class="detalle-campo"><span class="detalle-campo-label">Equipo</span><span class="detalle-campo-valor">${tend.equipo||'—'}</span></div>
           <div class="detalle-campo"><span class="detalle-campo-label">Completado en un día</span><span class="detalle-campo-valor">${tend.completo_en_un_dia?'Sí':'No — '+tend.fecha_continuacion}</span></div>
@@ -1258,22 +865,7 @@ async function verDetalle(tipo, id) {
             <div class="total-item"><div class="total-valor">${totalYC.toFixed(1)}</div><div class="total-label">Yds consumidas</div></div>
             <div class="total-item"><div class="total-valor">${totalYS.toFixed(1)}</div><div class="total-label">Yds sobrantes</div></div>
           </div>
-        </div>`;
-
-      if (tallasMarcadas.length) {
-        html += `
-        <div class="detalle-seccion">
-          <div class="detalle-seccion-titulo">Tallas marcadas en el trazo</div>
-          ${tallasMarcadas.map(t=>`
-            <div class="detalle-campo">
-              <span class="detalle-campo-label"><strong style="color:var(--azul)">${t.letra_local}</strong> · ${t.talla_key_original}</span>
-              <span class="detalle-campo-valor">×${t.multiplicidad}</span>
-            </div>
-          `).join('')}
-        </div>`;
-      }
-
-      html += `
+        </div>
         <div class="detalle-seccion">
           <div class="detalle-seccion-titulo">Rollos</div>
           ${rollos.map(r=>`
@@ -1281,7 +873,7 @@ async function verDetalle(tipo, id) {
               <strong>Rollo #${r.numero_rollo||'—'}</strong> · ${r.codigo_rollo||'Sin código'}
               <div class="row3 mt8">
                 <div><div class="text-muted">Yardas</div><strong>${r.yardas_rollo||'—'}</strong></div>
-                <div><div class="text-muted">Capas</div><strong>${r.lienzos_salidos||'—'}</strong></div>
+                <div><div class="text-muted">Lienzos</div><strong>${r.lienzos_salidos||'—'}</strong></div>
                 <div><div class="text-muted">Pares</div><strong>${r.pares||'—'}</strong></div>
               </div>
               ${r.observacion_tono?`<div class="text-muted mt8" style="font-size:12px">⚠️ ${r.observacion_tono}</div>`:''}
@@ -1289,20 +881,6 @@ async function verDetalle(tipo, id) {
           `).join('')}
         </div>
       `;
-
-      if (bultosDerivados.length) {
-        const normales = bultosDerivados.filter(b=>b.tipo_salida==='normal').length;
-        const subs = bultosDerivados.filter(b=>b.tipo_salida==='sustitucion').length;
-        html += `
-        <div class="detalle-seccion">
-          <div class="detalle-seccion-titulo">Bultos derivados (${bultosDerivados.length})</div>
-          <div class="text-muted mb8" style="font-size:12px">${normales} normal · ${subs} con sustitución</div>
-          <div class="bultos-preview">
-            ${bultosDerivados.map(b=>`<span class="bulto-chip ${b.tipo_salida==='sustitucion'?'sub':''}">${b.codigo_bulto}</span>`).join('')}
-          </div>
-        </div>`;
-      }
-
       if (tend.observaciones_generales) html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo">Observaciones</div><p style="font-size:14px">${tend.observaciones_generales}</p></div>`;
       document.getElementById('det-contenido').innerHTML = html;
     }
