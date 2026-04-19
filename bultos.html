@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taller IMIS — Bultos</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --azul: #1F4E79; --azul2: #2E75B6; --azul-claro: #D6E4F0;
+    --verde: #28A745; --rojo: #C00000; --amarillo: #FFF2CC;
+    --gris: #F5F5F5; --borde: #CCCCCC; --texto: #222222;
+    --naranja: #E65100;
+  }
+  body { font-family: Arial, sans-serif; background: #F0F4F8; color: var(--texto); min-height: 100vh; }
+
+  nav { background: var(--azul); color: white; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  .nav-top { display: flex; align-items: center; padding: 12px 16px; gap: 12px; }
+  .nav-top h1 { font-size: 16px; font-weight: 700; flex: 1; }
+  .nav-tabs { display: flex; border-top: 1px solid rgba(255,255,255,0.2); }
+  .nav-tab { flex: 1; padding: 10px 8px; text-align: center; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.7); cursor: pointer; border-bottom: 3px solid transparent; }
+  .nav-tab.active { color: white; border-bottom-color: #FFD700; }
+
+  .container { max-width: 800px; margin: 0 auto; padding: 16px; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .card-title { font-size: 15px; font-weight: 700; color: var(--azul); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+
+  .field { margin-bottom: 12px; }
+  label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--borde); border-radius: 8px; font-size: 14px; font-family: Arial, sans-serif; background: white; }
+  input:focus, select:focus { outline: none; border-color: var(--azul2); box-shadow: 0 0 0 3px rgba(46,117,182,0.15); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .row-cod { display: grid; grid-template-columns: 70px 60px 60px; gap: 8px; }
+
+  .btn { padding: 10px 16px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: Arial, sans-serif; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-primary { background: var(--azul); color: white; }
+  .btn-success { background: var(--verde); color: white; }
+  .btn-danger { background: var(--rojo); color: white; font-size: 12px; padding: 6px 10px; }
+  .btn-ghost { background: var(--gris); color: var(--texto); border: 1px solid var(--borde); }
+  .btn-naranja { background: var(--naranja); color: white; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-block { width: 100%; margin-top: 8px; justify-content: center; }
+
+  /* PREVIEW del código */
+  .codigo-preview { background: linear-gradient(135deg, var(--azul), var(--azul2)); color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 16px; }
+  .codigo-preview-label { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.8; margin-bottom: 8px; }
+  .codigo-preview-valor { font-size: 40px; font-weight: 900; letter-spacing: 2px; font-family: 'Courier New', monospace; }
+  .codigo-preview-sub { font-size: 13px; margin-top: 6px; opacity: 0.9; }
+
+  /* PIEZAS del bulto */
+  .pieza-card { background: var(--gris); border-radius: 10px; padding: 14px; margin-bottom: 10px; border-left: 4px solid var(--azul2); }
+  .pieza-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .pieza-num { font-weight: 700; color: var(--azul); font-size: 14px; }
+  .pieza-codigo { font-family: 'Courier New', monospace; font-size: 13px; font-weight: 700; color: var(--naranja); background: white; padding: 4px 10px; border-radius: 6px; border: 1px dashed var(--borde); margin-top: 10px; text-align: center; }
+
+  /* HISTORIAL */
+  .bulto-item { background: var(--gris); border-left: 4px solid var(--azul2); border-radius: 0 10px 10px 0; padding: 14px; margin-bottom: 10px; cursor: pointer; }
+  .bulto-item:hover { background: var(--azul-claro); }
+  .bulto-item-header { display: flex; justify-content: space-between; align-items: start; }
+  .bulto-item-codigo { font-family: 'Courier New', monospace; font-size: 20px; font-weight: 900; color: var(--azul); letter-spacing: 2px; }
+  .bulto-item-meta { font-size: 12px; color: #777; margin-top: 4px; }
+  .bulto-item-piezas { margin-top: 8px; display: flex; gap: 4px; flex-wrap: wrap; }
+  .pieza-chip { background: white; border: 1px solid var(--borde); font-size: 11px; padding: 3px 8px; border-radius: 10px; }
+
+  /* ETIQUETA IMPRIMIBLE */
+  .etiqueta { background: white; border: 2px solid black; border-radius: 8px; padding: 16px; margin-bottom: 12px; page-break-inside: avoid; }
+  .etiq-codigo { font-family: 'Courier New', monospace; font-size: 32px; font-weight: 900; text-align: center; letter-spacing: 3px; margin-bottom: 12px; }
+  .etiq-prenda { font-size: 18px; font-weight: 700; text-align: center; margin-bottom: 8px; }
+  .etiq-cant { font-size: 48px; font-weight: 900; text-align: center; color: var(--rojo); margin: 8px 0; }
+  .etiq-cant-label { text-align: center; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #555; }
+  .etiq-meta { font-size: 11px; text-align: center; color: #777; margin-top: 10px; }
+
+  /* DETALLE OVERLAY */
+  .detalle-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; overflow-y: auto; }
+  .detalle-overlay.active { display: block; }
+  .detalle-modal { background: white; border-radius: 16px 16px 0 0; padding: 20px; margin-top: 40px; min-height: calc(100vh - 40px); }
+  .detalle-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .detalle-titulo { font-size: 18px; font-weight: 700; color: var(--azul); }
+
+  .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; }
+  .alert-success { background: #D4EDDA; color: #155724; border: 1px solid #C3E6CB; }
+  .alert-error { background: #F8D7DA; color: #721C24; border: 1px solid #F5C6CB; }
+  .alert-info { background: var(--azul-claro); color: var(--azul); border: 1px solid #B8D4E8; }
+
+  .empty { text-align: center; padding: 40px 20px; color: #999; }
+  .empty-icon { font-size: 40px; margin-bottom: 10px; }
+  .loading { text-align: center; padding: 20px; color: #777; font-size: 14px; }
+  .text-muted { font-size: 12px; color: #777; }
+  .mt8 { margin-top: 8px; }
+  .mb8 { margin-bottom: 8px; }
+  .divider { height: 1px; background: var(--borde); margin: 16px 0; }
+
+  /* PRINT */
+  @media print {
+    nav, .card-title, button, .btn, .nav-tabs, .no-print { display: none !important; }
+    body { background: white; }
+    .container { max-width: 100%; padding: 0; }
+    .etiqueta { margin: 10px; border: 2px solid black; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-top">
+    <div style="width:32px;height:32px;background:rgba(255,255,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700">B</div>
+    <h1>Taller IMIS — Bultos</h1>
+  </div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" onclick="switchTab('nuevo',this)">➕ Nuevo</div>
+    <div class="nav-tab" onclick="switchTab('historial',this)">🗂 Historial</div>
+    <div class="nav-tab" onclick="switchTab('config',this)">⚙️ Config</div>
+  </div>
+</nav>
+
+<div class="container">
+
+<!-- ═══ NUEVO BULTO ═══ -->
+<div id="view-nuevo" class="view active">
+  <div id="alert-nuevo"></div>
+
+  <!-- Preview del código -->
+  <div class="codigo-preview">
+    <div class="codigo-preview-label">Código del bulto</div>
+    <div class="codigo-preview-valor" id="preview-codigo">— — —</div>
+    <div class="codigo-preview-sub" id="preview-sub">Llena los 3 campos de abajo</div>
+  </div>
+
+  <!-- Datos del bulto -->
+  <div class="card">
+    <div class="card-title">📝 Datos del bulto</div>
+    <div class="field">
+      <label>Fecha</label>
+      <input type="date" id="b-fecha">
+    </div>
+    <div class="row-cod">
+      <div class="field">
+        <label>N° bulto</label>
+        <input type="number" id="b-numero" placeholder="1" min="1" oninput="actualizarPreview()">
+      </div>
+      <div class="field">
+        <label>Corte</label>
+        <input type="text" id="b-corte" placeholder="K" maxlength="2" oninput="this.value=this.value.toUpperCase();actualizarPreview()">
+      </div>
+      <div class="field">
+        <label>Trazo</label>
+        <input type="text" id="b-trazo" placeholder="C" maxlength="2" oninput="this.value=this.value.toUpperCase();actualizarPreview()">
+      </div>
+    </div>
+    <div class="text-muted mt8">💡 El N° del bulto es el mismo que el N° del rollo del tendido.</div>
+  </div>
+
+  <!-- Piezas del bulto -->
+  <div class="card">
+    <div class="card-title">✂️ Piezas del bulto</div>
+    <div class="text-muted mb8">Agrega cada talla/largo/detalle que salió dentro de este bulto</div>
+    <div id="b-piezas-container"></div>
+    <button class="btn btn-ghost btn-block" onclick="agregarPieza()">+ Agregar pieza</button>
+  </div>
+
+  <!-- Observaciones -->
+  <div class="card">
+    <div class="field">
+      <label>Observaciones (opcional)</label>
+      <textarea id="b-observaciones" placeholder="Alguna nota relevante..."></textarea>
+    </div>
+  </div>
+
+  <button class="btn btn-success btn-block" id="btn-guardar" onclick="guardarBulto()">💾 Guardar bulto</button>
+</div>
+
+<!-- ═══ HISTORIAL ═══ -->
+<div id="view-historial" class="view">
+  <div class="card">
+    <div class="card-title">🗂 Bultos recientes</div>
+    <div class="field">
+      <input type="text" id="buscar" placeholder="🔍 Buscar por código, corte, trazo..." oninput="filtrarHistorial()">
+    </div>
+    <div id="historial-content"><div class="loading">Cargando...</div></div>
+  </div>
+</div>
+
+<!-- ═══ CONFIG ═══ -->
+<div id="view-config" class="view">
+  <div class="card">
+    <div class="card-title">⚙️ Configuración</div>
+    <div class="field">
+      <label>Supabase URL</label>
+      <input type="text" id="cfg-url">
+    </div>
+    <div class="field">
+      <label>Anon Key</label>
+      <input type="text" id="cfg-key">
+    </div>
+    <button class="btn btn-primary btn-block" onclick="guardarConfig()">Guardar</button>
+    <button class="btn btn-ghost btn-block mt8" onclick="verificarConexion()">Verificar conexión</button>
+    <div id="cfg-estado" class="mt8 text-muted" style="text-align:center"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📋 Abreviaturas de prenda</div>
+    <div style="font-size:13px;line-height:1.8">
+      <strong>C</strong> = Camisa blanca &nbsp;&nbsp; <strong>B</strong> = Blusa blanca &nbsp;&nbsp; <strong>CC</strong> = Camisa celeste<br>
+      <strong>P</strong> = Pantalón azul &nbsp;&nbsp; <strong>PB</strong> = Pantalón beige<br>
+      <strong>F</strong> = Falda azul &nbsp;&nbsp; <strong>FB</strong> = Falda beige &nbsp;&nbsp; <strong>FCE</strong> = Falda celeste<br>
+      <strong>S</strong> = Short parvularia
+    </div>
+  </div>
+</div>
+
+</div><!-- end container -->
+
+<!-- DETALLE OVERLAY -->
+<div id="detalle-overlay" class="detalle-overlay">
+  <div class="detalle-modal">
+    <div class="detalle-header no-print">
+      <div class="detalle-titulo" id="det-titulo">Detalle del bulto</div>
+      <button class="btn btn-ghost btn-sm" onclick="cerrarDetalle()">✕ Cerrar</button>
+    </div>
+    <div id="det-contenido"></div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+let SUPA_URL = localStorage.getItem('supa_url') || 'https://kszdievqesveluzcnzsh.supabase.co';
+let SUPA_KEY = localStorage.getItem('supa_key') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzemRpZXZxZXN2ZWx1emNuenNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MTgwMTgsImV4cCI6MjA5MDM5NDAxOH0.r28goEyUxZeKK9j0efu1BXC8ssU9lYxRK7dp3BGix1M';
+
+// Definición de prendas
+const PRENDAS = {
+  'C':   { nombre: 'Camisa blanca',   lleva_largo: false, tallas: [3,4,6,8,10,12,14,16,17,20,22,24,26,28,30] },
+  'B':   { nombre: 'Blusa blanca',    lleva_largo: false, tallas: [8,10,12,14,16,17,20,22,24,26] },
+  'CC':  { nombre: 'Camisa celeste',  lleva_largo: false, tallas: [3,4,6,8,10,12] },
+  'P':   { nombre: 'Pantalón azul',   lleva_largo: true,  lleva_detalle: true,  tallas: [4,6,7,8,10,11,12,14,15,16,17,19,20,22,24,25,26,28,30,32], largos: [60,65,70,75,80,85,90,95,100,105,110] },
+  'PB':  { nombre: 'Pantalón beige',  lleva_largo: true,  lleva_detalle: true,  tallas: [14,15,16,17,19,20,22,24,25,26,28,30,32], largos: [90,95,100,105] },
+  'F':   { nombre: 'Falda azul',      lleva_largo: true,  lleva_detalle: true,  tallas: [6,7,8,10,12,14,16,17,18,20,22,23,24,25,26], largos: [35,40,45,50,55,60,65] },
+  'FB':  { nombre: 'Falda beige',     lleva_largo: true,  lleva_detalle: true,  tallas: [8,10,12,14,16,17,18,20,22,23,24,25,26,30,32], largos: [50,55,60,65] },
+  'FCE': { nombre: 'Falda celeste',   lleva_largo: true,  lleva_detalle: false, tallas: [3,4,6,7,8,10,12,14,16,17], largos: [30,35,40,45,50,55] },
+  'S':   { nombre: 'Short parvularia',lleva_largo: false, tallas: [4,6,8,10,12,14] }
+};
+
+let piezasCount = 0;
+let historialData = [];
+
+// ── NAV ───────────────────────────────────────────────────────────────────────
+function switchTab(tab, el) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + tab).classList.add('active');
+  el.classList.add('active');
+  if (tab === 'historial') cargarHistorial();
+  if (tab === 'config') { document.getElementById('cfg-url').value = SUPA_URL; document.getElementById('cfg-key').value = SUPA_KEY; }
+}
+
+// ── SUPABASE ──────────────────────────────────────────────────────────────────
+async function supaFetch(table, method='GET', body=null, params='') {
+  const res = await fetch(`${SUPA_URL}/rest/v1/${table}${params}`, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${SUPA_KEY}`,
+      'Prefer': method==='POST'?'return=representation':''
+    },
+    body: body ? JSON.stringify(body) : null
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return method === 'DELETE' ? null : res.json();
+}
+
+// ── PREVIEW CÓDIGO ────────────────────────────────────────────────────────────
+function actualizarPreview() {
+  const num = document.getElementById('b-numero').value.trim();
+  const corte = document.getElementById('b-corte').value.trim();
+  const trazo = document.getElementById('b-trazo').value.trim();
+
+  const el = document.getElementById('preview-codigo');
+  const sub = document.getElementById('preview-sub');
+
+  if (num && corte && trazo) {
+    el.textContent = `${num}${corte}${trazo}`;
+    sub.textContent = `Bulto ${num} · Corte ${corte} · Trazo ${trazo}`;
+  } else {
+    el.textContent = `${num||'—'}${corte||'—'}${trazo||'—'}`;
+    sub.textContent = 'Llena los 3 campos de arriba';
+  }
+  actualizarCodigosPiezas();
+}
+
+// ── PIEZAS ────────────────────────────────────────────────────────────────────
+function agregarPieza() {
+  piezasCount++;
+  const id = piezasCount;
+  const div = document.createElement('div');
+  div.className = 'pieza-card';
+  div.id = `pieza-${id}`;
+  div.innerHTML = `
+    <div class="pieza-header">
+      <span class="pieza-num">Pieza #${id}</span>
+      <button class="btn btn-danger" onclick="document.getElementById('pieza-${id}').remove();actualizarCodigosPiezas()">✕</button>
+    </div>
+    <div class="field">
+      <label>Prenda</label>
+      <select data-pieza="${id}" data-field="prenda" onchange="onPrendaChange(${id})">
+        <option value="">— Seleccionar —</option>
+        ${Object.entries(PRENDAS).map(([k,v])=>`<option value="${k}">${k} — ${v.nombre}</option>`).join('')}
+      </select>
+    </div>
+    <div id="pieza-campos-${id}"></div>
+    <div class="field">
+      <label>Cantidad de piezas</label>
+      <input type="number" min="1" placeholder="Ej: 5" data-pieza="${id}" data-field="cantidad" oninput="actualizarCodigosPiezas()">
+    </div>
+    <div class="pieza-codigo" id="pieza-cod-${id}">— sin código aún —</div>
+  `;
+  document.getElementById('b-piezas-container').appendChild(div);
+}
+
+function onPrendaChange(id) {
+  const sel = document.querySelector(`[data-pieza="${id}"][data-field="prenda"]`);
+  const cod = sel.value;
+  const campos = document.getElementById(`pieza-campos-${id}`);
+  if (!cod) { campos.innerHTML = ''; actualizarCodigosPiezas(); return; }
+
+  const p = PRENDAS[cod];
+  let html = `
+    <div class="row2">
+      <div class="field">
+        <label>Talla</label>
+        <select data-pieza="${id}" data-field="talla" onchange="actualizarCodigosPiezas()">
+          <option value="">—</option>
+          ${p.tallas.map(t=>`<option value="${t}">${t}</option>`).join('')}
+        </select>
+      </div>
+  `;
+  if (p.lleva_largo) {
+    html += `
+      <div class="field">
+        <label>Largo</label>
+        <select data-pieza="${id}" data-field="largo" onchange="actualizarCodigosPiezas()">
+          <option value="">—</option>
+          ${p.largos.map(l=>`<option value="${l}">${l}</option>`).join('')}
+        </select>
+      </div>
+    `;
+  } else {
+    html += `<div class="field"><label>&nbsp;</label><div class="text-muted" style="padding:10px">Esta prenda no lleva largo</div></div>`;
+  }
+  html += `</div>`;
+  if (p.lleva_detalle) {
+    html += `
+      <div class="field">
+        <label>Detalle (opcional)</label>
+        <select data-pieza="${id}" data-field="detalle" onchange="actualizarCodigosPiezas()">
+          <option value="">— Sin detalle —</option>
+          <option value="CINT.7">CINT.7</option>
+          <option value="CINT.8">CINT.8</option>
+          <option value="CINT.10">CINT.10</option>
+          <option value="CINT.12">CINT.12</option>
+          <option value="CINT.14">CINT.14</option>
+          <option value="CINT.16">CINT.16</option>
+          <option value="CINT.17">CINT.17</option>
+          <option value="CINT.18">CINT.18</option>
+          <option value="CINT.20">CINT.20</option>
+          <option value="CINT.22">CINT.22</option>
+          <option value="CINT.23">CINT.23</option>
+          <option value="CINT.24">CINT.24</option>
+          <option value="CINT.26">CINT.26</option>
+          <option value="CAD.14">CAD.14</option>
+        </select>
+      </div>
+    `;
+  }
+  campos.innerHTML = html;
+  actualizarCodigosPiezas();
+}
+
+function generarKey(prenda, talla, largo, detalle) {
+  let key = prenda + talla;
+  if (largo) key += largo;
+  if (detalle) key += detalle.replace('.','');  // CINT.17 → CINT17
+  return key;
+}
+
+function actualizarCodigosPiezas() {
+  const num = document.getElementById('b-numero').value.trim();
+  const corte = document.getElementById('b-corte').value.trim();
+  const trazo = document.getElementById('b-trazo').value.trim();
+  const codBase = `${num}${corte}${trazo}`;
+
+  document.querySelectorAll('.pieza-card').forEach(card => {
+    const id = card.id.replace('pieza-','');
+    const prenda = card.querySelector('[data-field="prenda"]')?.value;
+    const talla = card.querySelector('[data-field="talla"]')?.value;
+    const largo = card.querySelector('[data-field="largo"]')?.value;
+    const detalle = card.querySelector('[data-field="detalle"]')?.value;
+    const cantidad = card.querySelector('[data-field="cantidad"]')?.value;
+
+    const codEl = document.getElementById(`pieza-cod-${id}`);
+    if (!codEl) return;
+
+    if (prenda && talla && num && corte && trazo) {
+      const key = generarKey(prenda, talla, largo, detalle);
+      const cod = `${codBase}-${key}`;
+      codEl.innerHTML = `📌 <strong>${cod}</strong>${cantidad?` · ${cantidad} pzs`:''}`;
+    } else {
+      codEl.textContent = '— faltan datos —';
+    }
+  });
+}
+
+// ── GUARDAR ───────────────────────────────────────────────────────────────────
+async function guardarBulto() {
+  const fecha = document.getElementById('b-fecha').value;
+  const num = document.getElementById('b-numero').value.trim();
+  const corte = document.getElementById('b-corte').value.trim();
+  const trazo = document.getElementById('b-trazo').value.trim();
+  const obs = document.getElementById('b-observaciones').value;
+
+  if (!fecha || !num || !corte || !trazo) {
+    mostrarAlerta('error', 'Fecha, número, corte y trazo son obligatorios.');
+    return;
+  }
+
+  const piezasCards = document.querySelectorAll('.pieza-card');
+  if (!piezasCards.length) {
+    mostrarAlerta('error', 'Agrega al menos una pieza al bulto.');
+    return;
+  }
+
+  const piezas = [];
+  for (const card of piezasCards) {
+    const prenda = card.querySelector('[data-field="prenda"]')?.value;
+    const talla = card.querySelector('[data-field="talla"]')?.value;
+    const largo = card.querySelector('[data-field="largo"]')?.value;
+    const detalle = card.querySelector('[data-field="detalle"]')?.value;
+    const cantidad = card.querySelector('[data-field="cantidad"]')?.value;
+    if (!prenda || !talla || !cantidad) {
+      mostrarAlerta('error', 'Cada pieza necesita prenda, talla y cantidad.');
+      return;
+    }
+    piezas.push({ prenda, talla: parseInt(talla), largo: largo?parseInt(largo):null, detalle: detalle||null, cantidad: parseInt(cantidad) });
+  }
+
+  const btn = document.getElementById('btn-guardar');
+  btn.textContent = '⏳ Guardando...';
+  btn.disabled = true;
+
+  const codBase = `${num}${corte}${trazo}`;
+
+  try {
+    const [bulto] = await supaFetch('bulto','POST',{
+      fecha,
+      codigo_corte: corte,
+      codigo_trazo: trazo,
+      numero_bulto: parseInt(num),
+      codigo_completo: codBase,
+      observaciones: obs || null
+    });
+
+    for (let i = 0; i < piezas.length; i++) {
+      const p = piezas[i];
+      const key = generarKey(p.prenda, p.talla, p.largo, p.detalle);
+      await supaFetch('bulto_pieza','POST',{
+        bulto_id: bulto.id,
+        prenda_codigo: p.prenda,
+        prenda_nombre: PRENDAS[p.prenda].nombre,
+        talla: p.talla,
+        largo: p.largo,
+        detalle: p.detalle,
+        cantidad: p.cantidad,
+        key_pieza: key,
+        codigo_etiqueta: `${codBase}-${key}`,
+        orden: i+1
+      });
+    }
+
+    mostrarAlerta('success', `✅ Bulto ${codBase} guardado con ${piezas.length} ${piezas.length===1?'pieza':'piezas'}.`);
+    setTimeout(() => initNuevo(), 1500);
+
+  } catch(e) {
+    mostrarAlerta('error', 'Error: ' + e.message);
+  } finally {
+    btn.textContent = '💾 Guardar bulto';
+    btn.disabled = false;
+  }
+}
+
+// ── INIT NUEVO ────────────────────────────────────────────────────────────────
+function initNuevo() {
+  document.getElementById('b-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('b-numero').value = '';
+  document.getElementById('b-corte').value = '';
+  document.getElementById('b-trazo').value = '';
+  document.getElementById('b-observaciones').value = '';
+  document.getElementById('b-piezas-container').innerHTML = '';
+  piezasCount = 0;
+  actualizarPreview();
+  agregarPieza();
+}
+
+// ── HISTORIAL ─────────────────────────────────────────────────────────────────
+async function cargarHistorial() {
+  const c = document.getElementById('historial-content');
+  c.innerHTML = '<div class="loading">Cargando...</div>';
+  try {
+    const bultos = await supaFetch('bulto','GET',null,'?order=creado_en.desc&limit=100');
+    if (!bultos.length) {
+      c.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><div>No hay bultos registrados</div></div>';
+      return;
+    }
+    // Traer todas las piezas
+    const ids = bultos.map(b => b.id).join(',');
+    const piezasAll = await supaFetch('bulto_pieza','GET',null,`?bulto_id=in.(${ids})&order=orden`);
+    historialData = bultos.map(b => ({ ...b, piezas: piezasAll.filter(p => p.bulto_id === b.id) }));
+    renderHistorial(historialData);
+  } catch(e) {
+    c.innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+  }
+}
+
+function renderHistorial(data) {
+  const c = document.getElementById('historial-content');
+  if (!data.length) { c.innerHTML = '<div class="empty"><div>Sin resultados</div></div>'; return; }
+  c.innerHTML = data.map(b => {
+    const totalPzs = b.piezas.reduce((a,p)=>a+p.cantidad,0);
+    const tallasResumen = b.piezas.slice(0,4).map(p => {
+      let t = `${p.prenda_codigo}${p.talla}`;
+      if (p.largo) t += `L${p.largo}`;
+      return `<span class="pieza-chip">${t}×${p.cantidad}</span>`;
+    }).join('');
+    const extra = b.piezas.length > 4 ? `<span class="pieza-chip">+${b.piezas.length-4}</span>` : '';
+    return `
+      <div class="bulto-item" onclick="verDetalle('${b.id}')">
+        <div class="bulto-item-header">
+          <div class="bulto-item-codigo">${b.codigo_completo}</div>
+          <div style="text-align:right">
+            <div style="font-weight:700;color:var(--naranja);font-size:18px">${totalPzs}</div>
+            <div class="text-muted">piezas</div>
+          </div>
+        </div>
+        <div class="bulto-item-meta">${b.fecha} · ${b.piezas.length} ${b.piezas.length===1?'talla':'tallas'}</div>
+        <div class="bulto-item-piezas">${tallasResumen}${extra}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function filtrarHistorial() {
+  const q = document.getElementById('buscar').value.trim().toLowerCase();
+  if (!q) { renderHistorial(historialData); return; }
+  const filt = historialData.filter(b =>
+    b.codigo_completo.toLowerCase().includes(q) ||
+    b.codigo_corte.toLowerCase().includes(q) ||
+    b.codigo_trazo.toLowerCase().includes(q) ||
+    b.piezas.some(p => p.codigo_etiqueta.toLowerCase().includes(q))
+  );
+  renderHistorial(filt);
+}
+
+// ── DETALLE ──────────────────────────────────────────────────────────────────
+async function verDetalle(id) {
+  const bulto = historialData.find(b => b.id === id);
+  if (!bulto) return;
+  document.getElementById('detalle-overlay').classList.add('active');
+  document.getElementById('det-titulo').textContent = `Bulto ${bulto.codigo_completo}`;
+  const total = bulto.piezas.reduce((a,p)=>a+p.cantidad,0);
+  document.getElementById('det-contenido').innerHTML = `
+    <div class="codigo-preview">
+      <div class="codigo-preview-label">Código del bulto</div>
+      <div class="codigo-preview-valor">${bulto.codigo_completo}</div>
+      <div class="codigo-preview-sub">${bulto.fecha} · ${total} piezas totales</div>
+    </div>
+    <div class="card no-print">
+      <button class="btn btn-naranja btn-block" onclick="window.print()">🖨 Imprimir etiquetas</button>
+    </div>
+    <div id="etiquetas-container">
+      ${bulto.piezas.map(p => `
+        <div class="etiqueta">
+          <div class="etiq-codigo">${p.codigo_etiqueta}</div>
+          <div class="etiq-prenda">${p.prenda_nombre} · T${p.talla}${p.largo?` L${p.largo}`:''}${p.detalle?` ${p.detalle}`:''}</div>
+          <div class="etiq-cant-label">Cantidad</div>
+          <div class="etiq-cant">${p.cantidad}</div>
+          <div class="etiq-meta">Bulto ${bulto.codigo_completo} · ${bulto.fecha}</div>
+        </div>
+      `).join('')}
+    </div>
+    ${bulto.observaciones ? `<div class="card no-print"><strong>Observaciones:</strong><p style="margin-top:8px">${bulto.observaciones}</p></div>` : ''}
+    <button class="btn btn-danger btn-block no-print" onclick="eliminarBulto('${bulto.id}')">🗑 Eliminar bulto</button>
+  `;
+}
+
+async function eliminarBulto(id) {
+  if (!confirm('¿Eliminar este bulto y todas sus piezas? Esta acción no se puede deshacer.')) return;
+  try {
+    await supaFetch(`bulto`,'DELETE',null,`?id=eq.${id}`);
+    cerrarDetalle();
+    cargarHistorial();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function cerrarDetalle() {
+  document.getElementById('detalle-overlay').classList.remove('active');
+}
+
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+function guardarConfig() {
+  SUPA_URL = document.getElementById('cfg-url').value.trim();
+  SUPA_KEY = document.getElementById('cfg-key').value.trim();
+  localStorage.setItem('supa_url', SUPA_URL);
+  localStorage.setItem('supa_key', SUPA_KEY);
+  alert('✅ Configuración guardada');
+}
+
+async function verificarConexion() {
+  const el = document.getElementById('cfg-estado');
+  el.textContent = 'Verificando...';
+  try {
+    await supaFetch('bulto','GET',null,'?limit=1');
+    el.innerHTML = '<span style="color:var(--verde);font-weight:700">✅ Conectado</span>';
+  } catch(e) {
+    el.innerHTML = `<span style="color:var(--rojo);font-weight:700">❌ Error: ${e.message}</span>`;
+  }
+}
+
+// ── UTILS ────────────────────────────────────────────────────────────────────
+function mostrarAlerta(tipo, msg) {
+  const el = document.getElementById('alert-nuevo');
+  el.innerHTML = `<div class="alert alert-${tipo==='error'?'error':'success'}">${msg}</div>`;
+  setTimeout(() => el.innerHTML = '', 4000);
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+initNuevo();
+</script>
+</body>
+</html>

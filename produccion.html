@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taller IMIS — Producción</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --azul: #1F4E79; --azul2: #2E75B6; --azul-claro: #D6E4F0;
+    --verde: #28A745; --rojo: #C00000; --amarillo: #FFF2CC;
+    --gris: #F5F5F5; --borde: #CCCCCC; --texto: #222222;
+  }
+  body { font-family: Arial, sans-serif; background: #F0F4F8; color: var(--texto); min-height: 100vh; }
+
+  nav { background: var(--azul); color: white; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  .nav-top { display: flex; align-items: center; padding: 12px 16px; gap: 12px; }
+  .nav-top h1 { font-size: 16px; font-weight: 700; flex: 1; }
+  .nav-tabs { display: flex; border-top: 1px solid rgba(255,255,255,0.2); }
+  .nav-tab { flex: 1; padding: 10px 8px; text-align: center; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.7); cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; }
+  .nav-tab.active { color: white; border-bottom-color: #FFD700; }
+
+  .container { max-width: 800px; margin: 0 auto; padding: 16px; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .card-title { font-size: 15px; font-weight: 700; color: var(--azul); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+
+  .field { margin-bottom: 12px; }
+  label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--borde); border-radius: 8px; font-size: 14px; font-family: Arial, sans-serif; color: var(--texto); background: white; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--azul2); box-shadow: 0 0 0 3px rgba(46,117,182,0.15); }
+  textarea { resize: vertical; min-height: 60px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  .btn { padding: 10px 16px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: Arial, sans-serif; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-primary { background: var(--azul); color: white; }
+  .btn-success { background: var(--verde); color: white; }
+  .btn-danger { background: var(--rojo); color: white; font-size: 12px; padding: 6px 10px; }
+  .btn-ghost { background: var(--gris); color: var(--texto); border: 1px solid var(--borde); }
+  .btn-video { background: #FF0000; color: white; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-block { width: 100%; margin-top: 8px; justify-content: center; }
+
+  .prenda-seccion { border: 2px solid var(--azul-claro); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .prenda-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .prenda-badge { background: var(--amarillo); color: var(--azul); font-weight: 700; font-size: 13px; padding: 4px 10px; border-radius: 6px; white-space: nowrap; }
+
+  /* Tallas del tendido */
+  .tallas-input-wrapper { background: var(--amarillo); border: 2px solid #FFC107; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .tallas-input-wrapper label { color: #856404; font-size: 13px; }
+  .tallas-input-wrapper input { border: 1px solid #FFC107; background: white; font-size: 16px; font-weight: 700; text-align: center; letter-spacing: 2px; }
+  .tallas-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .talla-chip { background: white; border: 2px solid var(--azul); color: var(--azul); padding: 4px 10px; border-radius: 14px; font-size: 12px; font-weight: 700; }
+
+  .tabla-piezas { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  .tabla-piezas th { background: var(--azul-claro); color: var(--azul); font-weight: 700; padding: 8px 6px; text-align: left; border: 1px solid var(--borde); font-size: 12px; }
+  .tabla-piezas td { padding: 6px; border: 1px solid var(--borde); vertical-align: middle; }
+  .tabla-piezas tr:nth-child(even) td { background: var(--gris); }
+  .tabla-piezas input[type=text] { padding: 4px 6px; font-size: 12px; border-radius: 4px; width: 100%; }
+  .tabla-piezas input[type=checkbox] { width: 20px; height: 20px; cursor: pointer; display: block; margin: 0 auto; }
+
+  .rollo-card { background: var(--gris); border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 4px solid var(--azul2); }
+  .rollo-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .rollo-num { font-weight: 700; color: var(--azul); font-size: 14px; }
+
+  .totales-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .total-item { background: var(--azul-claro); border-radius: 8px; padding: 10px; text-align: center; }
+  .total-valor { font-size: 22px; font-weight: 700; color: var(--azul); }
+  .total-label { font-size: 11px; color: #555; margin-top: 2px; }
+
+  .foto-upload { border: 2px dashed var(--borde); border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
+  .foto-upload:hover { border-color: var(--azul2); background: var(--azul-claro); }
+  .foto-upload input[type=file] { display: none; }
+  .foto-preview { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-top: 10px; }
+  .foto-icon { font-size: 32px; margin-bottom: 8px; }
+
+  .video-row { display: flex; gap: 8px; align-items: flex-end; }
+  .video-row input { flex: 1; }
+
+  .registro-item { border-left: 4px solid var(--azul2); padding: 12px; background: var(--gris); border-radius: 0 8px 8px 0; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; }
+  .registro-item:hover { background: var(--azul-claro); }
+  .registro-codigo { font-weight: 700; color: var(--azul); font-size: 14px; }
+  .registro-meta { font-size: 12px; color: #777; margin-top: 2px; }
+  .registro-badges { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .rbadge { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .rbadge-foto { background: #E8F5E9; color: #2E7D32; }
+  .rbadge-video { background: #FFEBEE; color: #C62828; }
+
+  .detalle-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; overflow-y: auto; }
+  .detalle-overlay.active { display: block; }
+  .detalle-modal { background: white; border-radius: 16px 16px 0 0; padding: 20px; margin-top: 40px; min-height: calc(100vh - 40px); }
+  .detalle-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .detalle-titulo { font-size: 18px; font-weight: 700; color: var(--azul); }
+  .detalle-seccion { margin-bottom: 16px; }
+  .detalle-seccion-titulo { font-size: 13px; font-weight: 700; color: var(--azul); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--azul-claro); }
+  .detalle-campo { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #F0F0F0; font-size: 14px; }
+  .detalle-campo:last-child { border-bottom: none; }
+  .detalle-campo-label { color: #777; }
+  .detalle-campo-valor { font-weight: 600; text-align: right; max-width: 60%; }
+
+  .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; }
+  .alert-success { background: #D4EDDA; color: #155724; border: 1px solid #C3E6CB; }
+  .alert-error { background: #F8D7DA; color: #721C24; border: 1px solid #F5C6CB; }
+  .alert-info { background: var(--azul-claro); color: var(--azul); border: 1px solid #B8D4E8; }
+
+  .guia-prenda { margin-bottom: 8px; }
+  .guia-prenda-nombre { font-weight: 700; font-size: 13px; color: var(--azul); margin-bottom: 4px; }
+  .guia-piezas-lista { display: flex; flex-wrap: wrap; gap: 4px; }
+  .guia-chip { background: var(--azul-claro); color: var(--azul); font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+  .guia-chip.sec { background: #FFF3CD; color: #856404; }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .badge-ok { background: #D4EDDA; color: #155724; }
+  .badge-err { background: #F8D7DA; color: #721C24; }
+
+  .config-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--borde); }
+  .config-item:last-child { border-bottom: none; }
+  .config-label { font-size: 14px; font-weight: 600; }
+  .config-sub { font-size: 12px; color: #777; margin-top: 2px; }
+
+  .empty { text-align: center; padding: 40px 20px; color: #999; }
+  .empty-icon { font-size: 40px; margin-bottom: 10px; }
+  .loading { text-align: center; padding: 20px; color: #777; font-size: 14px; }
+  .divider { height: 1px; background: var(--borde); margin: 16px 0; }
+  .text-muted { font-size: 12px; color: #777; }
+  .mt8 { margin-top: 8px; }
+  .mb8 { margin-bottom: 8px; }
+  .uploading { opacity: 0.6; pointer-events: none; }
+
+  .pieza-tag { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 12px; margin: 2px; font-weight: 600; }
+  .pieza-ok { background: #D4EDDA; color: #155724; }
+  .pieza-fail { background: #F8D7DA; color: #721C24; }
+
+  .radio-group { display: flex; gap: 12px; margin-top: 4px; }
+  .radio-label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; }
+  .radio-label input { width: auto; margin: 0; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-top">
+    <div style="width:32px;height:32px;background:rgba(255,255,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">T</div>
+    <h1>Taller IMIS — Producción</h1>
+  </div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" onclick="switchTab('trazo',this)">✂️ Trazo</div>
+    <div class="nav-tab" onclick="switchTab('tendido',this)">📋 Tendido</div>
+    <div class="nav-tab" onclick="switchTab('historial',this)">🗂 Historial</div>
+    <div class="nav-tab" onclick="switchTab('config',this)">⚙️ Config</div>
+  </div>
+</nav>
+
+<div class="container">
+
+<!-- ═══ TRAZO ═══ -->
+<div id="view-trazo" class="view active">
+  <div id="alert-trazo"></div>
+
+  <!-- Encabezado -->
+  <div class="card">
+    <div class="card-title">✂️ Nuevo Registro de Trazo</div>
+    <div class="row2">
+      <div class="field"><label>Fecha</label><input type="date" id="t-fecha"></div>
+      <div class="field"><label>Código de corte</label><input type="text" id="t-codigo" placeholder="Ej: C-01-A"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Capas</label><input type="number" id="t-capas" placeholder="Ej: 12" min="1"></div>
+      <div class="field"><label>Yardas estimadas</label><input type="number" id="t-yardas" placeholder="Ej: 45" step="0.5"></div>
+    </div>
+  </div>
+
+  <!-- Guía de piezas -->
+  <div class="card">
+    <div class="card-title" onclick="toggleGuia()" style="cursor:pointer">📋 Guía de piezas por prenda <span id="guia-icon">▼</span></div>
+    <div id="guia-piezas">
+      <div class="guia-prenda"><div class="guia-prenda-nombre">Camisa / Blusa</div><div class="guia-piezas-lista"><span class="guia-chip">Pechera ×2</span><span class="guia-chip">Trasero ×1</span><span class="guia-chip">Canesú ×2</span><span class="guia-chip">Manga ×2</span><span class="guia-chip">Cuello ×2</span><span class="guia-chip">Pie de cuello ×2</span><span class="guia-chip">Bolsillo ×1</span></div></div>
+      <div class="guia-prenda mt8"><div class="guia-prenda-nombre">Pantalón</div><div class="guia-piezas-lista"><span class="guia-chip">Delantero ×2</span><span class="guia-chip">Trasero ×2</span><span class="guia-chip">Pretina ×2</span><span class="guia-chip">Bolsa delantera visible ×2</span><span class="guia-chip sec">Bolsa interior ×2</span><span class="guia-chip sec">Bolsa trasera base ×2</span><span class="guia-chip sec">Tapadera ×2</span></div></div>
+      <div class="guia-prenda mt8"><div class="guia-prenda-nombre">Falda</div><div class="guia-piezas-lista"><span class="guia-chip">Delantero con paletones ×1</span><span class="guia-chip">Trasero ×2</span><span class="guia-chip">Pretina larga ×1</span><span class="guia-chip sec">Bolsa delantera ×4</span></div></div>
+      <div class="guia-prenda mt8"><div class="guia-prenda-nombre">Short parvularia</div><div class="guia-piezas-lista"><span class="guia-chip">Delantero ×2</span><span class="guia-chip">Trasero ×2</span><span class="guia-chip">Pretina ×1</span><span class="guia-chip sec">Bolsa ×4</span></div></div>
+      <div class="text-muted mt8">🔵 Azul = críticas de tono &nbsp; 🟡 Amarillo = secundarias</div>
+    </div>
+  </div>
+
+  <!-- Sección 1: Tallas del tendido -->
+  <div class="card">
+    <div class="card-title">1️⃣ Tallas del tendido</div>
+    <div class="tallas-input-wrapper">
+      <label>Escribir las tallas separadas por coma</label>
+      <input type="text" id="t-tallas-input" placeholder="4, 6, 8, 10, 12" oninput="procesarTallas()">
+      <div class="tallas-chips" id="t-tallas-chips"></div>
+    </div>
+
+    <div class="field">
+      <label>¿Hubo talla que no entró?</label>
+      <div class="radio-group">
+        <label class="radio-label"><input type="radio" name="t-no-entro" value="no" checked onchange="toggleNoEntro()"> No</label>
+        <label class="radio-label"><input type="radio" name="t-no-entro" value="si" onchange="toggleNoEntro()"> Sí</label>
+      </div>
+    </div>
+    <div id="t-no-entro-fields" style="display:none">
+      <div class="row2">
+        <div class="field"><label>Talla</label><input type="text" id="t-talla-no-entro" placeholder="Ej: 14"></div>
+        <div class="field"><label>Razón</label><input type="text" id="t-razon-no-entro" placeholder="Ej: no cupó en el tendido"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prendas con checklist -->
+  <div id="t-prendas-container"></div>
+  <button class="btn btn-ghost btn-block" onclick="agregarPrenda()">+ Agregar prenda al trazo</button>
+
+  <div class="divider"></div>
+
+  <!-- Piezas secundarias -->
+  <div class="card">
+    <div class="card-title">⚠️ Piezas secundarias pendientes</div>
+    <div id="t-secundarias-container"></div>
+    <button class="btn btn-ghost btn-sm mt8" onclick="agregarSecundaria()">+ Agregar pieza pendiente</button>
+  </div>
+
+  <!-- Foto -->
+  <div class="card">
+    <div class="card-title">📷 Foto del trazo</div>
+    <div class="foto-upload" onclick="document.getElementById('t-foto-input').click()">
+      <input type="file" id="t-foto-input" accept="image/*" capture="environment" onchange="previewFoto(this,'t-foto-preview','t-foto-label')">
+      <div class="foto-icon">📷</div>
+      <div id="t-foto-label" class="text-muted">Toca para tomar o adjuntar foto</div>
+      <img id="t-foto-preview" class="foto-preview" style="display:none">
+    </div>
+  </div>
+
+  <!-- Video -->
+  <div class="card">
+    <div class="card-title">🎥 Video del trazo</div>
+    <p class="text-muted mb8">Sube el video a YouTube (privado) o Google Drive y pega el enlace aquí.</p>
+    <div class="video-row">
+      <input type="url" id="t-video-url" placeholder="https://youtube.com/... o https://drive.google.com/...">
+      <button class="btn btn-video btn-sm" onclick="abrirVideo('t-video-url')">▶ Ver</button>
+    </div>
+  </div>
+
+  <!-- Observaciones -->
+  <div class="card">
+    <div class="field"><label>Observaciones</label><textarea id="t-observaciones" placeholder="Anotar cualquier situación relevante..."></textarea></div>
+  </div>
+
+  <button class="btn btn-success btn-block" id="btn-guardar-trazo" onclick="guardarTrazo()">💾 Guardar registro de trazo</button>
+</div>
+
+<!-- ═══ TENDIDO ═══ -->
+<div id="view-tendido" class="view">
+  <div id="alert-tendido"></div>
+  <div class="card">
+    <div class="card-title">📋 Nuevo Registro de Tendido</div>
+    <div class="row2">
+      <div class="field"><label>Fecha</label><input type="date" id="td-fecha"></div>
+      <div class="field"><label>Código de corte</label><input type="text" id="td-codigo" placeholder="Ej: C-01-A"></div>
+    </div>
+    <div class="field"><label>Prenda(s)</label><input type="text" id="td-prendas" placeholder="Ej: Pantalón / Falda"></div>
+    <div class="field"><label>Equipo del día</label><input type="text" id="td-equipo" placeholder="Ej: Sandra, Blanky, Tere, Paty"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🧻 Registro de rollos</div>
+    <div class="alert alert-info" style="font-size:12px;margin-bottom:12px">💡 Llenar rollo por rollo. El N° se asigna al terminar — el último tendido = N° 1.</div>
+    <div id="td-rollos-container"></div>
+    <button class="btn btn-ghost btn-sm mt8" onclick="agregarRollo()">+ Agregar rollo</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 Totales</div>
+    <div class="totales-grid">
+      <div class="total-item"><div class="total-valor" id="total-lienzos">0</div><div class="total-label">Lienzos</div></div>
+      <div class="total-item"><div class="total-valor" id="total-pares">0</div><div class="total-label">Pares</div></div>
+      <div class="total-item"><div class="total-valor" id="total-rollos">0</div><div class="total-label">Rollos</div></div>
+    </div>
+    <div class="row2 mt8">
+      <div class="total-item"><div class="total-valor" id="total-ycons">0</div><div class="total-label">Yardas consumidas</div></div>
+      <div class="total-item"><div class="total-valor" id="total-ysob">0</div><div class="total-label">Yardas sobrantes</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="field"><label>¿Se completó en un día?</label>
+      <select id="td-completo" onchange="document.getElementById('td-cont-field').style.display=this.value==='false'?'block':'none'">
+        <option value="true">Sí</option><option value="false">No</option>
+      </select>
+    </div>
+    <div class="field" id="td-cont-field" style="display:none"><label>Fecha de continuación</label><input type="date" id="td-continuacion"></div>
+    <div class="field"><label>Observaciones generales</label><textarea id="td-observaciones" placeholder="Variaciones de tono, problemas, notas..."></textarea></div>
+  </div>
+
+  <button class="btn btn-success btn-block" onclick="guardarTendido()">💾 Guardar registro de tendido</button>
+</div>
+
+<!-- ═══ HISTORIAL ═══ -->
+<div id="view-historial" class="view">
+  <div class="card">
+    <div class="card-title">🗂 Historial de registros</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn btn-primary btn-sm" id="hist-btn-trazo" onclick="switchHistorial('trazo')">✂️ Trazos</button>
+      <button class="btn btn-ghost btn-sm" id="hist-btn-tendido" onclick="switchHistorial('tendido')">📋 Tendidos</button>
+    </div>
+    <div id="historial-content"><div class="loading">Cargando...</div></div>
+  </div>
+</div>
+
+<!-- ═══ CONFIG ═══ -->
+<div id="view-config" class="view">
+  <div class="card">
+    <div class="card-title">⚙️ Configuración</div>
+    <div class="config-item"><div><div class="config-label">Supabase URL</div><div class="config-sub" id="cfg-url-display">—</div></div></div>
+    <div class="config-item">
+      <div><div class="config-label">Estado de conexión</div><div><span id="cfg-estado" class="badge badge-err">Sin verificar</span></div></div>
+      <button class="btn btn-ghost btn-sm" onclick="verificarConexion()">Verificar</button>
+    </div>
+    <div class="divider"></div>
+    <div class="field"><label>Supabase URL</label><input type="text" id="cfg-url" placeholder="https://xxxx.supabase.co"></div>
+    <div class="field"><label>Anon Key</label><input type="text" id="cfg-key" placeholder="eyJ..."></div>
+    <button class="btn btn-primary btn-block" onclick="guardarConfig()">Guardar configuración</button>
+  </div>
+</div>
+
+</div>
+
+<!-- DETALLE OVERLAY -->
+<div id="detalle-overlay" class="detalle-overlay">
+  <div class="detalle-modal">
+    <div class="detalle-header">
+      <div class="detalle-titulo" id="det-titulo">Detalle</div>
+      <button class="btn btn-ghost btn-sm" onclick="cerrarDetalle()">✕ Cerrar</button>
+    </div>
+    <div id="det-contenido"></div>
+  </div>
+</div>
+
+<script>
+let SUPA_URL = localStorage.getItem('supa_url') || 'https://kszdievqesveluzcnzsh.supabase.co';
+let SUPA_KEY = localStorage.getItem('supa_key') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzemRpZXZxZXN2ZWx1emNuenNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MTgwMTgsImV4cCI6MjA5MDM5NDAxOH0.r28goEyUxZeKK9j0efu1BXC8ssU9lYxRK7dp3BGix1M';
+
+const PRENDAS_LISTA = ['Camisa','Blusa','Pantalón','Falda','Short'];
+let prendasTrazo = [], prendasCount = 0;
+let secundariasCount = 0, rollosCount = 0;
+let tallasActuales = [];
+let fotoBlob = null;
+let historialTipo = 'trazo';
+
+function switchTab(tab, el) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + tab).classList.add('active');
+  el.classList.add('active');
+  if (tab === 'historial') cargarHistorial('trazo');
+  if (tab === 'config') initConfig();
+}
+
+async function supaFetch(table, method = 'GET', body = null, params = '') {
+  const url = `${SUPA_URL}/rest/v1/${table}${params}`;
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Prefer': method === 'POST' ? 'return=representation' : '' }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  if (!res.ok) throw new Error(await res.text());
+  return method === 'DELETE' ? null : res.json();
+}
+
+async function supaUploadFoto(file, trazoId) {
+  const ext = file.name.split('.').pop();
+  const path = `${trazoId}.${ext}`;
+  const res = await fetch(`${SUPA_URL}/storage/v1/object/trazo-fotos/${path}`, {
+    method: 'POST',
+    headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': file.type },
+    body: file
+  });
+  if (!res.ok) throw new Error('Error subiendo foto');
+  return `${SUPA_URL}/storage/v1/object/public/trazo-fotos/${path}`;
+}
+
+async function supaUpdate(table, id, data) {
+  const res = await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
+function previewFoto(input, previewId, labelId) {
+  const file = input.files[0];
+  if (!file) return;
+  fotoBlob = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById(previewId);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById(labelId).textContent = '✅ Foto lista para guardar';
+  };
+  reader.readAsDataURL(file);
+}
+
+function abrirVideo(inputId) {
+  const url = document.getElementById(inputId).value.trim();
+  if (!url) { alert('Ingresa un enlace primero'); return; }
+  window.open(url, '_blank');
+}
+
+function toggleGuia() {
+  const g = document.getElementById('guia-piezas');
+  const i = document.getElementById('guia-icon');
+  const v = g.style.display !== 'none';
+  g.style.display = v ? 'none' : 'block';
+  i.textContent = v ? '▶' : '▼';
+}
+
+function toggleNoEntro() {
+  const val = document.querySelector('input[name="t-no-entro"]:checked').value;
+  document.getElementById('t-no-entro-fields').style.display = val === 'si' ? 'block' : 'none';
+}
+
+// ── TALLAS DEL TENDIDO ────────────────────────────────────────────────────
+function procesarTallas() {
+  const raw = document.getElementById('t-tallas-input').value;
+  tallasActuales = raw.split(',').map(t => t.trim()).filter(t => t.length > 0);
+
+  // Mostrar chips
+  const chips = document.getElementById('t-tallas-chips');
+  chips.innerHTML = tallasActuales.map(t => `<span class="talla-chip">${t}</span>`).join('');
+
+  // Actualizar checklists de todas las prendas
+  prendasTrazo.forEach(p => {
+    if (p.prenda) regenerarChecklist(p.id);
+  });
+}
+
+// ── TRAZO ─────────────────────────────────────────────────────────────────
+function initTrazo() {
+  document.getElementById('t-fecha').value = new Date().toISOString().split('T')[0];
+  prendasTrazo = []; prendasCount = 0;
+  secundariasCount = 0;
+  fotoBlob = null;
+  tallasActuales = [];
+  document.getElementById('t-prendas-container').innerHTML = '';
+  document.getElementById('t-secundarias-container').innerHTML = '';
+  document.getElementById('t-tallas-chips').innerHTML = '';
+  ['t-codigo','t-capas','t-yardas','t-observaciones','t-video-url','t-tallas-input','t-talla-no-entro','t-razon-no-entro'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.querySelector('input[name="t-no-entro"][value="no"]').checked = true;
+  document.getElementById('t-no-entro-fields').style.display = 'none';
+  const preview = document.getElementById('t-foto-preview');
+  if (preview) { preview.style.display = 'none'; preview.src = ''; }
+  document.getElementById('t-foto-label').textContent = 'Toca para tomar o adjuntar foto';
+  agregarPrenda();
+}
+
+function agregarPrenda() {
+  prendasCount++;
+  const id = prendasCount;
+  const letra = String.fromCharCode(64 + id);
+  prendasTrazo.push({ id, letra, prenda: '' });
+  const div = document.createElement('div');
+  div.className = 'prenda-seccion';
+  div.id = `prenda-sec-${id}`;
+  div.innerHTML = `
+    <div class="prenda-header">
+      <span class="prenda-badge">PRENDA ${letra}</span>
+      <select onchange="onPrendaChange(${id},this.value)" style="flex:1;padding:8px;border:1px solid var(--borde);border-radius:8px;font-size:14px">
+        <option value="">— Seleccionar prenda —</option>
+        ${PRENDAS_LISTA.map(p=>`<option value="${p}">${p}</option>`).join('')}
+      </select>
+      ${id>1?`<button class="btn btn-danger" onclick="quitarPrenda(${id})">✕</button>`:''}
+    </div>
+    <div id="checklist-${id}"></div>
+  `;
+  document.getElementById('t-prendas-container').appendChild(div);
+}
+
+function quitarPrenda(id) {
+  document.getElementById(`prenda-sec-${id}`).remove();
+  prendasTrazo = prendasTrazo.filter(p => p.id !== id);
+}
+
+function onPrendaChange(id, prenda) {
+  const p = prendasTrazo.find(x => x.id === id);
+  if (p) p.prenda = prenda;
+  regenerarChecklist(id);
+}
+
+function regenerarChecklist(id) {
+  const container = document.getElementById(`checklist-${id}`);
+  const p = prendasTrazo.find(x => x.id === id);
+  if (!p || !p.prenda) { container.innerHTML = ''; return; }
+
+  if (tallasActuales.length === 0) {
+    container.innerHTML = `<div class="alert alert-info" style="font-size:13px">⬆️ Primero escribe las tallas del tendido arriba</div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <button class="btn btn-ghost btn-sm mb8" onclick="agregarPieza(${id})">+ Agregar pieza</button>
+    <div style="overflow-x:auto">
+    <table class="tabla-piezas" id="tabla-${id}">
+      <thead>
+        <tr>
+          <th style="min-width:110px">Pieza</th>
+          ${tallasActuales.map(t => `<th style="min-width:50px;text-align:center">${t}</th>`).join('')}
+          <th style="min-width:130px">Pieza faltante</th>
+          <th style="min-width:70px;text-align:center">Sec?</th>
+          <th style="min-width:70px;text-align:center">Resuelta?</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody-${id}"></tbody>
+    </table>
+    </div>
+  `;
+}
+
+function agregarPieza(prendaId) {
+  const tbody = document.getElementById(`tbody-${prendaId}`);
+  if (!tbody) return;
+  const filaId = `fila-${prendaId}-${Date.now()}`;
+  const tr = document.createElement('tr');
+  tr.id = filaId;
+  tr.innerHTML = `
+    <td><input type="text" placeholder="Ej: Pechera" data-field="pieza"></td>
+    ${tallasActuales.map(t => `<td style="text-align:center"><input type="checkbox" data-talla="${t}"></td>`).join('')}
+    <td><input type="text" placeholder="Si ✗ cuál" data-field="pieza_faltante"></td>
+    <td style="text-align:center"><input type="checkbox" data-field="es_secundaria"></td>
+    <td style="text-align:center"><input type="checkbox" data-field="resuelta"></td>
+    <td><button class="btn btn-danger" onclick="document.getElementById('${filaId}').remove()">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function agregarSecundaria() {
+  secundariasCount++;
+  const id = secundariasCount;
+  const div = document.createElement('div');
+  div.className = 'rollo-card';
+  div.id = `sec-${id}`;
+  div.style.borderLeftColor = '#FFC107';
+  div.innerHTML = `
+    <div class="rollo-header">
+      <span class="rollo-num" style="color:#856404">Pieza pendiente #${id}</span>
+      <button class="btn btn-danger" onclick="document.getElementById('sec-${id}').remove()">✕</button>
+    </div>
+    <div class="row3">
+      <div class="field"><label>Prenda</label><input type="text" data-sec="${id}" data-field="prenda"></div>
+      <div class="field"><label>Pieza</label><input type="text" data-sec="${id}" data-field="pieza"></div>
+      <div class="field"><label>Tallas afectadas</label><input type="text" data-sec="${id}" data-field="tallas"></div>
+    </div>
+    <div class="field"><label>Acción / Pendiente</label><input type="text" data-sec="${id}" data-field="accion"></div>
+  `;
+  document.getElementById('t-secundarias-container').appendChild(div);
+}
+
+async function guardarTrazo() {
+  const fecha = document.getElementById('t-fecha').value;
+  const codigo = document.getElementById('t-codigo').value.trim();
+  if (!fecha || !codigo) { mostrarAlerta('trazo','error','Fecha y código son obligatorios.'); return; }
+
+  const btn = document.getElementById('btn-guardar-trazo');
+  btn.textContent = '⏳ Guardando...';
+  btn.classList.add('uploading');
+
+  try {
+    const noEntroVal = document.querySelector('input[name="t-no-entro"]:checked').value;
+    const [trazo] = await supaFetch('trazo','POST',{
+      fecha, codigo_corte: codigo,
+      capas: document.getElementById('t-capas').value ? parseInt(document.getElementById('t-capas').value) : null,
+      yardas_estimadas: document.getElementById('t-yardas').value ? parseFloat(document.getElementById('t-yardas').value) : null,
+      tallas_tendido: tallasActuales.join(', ') || null,
+      talla_no_entro: noEntroVal === 'si' ? (document.getElementById('t-talla-no-entro').value || null) : null,
+      razon_no_entro: noEntroVal === 'si' ? (document.getElementById('t-razon-no-entro').value || null) : null,
+      observaciones: document.getElementById('t-observaciones').value || null,
+      video_url: document.getElementById('t-video-url').value.trim() || null,
+    });
+
+    // Foto
+    if (fotoBlob) {
+      try {
+        const fotoUrl = await supaUploadFoto(fotoBlob, trazo.id);
+        await supaUpdate('trazo', trazo.id, { foto_url: fotoUrl });
+      } catch(e) { console.warn('Foto error:', e); }
+    }
+
+    // Prendas y checklists
+    for (const p of prendasTrazo) {
+      if (!p.prenda) continue;
+      const [tPrenda] = await supaFetch('trazo_prenda','POST',{ trazo_id: trazo.id, prenda: p.prenda, orden: p.id });
+
+      const tbody = document.getElementById(`tbody-${p.id}`);
+      if (!tbody) continue;
+
+      const filas = tbody.querySelectorAll('tr');
+      let orden = 1;
+      for (const fila of filas) {
+        const piezaInp = fila.querySelector('[data-field="pieza"]');
+        if (!piezaInp || !piezaInp.value.trim()) continue;
+
+        const tallasEstado = {};
+        fila.querySelectorAll('[data-talla]').forEach(cb => {
+          tallasEstado[cb.dataset.talla] = cb.checked;
+        });
+
+        await supaFetch('trazo_checklist','POST',{
+          trazo_prenda_id: tPrenda.id,
+          pieza: piezaInp.value.trim(),
+          tallas_estado: tallasEstado,
+          pieza_faltante: fila.querySelector('[data-field="pieza_faltante"]').value.trim() || null,
+          es_secundaria: fila.querySelector('[data-field="es_secundaria"]').checked,
+          resuelta: fila.querySelector('[data-field="resuelta"]').checked,
+          orden: orden++
+        });
+      }
+    }
+
+    // Secundarias
+    const secsMap = {};
+    document.querySelectorAll('[data-sec]').forEach(el => {
+      const id = el.dataset.sec;
+      if (!secsMap[id]) secsMap[id] = {};
+      secsMap[id][el.dataset.field] = el.value;
+    });
+    for (const [,sec] of Object.entries(secsMap)) {
+      if (sec.prenda || sec.pieza) {
+        await supaFetch('trazo_secundaria','POST',{ trazo_id:trazo.id, prenda:sec.prenda||null, pieza:sec.pieza||null, tallas_afectadas:sec.tallas||null, accion:sec.accion||null });
+      }
+    }
+
+    mostrarAlerta('trazo','success',`✅ Trazo ${codigo} guardado correctamente.`);
+    setTimeout(() => { btn.textContent='💾 Guardar registro de trazo'; btn.classList.remove('uploading'); initTrazo(); }, 1500);
+  } catch(e) {
+    mostrarAlerta('trazo','error','Error al guardar: ' + e.message);
+    btn.textContent = '💾 Guardar registro de trazo';
+    btn.classList.remove('uploading');
+  }
+}
+
+// ── TENDIDO ───────────────────────────────────────────────────────────────
+function initTendido() {
+  document.getElementById('td-fecha').value = new Date().toISOString().split('T')[0];
+  rollosCount = 0;
+  document.getElementById('td-rollos-container').innerHTML = '';
+  ['td-codigo','td-prendas','td-equipo','td-observaciones'].forEach(id => document.getElementById(id).value = '');
+  agregarRollo();
+}
+
+function agregarRollo() {
+  rollosCount++;
+  const id = rollosCount;
+  const div = document.createElement('div');
+  div.className = 'rollo-card';
+  div.id = `rollo-${id}`;
+  div.innerHTML = `
+    <div class="rollo-header">
+      <span class="rollo-num">Rollo #${id}</span>
+      ${id>1?`<button class="btn btn-danger" onclick="document.getElementById('rollo-${id}').remove();calcularTotales()">✕</button>`:''}
+    </div>
+    <div class="row2">
+      <div class="field"><label>Código del rollo</label><input type="text" data-rollo="${id}" data-field="codigo_rollo" oninput="calcularTotales()"></div>
+      <div class="field"><label>Yardas del rollo</label><input type="number" step="0.5" data-rollo="${id}" data-field="yardas_rollo" oninput="calcularTotales()"></div>
+    </div>
+    <div class="row3">
+      <div class="field"><label>Lienzos</label><input type="number" data-rollo="${id}" data-field="lienzos_salidos" oninput="calcularTotales()"></div>
+      <div class="field"><label>Pares</label><input type="number" data-rollo="${id}" data-field="pares" oninput="calcularTotales()"></div>
+      <div class="field"><label>Yardas sobrantes</label><input type="number" step="0.5" data-rollo="${id}" data-field="yardas_sobrantes" oninput="calcularTotales()"></div>
+    </div>
+    <div class="field"><label>Obs. de tono</label><input type="text" data-rollo="${id}" data-field="observacion_tono"></div>
+  `;
+  document.getElementById('td-rollos-container').appendChild(div);
+}
+
+function calcularTotales() {
+  let lienzos=0,pares=0,ycons=0,ysob=0;
+  const seen = new Set();
+  document.querySelectorAll('[data-rollo]').forEach(el => {
+    seen.add(el.dataset.rollo);
+    const v = parseFloat(el.value)||0;
+    if(el.dataset.field==='lienzos_salidos') lienzos+=v;
+    if(el.dataset.field==='pares') pares+=v;
+    if(el.dataset.field==='yardas_rollo') ycons+=v;
+    if(el.dataset.field==='yardas_sobrantes') ysob+=v;
+  });
+  document.getElementById('total-lienzos').textContent=lienzos;
+  document.getElementById('total-pares').textContent=pares;
+  document.getElementById('total-rollos').textContent=seen.size;
+  document.getElementById('total-ycons').textContent=ycons.toFixed(1);
+  document.getElementById('total-ysob').textContent=ysob.toFixed(1);
+}
+
+async function guardarTendido() {
+  const fecha=document.getElementById('td-fecha').value;
+  const codigo=document.getElementById('td-codigo').value.trim();
+  if(!fecha||!codigo){mostrarAlerta('tendido','error','Fecha y código son obligatorios.');return;}
+  try {
+    const completo=document.getElementById('td-completo').value==='true';
+    const [tendido]=await supaFetch('tendido','POST',{
+      fecha,codigo_corte:codigo,
+      prendas:document.getElementById('td-prendas').value||null,
+      equipo:document.getElementById('td-equipo').value||null,
+      completo_en_un_dia:completo,
+      fecha_continuacion:(!completo&&document.getElementById('td-continuacion').value)?document.getElementById('td-continuacion').value:null,
+      observaciones_generales:document.getElementById('td-observaciones').value||null
+    });
+    const rollosMap={};
+    document.querySelectorAll('[data-rollo]').forEach(el=>{
+      const id=el.dataset.rollo;
+      if(!rollosMap[id]) rollosMap[id]={numero_rollo:parseInt(id)};
+      const v=el.value;
+      const f=el.dataset.field;
+      rollosMap[id][f]=['yardas_rollo','lienzos_salidos','pares','yardas_sobrantes'].includes(f)?(v?parseFloat(v):null):(v||null);
+    });
+    for(const[,rollo] of Object.entries(rollosMap)){
+      await supaFetch('tendido_rollo','POST',{tendido_id:tendido.id,...rollo});
+    }
+    mostrarAlerta('tendido','success',`✅ Tendido ${codigo} guardado.`);
+    setTimeout(()=>initTendido(),1500);
+  } catch(e){mostrarAlerta('tendido','error','Error: '+e.message);}
+}
+
+// ── HISTORIAL ─────────────────────────────────────────────────────────────
+function switchHistorial(tipo) {
+  historialTipo = tipo;
+  document.getElementById('hist-btn-trazo').className = tipo==='trazo'?'btn btn-primary btn-sm':'btn btn-ghost btn-sm';
+  document.getElementById('hist-btn-tendido').className = tipo==='tendido'?'btn btn-primary btn-sm':'btn btn-ghost btn-sm';
+  cargarHistorial(tipo);
+}
+
+async function cargarHistorial(tipo) {
+  historialTipo = tipo;
+  const container = document.getElementById('historial-content');
+  container.innerHTML = '<div class="loading">Cargando...</div>';
+  try {
+    const data = await supaFetch(tipo,'GET',null,'?order=creado_en.desc&limit=50');
+    if(!data.length){
+      container.innerHTML=`<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No hay registros todavía</div></div>`;
+      return;
+    }
+    container.innerHTML = data.map(r=>`
+      <div class="registro-item" onclick="verDetalle('${tipo}','${r.id}')">
+        <div class="registro-codigo">${r.codigo_corte}</div>
+        <div class="registro-meta">${r.fecha} · ${tipo==='trazo'?`${r.capas||'?'} capas · Tallas: ${r.tallas_tendido||'—'}`:`${r.prendas||''} · ${r.equipo||''}`}</div>
+        <div class="registro-badges">
+          ${r.foto_url?'<span class="rbadge rbadge-foto">📷 Foto</span>':''}
+          ${r.video_url?'<span class="rbadge rbadge-video">🎥 Video</span>':''}
+          ${r.observaciones||r.observaciones_generales?`<span class="rbadge" style="background:#F0F0F0;color:#555">💬 Obs</span>`:''}
+        </div>
+      </div>
+    `).join('');
+  } catch(e){
+    container.innerHTML=`<div class="alert alert-error">Error: ${e.message}</div>`;
+  }
+}
+
+async function verDetalle(tipo, id) {
+  document.getElementById('detalle-overlay').classList.add('active');
+  document.getElementById('det-contenido').innerHTML = '<div class="loading">Cargando...</div>';
+
+  try {
+    if (tipo === 'trazo') {
+      const [trazo] = await supaFetch('trazo','GET',null,`?id=eq.${id}`);
+      const prendas = await supaFetch('trazo_prenda','GET',null,`?trazo_id=eq.${id}&order=orden`);
+      const checklistData = prendas.length ? await supaFetch('trazo_checklist','GET',null,`?trazo_prenda_id=in.(${prendas.map(p=>p.id).join(',')})&order=orden`) : [];
+      const secundarias = await supaFetch('trazo_secundaria','GET',null,`?trazo_id=eq.${id}`);
+
+      document.getElementById('det-titulo').textContent = `Trazo ${trazo.codigo_corte}`;
+
+      let html = `
+        <div class="detalle-seccion">
+          <div class="detalle-seccion-titulo">Datos generales</div>
+          <div class="detalle-campo"><span class="detalle-campo-label">Fecha</span><span class="detalle-campo-valor">${trazo.fecha}</span></div>
+          <div class="detalle-campo"><span class="detalle-campo-label">Código</span><span class="detalle-campo-valor">${trazo.codigo_corte}</span></div>
+          <div class="detalle-campo"><span class="detalle-campo-label">Capas</span><span class="detalle-campo-valor">${trazo.capas||'—'}</span></div>
+          <div class="detalle-campo"><span class="detalle-campo-label">Yardas</span><span class="detalle-campo-valor">${trazo.yardas_estimadas||'—'}</span></div>
+          <div class="detalle-campo"><span class="detalle-campo-label">Tallas del tendido</span><span class="detalle-campo-valor">${trazo.tallas_tendido||'—'}</span></div>
+          ${trazo.talla_no_entro?`<div class="detalle-campo"><span class="detalle-campo-label">Talla no entró</span><span class="detalle-campo-valor">${trazo.talla_no_entro} — ${trazo.razon_no_entro||''}</span></div>`:''}
+        </div>
+      `;
+
+      for (const prenda of prendas) {
+        const items = checklistData.filter(c => c.trazo_prenda_id === prenda.id);
+        html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo">Prenda: ${prenda.prenda}</div>`;
+        if (items.length === 0) {
+          html += `<p class="text-muted">Sin piezas registradas</p>`;
+        } else {
+          items.forEach(it => {
+            const tallas = it.tallas_estado || {};
+            const tags = Object.entries(tallas).map(([t, ok]) => `<span class="pieza-tag ${ok?'pieza-ok':'pieza-fail'}">${t} ${ok?'✓':'✗'}</span>`).join('');
+            html += `
+              <div style="margin-bottom:10px;padding:8px;background:var(--gris);border-radius:6px">
+                <strong style="font-size:14px">${it.pieza}</strong>
+                ${it.es_secundaria?'<span class="rbadge" style="background:#FFF3CD;color:#856404;margin-left:6px">Secundaria</span>':''}
+                ${it.resuelta?'<span class="rbadge rbadge-foto" style="margin-left:6px">Resuelta</span>':''}
+                <div style="margin-top:6px">${tags}</div>
+                ${it.pieza_faltante?`<div class="text-muted" style="margin-top:4px">Faltante: ${it.pieza_faltante}</div>`:''}
+              </div>
+            `;
+          });
+        }
+        html += `</div>`;
+      }
+
+      if (secundarias.length) {
+        html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo">Piezas secundarias pendientes</div>`;
+        secundarias.forEach(s => {
+          html += `<div class="detalle-campo"><span class="detalle-campo-label">${s.prenda||''} · ${s.pieza||''}</span><span class="detalle-campo-valor">${s.tallas_afectadas||''} — ${s.accion||''}</span></div>`;
+        });
+        html += `</div>`;
+      }
+
+      if (trazo.observaciones) html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo">Observaciones</div><p style="font-size:14px">${trazo.observaciones}</p></div>`;
+
+      html += `
+        <div class="detalle-seccion">
+          <div class="detalle-seccion-titulo">Foto del trazo</div>
+          ${trazo.foto_url ? `<img src="${trazo.foto_url}" style="width:100%;border-radius:8px;margin-bottom:8px">` : '<p class="text-muted">Sin foto</p>'}
+          <div class="foto-upload mt8" onclick="document.getElementById('det-foto-input-${id}').click()" style="padding:12px">
+            <input type="file" id="det-foto-input-${id}" accept="image/*" capture="environment" onchange="actualizarFoto(this,'${id}')">
+            <div style="font-size:13px">📷 ${trazo.foto_url?'Cambiar foto':'Agregar foto'}</div>
+          </div>
+        </div>
+        <div class="detalle-seccion">
+          <div class="detalle-seccion-titulo">Video del trazo</div>
+          <div class="video-row">
+            <input type="url" id="det-video-${id}" value="${trazo.video_url||''}" placeholder="Enlace YouTube o Drive">
+            <button class="btn btn-video btn-sm" onclick="abrirVideo('det-video-${id}')">▶</button>
+          </div>
+          <button class="btn btn-primary btn-sm mt8" onclick="actualizarVideo('${id}','det-video-${id}')">💾 Guardar enlace</button>
+        </div>
+      `;
+
+      document.getElementById('det-contenido').innerHTML = html;
+    } else {
+      const [tend] = await supaFetch('tendido','GET',null,`?id=eq.${id}`);
+      const rollos = await supaFetch('tendido_rollo','GET',null,`?tendido_id=eq.${id}&order=numero_rollo`);
+      document.getElementById('det-titulo').textContent = `Tendido ${tend.codigo_corte}`;
+
+      let totalL=0,totalP=0,totalYC=0,totalYS=0;
+      rollos.forEach(r=>{totalL+=r.lienzos_salidos||0;totalP+=r.pares||0;totalYC+=parseFloat(r.yardas_rollo)||0;totalYS+=parseFloat(r.yardas_sobrantes)||0;});
+
+      let html = `
+        <div class="detalle-seccion">
+          <div class="detalle-seccion-titulo">Datos generales</div>
+          <div class="detalle-campo"><span class="detalle-campo-label">Fecha</span><span class="detalle-campo-valor">${tend.fecha}</span></div>
+          <div class="detalle-campo"><span class="detalle-campo-label">Código</span><span class="detalle-campo-valor">${tend.codigo_corte}</span></div>
+          <div class="detalle-campo"><span class="detalle-campo-label">Prendas</span><span class="detalle-campo-valor">${tend.prendas||'—'}</span></div>
+          <div class="detalle-campo"><span class="detalle-campo-label">Equipo</span><span class="detalle-campo-valor">${tend.equipo||'—'}</span></div>
+          <div class="detalle-campo"><span class="detalle-campo-label">Completado en un día</span><span class="detalle-campo-valor">${tend.completo_en_un_dia?'Sí':'No — '+tend.fecha_continuacion}</span></div>
+        </div>
+        <div class="detalle-seccion">
+          <div class="detalle-seccion-titulo">Totales</div>
+          <div class="totales-grid">
+            <div class="total-item"><div class="total-valor">${totalL}</div><div class="total-label">Lienzos</div></div>
+            <div class="total-item"><div class="total-valor">${totalP}</div><div class="total-label">Pares</div></div>
+            <div class="total-item"><div class="total-valor">${rollos.length}</div><div class="total-label">Rollos</div></div>
+          </div>
+          <div class="row2 mt8">
+            <div class="total-item"><div class="total-valor">${totalYC.toFixed(1)}</div><div class="total-label">Yds consumidas</div></div>
+            <div class="total-item"><div class="total-valor">${totalYS.toFixed(1)}</div><div class="total-label">Yds sobrantes</div></div>
+          </div>
+        </div>
+        <div class="detalle-seccion">
+          <div class="detalle-seccion-titulo">Rollos</div>
+          ${rollos.map(r=>`
+            <div class="rollo-card" style="margin-bottom:8px">
+              <strong>Rollo #${r.numero_rollo||'—'}</strong> · ${r.codigo_rollo||'Sin código'}
+              <div class="row3 mt8">
+                <div><div class="text-muted">Yardas</div><strong>${r.yardas_rollo||'—'}</strong></div>
+                <div><div class="text-muted">Lienzos</div><strong>${r.lienzos_salidos||'—'}</strong></div>
+                <div><div class="text-muted">Pares</div><strong>${r.pares||'—'}</strong></div>
+              </div>
+              ${r.observacion_tono?`<div class="text-muted mt8" style="font-size:12px">⚠️ ${r.observacion_tono}</div>`:''}
+            </div>
+          `).join('')}
+        </div>
+      `;
+      if (tend.observaciones_generales) html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo">Observaciones</div><p style="font-size:14px">${tend.observaciones_generales}</p></div>`;
+      document.getElementById('det-contenido').innerHTML = html;
+    }
+  } catch(e) {
+    document.getElementById('det-contenido').innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+  }
+}
+
+async function actualizarFoto(input, trazoId) {
+  const file = input.files[0];
+  if (!file) return;
+  try {
+    const fotoUrl = await supaUploadFoto(file, trazoId);
+    await supaUpdate('trazo', trazoId, { foto_url: fotoUrl });
+    alert('✅ Foto actualizada');
+    verDetalle('trazo', trazoId);
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function actualizarVideo(trazoId, inputId) {
+  const url = document.getElementById(inputId).value.trim();
+  try {
+    await supaUpdate('trazo', trazoId, { video_url: url || null });
+    alert('✅ Video guardado');
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function cerrarDetalle() {
+  document.getElementById('detalle-overlay').classList.remove('active');
+  if (historialTipo) cargarHistorial(historialTipo);
+}
+
+// ── CONFIG ────────────────────────────────────────────────────────────────
+function initConfig() {
+  document.getElementById('cfg-url').value = SUPA_URL;
+  document.getElementById('cfg-key').value = SUPA_KEY;
+  document.getElementById('cfg-url-display').textContent = SUPA_URL;
+}
+
+function guardarConfig() {
+  SUPA_URL = document.getElementById('cfg-url').value.trim();
+  SUPA_KEY = document.getElementById('cfg-key').value.trim();
+  localStorage.setItem('supa_url', SUPA_URL);
+  localStorage.setItem('supa_key', SUPA_KEY);
+  document.getElementById('cfg-url-display').textContent = SUPA_URL;
+  alert('Configuración guardada');
+}
+
+async function verificarConexion() {
+  const badge = document.getElementById('cfg-estado');
+  badge.textContent = 'Verificando...';
+  badge.className = 'badge';
+  try {
+    await supaFetch('trazo','GET',null,'?limit=1');
+    badge.textContent = 'Conectado ✓';
+    badge.className = 'badge badge-ok';
+  } catch(e) {
+    badge.textContent = 'Error de conexión';
+    badge.className = 'badge badge-err';
+  }
+}
+
+function mostrarAlerta(sec, tipo, msg) {
+  const el = document.getElementById(`alert-${sec}`);
+  el.innerHTML = `<div class="alert alert-${tipo==='error'?'error':'success'}">${msg}</div>`;
+  setTimeout(() => el.innerHTML='', 4000);
+}
+
+initTrazo();
+initTendido();
+</script>
+</body>
+</html>
