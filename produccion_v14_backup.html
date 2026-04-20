@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Taller IMIS — Producción v15</title>
+<title>Taller IMIS — Producción v13</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -152,12 +152,6 @@
   .prod-btn-terminar { background: var(--verde); color: white; border-color: var(--verde); }
   .prod-btn-terminar:hover { background: #2E7D32; }
   .prod-btn-revertir { background: white; color: #999; }
-  .prod-btn-dividir { background: #E1BEE7; color: #4A148C; border-color: #CE93D8; }
-  .prod-btn-unir { background: #BBDEFB; color: #0D47A1; border-color: #90CAF9; }
-  .prod-bulto-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
-  .prod-badge { font-size: 10px; padding: 2px 6px; border-radius: 8px; font-weight: 700; }
-  .prod-badge-div { background: #E1BEE7; color: #4A148C; }
-  .prod-badge-unido { background: #BBDEFB; color: #0D47A1; }
 
   .detalle-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; padding: 16px; overflow-y: auto; }
   .detalle-overlay.active { display: block; }
@@ -243,7 +237,7 @@
 <nav>
   <div class="nav-top">
     <div style="width:32px;height:32px;background:rgba(255,255,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">T</div>
-    <h1>Taller IMIS — Producción v15</h1>
+    <h1>Taller IMIS — Producción v13</h1>
   </div>
   <div class="nav-tabs">
     <div class="nav-tab active" onclick="switchTab('nuevo',this)">➕ Nuevo</div>
@@ -980,38 +974,10 @@ function onKeyInput(id) {
   const drop = document.getElementById(`keydrop-${id}`);
   if (!inp || !drop) return;
   const q = (inp.value || '').trim().toUpperCase();
-
-  // Armar opciones con talla/largo parseados + puntuación de relevancia
-  let opcionesRaw = (CATALOGO[prenda]?.keys || [])
-    .map(k => {
-      const p = parsearKey(k);
-      let score = 0;
-      if (q) {
-        const matchKey = k.toUpperCase().includes(q);
-        if (!matchKey) return null;
-        // Priorizar: si la query matchea la TALLA exacta, score alto
-        if (p && p.talla !== null && String(p.talla) === q) score = 1000;
-        // Si la query aparece como prefijo de la talla, score medio
-        else if (p && p.talla !== null && String(p.talla).startsWith(q)) score = 500;
-        // Si matchea en cualquier otra parte, score bajo
-        else score = 100;
-      }
-      return { key: k, cod: prenda, nombre: CATALOGO[prenda].nombre, talla: p?.talla ?? 999, largo: p?.largo ?? 0, score };
-    })
-    .filter(x => x !== null);
-
-  // Ordenar: score desc → talla asc → largo desc
-  opcionesRaw.sort((a, b) => {
-    if (a.score !== b.score) return b.score - a.score;
-    if (a.talla !== b.talla) return a.talla - b.talla;
-    return b.largo - a.largo;
-  });
-
-  // Límite más generoso
-  const LIMITE = 100;
-  const totalMatches = opcionesRaw.length;
-  const opciones = opcionesRaw.slice(0, LIMITE);
-
+  let opciones = (CATALOGO[prenda]?.keys || [])
+    .filter(k => !q || k.toUpperCase().includes(q))
+    .map(k => ({ key: k, cod: prenda, nombre: CATALOGO[prenda].nombre }))
+    .slice(0, 30);
   const existeExacta = opciones.some(o => o.key.toUpperCase() === q);
   let html = '';
   if (opciones.length === 0 && !q) {
@@ -1022,9 +988,6 @@ function onKeyInput(id) {
         <strong>${o.key}</strong>
       </div>
     `).join('');
-    if (totalMatches > LIMITE) {
-      html += `<div class="key-option text-muted" style="font-style:italic;font-size:11px">... y ${totalMatches - LIMITE} más. Escribí más para filtrar.</div>`;
-    }
   }
   if (q && !existeExacta) {
     html += `
@@ -1423,18 +1386,10 @@ async function confirmarMiniModal() {
     await asignarComplementoPorKey(ctx.idFila, keyElegida);
     return;
   }
-
-  if (ctx.tipo === 'unirBultos') {
-    await ejecutarUnion();
-    return;
-  }
 }
 
 function cerrarMiniModal() {
   document.getElementById('mini-modal').classList.remove('active');
-  // Restaurar texto por defecto del botón OK
-  const btnOk = document.getElementById('mm-ok');
-  if (btnOk) btnOk.textContent = 'Agregar';
   // Si el select de complemento quedó con valor especial y no se confirmó, volver a vacío
   if (miniModalContext?.idFila) {
     const row = document.getElementById(`ttrazo-${miniModalContext.idFila}`);
@@ -2625,9 +2580,8 @@ async function cargarProduccion() {
     produccionData = await supaFetch('vw_produccion_estado','GET',null,'?limit=2000');
 
     // Auto-crear produccion_bulto para salidas sin seguimiento aún
-    // (produccion_bulto_id es NULL cuando nunca se creó registro)
-    const sinRegistro = produccionData.filter(b => !b.produccion_bulto_id);
-    for (const b of sinRegistro) {
+    const sinIniciar = produccionData.filter(b => b.estado === 'sin_iniciar');
+    for (const b of sinIniciar) {
       try {
         const [nuevo] = await supaFetch('produccion_bulto','POST',{
           tendido_rollo_salida_id: b.salida_id,
@@ -2793,30 +2747,15 @@ function actualizarFiltrosProd() {
 
 function renderProdBulto(b) {
   const clase = b.estado === 'terminado' ? 'terminado' : (b.estado === 'en_proceso' ? 'proceso' : '');
-  const cantActual = b.cantidad_original; // viene de cantidad_ajustada o trs.cantidad según la vista
-  const cantFinal = b.cantidad_final && b.cantidad_final !== cantActual
-    ? `${b.cantidad_final}/${cantActual} pz`
-    : `${cantActual} pz`;
+  const cantFinal = b.cantidad_final && b.cantidad_final !== b.cantidad_original
+    ? `${b.cantidad_final}/${b.cantidad_original} pz`
+    : `${b.cantidad_original} pz`;
 
-  // Badges de trazabilidad
-  let badges = '';
-  if (b.sufijo_division) {
-    badges += `<span class="prod-badge prod-badge-div">✂️ derivado ${b.sufijo_division}</span>`;
-  }
-
-  // Acciones
   let acciones = '';
   if (b.estado === 'terminado') {
     acciones = `<button class="prod-btn-accion prod-btn-revertir" onclick="revertirBulto('${b.produccion_bulto_id}')">↶ Revertir</button>`;
   } else {
-    acciones = `<button class="prod-btn-accion prod-btn-terminar" onclick="terminarBulto('${b.produccion_bulto_id}', ${cantActual})">✓ Terminado</button>`;
-  }
-  // Acciones adicionales (dividir/unir) solo para bultos NO terminados y con cantidad > 1
-  if (b.estado !== 'terminado' && cantActual > 1) {
-    acciones += `<button class="prod-btn-accion prod-btn-dividir" onclick="abrirDividir('${b.produccion_bulto_id}', ${cantActual}, '${b.codigo_bulto}')">✂️ Dividir</button>`;
-  }
-  if (b.estado !== 'terminado') {
-    acciones += `<button class="prod-btn-accion prod-btn-unir" onclick="abrirUnir('${b.produccion_bulto_id}', '${b.talla_key_salida}', '${b.codigo_bulto}')">🔗 Unir</button>`;
+    acciones = `<button class="prod-btn-accion prod-btn-terminar" onclick="terminarBulto('${b.produccion_bulto_id}', ${b.cantidad_original})">✓ Terminado</button>`;
   }
 
   const fechaInfo = b.estado === 'terminado' && b.fecha_terminado 
@@ -2833,7 +2772,6 @@ function renderProdBulto(b) {
           <span class="prod-bulto-cant">${cantFinal}</span>
         </div>
         <div class="prod-bulto-corte">Corte ${b.letra_corte||'?'} · ${b.codigo_corte}${fechaInfo}</div>
-        ${badges?`<div class="prod-bulto-badges">${badges}</div>`:''}
         ${obsInfo}
       </div>
       <div class="prod-bulto-acciones">${acciones}</div>
@@ -2904,140 +2842,6 @@ async function revertirBulto(produccionBultoId) {
     renderProduccion();
   } catch(e) {
     alert('Error: ' + e.message);
-  }
-}
-
-// ══ DIVIDIR ══════════════════════════════════════════════════════════
-async function abrirDividir(produccionBultoId, cantidadActual, codigoBulto) {
-  const cantStr = prompt(
-    `Dividir bulto ${codigoBulto} (${cantidadActual} piezas)\n\n¿Cuántas piezas separar en un bulto derivado?\n(El resto queda en el bulto original con la misma KEY)`,
-    Math.floor(cantidadActual / 2)
-  );
-  if (cantStr === null) return;
-  const piezasAPartir = parseInt(cantStr);
-  if (!piezasAPartir || piezasAPartir <= 0 || piezasAPartir >= cantidadActual) {
-    alert(`Cantidad inválida. Debe ser entre 1 y ${cantidadActual - 1}.`);
-    return;
-  }
-
-  const motivo = prompt('Motivo de la división (opcional, ej: "defectos", "agilizar entrega"):') || null;
-
-  try {
-    // 1. Encontrar el bulto original para obtener su salida_id
-    const original = produccionData.find(x => x.produccion_bulto_id === produccionBultoId);
-    if (!original) throw new Error('No se encontró el bulto original');
-
-    // 2. Contar hermanos de división para asignar sufijo correcto
-    const hermanos = await supaFetch('produccion_bulto','GET',null,
-      `?or=(id.eq.${produccionBultoId},bulto_origen_id.eq.${produccionBultoId})&select=id,sufijo_division`);
-    const yaUsados = new Set(['']); // '' = original sin sufijo
-    hermanos.forEach(h => { if (h.sufijo_division) yaUsados.add(h.sufijo_division); });
-    let n = 2;
-    while (yaUsados.has(`/${n}`)) n++;
-    const sufijoNuevo = `/${n}`;
-
-    // 3. Actualizar cantidad del original
-    const cantidadOriginalNueva = original.cantidad_original - piezasAPartir;
-    await supaUpdate('produccion_bulto', produccionBultoId, {
-      cantidad_ajustada: cantidadOriginalNueva,
-      actualizado_en: new Date().toISOString(),
-    });
-
-    // 4. Crear bulto derivado (mismo tendido_rollo_salida, con sufijo)
-    await supaFetch('produccion_bulto','POST',{
-      tendido_rollo_salida_id: original.salida_id,
-      estado: 'pendiente',
-      cantidad_ajustada: piezasAPartir,
-      bulto_origen_id: produccionBultoId,
-      sufijo_division: sufijoNuevo,
-      observaciones: motivo,
-    });
-
-    alert(`✅ Dividido: ${cantidadOriginalNueva} + ${piezasAPartir} piezas (derivado${sufijoNuevo})`);
-    await cargarProduccion(); // recargar desde BD porque cambió estructura
-  } catch(e) {
-    alert('Error al dividir: ' + e.message);
-  }
-}
-
-// ══ UNIR ═════════════════════════════════════════════════════════════
-async function abrirUnir(produccionBultoId, tallaKeySalida, codigoBulto) {
-  // Buscar otros bultos con misma KEY, no terminados, no fusionados, no este mismo
-  const candidatos = produccionData.filter(b => 
-    b.talla_key_salida === tallaKeySalida &&
-    b.produccion_bulto_id !== produccionBultoId &&
-    b.estado !== 'terminado'
-  );
-
-  if (candidatos.length === 0) {
-    alert(`No hay otros bultos pendientes con la KEY ${tallaKeySalida} para unir.`);
-    return;
-  }
-
-  // Abrir mini-modal con lista
-  miniModalContext = { tipo: 'unirBultos', principalId: produccionBultoId, principalCodigo: codigoBulto, candidatos };
-  document.getElementById('mm-title').textContent = `Unir bultos a ${codigoBulto}`;
-  const body = document.getElementById('mm-body');
-  body.innerHTML = `
-    <div class="text-muted" style="margin-bottom:10px;font-size:12px">
-      Elegí uno o más bultos con KEY <strong>${tallaKeySalida}</strong> para fusionar en <strong>${codigoBulto}</strong>.
-      Los fusionados pasan a formar parte del principal.
-    </div>
-    <div style="max-height:300px;overflow-y:auto">
-      ${candidatos.map(c => `
-        <label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--borde);border-radius:6px;margin-bottom:4px;cursor:pointer">
-          <input type="checkbox" data-unir-id="${c.produccion_bulto_id}" data-unir-cant="${c.cantidad_original}">
-          <div style="flex:1">
-            <div style="font-family:monospace;font-weight:700;color:var(--azul)">${c.codigo_bulto}</div>
-            <div style="font-size:11px;color:#666">${c.cantidad_original} pz · Corte ${c.letra_corte||'?'} · ${c.codigo_corte}</div>
-          </div>
-        </label>
-      `).join('')}
-    </div>
-  `;
-  document.getElementById('mm-ok').textContent = 'Unir seleccionados';
-  document.getElementById('mini-modal').classList.add('active');
-}
-
-async function ejecutarUnion() {
-  const ctx = miniModalContext;
-  if (!ctx || ctx.tipo !== 'unirBultos') return;
-
-  const seleccionados = Array.from(document.querySelectorAll('[data-unir-id]:checked'))
-    .map(el => ({ id: el.dataset.unirId, cant: parseInt(el.dataset.unirCant) || 0 }));
-
-  if (seleccionados.length === 0) {
-    alert('Elegí al menos un bulto para unir.');
-    return;
-  }
-
-  // Confirmar
-  const totalSumar = seleccionados.reduce((s, x) => s + x.cant, 0);
-  const principal = produccionData.find(x => x.produccion_bulto_id === ctx.principalId);
-  const nuevaCantidad = (principal?.cantidad_original || 0) + totalSumar;
-  
-  if (!confirm(`Unir ${seleccionados.length} bulto(s) a ${ctx.principalCodigo}.\n\nEl principal pasa de ${principal?.cantidad_original} → ${nuevaCantidad} piezas.\n\n¿Continuar?`)) return;
-
-  try {
-    // 1. Actualizar cantidad del principal
-    await supaUpdate('produccion_bulto', ctx.principalId, {
-      cantidad_ajustada: nuevaCantidad,
-      actualizado_en: new Date().toISOString(),
-    });
-
-    // 2. Marcar los otros como unidos al principal
-    for (const sel of seleccionados) {
-      await supaUpdate('produccion_bulto', sel.id, {
-        unido_a_id: ctx.principalId,
-        actualizado_en: new Date().toISOString(),
-      });
-    }
-
-    cerrarMiniModal();
-    alert(`✅ ${seleccionados.length} bulto(s) unido(s). Total: ${nuevaCantidad} piezas en ${ctx.principalCodigo}.`);
-    await cargarProduccion();
-  } catch(e) {
-    alert('Error al unir: ' + e.message);
   }
 }
 
