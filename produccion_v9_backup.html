@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Taller IMIS — Producción v10</title>
+<title>Taller IMIS — Producción v9</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -214,7 +214,7 @@
 <nav>
   <div class="nav-top">
     <div style="width:32px;height:32px;background:rgba(255,255,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">T</div>
-    <h1>Taller IMIS — Producción v10</h1>
+    <h1>Taller IMIS — Producción v9</h1>
   </div>
   <div class="nav-tabs">
     <div class="nav-tab active" onclick="switchTab('nuevo',this)">➕ Nuevo</div>
@@ -830,8 +830,14 @@ function agregarTallaTrazo() {
 }
 
 function eliminarTallaTrazo(id) {
+  // Limpiar si era complemento de otra
   const row = document.getElementById(`ttrazo-${id}`);
   if (row) row.remove();
+  // Cualquier otra que apuntaba a esta, desvinculala
+  document.querySelectorAll('[data-ttrazo-complemento]').forEach(sel => {
+    if (sel.value == id) sel.value = '';
+  });
+  actualizarComplementosVisibles();
 }
 
 function setTipoTalla(id, tipo) {
@@ -845,15 +851,20 @@ function setTipoTalla(id, tipo) {
   // Mostrar/ocultar complemento
   const comp = document.getElementById(`comp-${id}`);
   if (comp) comp.style.display = (tipo === 'par') ? 'block' : 'none';
-  // Si cambia a completa, limpiar complemento
+  // Si cambia a completa, limpiar complemento y desvincular reverso
   if (tipo !== 'par') {
     const sel = row.querySelector('[data-ttrazo-complemento]');
-    if (sel) sel.value = '';
-    limpiarComplemento(id);
-  } else {
-    // Al entrar a par, cargar sugerencias
-    actualizarSugerenciasComplemento(id);
+    if (sel) {
+      const prevPartner = sel.value;
+      sel.value = '';
+      if (prevPartner) {
+        // Desvincular la otra si apuntaba a esta
+        const revSel = document.querySelector(`[data-tt-id="${prevPartner}"][data-ttrazo-complemento]`);
+        if (revSel && revSel.value == id) revSel.value = '';
+      }
+    }
   }
+  actualizarComplementosVisibles();
 }
 
 function onPrendaTallaChange(id) {
@@ -1139,11 +1150,7 @@ async function onComplementoChange(id) {
   if (!sel) return;
   const val = sel.value;
 
-  if (!val) {
-    // "sin asignar" - limpiar
-    limpiarComplemento(id);
-    return;
-  }
+  if (!val) return; // "sin asignar"
 
   // Opciones especiales
   if (val === '__otra__') {
@@ -1164,41 +1171,90 @@ async function onComplementoChange(id) {
   }
 }
 
-// Asignar complemento: guarda la KEY como segundo campo de la MISMA fila
-// (NO crea fila nueva, NO vincula a otra fila existente)
+// Asignar complemento: busca o crea la talla marcada con esa KEY y vincula bidireccional
 async function asignarComplementoPorKey(idPrincipal, keyComp) {
-  const row = document.getElementById(`ttrazo-${idPrincipal}`);
-  if (!row) return;
-
-  // Guardar la KEY complemento en un atributo data de la fila
-  row.dataset.keyComplemento = keyComp;
-
-  // Actualizar el texto visual
-  const info = row.querySelector('.complemento-info');
-  if (info) info.textContent = `↔ complementa con ${keyComp}`;
-
-  // El select del complemento queda mostrando la KEY elegida
-  const sel = row.querySelector('[data-ttrazo-complemento]');
-  if (sel) {
-    // Asegurar que la opción exista en el dropdown (si fue de "otra" o "nueva")
-    let optExiste = Array.from(sel.options).some(o => o.value === `KEY::${keyComp}`);
-    if (!optExiste) {
-      const opt = document.createElement('option');
-      opt.value = `KEY::${keyComp}`;
-      opt.textContent = keyComp;
-      sel.appendChild(opt);
+  // Buscar si ya existe una fila en el trazo con esa KEY y tipo par
+  let idPartner = null;
+  document.querySelectorAll('.talla-row').forEach(r => {
+    if (idPartner) return;
+    const k = r.querySelector('[data-ttrazo-key]')?.value?.trim();
+    const tipoEl = r.querySelector('[data-ttrazo-tipo].active');
+    const tipo = tipoEl ? tipoEl.dataset.ttrazoTipo : 'completa';
+    if (k === keyComp && tipo === 'par' && r.dataset.ttId !== idPrincipal) {
+      idPartner = r.dataset.ttId;
     }
-    sel.value = `KEY::${keyComp}`;
+  });
+
+  if (!idPartner) {
+    // Crear nueva fila automáticamente
+    idPartner = crearFilaAutomatica(keyComp);
   }
+
+  if (!idPartner) return;
+
+  // Vincular bidireccional
+  vincularComplemento(idPrincipal, idPartner);
+  actualizarComplementosVisibles();
 }
 
-// Limpiar el complemento (cuando cambia a tipo completa o se elige "sin asignar")
-function limpiarComplemento(idFila) {
-  const row = document.getElementById(`ttrazo-${idFila}`);
-  if (!row) return;
-  delete row.dataset.keyComplemento;
-  const info = row.querySelector('.complemento-info');
-  if (info) info.textContent = '';
+// Crear una fila de talla marcada automáticamente para el complemento
+function crearFilaAutomatica(key) {
+  const p = parsearKey(key);
+  if (!p) return null;
+
+  // Simular click en "agregar talla" y luego setear valores
+  agregarTallaTrazo();
+  const id = tallasCount; // el recién creado
+  const row = document.getElementById(`ttrazo-${id}`);
+  if (!row) return null;
+
+  // Setear prenda
+  const selPrenda = row.querySelector('[data-ttrazo-prenda]');
+  if (selPrenda) {
+    selPrenda.value = p.cod;
+    onPrendaTallaChange(id);
+  }
+  // Setear KEY
+  const inpKey = row.querySelector('[data-ttrazo-key]');
+  if (inpKey) inpKey.value = key;
+  // Tipo par
+  setTipoTalla(id, 'par');
+
+  return String(id);
+}
+
+// Vincular dos filas como complementarias (bidireccional)
+function vincularComplemento(idA, idB) {
+  const rowA = document.getElementById(`ttrazo-${idA}`);
+  const rowB = document.getElementById(`ttrazo-${idB}`);
+  if (!rowA || !rowB) return;
+  const selA = rowA.querySelector('[data-ttrazo-complemento]');
+  const selB = rowB.querySelector('[data-ttrazo-complemento]');
+  if (!selA || !selB) return;
+
+  // Primero refrescar sugerencias para que ambas tengan a la otra como opción
+  actualizarSugerenciasComplemento(idA);
+  actualizarSugerenciasComplemento(idB);
+
+  const keyA = rowA.querySelector('[data-ttrazo-key]')?.value.trim();
+  const keyB = rowB.querySelector('[data-ttrazo-key]')?.value.trim();
+
+  if (keyB) selA.value = `KEY::${keyB}`;
+  if (keyA) selB.value = `KEY::${keyA}`;
+
+  // Desvincular otros partners previos
+  document.querySelectorAll('[data-ttrazo-complemento]').forEach(s => {
+    const sidFila = s.dataset.ttId;
+    if (sidFila === idA || sidFila === idB) return;
+    // Si apuntaba a A o B, limpiar
+    if (s.value === `KEY::${keyA}` || s.value === `KEY::${keyB}`) s.value = '';
+  });
+
+  // Pequeña nota visual
+  const infoA = rowA.querySelector('.complemento-info');
+  const infoB = rowB.querySelector('.complemento-info');
+  if (infoA) infoA.textContent = keyB ? `↔ complementa con ${keyB}` : '';
+  if (infoB) infoB.textContent = keyA ? `↔ complementa con ${keyA}` : '';
 }
 
 // ── Modal para crear KEY nueva (mas grande o mas chica) ──────────────
@@ -1342,8 +1398,10 @@ function recolectarTallasTrazo() {
     const key = row.querySelector('[data-ttrazo-key]')?.value.trim() || '';
     const tipoEl = row.querySelector('[data-ttrazo-tipo].active');
     const tipo = tipoEl ? tipoEl.dataset.ttrazoTipo : 'completa';
-    // Complemento: solo aplica si es par y está en el dataset
-    const complementoKey = (tipo === 'par') ? (row.dataset.keyComplemento || null) : null;
+    // El valor del complemento ahora es "KEY::xxx" → extraemos la key
+    const selComp = row.querySelector('[data-ttrazo-complemento]')?.value || '';
+    let complementoKey = null;
+    if (selComp.startsWith('KEY::')) complementoKey = selComp.substring(5);
     if (letra && key) tallas.push({ idLocal, letra, key, tipo, prenda, complementoKey, orden: tallas.length + 1 });
   });
   return tallas;
@@ -1384,18 +1442,30 @@ async function guardarTrazo() {
       video_url: document.getElementById('t-video-url').value.trim() || null,
     });
 
-    // Insertar todas las tallas con complemento en una sola pasada
+    // Primera pasada: insertar todas (sin complemento) y guardar map
+    const mapaIds = {}; // idLocal → uuid remoto
+    const mapaKeyAUuid = {}; // key → uuid remoto
     for (const t of tallas) {
-      await supaFetch('trazo_talla_marcada','POST',{
+      const [inserted] = await supaFetch('trazo_talla_marcada','POST',{
         trazo_id: trazo.id,
         letra_local: t.letra,
         talla_key_original: t.key,
-        talla_key_complemento: (t.tipo === 'par' && t.complementoKey) ? t.complementoKey : null,
         tipo: t.tipo,
         multiplicidad: 1,
         cod_prenda: t.prenda,
         orden: t.orden,
       });
+      mapaIds[t.idLocal] = inserted.id;
+      mapaKeyAUuid[t.key] = inserted.id;
+    }
+
+    // Segunda pasada: vincular complementos por KEY
+    for (const t of tallas) {
+      if (t.tipo === 'par' && t.complementoKey && mapaKeyAUuid[t.complementoKey]) {
+        await supaUpdate('trazo_talla_marcada', mapaIds[t.idLocal], {
+          complemento_id: mapaKeyAUuid[t.complementoKey],
+        });
+      }
     }
 
     if (fotoBlob) {
@@ -1583,7 +1653,6 @@ async function guardarTendido() {
         trazo_talla_marcada_id: t.id,
         letra_local: t.letra_local,
         talla_key_original: t.talla_key_original,
-        talla_key_complemento: t.talla_key_complemento || null,
         tipo: t.tipo,
         multiplicidad: t.multiplicidad,
         orden: t.orden,
@@ -1686,10 +1755,8 @@ async function onElegirTendido() {
       estado: 'propuesto',  // propuesto | confirmado | dividido | sustituido
       cantidad: p.cantidad_propuesta,
       talla_salida: p.talla_key,
-      partidas: null,
+      partidas: null,  // si se divide: [{cantidad, talla}, ...]
       lienzo_sobrante: p.lienzo_sobrante,
-      rol_par: p.rol_par || null,          // 'principal' | 'complemento' | null
-      hermano_key: p.hermano_talla_key || null,
     }));
 
     renderBultos();
@@ -1734,21 +1801,12 @@ function renderBultos() {
 }
 
 function renderBulto(b, letraCorte) {
-  // Código del bulto: remover punto del detalle (ej: CINT.17 → CINT17) como en el Excel
-  const talla = b.estado === 'dividido' ? b.talla_original : b.talla_salida;
-  const tallaLimpia = (talla || '').replace(/\./g, '');
-  const codigoActual = `${b.numero_rollo}${letraCorte}${b.letra_talla}${b.cantidad}-${tallaLimpia}`;
+  const codigoActual = (b.estado === 'dividido')
+    ? `${b.numero_rollo}${letraCorte}${b.letra_talla}${b.cantidad}-${b.talla_original}`
+    : `${b.numero_rollo}${letraCorte}${b.letra_talla}${b.cantidad}-${b.talla_salida}`;
   
   const claseEstado = 'bulto-' + b.estado;
   const hint = b.tipo_talla === 'par' ? `(par: ${b.capas}÷2×${b.multiplicidad})` : `(completa: ${b.capas}×${b.multiplicidad})`;
-
-  // Badge de rol en par complementado
-  let badgeRol = '';
-  if (b.rol_par === 'principal' && b.hermano_key) {
-    badgeRol = `<span class="rbadge rbadge-trazo" title="Bulto principal del par, hermano: ${b.hermano_key}">🔗 par-P</span>`;
-  } else if (b.rol_par === 'complemento' && b.hermano_key) {
-    badgeRol = `<span class="rbadge rbadge-trazo" title="Bulto complemento del par, hermano: ${b.hermano_key}">🔗 par-C</span>`;
-  }
 
   let acciones = '';
   if (b.estado === 'propuesto') {
@@ -1790,7 +1848,6 @@ function renderBulto(b, letraCorte) {
     <div class="bulto-card ${claseEstado}" id="bcard-${b.uid}">
       <div class="bulto-head">
         <span class="bulto-codigo">${codigoActual}</span>
-        ${badgeRol}
         <span class="bulto-meta">${hint} ${b.lienzo_sobrante?'· ⚠ 1 lienzo desperdicio':''}</span>
       </div>
       <div class="bulto-acciones">${acciones}</div>
@@ -1895,8 +1952,6 @@ async function guardarBultos() {
 
   try {
     let total = 0;
-    // uid del bultosState → id UUID insertado en tendido_rollo_salida (solo para no-divididos)
-    const uidToSalidaId = {};
     for (const b of bultosState) {
       if (b.estado === 'dividido' && b.partidas) {
         let ord = 1;
@@ -1911,38 +1966,14 @@ async function guardarBultos() {
           total++;
         }
       } else {
-        const [inserted] = await supaFetch('tendido_rollo_salida','POST',{
+        await supaFetch('tendido_rollo_salida','POST',{
           tendido_rollo_id: b.rollo_id,
           tendido_talla_marcada_id: b.talla_marcada_id,
           talla_key_salida: b.talla_salida,
           cantidad: b.cantidad,
           orden: 1,
         });
-        if (inserted?.id) uidToSalidaId[b.uid] = inserted.id;
         total++;
-      }
-    }
-
-    // Segunda pasada: vincular bulto_hermano_id entre principal y complemento
-    // Dos bultos son hermanos si comparten (rollo_id, talla_marcada_id) y son
-    // uno principal + uno complemento (ambos no divididos).
-    const parejas = {}; // key "rollo_id|talla_marcada_id" → {principal: uid, complemento: uid}
-    for (const b of bultosState) {
-      if (!uidToSalidaId[b.uid]) continue;       // solo los no divididos
-      if (!b.rol_par || !b.hermano_key) continue; // solo los pares
-      const k = `${b.rollo_id}|${b.talla_marcada_id}`;
-      if (!parejas[k]) parejas[k] = {};
-      parejas[k][b.rol_par] = b.uid;
-    }
-    for (const k of Object.keys(parejas)) {
-      const par = parejas[k];
-      if (par.principal && par.complemento) {
-        const idP = uidToSalidaId[par.principal];
-        const idC = uidToSalidaId[par.complemento];
-        if (idP && idC) {
-          await supaUpdate('tendido_rollo_salida', idP, { bulto_hermano_id: idC });
-          await supaUpdate('tendido_rollo_salida', idC, { bulto_hermano_id: idP });
-        }
       }
     }
 
