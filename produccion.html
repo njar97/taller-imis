@@ -3,15 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Taller IMIS — Producción</title>
+<title>Taller IMIS — Producción v9</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --azul: #1F4E79; --azul2: #2E75B6; --azul-claro: #D6E4F0;
-    --verde: #28A745; --rojo: #C00000; --amarillo: #FFF2CC;
+    --verde: #28A745; --verde-claro: #E8F5E9;
+    --rojo: #C00000; --rojo-claro: #F8D7DA;
+    --amarillo: #FFF2CC; --ambar: #FFC107; --ambar-claro: #FFF8E1;
     --gris: #F5F5F5; --borde: #CCCCCC; --texto: #222222;
   }
-  body { font-family: Arial, sans-serif; background: #F0F4F8; color: var(--texto); min-height: 100vh; }
+  body { font-family: Arial, sans-serif; background: #F0F4F8; color: var(--texto); min-height: 100vh; padding-bottom: 60px; }
 
   nav { background: var(--azul); color: white; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
   .nav-top { display: flex; align-items: center; padding: 12px 16px; gap: 12px; }
@@ -26,6 +28,7 @@
 
   .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
   .card-title { font-size: 15px; font-weight: 700; color: var(--azul); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .card-sub { font-size: 12px; color: #777; margin-top: -8px; margin-bottom: 10px; }
 
   .field { margin-bottom: 12px; }
   label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -40,83 +43,105 @@
   .btn-success { background: var(--verde); color: white; }
   .btn-danger { background: var(--rojo); color: white; font-size: 12px; padding: 6px 10px; }
   .btn-ghost { background: var(--gris); color: var(--texto); border: 1px solid var(--borde); }
-  .btn-video { background: #FF0000; color: white; }
+  .btn-warn { background: var(--ambar); color: #333; }
   .btn-sm { padding: 6px 12px; font-size: 12px; }
   .btn-block { width: 100%; margin-top: 8px; justify-content: center; }
+  .btn-mini { padding: 4px 8px; font-size: 11px; border-radius: 4px; border: 1px solid var(--borde); background: white; cursor: pointer; color: var(--texto); }
+  .btn-mini:hover { background: var(--gris); }
+  .btn-mini-danger { color: var(--rojo); border-color: #F5C2C7; }
+  .btn-mini-primary { color: var(--azul); border-color: var(--azul2); }
+  .btn-mini-success { color: #2E7D32; border-color: #66BB6A; background: var(--verde-claro); }
+  .btn-mini.active { background: var(--azul); color: white; border-color: var(--azul); }
 
-  .prenda-seccion { border: 2px solid var(--azul-claro); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
-  .prenda-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-  .prenda-badge { background: var(--amarillo); color: var(--azul); font-weight: 700; font-size: 13px; padding: 4px 10px; border-radius: 6px; white-space: nowrap; }
+  .alert { padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
+  .alert-success { background: var(--verde-claro); color: #155724; border-left: 4px solid var(--verde); }
+  .alert-error { background: var(--rojo-claro); color: #721C24; border-left: 4px solid var(--rojo); }
+  .alert-info { background: #D1ECF1; color: #0C5460; border-left: 4px solid #17A2B8; }
+  .alert-warn { background: var(--ambar-claro); color: #856404; border-left: 4px solid var(--ambar); }
 
-  /* Tallas del tendido */
-  .tallas-input-wrapper { background: var(--amarillo); border: 2px solid #FFC107; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
-  .tallas-input-wrapper label { color: #856404; font-size: 13px; }
-  .tallas-input-wrapper input { border: 1px solid #FFC107; background: white; font-size: 16px; font-weight: 700; text-align: center; letter-spacing: 2px; }
-  .tallas-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .talla-chip { background: white; border: 2px solid var(--azul); color: var(--azul); padding: 4px 10px; border-radius: 14px; font-size: 12px; font-weight: 700; }
+  /* Menú Nuevo */
+  .menu-nuevo { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .menu-tarjeta { padding: 20px; border-radius: 12px; border: 2px solid var(--borde); cursor: pointer; display: flex; align-items: center; gap: 14px; background: white; transition: all 0.2s; }
+  .menu-tarjeta:hover { border-color: var(--azul); background: #F8FBFF; }
+  .menu-icono { font-size: 36px; }
+  .menu-info { flex: 1; }
+  .menu-titulo { font-size: 16px; font-weight: 700; color: var(--azul); }
+  .menu-desc { font-size: 12px; color: #666; margin-top: 4px; }
 
-  .tabla-piezas { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
-  .tabla-piezas th { background: var(--azul-claro); color: var(--azul); font-weight: 700; padding: 8px 6px; text-align: left; border: 1px solid var(--borde); font-size: 12px; }
-  .tabla-piezas td { padding: 6px; border: 1px solid var(--borde); vertical-align: middle; }
-  .tabla-piezas tr:nth-child(even) td { background: var(--gris); }
-  .tabla-piezas input[type=text] { padding: 4px 6px; font-size: 12px; border-radius: 4px; width: 100%; }
-  .tabla-piezas input[type=checkbox] { width: 20px; height: 20px; cursor: pointer; display: block; margin: 0 auto; }
+  /* Tallas marcadas - Trazo */
+  .talla-row { background: var(--ambar-claro); border: 1px solid var(--ambar); border-radius: 10px; padding: 10px; margin-bottom: 8px; }
+  .talla-row-head { display: grid; grid-template-columns: 48px 1fr 1fr 36px; gap: 8px; align-items: end; }
+  .talla-row-tipo { display: flex; gap: 6px; margin-top: 8px; align-items: center; font-size: 12px; }
+  .talla-row-tipo .tipo-opt { flex: 1; padding: 6px; text-align: center; border-radius: 6px; border: 1px solid var(--borde); cursor: pointer; background: white; font-weight: 600; color: #555; }
+  .talla-row-tipo .tipo-opt.active { background: var(--azul); color: white; border-color: var(--azul); }
+  .talla-row-hint { font-size: 11px; color: #856404; margin-top: 6px; font-style: italic; }
+  .letra-input { text-align: center; font-weight: 700; font-size: 16px !important; text-transform: uppercase; color: var(--azul); }
+  .letra-warning { background: #FFF3CD !important; border-color: var(--ambar) !important; }
 
-  .rollo-card { background: var(--gris); border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 4px solid var(--azul2); }
+  /* Trazo seleccionado */
+  .trazo-card { background: var(--azul-claro); border-radius: 10px; padding: 12px; border-left: 4px solid var(--azul); }
+  .trazo-code { font-size: 16px; font-weight: 700; color: var(--azul); }
+  .trazo-meta { font-size: 12px; color: #555; margin-top: 4px; }
+  .tallas-inline { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .talla-pill { background: white; border: 1px solid var(--azul2); color: var(--azul); padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .talla-pill.par { background: var(--ambar-claro); border-color: var(--ambar); color: #856404; }
+
+  /* Rollos */
+  .rollo-card { background: var(--gris); border-radius: 10px; padding: 12px; margin-bottom: 10px; border-left: 4px solid var(--azul2); }
   .rollo-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .rollo-num { font-weight: 700; color: var(--azul); font-size: 14px; }
+  .equivalencia-pares { font-size: 11px; color: #666; margin-top: 2px; font-style: italic; }
 
   .totales-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .total-item { background: var(--azul-claro); border-radius: 8px; padding: 10px; text-align: center; }
   .total-valor { font-size: 22px; font-weight: 700; color: var(--azul); }
   .total-label { font-size: 11px; color: #555; margin-top: 2px; }
 
-  .foto-upload { border: 2px dashed var(--borde); border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
-  .foto-upload:hover { border-color: var(--azul2); background: var(--azul-claro); }
-  .foto-upload input[type=file] { display: none; }
-  .foto-preview { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-top: 10px; }
-  .foto-icon { font-size: 32px; margin-bottom: 8px; }
+  /* Asistente de Bulto */
+  .bulto-card { border-radius: 10px; padding: 10px; margin-bottom: 8px; border: 1px solid var(--borde); background: white; }
+  .bulto-propuesto { border-left: 4px solid var(--azul2); background: #FAFCFF; }
+  .bulto-confirmado { border-left: 4px solid var(--verde); background: var(--verde-claro); }
+  .bulto-dividido { border-left: 4px solid var(--ambar); background: var(--ambar-claro); opacity: 0.65; }
+  .bulto-sustituido { border-left: 4px solid var(--ambar); background: var(--ambar-claro); }
+  .bulto-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .bulto-codigo { font-family: 'Courier New', monospace; font-weight: 700; font-size: 14px; padding: 4px 8px; border-radius: 6px; background: white; border: 1px solid var(--borde); }
+  .bulto-confirmado .bulto-codigo { background: white; border-color: #66BB6A; color: #2E7D32; }
+  .bulto-dividido .bulto-codigo { text-decoration: line-through; color: #999; }
+  .bulto-meta { font-size: 11px; color: #666; flex: 1; }
+  .bulto-acciones { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+  .bulto-partidas { margin-top: 8px; padding-left: 14px; border-left: 2px dashed var(--ambar); }
+  .partida-child { display: grid; grid-template-columns: 60px 1fr 36px; gap: 6px; align-items: center; margin-bottom: 4px; }
+  .partida-child input { padding: 5px 8px; font-size: 12px; }
 
-  .video-row { display: flex; gap: 8px; align-items: flex-end; }
-  .video-row input { flex: 1; }
-
-  .registro-item { border-left: 4px solid var(--azul2); padding: 12px; background: var(--gris); border-radius: 0 8px 8px 0; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; }
-  .registro-item:hover { background: var(--azul-claro); }
+  /* Historial */
+  .registro-item { padding: 12px; border: 1px solid var(--borde); border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.15s; }
+  .registro-item:hover { border-color: var(--azul2); background: #F8FBFF; }
   .registro-codigo { font-weight: 700; color: var(--azul); font-size: 14px; }
-  .registro-meta { font-size: 12px; color: #777; margin-top: 2px; }
-  .registro-badges { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
-  .rbadge { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
-  .rbadge-foto { background: #E8F5E9; color: #2E7D32; }
-  .rbadge-video { background: #FFEBEE; color: #C62828; }
+  .registro-meta { font-size: 12px; color: #666; margin-top: 4px; }
+  .registro-badges { margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap; }
+  .rbadge { font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 600; }
+  .rbadge-foto { background: var(--verde-claro); color: #155724; }
+  .rbadge-video { background: #FFE5E5; color: #C00000; }
+  .rbadge-trazo { background: var(--azul-claro); color: var(--azul); }
+  .rbadge-tendido { background: var(--ambar-claro); color: #856404; }
+  .rbadge-bulto { background: var(--verde-claro); color: #2E7D32; }
 
-  .detalle-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; overflow-y: auto; }
+  .badge { font-size: 11px; padding: 3px 8px; border-radius: 10px; font-weight: 700; }
+  .badge-ok { background: var(--verde-claro); color: #155724; }
+  .badge-err { background: var(--rojo-claro); color: #721C24; }
+
+  .detalle-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; padding: 16px; overflow-y: auto; }
   .detalle-overlay.active { display: block; }
-  .detalle-modal { background: white; border-radius: 16px 16px 0 0; padding: 20px; margin-top: 40px; min-height: calc(100vh - 40px); }
-  .detalle-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .detalle-modal { background: white; max-width: 700px; margin: 20px auto; border-radius: 12px; padding: 20px; }
+  .detalle-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--borde); }
   .detalle-titulo { font-size: 18px; font-weight: 700; color: var(--azul); }
   .detalle-seccion { margin-bottom: 16px; }
-  .detalle-seccion-titulo { font-size: 13px; font-weight: 700; color: var(--azul); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--azul-claro); }
-  .detalle-campo { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #F0F0F0; font-size: 14px; }
-  .detalle-campo:last-child { border-bottom: none; }
-  .detalle-campo-label { color: #777; }
-  .detalle-campo-valor { font-weight: 600; text-align: right; max-width: 60%; }
+  .detalle-seccion-titulo { font-size: 13px; font-weight: 700; color: var(--azul); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .detalle-campo { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #F0F0F0; font-size: 13px; }
+  .detalle-campo-label { color: #666; }
+  .detalle-campo-valor { font-weight: 600; }
 
-  .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; }
-  .alert-success { background: #D4EDDA; color: #155724; border: 1px solid #C3E6CB; }
-  .alert-error { background: #F8D7DA; color: #721C24; border: 1px solid #F5C6CB; }
-  .alert-info { background: var(--azul-claro); color: var(--azul); border: 1px solid #B8D4E8; }
-
-  .guia-prenda { margin-bottom: 8px; }
-  .guia-prenda-nombre { font-weight: 700; font-size: 13px; color: var(--azul); margin-bottom: 4px; }
-  .guia-piezas-lista { display: flex; flex-wrap: wrap; gap: 4px; }
-  .guia-chip { background: var(--azul-claro); color: var(--azul); font-size: 11px; padding: 2px 8px; border-radius: 10px; }
-  .guia-chip.sec { background: #FFF3CD; color: #856404; }
-
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
-  .badge-ok { background: #D4EDDA; color: #155724; }
-  .badge-err { background: #F8D7DA; color: #721C24; }
-
-  .config-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--borde); }
+  .config-item { padding: 12px 0; border-bottom: 1px solid #F0F0F0; display: flex; justify-content: space-between; align-items: center; }
   .config-item:last-child { border-bottom: none; }
   .config-label { font-size: 14px; font-weight: 600; }
   .config-sub { font-size: 12px; color: #777; margin-top: 2px; }
@@ -128,45 +153,60 @@
   .text-muted { font-size: 12px; color: #777; }
   .mt8 { margin-top: 8px; }
   .mb8 { margin-bottom: 8px; }
-  .uploading { opacity: 0.6; pointer-events: none; }
 
-  .pieza-tag { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 12px; margin: 2px; font-weight: 600; }
-  .pieza-ok { background: #D4EDDA; color: #155724; }
-  .pieza-fail { background: #F8D7DA; color: #721C24; }
+  .foto-upload { border: 2px dashed var(--borde); border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
+  .foto-upload:hover { border-color: var(--azul2); background: var(--azul-claro); }
+  .foto-upload input[type=file] { display: none; }
+  .foto-preview { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-top: 10px; }
 
-  .radio-group { display: flex; gap: 12px; margin-top: 4px; }
-  .radio-label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; }
-  .radio-label input { width: auto; margin: 0; }
+  /* Selector de prendas (chips tipo multi-select) */
+  .prenda-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .prenda-chip { padding: 8px 12px; border: 2px solid var(--borde); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: #555; background: white; transition: all 0.15s; }
+  .prenda-chip:hover { border-color: var(--azul2); }
+  .prenda-chip.active { background: var(--azul); color: white; border-color: var(--azul); }
 
-  /* Tallas marcadas */
-  .talla-marcada-row { display: grid; grid-template-columns: 56px 1fr 1fr 80px 40px; gap: 8px; align-items: end; margin-bottom: 8px; padding: 8px; background: #FFF8E1; border: 1px solid #FFD54F; border-radius: 8px; }
-  .talla-marcada-row label { font-size: 10px; }
-  .talla-marcada-row input { padding: 6px 8px; font-size: 13px; }
-  .letra-input { text-align: center; font-weight: 700; font-size: 16px !important; text-transform: uppercase; color: var(--azul); }
-  .letra-warning { background: #FFF3CD; border-color: #FFC107; }
-  .letra-hint { font-size: 10px; color: #856404; margin-top: 2px; }
+  /* Conversor lienzos→yardas */
+  .conversor { display: flex; gap: 6px; align-items: end; }
+  .conversor input { flex: 1; }
+  .conversor-ctrl { display: flex; flex-direction: column; gap: 4px; min-width: 90px; }
+  .conversor-ctrl label { font-size: 10px; text-transform: none; letter-spacing: 0; margin-bottom: 2px; }
+  .conversor-ctrl input { padding: 6px 8px; font-size: 12px; }
 
-  /* Salidas por rollo */
-  .salidas-block { background: white; border: 1px solid var(--borde); border-radius: 8px; padding: 10px; margin-top: 10px; }
-  .salidas-title { font-size: 12px; font-weight: 700; color: var(--azul); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .salida-row { display: grid; grid-template-columns: 32px 1fr; gap: 8px; align-items: start; margin-bottom: 8px; }
-  .salida-letra { background: var(--azul); color: white; border-radius: 6px; padding: 6px 0; text-align: center; font-weight: 700; font-size: 13px; }
-  .salida-partidas { display: flex; flex-direction: column; gap: 6px; }
-  .partida-row { display: grid; grid-template-columns: 70px 1fr 28px; gap: 6px; align-items: center; }
-  .partida-row input { padding: 5px 8px; font-size: 12px; }
-  .partida-row input[type=number] { text-align: right; }
-  .btn-mini { padding: 4px 8px; font-size: 11px; border-radius: 4px; border: 1px solid var(--borde); background: white; cursor: pointer; color: var(--texto); }
-  .btn-mini:hover { background: var(--gris); }
-  .btn-mini-danger { color: var(--rojo); border-color: #F5C2C7; }
-  .partida-original-hint { font-size: 10px; color: #666; padding-left: 40px; font-style: italic; }
+  /* KEY autocomplete */
+  .key-wrap { position: relative; }
+  .key-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--azul2); border-radius: 6px; max-height: 200px; overflow-y: auto; z-index: 50; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .key-dropdown.active { display: block; }
+  .key-option { padding: 8px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid #F0F0F0; }
+  .key-option:hover, .key-option.highlighted { background: var(--azul-claro); }
+  .key-option.nueva { background: var(--verde-claro); color: #155724; font-weight: 600; }
+  .key-option:last-child { border-bottom: none; }
 
-  /* Bultos preview */
-  .bultos-preview { background: #E8F5E9; border: 1px solid #81C784; border-radius: 8px; padding: 10px; margin-top: 10px; }
-  .bulto-chip { display: inline-block; background: white; border: 1px solid #66BB6A; color: #2E7D32; padding: 4px 8px; margin: 3px; border-radius: 6px; font-size: 12px; font-weight: 600; font-family: 'Courier New', monospace; }
-  .bulto-chip.sub { background: #FFF8E1; border-color: #FFB300; color: #E65100; }
-  .validacion-row { display: flex; justify-content: space-between; font-size: 11px; padding: 3px 0; }
-  .validacion-ok { color: #2E7D32; }
-  .validacion-warn { color: #C62828; font-weight: 700; }
+  /* Color de tela */
+  .color-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .color-chip { padding: 10px 16px; border: 2px solid var(--borde); border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; background: white; display: flex; align-items: center; gap: 8px; transition: all 0.15s; }
+  .color-chip:hover { border-color: var(--azul2); }
+  .color-chip.active { border-color: var(--azul); background: #F0F7FF; }
+  .color-chip.disabled { opacity: 0.35; cursor: not-allowed; background: #F5F5F5; }
+  .color-chip.disabled:hover { border-color: var(--borde); }
+  .color-swatch { width: 20px; height: 20px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.15); flex-shrink: 0; }
+
+  /* Prenda dentro de talla */
+  .talla-row-head2 { display: grid; grid-template-columns: 56px 130px 1fr 36px; gap: 8px; align-items: end; }
+  @media (max-width: 600px) {
+    .talla-row-head2 { grid-template-columns: 44px 100px 1fr 32px; gap: 6px; }
+  }
+  .talla-complemento { margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.7); border-radius: 6px; font-size: 12px; }
+  .talla-complemento label { font-size: 11px; margin-bottom: 4px; }
+  .talla-complemento select { padding: 6px 8px; font-size: 12px; }
+  .talla-complemento optgroup { font-weight: 700; color: var(--azul); }
+  .complemento-info { font-size: 11px; color: #666; margin-top: 4px; font-style: italic; }
+
+  /* Modal simple para crear talla nueva */
+  .mini-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1500; display: none; align-items: center; justify-content: center; padding: 16px; }
+  .mini-modal.active { display: flex; }
+  .mini-modal-box { background: white; border-radius: 12px; padding: 20px; max-width: 400px; width: 100%; }
+  .mini-modal h3 { color: var(--azul); font-size: 16px; margin-bottom: 12px; }
+  .mini-modal .actions { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
 </style>
 </head>
 <body>
@@ -174,11 +214,10 @@
 <nav>
   <div class="nav-top">
     <div style="width:32px;height:32px;background:rgba(255,255,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">T</div>
-    <h1>Taller IMIS — Producción</h1>
+    <h1>Taller IMIS — Producción v9</h1>
   </div>
   <div class="nav-tabs">
-    <div class="nav-tab active" onclick="switchTab('trazo',this)">✂️ Trazo</div>
-    <div class="nav-tab" onclick="switchTab('tendido',this)">📋 Tendido</div>
+    <div class="nav-tab active" onclick="switchTab('nuevo',this)">➕ Nuevo</div>
     <div class="nav-tab" onclick="switchTab('historial',this)">🗂 Historial</div>
     <div class="nav-tab" onclick="switchTab('config',this)">⚙️ Config</div>
   </div>
@@ -186,78 +225,103 @@
 
 <div class="container">
 
+<!-- ═══ MENÚ NUEVO ═══ -->
+<div id="view-nuevo" class="view active">
+  <div class="card">
+    <div class="card-title">➕ Nuevo registro</div>
+    <div class="card-sub">Elegí qué querés registrar según el momento del taller.</div>
+    <div class="menu-nuevo">
+      <div class="menu-tarjeta" onclick="irA('trazo')">
+        <div class="menu-icono">✂️</div>
+        <div class="menu-info">
+          <div class="menu-titulo">Trazo</div>
+          <div class="menu-desc">Imelda dibuja la plancha con las tallas marcadas. Se puede dejar pendiente de tender para después.</div>
+        </div>
+        <div style="font-size:22px;color:#ccc">›</div>
+      </div>
+      <div class="menu-tarjeta" onclick="irA('tendido')">
+        <div class="menu-icono">📋</div>
+        <div class="menu-info">
+          <div class="menu-titulo">Tendido</div>
+          <div class="menu-desc">Sobre un trazo existente. Registrar rollo por rollo mientras se tiende.</div>
+        </div>
+        <div style="font-size:22px;color:#ccc">›</div>
+      </div>
+      <div class="menu-tarjeta" onclick="irA('bulto')">
+        <div class="menu-icono">📦</div>
+        <div class="menu-info">
+          <div class="menu-titulo">Bulto</div>
+          <div class="menu-desc">Después del corte. Propone bultos automáticamente; Paty confirma, divide o sustituye.</div>
+        </div>
+        <div style="font-size:22px;color:#ccc">›</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ TRAZO ═══ -->
-<div id="view-trazo" class="view active">
+<div id="view-trazo" class="view">
   <div id="alert-trazo"></div>
 
-  <!-- Encabezado -->
   <div class="card">
-    <div class="card-title">✂️ Nuevo Registro de Trazo</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div class="card-title" style="margin:0">✂️ Nuevo Trazo</div>
+      <button class="btn btn-ghost btn-sm" onclick="volverNuevo()">← Volver</button>
+    </div>
     <div class="row2">
       <div class="field"><label>Fecha</label><input type="date" id="t-fecha"></div>
-      <div class="field"><label>Código de corte</label><input type="text" id="t-codigo" placeholder="Ej: C-01-A"></div>
+      <div class="field">
+        <label>Letra del corte</label>
+        <input type="text" id="t-letra-corte" class="letra-input" maxlength="1" placeholder="A" oninput="this.value=this.value.toUpperCase();sugerirLetrasTallas()">
+        <div class="text-muted">Una letra única del corte. Va en cada código de bulto.</div>
+      </div>
     </div>
+  </div>
+
+  <!-- Color de tela -->
+  <div class="card">
+    <div class="card-title">🎨 Color de la tela</div>
+    <div class="text-muted mb8">Elegí el color que se va a tender. Se pueden combinar Blanco+Celeste o Azul+Beige.</div>
+    <div class="color-chips" id="t-color-chips"></div>
+  </div>
+
+  <!-- Capas + yardas + conversor -->
+  <div class="card">
+    <div class="card-title">📏 Medidas del trazo</div>
     <div class="row2">
-      <div class="field"><label>Capas</label><input type="number" id="t-capas" placeholder="Ej: 12" min="1"></div>
-      <div class="field"><label>Yardas estimadas</label><input type="number" id="t-yardas" placeholder="Ej: 45" step="0.5"></div>
+      <div class="field">
+        <label>Capas planeadas</label>
+        <input type="number" id="t-capas" min="1" placeholder="20" oninput="recalcYardas()">
+      </div>
+      <div class="field">
+        <label>Yardas por lienzo</label>
+        <input type="number" id="t-yd-por-lienzo" step="0.1" value="4" placeholder="4" oninput="recalcYardas()">
+      </div>
     </div>
-  </div>
-
-  <!-- Guía de piezas -->
-  <div class="card">
-    <div class="card-title" onclick="toggleGuia()" style="cursor:pointer">📋 Guía de piezas por prenda <span id="guia-icon">▼</span></div>
-    <div id="guia-piezas">
-      <div class="guia-prenda"><div class="guia-prenda-nombre">Camisa / Blusa</div><div class="guia-piezas-lista"><span class="guia-chip">Pechera ×2</span><span class="guia-chip">Trasero ×1</span><span class="guia-chip">Canesú ×2</span><span class="guia-chip">Manga ×2</span><span class="guia-chip">Cuello ×2</span><span class="guia-chip">Pie de cuello ×2</span><span class="guia-chip">Bolsillo ×1</span></div></div>
-      <div class="guia-prenda mt8"><div class="guia-prenda-nombre">Pantalón</div><div class="guia-piezas-lista"><span class="guia-chip">Delantero ×2</span><span class="guia-chip">Trasero ×2</span><span class="guia-chip">Pretina ×2</span><span class="guia-chip">Bolsa delantera visible ×2</span><span class="guia-chip sec">Bolsa interior ×2</span><span class="guia-chip sec">Bolsa trasera base ×2</span><span class="guia-chip sec">Tapadera ×2</span></div></div>
-      <div class="guia-prenda mt8"><div class="guia-prenda-nombre">Falda</div><div class="guia-piezas-lista"><span class="guia-chip">Delantero con paletones ×1</span><span class="guia-chip">Trasero ×2</span><span class="guia-chip">Pretina larga ×1</span><span class="guia-chip sec">Bolsa delantera ×4</span></div></div>
-      <div class="guia-prenda mt8"><div class="guia-prenda-nombre">Short parvularia</div><div class="guia-piezas-lista"><span class="guia-chip">Delantero ×2</span><span class="guia-chip">Trasero ×2</span><span class="guia-chip">Pretina ×1</span><span class="guia-chip sec">Bolsa ×4</span></div></div>
-      <div class="text-muted mt8">🔵 Azul = críticas de tono &nbsp; 🟡 Amarillo = secundarias</div>
-    </div>
-  </div>
-
-  <!-- Sección 1: Tallas del tendido -->
-  <div class="card">
-    <div class="card-title">1️⃣ Tallas del tendido</div>
-    <div class="tallas-input-wrapper">
-      <label>Escribir las tallas separadas por coma</label>
-      <input type="text" id="t-tallas-input" placeholder="4, 6, 8, 10, 12" oninput="procesarTallas()">
-      <div class="tallas-chips" id="t-tallas-chips"></div>
-    </div>
-
     <div class="field">
-      <label>¿Hubo talla que no entró?</label>
-      <div class="radio-group">
-        <label class="radio-label"><input type="radio" name="t-no-entro" value="no" checked onchange="toggleNoEntro()"> No</label>
-        <label class="radio-label"><input type="radio" name="t-no-entro" value="si" onchange="toggleNoEntro()"> Sí</label>
+      <label>Yardas estimadas totales</label>
+      <div class="conversor">
+        <input type="number" id="t-yardas" step="0.5" placeholder="Se calcula auto">
+        <button class="btn btn-ghost btn-sm" onclick="aplicarYardasCalc()" title="Aplicar cálculo">🧮 Calc</button>
       </div>
-    </div>
-    <div id="t-no-entro-fields" style="display:none">
-      <div class="row2">
-        <div class="field"><label>Talla</label><input type="text" id="t-talla-no-entro" placeholder="Ej: 14"></div>
-        <div class="field"><label>Razón</label><input type="text" id="t-razon-no-entro" placeholder="Ej: no cupó en el tendido"></div>
-      </div>
+      <div class="text-muted" id="t-yardas-hint">Tip: capas × yardas por lienzo. Editable si preferís otro valor.</div>
     </div>
   </div>
 
-  <!-- Prendas con checklist -->
-  <div id="t-prendas-container"></div>
-  <button class="btn btn-ghost btn-block" onclick="agregarPrenda()">+ Agregar prenda al trazo</button>
-
-  <div class="divider"></div>
-
-  <!-- Piezas secundarias -->
+  <!-- Tallas marcadas -->
   <div class="card">
-    <div class="card-title">⚠️ Piezas secundarias pendientes</div>
-    <div id="t-secundarias-container"></div>
-    <button class="btn btn-ghost btn-sm mt8" onclick="agregarSecundaria()">+ Agregar pieza pendiente</button>
+    <div class="card-title">🏷️ Tallas marcadas en el trazo</div>
+    <div class="alert alert-info">💡 Una fila por cada talla dibujada. Si marcaste la misma talla 2 veces, agregala 2 veces (llevará letras distintas). <strong>Completa</strong>: 1 lienzo = 1 pieza. <strong>Par</strong>: 2 lienzos = 1 pieza (elegí cuál talla la complementa).</div>
+    <div id="t-tallas-container"></div>
+    <button class="btn btn-ghost btn-sm mt8" onclick="agregarTallaTrazo()">+ Agregar talla marcada</button>
   </div>
 
   <!-- Foto -->
   <div class="card">
-    <div class="card-title">📷 Foto del trazo</div>
+    <div class="card-title">📷 Foto del trazo (opcional)</div>
     <div class="foto-upload" onclick="document.getElementById('t-foto-input').click()">
       <input type="file" id="t-foto-input" accept="image/*" capture="environment" onchange="previewFoto(this,'t-foto-preview','t-foto-label')">
-      <div class="foto-icon">📷</div>
+      <div style="font-size:32px;margin-bottom:8px">📷</div>
       <div id="t-foto-label" class="text-muted">Toca para tomar o adjuntar foto</div>
       <img id="t-foto-preview" class="foto-preview" style="display:none">
     </div>
@@ -265,98 +329,136 @@
 
   <!-- Video -->
   <div class="card">
-    <div class="card-title">🎥 Video del trazo</div>
-    <p class="text-muted mb8">Sube el video a YouTube (privado) o Google Drive y pega el enlace aquí.</p>
-    <div class="video-row">
-      <input type="url" id="t-video-url" placeholder="https://youtube.com/... o https://drive.google.com/...">
-      <button class="btn btn-video btn-sm" onclick="abrirVideo('t-video-url')">▶ Ver</button>
-    </div>
+    <div class="card-title">🎥 Video del trazo (opcional)</div>
+    <input type="url" id="t-video-url" placeholder="https://youtube.com/... o https://drive.google.com/...">
   </div>
 
   <!-- Observaciones -->
   <div class="card">
-    <div class="field"><label>Observaciones</label><textarea id="t-observaciones" placeholder="Anotar cualquier situación relevante..."></textarea></div>
+    <div class="field"><label>Observaciones</label><textarea id="t-observaciones" placeholder="Cualquier detalle relevante..."></textarea></div>
   </div>
 
-  <button class="btn btn-success btn-block" id="btn-guardar-trazo" onclick="guardarTrazo()">💾 Guardar registro de trazo</button>
+  <button class="btn btn-success btn-block" id="btn-guardar-trazo" onclick="guardarTrazo()">💾 Guardar trazo</button>
 </div>
 
 <!-- ═══ TENDIDO ═══ -->
 <div id="view-tendido" class="view">
   <div id="alert-tendido"></div>
+
   <div class="card">
-    <div class="card-title">📋 Nuevo Registro de Tendido</div>
-    <div class="row2">
-      <div class="field"><label>Fecha</label><input type="date" id="td-fecha"></div>
-      <div class="field"><label>Código de corte</label><input type="text" id="td-codigo" placeholder="Ej: C-01-A" oninput="actualizarPreviewBultos()"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div class="card-title" style="margin:0">📋 Asistente de Tendido</div>
+      <button class="btn btn-ghost btn-sm" onclick="volverNuevo()">← Volver</button>
     </div>
-    <div class="row2">
+
+    <!-- Paso 1: elegir trazo -->
+    <div id="td-paso-1">
       <div class="field">
-        <label>Letra del corte (bulto)</label>
-        <input type="text" id="td-letra-corte" class="letra-input" maxlength="1" placeholder="A" oninput="this.value=this.value.toUpperCase();actualizarPreviewBultos();sugerirLetrasTallas()">
-        <div class="letra-hint">Una sola letra. Va en el código de bulto.</div>
+        <label>1. Elegir trazo pendiente de tender</label>
+        <select id="td-trazo-select" onchange="onElegirTrazo()">
+          <option value="">— Cargando trazos pendientes... —</option>
+        </select>
       </div>
-      <div class="field"><label>Prenda(s)</label><input type="text" id="td-prendas" placeholder="Ej: Pantalón / Falda"></div>
-    </div>
-    <div class="field"><label>Equipo del día</label><input type="text" id="td-equipo" placeholder="Ej: Sandra, Blanky, Tere, Paty"></div>
-  </div>
-
-  <!-- Tallas marcadas en el trazo -->
-  <div class="card">
-    <div class="card-title">🏷️ Tallas marcadas en el trazo</div>
-    <div class="alert alert-info" style="font-size:12px;margin-bottom:12px">💡 Una fila por cada talla dibujada dentro del trazo físico. La letra (A, B, C...) identifica la talla original en el código del bulto.</div>
-    <div id="td-tallas-container"></div>
-    <button class="btn btn-ghost btn-sm mt8" onclick="agregarTallaMarcada()">+ Agregar talla marcada</button>
-  </div>
-
-  <div class="card">
-    <div class="card-title">🧻 Registro de rollos</div>
-    <div class="alert alert-info" style="font-size:12px;margin-bottom:12px">💡 Llenar rollo por rollo. El N° se asigna al terminar — el último tendido = N° 1. Dentro de cada rollo se registra lo que salió de cada talla marcada.</div>
-    <div id="td-rollos-container"></div>
-    <button class="btn btn-ghost btn-sm mt8" onclick="agregarRollo()">+ Agregar rollo</button>
-  </div>
-
-  <!-- Preview de bultos derivados -->
-  <div class="card">
-    <div class="card-title">📦 Bultos que se derivarán</div>
-    <div id="bultos-preview-container">
-      <p class="text-muted">Agregá tallas marcadas y salidas por rollo para ver los códigos de bulto.</p>
+      <div id="td-trazo-info"></div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-title">📊 Totales</div>
-    <div class="totales-grid">
-      <div class="total-item"><div class="total-valor" id="total-lienzos">0</div><div class="total-label">Lienzos</div></div>
-      <div class="total-item"><div class="total-valor" id="total-pares">0</div><div class="total-label">Pares</div></div>
-      <div class="total-item"><div class="total-valor" id="total-rollos">0</div><div class="total-label">Rollos</div></div>
+  <!-- Paso 2: datos del tendido + rollos -->
+  <div id="td-paso-2" style="display:none">
+    <div class="card">
+      <div class="card-title">2. Datos del tendido</div>
+      <div class="row2">
+        <div class="field"><label>Fecha del tendido</label><input type="date" id="td-fecha"></div>
+        <div class="field"><label>Equipo del día</label><input type="text" id="td-equipo" placeholder="Sandra, Blanky, Tere..."></div>
+      </div>
     </div>
-    <div class="row2 mt8">
-      <div class="total-item"><div class="total-valor" id="total-ycons">0</div><div class="total-label">Yardas consumidas</div></div>
-      <div class="total-item"><div class="total-valor" id="total-ysob">0</div><div class="total-label">Yardas sobrantes</div></div>
+
+    <div class="card">
+      <div class="card-title">3. Rollos tendidos</div>
+      <div class="alert alert-info">💡 Agregá rollos en el orden que se tienden. Al guardar, el sistema invierte la numeración: el último tendido queda como bulto #1.</div>
+      <div id="td-rollos-container"></div>
+      <button class="btn btn-ghost btn-sm mt8" onclick="agregarRolloTendido()">+ Agregar rollo</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">4. Totales del tendido</div>
+      <div class="totales-grid">
+        <div class="total-item"><div class="total-valor" id="td-total-capas">0</div><div class="total-label">Capas (lienzos)</div></div>
+        <div class="total-item"><div class="total-valor" id="td-total-pares">0</div><div class="total-label">Pares</div></div>
+        <div class="total-item"><div class="total-valor" id="td-total-rollos">0</div><div class="total-label">Rollos</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="field"><label>Observaciones generales</label><textarea id="td-observaciones" placeholder="Tono, problemas, notas..."></textarea></div>
+      <div class="row2">
+        <div class="field">
+          <label>¿Se completó en un día?</label>
+          <select id="td-completo" onchange="document.getElementById('td-cont-field').style.display=this.value==='false'?'block':'none'">
+            <option value="true">Sí</option><option value="false">No</option>
+          </select>
+        </div>
+        <div class="field" id="td-cont-field" style="display:none"><label>Fecha de continuación</label><input type="date" id="td-continuacion"></div>
+      </div>
+    </div>
+
+    <div id="td-warnings"></div>
+
+    <button class="btn btn-success btn-block" id="btn-guardar-tendido" onclick="guardarTendido()">💾 Guardar tendido (invierte numeración)</button>
+  </div>
+</div>
+
+<!-- ═══ BULTO ═══ -->
+<div id="view-bulto" class="view">
+  <div id="alert-bulto"></div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div class="card-title" style="margin:0">📦 Asistente de Bulto</div>
+      <button class="btn btn-ghost btn-sm" onclick="volverNuevo()">← Volver</button>
+    </div>
+
+    <!-- Paso 1: elegir tendido -->
+    <div id="bu-paso-1">
+      <div class="field">
+        <label>Elegir tendido sin bultos capturados</label>
+        <select id="bu-tendido-select" onchange="onElegirTendido()">
+          <option value="">— Cargando tendidos pendientes... —</option>
+        </select>
+      </div>
+      <div id="bu-tendido-info"></div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="field"><label>¿Se completó en un día?</label>
-      <select id="td-completo" onchange="document.getElementById('td-cont-field').style.display=this.value==='false'?'block':'none'">
-        <option value="true">Sí</option><option value="false">No</option>
-      </select>
+  <!-- Paso 2: bultos propuestos -->
+  <div id="bu-paso-2" style="display:none">
+    <div class="card">
+      <div class="card-title">Bultos propuestos</div>
+      <div class="alert alert-info">💡 Paty confirma cada bulto conforme corta. Puede <strong>dividir</strong> (ej: partir 15 en 7+8 de distinta talla), <strong>sustituir</strong> la talla (ej: P1595 → P1590), o <strong>confirmar</strong> si salió tal cual.</div>
+      <div id="bu-bultos-container"></div>
     </div>
-    <div class="field" id="td-cont-field" style="display:none"><label>Fecha de continuación</label><input type="date" id="td-continuacion"></div>
-    <div class="field"><label>Observaciones generales</label><textarea id="td-observaciones" placeholder="Variaciones de tono, problemas, notas..."></textarea></div>
-  </div>
 
-  <button class="btn btn-success btn-block" onclick="guardarTendido()">💾 Guardar registro de tendido</button>
+    <div class="card">
+      <div class="card-title">Resumen</div>
+      <div class="totales-grid">
+        <div class="total-item"><div class="total-valor" id="bu-total-propuestos">0</div><div class="total-label">Propuestos</div></div>
+        <div class="total-item"><div class="total-valor" id="bu-total-confirmados">0</div><div class="total-label">Confirmados</div></div>
+        <div class="total-item"><div class="total-valor" id="bu-total-pz">0</div><div class="total-label">Piezas total</div></div>
+      </div>
+    </div>
+
+    <button class="btn btn-success btn-block" id="btn-guardar-bulto" onclick="guardarBultos()">💾 Guardar bultos confirmados</button>
+  </div>
 </div>
 
 <!-- ═══ HISTORIAL ═══ -->
 <div id="view-historial" class="view">
   <div class="card">
-    <div class="card-title">🗂 Historial de registros</div>
-    <div style="display:flex;gap:8px;margin-bottom:12px">
+    <div class="card-title">🗂 Historial</div>
+    <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
       <button class="btn btn-primary btn-sm" id="hist-btn-trazo" onclick="switchHistorial('trazo')">✂️ Trazos</button>
       <button class="btn btn-ghost btn-sm" id="hist-btn-tendido" onclick="switchHistorial('tendido')">📋 Tendidos</button>
+      <button class="btn btn-ghost btn-sm" id="hist-btn-bulto" onclick="switchHistorial('bulto')">📦 Bultos</button>
     </div>
     <div id="historial-content"><div class="loading">Cargando...</div></div>
   </div>
@@ -366,18 +468,35 @@
 <div id="view-config" class="view">
   <div class="card">
     <div class="card-title">⚙️ Configuración</div>
-    <div class="config-item"><div><div class="config-label">Supabase URL</div><div class="config-sub" id="cfg-url-display">—</div></div></div>
     <div class="config-item">
-      <div><div class="config-label">Estado de conexión</div><div><span id="cfg-estado" class="badge badge-err">Sin verificar</span></div></div>
+      <div>
+        <div class="config-label">Supabase URL</div>
+        <div class="config-sub" id="cfg-url-display">—</div>
+      </div>
+    </div>
+    <div class="config-item">
+      <div><div class="config-label">Estado</div><div><span id="cfg-estado" class="badge badge-err">Sin verificar</span></div></div>
       <button class="btn btn-ghost btn-sm" onclick="verificarConexion()">Verificar</button>
     </div>
     <div class="divider"></div>
-    <div class="field"><label>Supabase URL</label><input type="text" id="cfg-url" placeholder="https://xxxx.supabase.co"></div>
-    <div class="field"><label>Anon Key</label><input type="text" id="cfg-key" placeholder="eyJ..."></div>
+    <div class="field"><label>URL</label><input type="text" id="cfg-url"></div>
+    <div class="field"><label>Anon Key</label><input type="text" id="cfg-key"></div>
     <button class="btn btn-primary btn-block" onclick="guardarConfig()">Guardar configuración</button>
   </div>
 </div>
 
+</div>
+
+<!-- MINI MODAL: crear KEY nueva -->
+<div id="mini-modal" class="mini-modal">
+  <div class="mini-modal-box">
+    <h3 id="mm-title">Agregar talla al catálogo</h3>
+    <div id="mm-body"></div>
+    <div class="actions">
+      <button class="btn btn-ghost btn-sm" onclick="cerrarMiniModal()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="mm-ok" onclick="confirmarMiniModal()">Agregar</button>
+    </div>
+  </div>
 </div>
 
 <!-- DETALLE OVERLAY -->
@@ -392,25 +511,88 @@
 </div>
 
 <script>
+// ══════════════════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════════════════
 let SUPA_URL = localStorage.getItem('supa_url') || 'https://kszdievqesveluzcnzsh.supabase.co';
 let SUPA_KEY = localStorage.getItem('supa_key') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzemRpZXZxZXN2ZWx1emNuenNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MTgwMTgsImV4cCI6MjA5MDM5NDAxOH0.r28goEyUxZeKK9j0efu1BXC8ssU9lYxRK7dp3BGix1M';
 
-const PRENDAS_LISTA = ['Camisa','Blusa','Pantalón','Falda','Short'];
-let prendasTrazo = [], prendasCount = 0;
-let secundariasCount = 0, rollosCount = 0;
-let tallasActuales = [];
-let fotoBlob = null;
-let historialTipo = 'trazo';
+// Catálogo base de KEYs por prenda (extraído del BASE_2025)
+// Se puede extender con la tabla catalogo_key de Supabase
+const CATALOGO_BASE = {
+  "C":{"nombre":"Camisa","codigo":"C","keys":["C2","C4","C6","C8","C10","C12","C14","C16","C17","C20","C22","C24","C26","C28","C30"]},
+  "B":{"nombre":"Blusa","codigo":"B","keys":["B8","B10","B12","B14","B16","B17","B20","B22","B24","B26","B28","B30"]},
+  "CC":{"nombre":"Camisa celeste","codigo":"CC","keys":["CC2","CC3","CC4","CC6","CC8","CC10","CC12","CC14","CC16"]},
+  "F":{"nombre":"Falda","codigo":"F","keys":["F465","F460","F458","F455","F450","F445","F440","F435","F665","F660","F658","F655","F650","F645","F640","F635","F765","F760","F758","F755","F750","F745","F740","F735","F865","F860","F858","F855","F850","F845","F840","F835","F1065","F1060","F1058","F1055","F1050","F1045","F1040","F1035","F1265","F1260","F1258","F1255","F1250","F1245","F1240","F1235","F1465","F1460","F1458","F1455","F1450","F1445","F1440","F1435","F1665","F1660","F1658","F1655","F1650","F1645","F1640","F1635","F1765","F1760","F1758","F1755","F1750","F1745","F1740","F1735","F1865","F1860","F1858","F1855","F1850","F1845","F1840","F1835","F2065","F2060","F2058","F2055","F2050","F2045","F2040","F2035","F2265","F2260","F2258","F2255","F2250","F2245","F2240","F2235","F2365","F2360","F2358","F2355","F2350","F2345","F2340","F2335","F2465","F2460","F2458","F2455","F2450","F2445","F2440","F2435","F2565","F2560","F2558","F2555","F2550","F2545","F2540","F2535","F2665","F2660","F2658","F2655","F2650","F2645","F2640","F2635","F2865","F2860","F2858","F2855","F2850","F2845","F2840","F2835","F3065","F3060","F3058","F3055","F3050","F3045","F3040","F3035"]},
+  "FB":{"nombre":"Falda beige","codigo":"FB","keys":["FB770","FB765","FB760","FB758","FB755","FB750","FB745","FB870","FB865","FB860","FB858","FB855","FB850","FB845","FB1070","FB1065","FB1060","FB1058","FB1055","FB1050","FB1045","FB1270","FB1265","FB1260","FB1258","FB1255","FB1250","FB1245","FB1470","FB1465","FB1460","FB1458","FB1455","FB1450","FB1445","FB1670","FB1665","FB1660","FB1658","FB1655","FB1650","FB1645","FB1770","FB1765","FB1760","FB1758","FB1755","FB1750","FB1745","FB1870","FB1865","FB1860","FB1858","FB1855","FB1850","FB1845","FB2070","FB2065","FB2060","FB2058","FB2055","FB2050","FB2045","FB2270","FB2265","FB2260","FB2258","FB2255","FB2250","FB2245","FB2370","FB2365","FB2360","FB2358","FB2355","FB2350","FB2345","FB2470","FB2465","FB2460","FB2458","FB2455","FB2450","FB2445","FB2570","FB2565","FB2560","FB2558","FB2555","FB2550","FB2545","FB2670","FB2665","FB2660","FB2658","FB2655","FB2650","FB2645","FB2870","FB2865","FB2860","FB2858","FB2855","FB2850","FB2845","FB3070","FB3065","FB3060","FB3058","FB3055","FB3050","FB3045","FB3270","FB3265","FB3260","FB3258","FB3255","FB3250","FB3245"]},
+  "P":{"nombre":"Pantalón","codigo":"P","keys":["P4110","P4105","P4100","P495","P490","P485","P480","P475","P470","P465","P460","P6110","P6105","P6100","P695","P690","P685","P680","P675","P670","P665","P660","P7110","P7105","P7100","P795","P790","P785","P780","P775","P770","P765","P760","P8110","P8105","P8100","P895","P890","P885","P880","P875","P870","P865","P860","P10110","P10105","P10100","P1095","P1090","P1085","P1080","P1075","P1070","P1065","P1060","P11110","P11105","P11100","P1195","P1190","P1185","P1180","P1175","P1170","P1165","P1160","P12110","P12105","P12100","P1295","P1290","P1285","P1280","P1275","P1270","P1265","P1260","P14110","P14105","P14100","P1495","P1490","P1485","P1480","P1475","P1470","P1465","P1460","P15110","P15105","P15100","P1595","P1590","P1585","P1580","P1575","P1570","P1565","P1560","P16110","P16105","P16100","P1695","P1690","P1685","P1680","P1675","P1670","P1665","P1660","P17110","P17105","P17100","P1795","P1790","P1785","P1780","P1775","P1770","P1765","P1760","P19110","P19105","P19100","P1995","P1990","P1985","P1980","P1975","P1970","P1965","P1960","P20110","P20105","P20100","P2095","P2090","P2085","P2080","P2075","P2070","P2065","P2060","P22110","P22105","P22100","P2295","P2290","P2285","P2280","P2275","P2270","P2265","P2260","P24110","P24105","P24100","P2495","P2490","P2485","P2480","P2475","P2470","P2465","P2460","P25110","P25105","P25100","P2595","P2590","P2585","P2580","P2575","P2570","P2565","P2560","P26110","P26105","P26100","P2695","P2690","P2685","P2680","P2675","P2670","P2665","P2660","P28110","P28105","P28100","P2895","P2890","P2885","P2880","P2875","P2870","P2865","P2860","P30110","P30105","P30100","P3095","P3090","P3085","P3080","P3075","P3070","P3065","P3060","P32110","P32105","P32100","P3295","P3290","P3285","P3280","P3275","P3270","P3265","P3260"]},
+  "PB":{"nombre":"Pantalón beige","codigo":"PB","keys":["PB12110","PB12105","PB12100","PB1295","PB1290","PB14110","PB14105","PB14100","PB1495","PB1490","PB15110","PB15105","PB15100","PB1595","PB1590","PB16110","PB16105","PB16100","PB1695","PB1690","PB17110","PB17105","PB17100","PB1795","PB1790","PB19110","PB19105","PB19100","PB1995","PB1990","PB20110","PB20105","PB20100","PB2095","PB2090","PB22110","PB22105","PB22100","PB2295","PB2290","PB24110","PB24105","PB24100","PB2495","PB2490","PB25110","PB25105","PB25100","PB2595","PB2590","PB26110","PB26105","PB26100","PB2695","PB2690","PB28110","PB28105","PB28100","PB2895","PB2890","PB30110","PB30105","PB30100","PB3095","PB3090"]},
+  "S":{"nombre":"Short","codigo":"S","keys":["S3","S4","S6","S8","S10","S12","S14","S16"]},
+  "FCE":{"nombre":"Falda C.E.","codigo":"FCE","keys":["FCE350","FCE345","FCE340","FCE335","FCE330","FCE325","FCE450","FCE445","FCE440","FCE435","FCE430","FCE425","FCE650","FCE645","FCE640","FCE635","FCE630","FCE625","FCE750","FCE745","FCE740","FCE735","FCE730","FCE725","FCE850","FCE845","FCE840","FCE835","FCE830","FCE825","FCE1050","FCE1045","FCE1040","FCE1035","FCE1030","FCE1025","FCE1250","FCE1245","FCE1240","FCE1235","FCE1230","FCE1225","FCE1450","FCE1445","FCE1440","FCE1435","FCE1430","FCE1425","FCE1650","FCE1645","FCE1640","FCE1635","FCE1630","FCE1625"]}
+};
+// Catálogo combinado (base + custom desde Supabase). Se carga al abrir Trazo.
+let CATALOGO = JSON.parse(JSON.stringify(CATALOGO_BASE));
 
+// Estado global
+let historialTipo = 'trazo';
+let trazoSeleccionado = null;      // para Tendido
+let tendidoSeleccionado = null;    // para Bulto
+let trazoTallasBuffer = [];        // tallas del trazo en el form
+let tallasCount = 0;
+let rollosCountTd = 0;
+let bultosState = [];              // estado del asistente de bulto
+let fotoBlob = null;
+let coloresSeleccionados = new Set(); // 'blanco', 'celeste', 'azul', 'beige'
+
+// Mapeo color → prendas permitidas
+const COLORES = {
+  blanco:  { nombre: 'Blanco',  hex: '#FFFFFF', border: '#BBB', prendas: ['C','B'] },
+  celeste: { nombre: 'Celeste', hex: '#8EC5E8', border: '#6AA5C8', prendas: ['CC','FCE'] },
+  azul:    { nombre: 'Azul',    hex: '#1F4E79', border: '#1F4E79', prendas: ['P','F'] },
+  beige:   { nombre: 'Beige',   hex: '#D4C59E', border: '#B0A07A', prendas: ['PB','FB'] },
+};
+
+// Compatibilidad: cuáles colores se pueden combinar
+const COMPATIBLES = {
+  blanco:  ['celeste'],
+  celeste: ['blanco'],
+  azul:    ['beige'],
+  beige:   ['azul'],
+};
+
+// ══════════════════════════════════════════════════════════════════════
+// NAV
+// ══════════════════════════════════════════════════════════════════════
 function switchTab(tab, el) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('view-' + tab).classList.add('active');
-  el.classList.add('active');
+  if (el) el.classList.add('active');
   if (tab === 'historial') cargarHistorial('trazo');
   if (tab === 'config') initConfig();
+  if (tab === 'nuevo') {} // menu se arma en init
+  window.scrollTo(0, 0);
 }
 
+function irA(seccion) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + seccion).classList.add('active');
+  window.scrollTo(0, 0);
+  if (seccion === 'trazo') initTrazo();
+  if (seccion === 'tendido') initTendido();
+  if (seccion === 'bulto') initBulto();
+}
+
+function volverNuevo() {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-nuevo').classList.add('active');
+  document.querySelectorAll('.nav-tab')[0].classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// SUPABASE
+// ══════════════════════════════════════════════════════════════════════
 async function supaFetch(table, method = 'GET', body = null, params = '') {
   const url = `${SUPA_URL}/rest/v1/${table}${params}`;
   const opts = {
@@ -444,6 +626,13 @@ async function supaUpdate(table, id, data) {
   if (!res.ok) throw new Error(await res.text());
 }
 
+function mostrarAlerta(sec, tipo, msg) {
+  const el = document.getElementById(`alert-${sec}`);
+  if (!el) return;
+  el.innerHTML = `<div class="alert alert-${tipo==='error'?'error':(tipo==='warn'?'warn':'success')}">${msg}</div>`;
+  setTimeout(() => el.innerHTML='', 5000);
+}
+
 function previewFoto(input, previewId, labelId) {
   const file = input.files[0];
   if (!file) return;
@@ -453,667 +642,1359 @@ function previewFoto(input, previewId, labelId) {
     const img = document.getElementById(previewId);
     img.src = e.target.result;
     img.style.display = 'block';
-    document.getElementById(labelId).textContent = '✅ Foto lista para guardar';
+    document.getElementById(labelId).textContent = file.name;
   };
   reader.readAsDataURL(file);
 }
 
-function abrirVideo(inputId) {
-  const url = document.getElementById(inputId).value.trim();
-  if (!url) { alert('Ingresa un enlace primero'); return; }
-  window.open(url, '_blank');
-}
-
-function toggleGuia() {
-  const g = document.getElementById('guia-piezas');
-  const i = document.getElementById('guia-icon');
-  const v = g.style.display !== 'none';
-  g.style.display = v ? 'none' : 'block';
-  i.textContent = v ? '▶' : '▼';
-}
-
-function toggleNoEntro() {
-  const val = document.querySelector('input[name="t-no-entro"]:checked').value;
-  document.getElementById('t-no-entro-fields').style.display = val === 'si' ? 'block' : 'none';
-}
-
-// ── TALLAS DEL TENDIDO ────────────────────────────────────────────────────
-function procesarTallas() {
-  const raw = document.getElementById('t-tallas-input').value;
-  tallasActuales = raw.split(',').map(t => t.trim()).filter(t => t.length > 0);
-
-  // Mostrar chips
-  const chips = document.getElementById('t-tallas-chips');
-  chips.innerHTML = tallasActuales.map(t => `<span class="talla-chip">${t}</span>`).join('');
-
-  // Actualizar checklists de todas las prendas
-  prendasTrazo.forEach(p => {
-    if (p.prenda) regenerarChecklist(p.id);
-  });
-}
-
-// ── TRAZO ─────────────────────────────────────────────────────────────────
-function initTrazo() {
+// ══════════════════════════════════════════════════════════════════════
+// TRAZO
+// ══════════════════════════════════════════════════════════════════════
+async function initTrazo() {
   document.getElementById('t-fecha').value = new Date().toISOString().split('T')[0];
-  prendasTrazo = []; prendasCount = 0;
-  secundariasCount = 0;
-  fotoBlob = null;
-  tallasActuales = [];
-  document.getElementById('t-prendas-container').innerHTML = '';
-  document.getElementById('t-secundarias-container').innerHTML = '';
-  document.getElementById('t-tallas-chips').innerHTML = '';
-  ['t-codigo','t-capas','t-yardas','t-observaciones','t-video-url','t-tallas-input','t-talla-no-entro','t-razon-no-entro'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  document.querySelector('input[name="t-no-entro"][value="no"]').checked = true;
-  document.getElementById('t-no-entro-fields').style.display = 'none';
-  const preview = document.getElementById('t-foto-preview');
-  if (preview) { preview.style.display = 'none'; preview.src = ''; }
-  document.getElementById('t-foto-label').textContent = 'Toca para tomar o adjuntar foto';
-  agregarPrenda();
-}
-
-function agregarPrenda() {
-  prendasCount++;
-  const id = prendasCount;
-  const letra = String.fromCharCode(64 + id);
-  prendasTrazo.push({ id, letra, prenda: '' });
-  const div = document.createElement('div');
-  div.className = 'prenda-seccion';
-  div.id = `prenda-sec-${id}`;
-  div.innerHTML = `
-    <div class="prenda-header">
-      <span class="prenda-badge">PRENDA ${letra}</span>
-      <select onchange="onPrendaChange(${id},this.value)" style="flex:1;padding:8px;border:1px solid var(--borde);border-radius:8px;font-size:14px">
-        <option value="">— Seleccionar prenda —</option>
-        ${PRENDAS_LISTA.map(p=>`<option value="${p}">${p}</option>`).join('')}
-      </select>
-      ${id>1?`<button class="btn btn-danger" onclick="quitarPrenda(${id})">✕</button>`:''}
-    </div>
-    <div id="checklist-${id}"></div>
-  `;
-  document.getElementById('t-prendas-container').appendChild(div);
-}
-
-function quitarPrenda(id) {
-  document.getElementById(`prenda-sec-${id}`).remove();
-  prendasTrazo = prendasTrazo.filter(p => p.id !== id);
-}
-
-function onPrendaChange(id, prenda) {
-  const p = prendasTrazo.find(x => x.id === id);
-  if (p) p.prenda = prenda;
-  regenerarChecklist(id);
-}
-
-function regenerarChecklist(id) {
-  const container = document.getElementById(`checklist-${id}`);
-  const p = prendasTrazo.find(x => x.id === id);
-  if (!p || !p.prenda) { container.innerHTML = ''; return; }
-
-  if (tallasActuales.length === 0) {
-    container.innerHTML = `<div class="alert alert-info" style="font-size:13px">⬆️ Primero escribe las tallas del tendido arriba</div>`;
-    return;
-  }
-
-  container.innerHTML = `
-    <button class="btn btn-ghost btn-sm mb8" onclick="agregarPieza(${id})">+ Agregar pieza</button>
-    <div style="overflow-x:auto">
-    <table class="tabla-piezas" id="tabla-${id}">
-      <thead>
-        <tr>
-          <th style="min-width:110px">Pieza</th>
-          ${tallasActuales.map(t => `<th style="min-width:50px;text-align:center">${t}</th>`).join('')}
-          <th style="min-width:130px">Pieza faltante</th>
-          <th style="min-width:70px;text-align:center">Sec?</th>
-          <th style="min-width:70px;text-align:center">Resuelta?</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="tbody-${id}"></tbody>
-    </table>
-    </div>
-  `;
-}
-
-function agregarPieza(prendaId) {
-  const tbody = document.getElementById(`tbody-${prendaId}`);
-  if (!tbody) return;
-  const filaId = `fila-${prendaId}-${Date.now()}`;
-  const tr = document.createElement('tr');
-  tr.id = filaId;
-  tr.innerHTML = `
-    <td><input type="text" placeholder="Ej: Pechera" data-field="pieza"></td>
-    ${tallasActuales.map(t => `<td style="text-align:center"><input type="checkbox" data-talla="${t}"></td>`).join('')}
-    <td><input type="text" placeholder="Si ✗ cuál" data-field="pieza_faltante"></td>
-    <td style="text-align:center"><input type="checkbox" data-field="es_secundaria"></td>
-    <td style="text-align:center"><input type="checkbox" data-field="resuelta"></td>
-    <td><button class="btn btn-danger" onclick="document.getElementById('${filaId}').remove()">✕</button></td>
-  `;
-  tbody.appendChild(tr);
-}
-
-function agregarSecundaria() {
-  secundariasCount++;
-  const id = secundariasCount;
-  const div = document.createElement('div');
-  div.className = 'rollo-card';
-  div.id = `sec-${id}`;
-  div.style.borderLeftColor = '#FFC107';
-  div.innerHTML = `
-    <div class="rollo-header">
-      <span class="rollo-num" style="color:#856404">Pieza pendiente #${id}</span>
-      <button class="btn btn-danger" onclick="document.getElementById('sec-${id}').remove()">✕</button>
-    </div>
-    <div class="row3">
-      <div class="field"><label>Prenda</label><input type="text" data-sec="${id}" data-field="prenda"></div>
-      <div class="field"><label>Pieza</label><input type="text" data-sec="${id}" data-field="pieza"></div>
-      <div class="field"><label>Tallas afectadas</label><input type="text" data-sec="${id}" data-field="tallas"></div>
-    </div>
-    <div class="field"><label>Acción / Pendiente</label><input type="text" data-sec="${id}" data-field="accion"></div>
-  `;
-  document.getElementById('t-secundarias-container').appendChild(div);
-}
-
-async function guardarTrazo() {
-  const fecha = document.getElementById('t-fecha').value;
-  const codigo = document.getElementById('t-codigo').value.trim();
-  if (!fecha || !codigo) { mostrarAlerta('trazo','error','Fecha y código son obligatorios.'); return; }
-
-  const btn = document.getElementById('btn-guardar-trazo');
-  btn.textContent = '⏳ Guardando...';
-  btn.classList.add('uploading');
-
-  try {
-    const noEntroVal = document.querySelector('input[name="t-no-entro"]:checked').value;
-    const [trazo] = await supaFetch('trazo','POST',{
-      fecha, codigo_corte: codigo,
-      capas: document.getElementById('t-capas').value ? parseInt(document.getElementById('t-capas').value) : null,
-      yardas_estimadas: document.getElementById('t-yardas').value ? parseFloat(document.getElementById('t-yardas').value) : null,
-      tallas_tendido: tallasActuales.join(', ') || null,
-      talla_no_entro: noEntroVal === 'si' ? (document.getElementById('t-talla-no-entro').value || null) : null,
-      razon_no_entro: noEntroVal === 'si' ? (document.getElementById('t-razon-no-entro').value || null) : null,
-      observaciones: document.getElementById('t-observaciones').value || null,
-      video_url: document.getElementById('t-video-url').value.trim() || null,
-    });
-
-    // Foto
-    if (fotoBlob) {
-      try {
-        const fotoUrl = await supaUploadFoto(fotoBlob, trazo.id);
-        await supaUpdate('trazo', trazo.id, { foto_url: fotoUrl });
-      } catch(e) { console.warn('Foto error:', e); }
-    }
-
-    // Prendas y checklists
-    for (const p of prendasTrazo) {
-      if (!p.prenda) continue;
-      const [tPrenda] = await supaFetch('trazo_prenda','POST',{ trazo_id: trazo.id, prenda: p.prenda, orden: p.id });
-
-      const tbody = document.getElementById(`tbody-${p.id}`);
-      if (!tbody) continue;
-
-      const filas = tbody.querySelectorAll('tr');
-      let orden = 1;
-      for (const fila of filas) {
-        const piezaInp = fila.querySelector('[data-field="pieza"]');
-        if (!piezaInp || !piezaInp.value.trim()) continue;
-
-        const tallasEstado = {};
-        fila.querySelectorAll('[data-talla]').forEach(cb => {
-          tallasEstado[cb.dataset.talla] = cb.checked;
-        });
-
-        await supaFetch('trazo_checklist','POST',{
-          trazo_prenda_id: tPrenda.id,
-          pieza: piezaInp.value.trim(),
-          tallas_estado: tallasEstado,
-          pieza_faltante: fila.querySelector('[data-field="pieza_faltante"]').value.trim() || null,
-          es_secundaria: fila.querySelector('[data-field="es_secundaria"]').checked,
-          resuelta: fila.querySelector('[data-field="resuelta"]').checked,
-          orden: orden++
-        });
-      }
-    }
-
-    // Secundarias
-    const secsMap = {};
-    document.querySelectorAll('[data-sec]').forEach(el => {
-      const id = el.dataset.sec;
-      if (!secsMap[id]) secsMap[id] = {};
-      secsMap[id][el.dataset.field] = el.value;
-    });
-    for (const [,sec] of Object.entries(secsMap)) {
-      if (sec.prenda || sec.pieza) {
-        await supaFetch('trazo_secundaria','POST',{ trazo_id:trazo.id, prenda:sec.prenda||null, pieza:sec.pieza||null, tallas_afectadas:sec.tallas||null, accion:sec.accion||null });
-      }
-    }
-
-    mostrarAlerta('trazo','success',`✅ Trazo ${codigo} guardado correctamente.`);
-    setTimeout(() => { btn.textContent='💾 Guardar registro de trazo'; btn.classList.remove('uploading'); initTrazo(); }, 1500);
-  } catch(e) {
-    mostrarAlerta('trazo','error','Error al guardar: ' + e.message);
-    btn.textContent = '💾 Guardar registro de trazo';
-    btn.classList.remove('uploading');
-  }
-}
-
-// ── TENDIDO ───────────────────────────────────────────────────────────────
-let tallasMarcadasCount = 0;
-
-function initTendido() {
-  document.getElementById('td-fecha').value = new Date().toISOString().split('T')[0];
-  rollosCount = 0;
-  tallasMarcadasCount = 0;
-  document.getElementById('td-rollos-container').innerHTML = '';
-  document.getElementById('td-tallas-container').innerHTML = '';
-  ['td-codigo','td-prendas','td-equipo','td-observaciones','td-letra-corte'].forEach(id => {
+  ['t-letra-corte','t-capas','t-yardas','t-video-url','t-observaciones'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
-  agregarRollo();
-  actualizarPreviewBultos();
+  document.getElementById('t-yd-por-lienzo').value = '4';
+  document.getElementById('t-foto-preview').style.display = 'none';
+  document.getElementById('t-foto-label').textContent = 'Toca para tomar o adjuntar foto';
+  document.getElementById('t-tallas-container').innerHTML = '';
+  tallasCount = 0;
+  fotoBlob = null;
+  coloresSeleccionados = new Set();
+  await cargarCatalogoCustom();
+  renderColorChips();
+  agregarTallaTrazo();
 }
 
-// ── TALLAS MARCADAS ──────────────────────────────────────────────────────
-function letraParaTalla(idxCero) {
-  // Sugiere letra local: A, B, C... saltando la letra del corte si coincide
-  const corte = (document.getElementById('td-letra-corte').value || '').toUpperCase();
+async function cargarCatalogoCustom() {
+  CATALOGO = JSON.parse(JSON.stringify(CATALOGO_BASE));
+  try {
+    const customs = await supaFetch('catalogo_key','GET',null,'?activo=eq.true&limit=500');
+    customs.forEach(c => {
+      if (CATALOGO[c.cod_prenda] && !CATALOGO[c.cod_prenda].keys.includes(c.key)) {
+        CATALOGO[c.cod_prenda].keys.push(c.key);
+      }
+    });
+  } catch(e) {
+    console.warn('Sin catalogo_key:', e.message);
+  }
+}
+
+function renderColorChips() {
+  const cont = document.getElementById('t-color-chips');
+  const ids = ['blanco','celeste','azul','beige'];
+  cont.innerHTML = ids.map(id => {
+    const c = COLORES[id];
+    const activo = coloresSeleccionados.has(id);
+    const incompatible = esIncompatible(id);
+    const cls = 'color-chip' + (activo ? ' active' : '') + (incompatible ? ' disabled' : '');
+    return `<div class="${cls}" onclick="toggleColor('${id}')">
+      <span class="color-swatch" style="background:${c.hex};border-color:${c.border}"></span>
+      ${c.nombre}
+    </div>`;
+  }).join('');
+}
+
+function esIncompatible(colorId) {
+  if (coloresSeleccionados.size === 0) return false;
+  if (coloresSeleccionados.has(colorId)) return false;
+  // Solo se permite si todos los actuales lo aceptan
+  for (const c of coloresSeleccionados) {
+    if (!COMPATIBLES[c]?.includes(colorId)) return true;
+  }
+  return false;
+}
+
+function toggleColor(id) {
+  if (coloresSeleccionados.has(id)) {
+    coloresSeleccionados.delete(id);
+  } else {
+    if (esIncompatible(id)) return; // bloqueado
+    coloresSeleccionados.add(id);
+  }
+  renderColorChips();
+  // Refrescar prendas permitidas en todas las tallas abiertas
+  actualizarPrendasPermitidasTodas();
+}
+
+function prendasPermitidas() {
+  // Unión de las prendas de todos los colores seleccionados
+  const set = new Set();
+  for (const c of coloresSeleccionados) {
+    (COLORES[c]?.prendas || []).forEach(p => set.add(p));
+  }
+  return [...set];
+}
+
+function recalcYardas() {
+  const capas = parseFloat(document.getElementById('t-capas').value) || 0;
+  const ydLienzo = parseFloat(document.getElementById('t-yd-por-lienzo').value) || 0;
+  const calc = capas * ydLienzo;
+  const hint = document.getElementById('t-yardas-hint');
+  if (capas > 0 && ydLienzo > 0) {
+    hint.innerHTML = `Cálculo: ${capas} × ${ydLienzo} = <strong>${calc.toFixed(1)} yd</strong>. Tocá "🧮 Calc" para aplicar.`;
+  } else {
+    hint.textContent = 'Tip: capas × yardas por lienzo. Editable si preferís otro valor.';
+  }
+}
+
+function aplicarYardasCalc() {
+  const capas = parseFloat(document.getElementById('t-capas').value) || 0;
+  const ydLienzo = parseFloat(document.getElementById('t-yd-por-lienzo').value) || 0;
+  if (capas <= 0 || ydLienzo <= 0) { mostrarAlerta('trazo','error','Ingresá capas y yardas por lienzo primero.'); return; }
+  document.getElementById('t-yardas').value = (capas * ydLienzo).toFixed(1);
+}
+
+function letraSugeridaTalla() {
+  const corte = (document.getElementById('t-letra-corte').value || '').toUpperCase();
   const usadas = new Set();
-  document.querySelectorAll('[data-tm-letra]').forEach(el => {
-    const v = el.value.toUpperCase();
+  document.querySelectorAll('[data-ttrazo-letra]').forEach(el => {
+    const v = (el.value||'').toUpperCase();
     if (v) usadas.add(v);
   });
   const alfabeto = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  for (const l of alfabeto) {
-    if (!usadas.has(l) && l !== corte) return l;
-  }
-  // Si ya no hay letras que no coincidan, permitir la del corte
-  for (const l of alfabeto) {
-    if (!usadas.has(l)) return l;
-  }
+  for (const l of alfabeto) if (!usadas.has(l) && l !== corte) return l;
+  for (const l of alfabeto) if (!usadas.has(l)) return l;
   return '';
 }
 
 function sugerirLetrasTallas() {
-  // Cuando cambia la letra del corte, re-sugiere letras vacías pero no sobrescribe
-  document.querySelectorAll('[data-tm-letra]').forEach(el => {
-    if (!el.value.trim()) {
-      el.value = letraParaTalla();
-    }
-    marcarColisionLetra(el);
-  });
-  actualizarPreviewBultos();
-}
-
-function marcarColisionLetra(input) {
-  const corte = (document.getElementById('td-letra-corte').value || '').toUpperCase();
-  const val = (input.value || '').toUpperCase();
-  const parent = input.closest('.talla-marcada-row');
-  if (!parent) return;
-  if (val && val === corte) {
-    parent.classList.add('letra-warning');
-  } else {
-    parent.classList.remove('letra-warning');
-  }
-}
-
-function agregarTallaMarcada() {
-  tallasMarcadasCount++;
-  const id = tallasMarcadasCount;
-  const letraSugerida = letraParaTalla();
-  const div = document.createElement('div');
-  div.className = 'talla-marcada-row';
-  div.id = `tm-${id}`;
-  div.innerHTML = `
-    <div>
-      <label>Letra</label>
-      <input type="text" class="letra-input" maxlength="1" data-tm-id="${id}" data-tm-letra="1" value="${letraSugerida}" oninput="this.value=this.value.toUpperCase();marcarColisionLetra(this);onTallaMarcadaChange()">
-    </div>
-    <div>
-      <label>Talla original (KEY)</label>
-      <input type="text" data-tm-id="${id}" data-tm-key="1" placeholder="Ej: P1595" oninput="onTallaMarcadaChange()">
-    </div>
-    <div>
-      <label>Notas (opcional)</label>
-      <input type="text" data-tm-id="${id}" data-tm-notas="1" placeholder="Prenda/descripción">
-    </div>
-    <div>
-      <label>Multiplic.</label>
-      <input type="number" min="1" value="1" data-tm-id="${id}" data-tm-mult="1" oninput="onTallaMarcadaChange()">
-    </div>
-    <div>
-      <button class="btn-mini btn-mini-danger" onclick="eliminarTallaMarcada(${id})" title="Eliminar">✕</button>
-    </div>
-  `;
-  document.getElementById('td-tallas-container').appendChild(div);
-  marcarColisionLetra(div.querySelector('[data-tm-letra]'));
-  // Agregar la talla a todos los rollos existentes
-  document.querySelectorAll('[data-rollo-id]').forEach(rc => {
-    agregarSalidaARollo(parseInt(rc.dataset.rolloId), id);
-  });
-  actualizarPreviewBultos();
-}
-
-function eliminarTallaMarcada(id) {
-  document.getElementById(`tm-${id}`)?.remove();
-  document.querySelectorAll(`[data-salida-tm="${id}"]`).forEach(el => el.remove());
-  actualizarPreviewBultos();
-}
-
-function onTallaMarcadaChange() {
-  // Cuando cambia una talla marcada, actualizar los "hints" en las salidas y el preview
-  document.querySelectorAll('[data-tm-id]').forEach(input => {
-    if (!input.dataset.tmKey) return;
-    const tmId = input.dataset.tmId;
-    const key = input.value.trim();
-    // Actualizar hints de "original" en salidas de este tm en todos los rollos
-    document.querySelectorAll(`[data-salida-tm="${tmId}"]`).forEach(block => {
-      const hint = block.querySelector('.partida-original-hint');
-      if (hint) hint.textContent = key ? `Default: ${key} (sin sustitución)` : '';
-      // Prellenar primera partida vacía con el KEY original
-      const primerKey = block.querySelector(`[data-partida-talla]`);
-      if (primerKey && !primerKey.value.trim() && key) primerKey.value = key;
-    });
-  });
-  actualizarPreviewBultos();
-}
-
-// ── ROLLOS ───────────────────────────────────────────────────────────────
-function agregarRollo() {
-  rollosCount++;
-  const id = rollosCount;
-  const div = document.createElement('div');
-  div.className = 'rollo-card';
-  div.id = `rollo-${id}`;
-  div.dataset.rolloId = id;
-  div.innerHTML = `
-    <div class="rollo-header">
-      <span class="rollo-num">Rollo #${id}</span>
-      ${id>1?`<button class="btn btn-danger" onclick="document.getElementById('rollo-${id}').remove();calcularTotales();actualizarPreviewBultos()">✕</button>`:''}
-    </div>
-    <div class="row2">
-      <div class="field"><label>Código del rollo</label><input type="text" data-rollo="${id}" data-field="codigo_rollo" oninput="calcularTotales()"></div>
-      <div class="field"><label>Yardas del rollo</label><input type="number" step="0.5" data-rollo="${id}" data-field="yardas_rollo" oninput="calcularTotales()"></div>
-    </div>
-    <div class="row3">
-      <div class="field"><label>Capas (lienzos)</label><input type="number" data-rollo="${id}" data-field="lienzos_salidos" oninput="calcularTotales();actualizarPreviewBultos()"></div>
-      <div class="field"><label>Pares</label><input type="number" data-rollo="${id}" data-field="pares" oninput="calcularTotales()"></div>
-      <div class="field"><label>Yardas sobrantes</label><input type="number" step="0.5" data-rollo="${id}" data-field="yardas_sobrantes" oninput="calcularTotales()"></div>
-    </div>
-    <div class="field"><label>Obs. de tono</label><input type="text" data-rollo="${id}" data-field="observacion_tono"></div>
-
-    <div class="salidas-block">
-      <div class="salidas-title">📦 Salidas de este rollo por talla marcada</div>
-      <div class="salidas-rollo-container" id="salidas-rollo-${id}"></div>
-      <p class="text-muted" id="salidas-empty-${id}" style="font-size:11px">Agregá tallas marcadas arriba para capturar salidas aquí.</p>
-    </div>
-  `;
-  document.getElementById('td-rollos-container').appendChild(div);
-  // Agregar filas de salida para cada talla marcada existente
-  document.querySelectorAll('[data-tm-id][data-tm-letra]').forEach(inp => {
-    agregarSalidaARollo(id, parseInt(inp.dataset.tmId));
+  document.querySelectorAll('[data-ttrazo-letra]').forEach(el => {
+    if (!el.value.trim()) el.value = letraSugeridaTalla();
+    marcarColisionLetraTrazo(el);
   });
 }
 
-function agregarSalidaARollo(rolloId, tmId) {
-  const container = document.getElementById(`salidas-rollo-${rolloId}`);
-  if (!container) return;
-  // Ocultar mensaje "vacío"
-  const empty = document.getElementById(`salidas-empty-${rolloId}`);
-  if (empty) empty.style.display = 'none';
-  // Si ya existe, no duplicar
-  if (container.querySelector(`[data-salida-tm="${tmId}"]`)) return;
-
-  const letra = document.querySelector(`[data-tm-id="${tmId}"][data-tm-letra]`)?.value || '?';
-  const keyOriginal = document.querySelector(`[data-tm-id="${tmId}"][data-tm-key]`)?.value || '';
-
-  const block = document.createElement('div');
-  block.className = 'salida-row';
-  block.dataset.salidaTm = tmId;
-  block.dataset.salidaRollo = rolloId;
-  block.innerHTML = `
-    <div class="salida-letra" data-salida-letra="${tmId}">${letra}</div>
-    <div class="salida-partidas" id="partidas-${rolloId}-${tmId}">
-      <!-- filas dinámicas -->
-    </div>
-  `;
-  container.appendChild(block);
-  // Agregar primera partida con la talla original prellenada
-  agregarPartida(rolloId, tmId, keyOriginal);
+function marcarColisionLetraTrazo(input) {
+  const corte = (document.getElementById('t-letra-corte').value||'').toUpperCase();
+  const v = (input.value||'').toUpperCase();
+  if (v && v === corte) input.classList.add('letra-warning');
+  else input.classList.remove('letra-warning');
 }
 
-function agregarPartida(rolloId, tmId, tallaDefault='') {
-  const cont = document.getElementById(`partidas-${rolloId}-${tmId}`);
-  if (!cont) return;
+function agregarTallaTrazo() {
+  tallasCount++;
+  const id = tallasCount;
+  const letra = letraSugeridaTalla();
+  const permitidas = prendasPermitidas();
+  const prendaOptions = `<option value="">— Prenda —</option>` + permitidas.map(p => 
+    `<option value="${p}">${CATALOGO[p].nombre}</option>`).join('');
+
   const row = document.createElement('div');
-  row.className = 'partida-row';
+  row.className = 'talla-row';
+  row.id = `ttrazo-${id}`;
+  row.dataset.ttId = id;
   row.innerHTML = `
-    <input type="number" min="1" placeholder="pz" data-partida-rollo="${rolloId}" data-partida-tm="${tmId}" data-partida-qty="1" oninput="actualizarPreviewBultos()">
-    <input type="text" placeholder="Talla (KEY)" value="${tallaDefault}" data-partida-rollo="${rolloId}" data-partida-tm="${tmId}" data-partida-talla="1" oninput="actualizarPreviewBultos()">
-    <button class="btn-mini btn-mini-danger" onclick="this.parentElement.remove();actualizarPreviewBultos()" title="Eliminar partida">✕</button>
+    <div class="talla-row-head2">
+      <div>
+        <label>Letra</label>
+        <input type="text" class="letra-input" maxlength="1" data-tt-id="${id}" data-ttrazo-letra="1" value="${letra}" oninput="this.value=this.value.toUpperCase();marcarColisionLetraTrazo(this);actualizarComplementosVisibles()">
+      </div>
+      <div>
+        <label>Prenda</label>
+        <select data-tt-id="${id}" data-ttrazo-prenda="1" onchange="onPrendaTallaChange(${id})">${prendaOptions}</select>
+      </div>
+      <div class="key-wrap">
+        <label>Talla (KEY)</label>
+        <input type="text" data-tt-id="${id}" data-ttrazo-key="1" placeholder="Elegí prenda primero"
+               oninput="onKeyInput(${id})"
+               onfocus="onKeyInput(${id})"
+               onblur="setTimeout(()=>cerrarDropdownKey(${id}),200)"
+               autocomplete="off"
+               disabled>
+        <div class="key-dropdown" id="keydrop-${id}"></div>
+      </div>
+      <div>
+        <label style="visibility:hidden">x</label>
+        <button class="btn-mini btn-mini-danger" onclick="eliminarTallaTrazo(${id})">✕</button>
+      </div>
+    </div>
+    <div class="talla-row-tipo">
+      <div><label style="margin:0">Tipo:</label></div>
+      <div class="tipo-opt active" data-tt-id="${id}" data-ttrazo-tipo="completa" onclick="setTipoTalla(${id},'completa')">completa</div>
+      <div class="tipo-opt" data-tt-id="${id}" data-ttrazo-tipo="par" onclick="setTipoTalla(${id},'par')">par</div>
+    </div>
+    <div class="talla-row-hint" id="hint-${id}">completa: 1 lienzo = 1 pieza</div>
+    <div class="talla-complemento" id="comp-${id}" style="display:none">
+      <label>Complementa con (otra talla par):</label>
+      <select data-tt-id="${id}" data-ttrazo-complemento="1" onchange="onComplementoChange(${id})">
+        <option value="">— Elegí primero una KEY —</option>
+      </select>
+      <div class="complemento-info"></div>
+    </div>
   `;
-  cont.appendChild(row);
-  // Botón "agregar partida" (si es la primera, lo agregamos al final)
-  if (!cont.querySelector('.btn-add-partida')) {
-    const btn = document.createElement('button');
-    btn.className = 'btn-mini btn-add-partida';
-    btn.textContent = '+ partida (sustitución parcial)';
-    btn.style.marginTop = '2px';
-    btn.style.alignSelf = 'flex-start';
-    btn.onclick = () => { agregarPartida(rolloId, tmId); };
-    cont.appendChild(btn);
+  document.getElementById('t-tallas-container').appendChild(row);
+  actualizarPrendasPermitidasTodas(); // por si cambió algo
+}
+
+function eliminarTallaTrazo(id) {
+  // Limpiar si era complemento de otra
+  const row = document.getElementById(`ttrazo-${id}`);
+  if (row) row.remove();
+  // Cualquier otra que apuntaba a esta, desvinculala
+  document.querySelectorAll('[data-ttrazo-complemento]').forEach(sel => {
+    if (sel.value == id) sel.value = '';
+  });
+  actualizarComplementosVisibles();
+}
+
+function setTipoTalla(id, tipo) {
+  const row = document.getElementById(`ttrazo-${id}`);
+  if (!row) return;
+  row.querySelectorAll('[data-ttrazo-tipo]').forEach(el => {
+    el.classList.toggle('active', el.dataset.ttrazoTipo === tipo);
+  });
+  const hint = document.getElementById(`hint-${id}`);
+  if (hint) hint.textContent = tipo === 'par' ? 'par: 2 lienzos = 1 pieza' : 'completa: 1 lienzo = 1 pieza';
+  // Mostrar/ocultar complemento
+  const comp = document.getElementById(`comp-${id}`);
+  if (comp) comp.style.display = (tipo === 'par') ? 'block' : 'none';
+  // Si cambia a completa, limpiar complemento y desvincular reverso
+  if (tipo !== 'par') {
+    const sel = row.querySelector('[data-ttrazo-complemento]');
+    if (sel) {
+      const prevPartner = sel.value;
+      sel.value = '';
+      if (prevPartner) {
+        // Desvincular la otra si apuntaba a esta
+        const revSel = document.querySelector(`[data-tt-id="${prevPartner}"][data-ttrazo-complemento]`);
+        if (revSel && revSel.value == id) revSel.value = '';
+      }
+    }
+  }
+  actualizarComplementosVisibles();
+}
+
+function onPrendaTallaChange(id) {
+  const row = document.getElementById(`ttrazo-${id}`);
+  if (!row) return;
+  const prenda = row.querySelector('[data-ttrazo-prenda]').value;
+  const keyInp = row.querySelector('[data-ttrazo-key]');
+  if (prenda) {
+    keyInp.disabled = false;
+    keyInp.placeholder = 'Buscar o escribir (ej: P1595)';
+    keyInp.value = ''; // limpiar selección previa porque cambió la prenda
+    cerrarDropdownKey(id);
   } else {
-    // mover el botón al final
-    const btn = cont.querySelector('.btn-add-partida');
-    cont.appendChild(btn);
+    keyInp.disabled = true;
+    keyInp.value = '';
+    keyInp.placeholder = 'Elegí prenda primero';
   }
 }
 
-// ── PREVIEW DE BULTOS DERIVADOS ──────────────────────────────────────────
-function actualizarPreviewBultos() {
-  const cont = document.getElementById('bultos-preview-container');
-  if (!cont) return;
-  const corte = (document.getElementById('td-letra-corte').value || '').toUpperCase();
-  const bultos = [];
-  const validaciones = [];
-
-  // Agrupar tallas marcadas
-  const tm = {};
-  document.querySelectorAll('[data-tm-id]').forEach(el => {
-    const id = el.dataset.tmId;
-    if (!tm[id]) tm[id] = {};
-    if (el.dataset.tmLetra) tm[id].letra = (el.value||'').toUpperCase();
-    if (el.dataset.tmKey) tm[id].key = el.value.trim();
-    if (el.dataset.tmMult) tm[id].mult = parseInt(el.value) || 1;
+function actualizarPrendasPermitidasTodas() {
+  const permitidas = prendasPermitidas();
+  document.querySelectorAll('[data-ttrazo-prenda]').forEach(sel => {
+    const actual = sel.value;
+    const opts = `<option value="">— Prenda —</option>` + permitidas.map(p => 
+      `<option value="${p}" ${actual===p?'selected':''}>${CATALOGO[p].nombre}</option>`).join('');
+    // Si la prenda actual ya no está permitida, queda vacía
+    if (actual && !permitidas.includes(actual)) {
+      sel.innerHTML = opts;
+      sel.value = '';
+      // limpiar KEY asociada
+      const id = sel.dataset.ttId;
+      const row = document.getElementById(`ttrazo-${id}`);
+      if (row) {
+        const keyInp = row.querySelector('[data-ttrazo-key]');
+        if (keyInp) { keyInp.value = ''; keyInp.disabled = true; keyInp.placeholder = 'Elegí prenda primero'; }
+      }
+    } else {
+      sel.innerHTML = opts;
+    }
   });
+}
 
-  // Rollos
-  const rollos = {};
-  document.querySelectorAll('[data-rollo]').forEach(el => {
-    const id = el.dataset.rollo;
-    if (!rollos[id]) rollos[id] = {};
-    if (el.dataset.field === 'lienzos_salidos') rollos[id].capas = parseInt(el.value) || 0;
-  });
+// Dropdown KEY: filtra solo por la prenda de ESA fila
+function onKeyInput(id) {
+  const row = document.getElementById(`ttrazo-${id}`);
+  if (!row) return;
+  const prenda = row.querySelector('[data-ttrazo-prenda]').value;
+  if (!prenda) return;
+  const inp = row.querySelector('[data-ttrazo-key]');
+  const drop = document.getElementById(`keydrop-${id}`);
+  if (!inp || !drop) return;
+  const q = (inp.value || '').trim().toUpperCase();
+  let opciones = (CATALOGO[prenda]?.keys || [])
+    .filter(k => !q || k.toUpperCase().includes(q))
+    .map(k => ({ key: k, cod: prenda, nombre: CATALOGO[prenda].nombre }))
+    .slice(0, 30);
+  const existeExacta = opciones.some(o => o.key.toUpperCase() === q);
+  let html = '';
+  if (opciones.length === 0 && !q) {
+    html = '<div class="key-option text-muted" style="font-style:italic">Escribí para buscar o elegí de la lista...</div>';
+  } else {
+    html = opciones.map(o => `
+      <div class="key-option" onmousedown="seleccionarKey(${id},'${o.key.replace(/'/g,"\\'")}')">
+        <strong>${o.key}</strong>
+      </div>
+    `).join('');
+  }
+  if (q && !existeExacta) {
+    html += `
+      <div class="key-option nueva" onmousedown="agregarKeyCatalogo(${id},'${q.replace(/'/g,"\\'")}','${prenda}')">
+        ➕ Agregar "${q}" al catálogo de ${CATALOGO[prenda].nombre}
+      </div>
+    `;
+  }
+  drop.innerHTML = html;
+  drop.classList.add('active');
+}
 
-  // Recorrer rollos × tallas
-  Object.entries(rollos).forEach(([rolloId, r]) => {
-    Object.entries(tm).forEach(([tmId, t]) => {
-      if (!t.letra || !t.key) return;
-      const esperado = r.capas * (t.mult || 1);
-      let registrado = 0;
-      const cellBultos = [];
-      document.querySelectorAll(`[data-partida-rollo="${rolloId}"][data-partida-tm="${tmId}"]`).forEach(el => {
-        // Emparejar qty + talla
-        const partidaRow = el.closest('.partida-row');
-        const qtyInp = partidaRow.querySelector('[data-partida-qty]');
-        const tallaInp = partidaRow.querySelector('[data-partida-talla]');
-        if (el === qtyInp) {
-          const qty = parseInt(qtyInp.value) || 0;
-          const talla = tallaInp.value.trim();
-          if (qty > 0 && talla) {
-            registrado += qty;
-            const cod = `${rolloId}${corte || '?'}${t.letra}${qty}-${talla}`;
-            cellBultos.push({ cod, sustitucion: talla !== t.key });
-          }
-        }
-      });
-      cellBultos.forEach(b => bultos.push(b));
-      if (esperado > 0 || registrado > 0) {
-        validaciones.push({
-          rollo: rolloId, letra: t.letra, key: t.key,
-          esperado, registrado, 
-          estado: esperado === registrado ? 'ok' : (registrado === 0 ? 'vacio' : 'revisar')
-        });
+function detectarPrendaDeKey(key) {
+  const codigos = Object.keys(CATALOGO).sort((a,b) => b.length - a.length);
+  for (const c of codigos) {
+    if (key.startsWith(c)) return c;
+  }
+  return null;
+}
+
+function seleccionarKey(id, key) {
+  const row = document.getElementById(`ttrazo-${id}`);
+  if (!row) return;
+  const inp = row.querySelector('[data-ttrazo-key]');
+  if (inp) inp.value = key;
+  cerrarDropdownKey(id);
+  actualizarComplementosVisibles(); // actualizar dropdowns de complemento (para que muestren KEY)
+}
+
+function cerrarDropdownKey(id) {
+  const drop = document.getElementById(`keydrop-${id}`);
+  if (drop) drop.classList.remove('active');
+}
+
+async function agregarKeyCatalogo(id, key, codPrenda) {
+  if (!codPrenda) return;
+  try {
+    await supaFetch('catalogo_key','POST',{ cod_prenda: codPrenda, key });
+    if (CATALOGO[codPrenda] && !CATALOGO[codPrenda].keys.includes(key)) {
+      CATALOGO[codPrenda].keys.push(key);
+    }
+    seleccionarKey(id, key);
+  } catch(e) {
+    if (CATALOGO[codPrenda] && !CATALOGO[codPrenda].keys.includes(key)) {
+      CATALOGO[codPrenda].keys.push(key);
+    }
+    seleccionarKey(id, key);
+    console.warn('catalogo_key no disponible, usando local:', e.message);
+  }
+}
+
+// Complementos: ahora sugieren del CATÁLOGO basándose en la KEY principal
+// Parsea una KEY tipo "P1595", "F2055CINT.17", "C10" → {cod, talla, largo, detalle}
+function parsearKey(key) {
+  if (!key) return null;
+  const codigos = Object.keys(CATALOGO).sort((a,b) => b.length - a.length);
+  let cod = null;
+  for (const c of codigos) {
+    if (key.startsWith(c)) { cod = c; break; }
+  }
+  if (!cod) return null;
+  const resto = key.substring(cod.length); // ej: "1595" o "2055CINT.17"
+  const mDetalle = resto.match(/^(\d+)(.*)$/);
+  if (!mDetalle) return { cod, talla: null, largo: null, detalle: null };
+  const numeros = mDetalle[1];
+  const detalle = mDetalle[2] || null;
+
+  let talla = null, largo = null;
+  if (['C','B','CC','S'].includes(cod)) {
+    // Prendas sin largo: todo es talla
+    talla = parseInt(numeros);
+  } else {
+    // Prendas con talla+largo. Estrategia: preferir la división donde la talla pertenezca
+    // al catálogo conocido para esa prenda. Si hay empate, preferir talla mayor.
+    const tallasCatalogo = new Set();
+    (CATALOGO[cod]?.keys || []).forEach(k => {
+      // Parseo rápido solo para extraer tallas conocidas (prefijos posibles)
+      const m = k.substring(cod.length).match(/^(\d+)/);
+      if (!m) return;
+      const nums = m[1];
+      // Probar splits de 1 a 2 dígitos para talla
+      for (let s = 1; s <= Math.min(2, nums.length - 1); s++) {
+        const t = parseInt(nums.substring(0, s));
+        const l = parseInt(nums.substring(s));
+        if (t >= 2 && t <= 40 && l >= 20 && l <= 120) tallasCatalogo.add(t);
       }
     });
-  });
 
-  if (!bultos.length) {
-    cont.innerHTML = '<p class="text-muted">Agregá tallas marcadas y salidas por rollo para ver los códigos de bulto.</p>';
+    // Buscar la división óptima
+    const candidatos = [];
+    for (let split = 1; split < numeros.length; split++) {
+      const t = parseInt(numeros.substring(0, split));
+      const l = parseInt(numeros.substring(split));
+      if (t >= 2 && t <= 40 && l >= 20 && l <= 120) {
+        candidatos.push({ t, l, split, enCatalogo: tallasCatalogo.has(t) });
+      }
+    }
+    if (candidatos.length > 0) {
+      // Preferir (1) los que están en el catálogo, (2) talla mayor
+      candidatos.sort((a, b) => {
+        if (a.enCatalogo !== b.enCatalogo) return b.enCatalogo - a.enCatalogo;
+        return b.t - a.t;
+      });
+      talla = candidatos[0].t;
+      largo = candidatos[0].l;
+    } else {
+      talla = parseInt(numeros);
+    }
+  }
+  return { cod, talla, largo, detalle };
+}
+
+// Construir KEY a partir de componentes
+function construirKey(cod, talla, largo, detalle) {
+  let k = cod + (talla !== null && talla !== undefined ? talla : '');
+  if (largo !== null && largo !== undefined) k += largo;
+  if (detalle) k += detalle;
+  return k;
+}
+
+// Generar sugerencias de complemento para una KEY principal
+// Retorna array de grupos: [{talla: N, keys: [{key, largo, detalle, existeEnCatalogo}]}, ...]
+function generarSugerenciasComplemento(keyPrincipal) {
+  const p = parsearKey(keyPrincipal);
+  if (!p || p.talla === null) return [];
+
+  // Buscar en el catálogo de la misma prenda (cod)
+  const allKeys = CATALOGO[p.cod]?.keys || [];
+  // Parsear todas, filtrar por talla < principal
+  const parsed = allKeys
+    .map(k => ({ key: k, ...parsearKey(k) }))
+    .filter(x => x && x.cod === p.cod && x.talla !== null && x.talla < p.talla);
+
+  // Agrupar por talla, ordenar tallas descendente (más cercana a la principal primero)
+  const grupos = {};
+  parsed.forEach(x => {
+    if (!grupos[x.talla]) grupos[x.talla] = [];
+    grupos[x.talla].push(x);
+  });
+  // Ordenar dentro de cada talla: largo mayor→menor, luego por detalle
+  Object.keys(grupos).forEach(t => {
+    grupos[t].sort((a, b) => {
+      if (a.largo !== b.largo) return (b.largo||0) - (a.largo||0);
+      return (a.detalle||'').localeCompare(b.detalle||'');
+    });
+  });
+  // Tomar las 2 tallas más cercanas (más grandes entre las menores)
+  const tallasOrdenadas = Object.keys(grupos).map(Number).sort((a,b) => b - a);
+  const top2 = tallasOrdenadas.slice(0, 2);
+  return top2.map(t => ({ talla: t, keys: grupos[t] }));
+}
+
+// Actualizar un <select> de complemento de una fila específica
+function actualizarSugerenciasComplemento(idFila) {
+  const row = document.getElementById(`ttrazo-${idFila}`);
+  if (!row) return;
+  const sel = row.querySelector('[data-ttrazo-complemento]');
+  if (!sel) return;
+  const keyPrincipal = row.querySelector('[data-ttrazo-key]')?.value.trim() || '';
+  const prevVal = sel.value;
+
+  if (!keyPrincipal) {
+    sel.innerHTML = '<option value="">— Elegí primero una KEY —</option>';
     return;
   }
 
-  const bultosHtml = bultos.map(b => 
-    `<span class="bulto-chip ${b.sustitucion?'sub':''}">${b.cod}</span>`
-  ).join('');
+  const p = parsearKey(keyPrincipal);
+  if (!p) {
+    sel.innerHTML = '<option value="">— KEY no reconocida —</option>';
+    return;
+  }
 
-  const validHtml = validaciones.length ? `
-    <div class="divider" style="margin:10px 0 8px"></div>
-    <div class="salidas-title" style="color:#555">Validación (capas × multiplic. vs suma de salidas)</div>
-    ${validaciones.map(v => {
-      const cls = v.estado==='ok'?'validacion-ok':'validacion-warn';
-      const msg = v.estado==='ok'?'✓':(v.estado==='vacio'?'sin salidas':`⚠ falta ${v.esperado-v.registrado}`);
-      return `<div class="validacion-row ${cls}"><span>Rollo ${v.rollo} · Talla ${v.letra} (${v.key})</span><span>${v.registrado}/${v.esperado} ${msg}</span></div>`;
-    }).join('')}
-  ` : '';
+  const grupos = generarSugerenciasComplemento(keyPrincipal);
 
-  cont.innerHTML = `
-    <div class="bultos-preview">
-      <div class="salidas-title">Total: ${bultos.length} bulto(s) · ${bultos.filter(b=>b.sustitucion).length} con sustitución</div>
-      ${bultosHtml}
-      ${validHtml}
-    </div>
-  `;
+  // Construir opciones agrupadas
+  let html = '<option value="">— Sin asignar —</option>';
+  if (grupos.length === 0) {
+    html += `<option value="__nueva__" data-cod="${p.cod}" data-mas-chica="1">+ No hay menores · Agregar talla nueva...</option>`;
+  } else {
+    grupos.forEach(g => {
+      html += `<optgroup label="Talla ${g.talla}">`;
+      g.keys.forEach(x => {
+        const desc = [x.largo?`largo ${x.largo}`:null, x.detalle].filter(Boolean).join(' · ') || 'sola';
+        html += `<option value="KEY::${x.key}">${x.key}  (${desc})</option>`;
+      });
+      html += `</optgroup>`;
+    });
+    // Opción "otra talla del catálogo completo"
+    html += `<option value="__otra__" data-cod="${p.cod}">— Otra talla del catálogo —</option>`;
+    // Opción "registrar talla más grande"
+    html += `<option value="__mas_grande__" data-cod="${p.cod}">+ Registrar talla más grande...</option>`;
+  }
+
+  sel.innerHTML = html;
+
+  // Restaurar selección previa si sigue siendo válida
+  if (prevVal && prevVal.startsWith('KEY::')) {
+    const stillThere = sel.querySelector(`option[value="${CSS.escape(prevVal)}"]`);
+    if (stillThere) sel.value = prevVal;
+  }
 }
 
-function calcularTotales() {
-  let lienzos=0,pares=0,ycons=0,ysob=0;
-  const seen = new Set();
-  document.querySelectorAll('[data-rollo]').forEach(el => {
-    seen.add(el.dataset.rollo);
-    const v = parseFloat(el.value)||0;
-    if(el.dataset.field==='lienzos_salidos') lienzos+=v;
-    if(el.dataset.field==='pares') pares+=v;
-    if(el.dataset.field==='yardas_rollo') ycons+=v;
-    if(el.dataset.field==='yardas_sobrantes') ysob+=v;
+// Refrescar TODOS los complementos visibles (cuando cambia la KEY de alguna fila)
+function actualizarComplementosVisibles() {
+  document.querySelectorAll('.talla-row').forEach(row => {
+    const id = row.dataset.ttId;
+    const tipoEl = row.querySelector('[data-ttrazo-tipo].active');
+    const tipo = tipoEl ? tipoEl.dataset.ttrazoTipo : 'completa';
+    if (tipo === 'par') actualizarSugerenciasComplemento(id);
   });
-  document.getElementById('total-lienzos').textContent=lienzos;
-  document.getElementById('total-pares').textContent=pares;
-  document.getElementById('total-rollos').textContent=seen.size;
-  document.getElementById('total-ycons').textContent=ycons.toFixed(1);
-  document.getElementById('total-ysob').textContent=ysob.toFixed(1);
 }
 
-async function guardarTendido() {
-  const fecha=document.getElementById('td-fecha').value;
-  const codigo=document.getElementById('td-codigo').value.trim();
-  if(!fecha||!codigo){mostrarAlerta('tendido','error','Fecha y código son obligatorios.');return;}
+async function onComplementoChange(id) {
+  const row = document.getElementById(`ttrazo-${id}`);
+  if (!row) return;
+  const sel = row.querySelector('[data-ttrazo-complemento]');
+  if (!sel) return;
+  const val = sel.value;
+
+  if (!val) return; // "sin asignar"
+
+  // Opciones especiales
+  if (val === '__otra__') {
+    await abrirSelectorOtraTalla(id);
+    return;
+  }
+  if (val === '__mas_grande__' || val === '__nueva__') {
+    const cod = sel.selectedOptions[0]?.dataset?.cod;
+    const masChica = sel.selectedOptions[0]?.dataset?.masChica === '1';
+    await abrirModalKeyNueva(id, cod, masChica ? 'menor' : 'mayor');
+    return;
+  }
+
+  // Es una KEY del catálogo: "KEY::F1855"
+  if (val.startsWith('KEY::')) {
+    const keyComp = val.substring(5);
+    await asignarComplementoPorKey(id, keyComp);
+  }
+}
+
+// Asignar complemento: busca o crea la talla marcada con esa KEY y vincula bidireccional
+async function asignarComplementoPorKey(idPrincipal, keyComp) {
+  // Buscar si ya existe una fila en el trazo con esa KEY y tipo par
+  let idPartner = null;
+  document.querySelectorAll('.talla-row').forEach(r => {
+    if (idPartner) return;
+    const k = r.querySelector('[data-ttrazo-key]')?.value?.trim();
+    const tipoEl = r.querySelector('[data-ttrazo-tipo].active');
+    const tipo = tipoEl ? tipoEl.dataset.ttrazoTipo : 'completa';
+    if (k === keyComp && tipo === 'par' && r.dataset.ttId !== idPrincipal) {
+      idPartner = r.dataset.ttId;
+    }
+  });
+
+  if (!idPartner) {
+    // Crear nueva fila automáticamente
+    idPartner = crearFilaAutomatica(keyComp);
+  }
+
+  if (!idPartner) return;
+
+  // Vincular bidireccional
+  vincularComplemento(idPrincipal, idPartner);
+  actualizarComplementosVisibles();
+}
+
+// Crear una fila de talla marcada automáticamente para el complemento
+function crearFilaAutomatica(key) {
+  const p = parsearKey(key);
+  if (!p) return null;
+
+  // Simular click en "agregar talla" y luego setear valores
+  agregarTallaTrazo();
+  const id = tallasCount; // el recién creado
+  const row = document.getElementById(`ttrazo-${id}`);
+  if (!row) return null;
+
+  // Setear prenda
+  const selPrenda = row.querySelector('[data-ttrazo-prenda]');
+  if (selPrenda) {
+    selPrenda.value = p.cod;
+    onPrendaTallaChange(id);
+  }
+  // Setear KEY
+  const inpKey = row.querySelector('[data-ttrazo-key]');
+  if (inpKey) inpKey.value = key;
+  // Tipo par
+  setTipoTalla(id, 'par');
+
+  return String(id);
+}
+
+// Vincular dos filas como complementarias (bidireccional)
+function vincularComplemento(idA, idB) {
+  const rowA = document.getElementById(`ttrazo-${idA}`);
+  const rowB = document.getElementById(`ttrazo-${idB}`);
+  if (!rowA || !rowB) return;
+  const selA = rowA.querySelector('[data-ttrazo-complemento]');
+  const selB = rowB.querySelector('[data-ttrazo-complemento]');
+  if (!selA || !selB) return;
+
+  // Primero refrescar sugerencias para que ambas tengan a la otra como opción
+  actualizarSugerenciasComplemento(idA);
+  actualizarSugerenciasComplemento(idB);
+
+  const keyA = rowA.querySelector('[data-ttrazo-key]')?.value.trim();
+  const keyB = rowB.querySelector('[data-ttrazo-key]')?.value.trim();
+
+  if (keyB) selA.value = `KEY::${keyB}`;
+  if (keyA) selB.value = `KEY::${keyA}`;
+
+  // Desvincular otros partners previos
+  document.querySelectorAll('[data-ttrazo-complemento]').forEach(s => {
+    const sidFila = s.dataset.ttId;
+    if (sidFila === idA || sidFila === idB) return;
+    // Si apuntaba a A o B, limpiar
+    if (s.value === `KEY::${keyA}` || s.value === `KEY::${keyB}`) s.value = '';
+  });
+
+  // Pequeña nota visual
+  const infoA = rowA.querySelector('.complemento-info');
+  const infoB = rowB.querySelector('.complemento-info');
+  if (infoA) infoA.textContent = keyB ? `↔ complementa con ${keyB}` : '';
+  if (infoB) infoB.textContent = keyA ? `↔ complementa con ${keyA}` : '';
+}
+
+// ── Modal para crear KEY nueva (mas grande o mas chica) ──────────────
+let miniModalContext = null;
+
+function abrirModalKeyNueva(idFila, cod, direccion /* 'mayor' | 'menor' */) {
+  miniModalContext = { tipo: 'keyNueva', idFila, cod, direccion };
+  const prenda = CATALOGO[cod];
+  const rowActual = document.getElementById(`ttrazo-${idFila}`);
+  const keyActual = rowActual?.querySelector('[data-ttrazo-key]')?.value || '';
+  const pActual = parsearKey(keyActual) || {};
+
+  document.getElementById('mm-title').textContent = `Agregar talla ${direccion === 'mayor' ? 'más grande' : 'nueva'} · ${prenda.nombre}`;
+  const body = document.getElementById('mm-body');
+  body.innerHTML = `
+    <div class="field">
+      <label>Talla</label>
+      <input type="number" id="mm-talla" min="1" max="50" placeholder="Ej: ${(pActual.talla||14)+(direccion==='mayor'?2:-2)}">
+    </div>
+    <div class="field">
+      <label>Largo (opcional)</label>
+      <input type="number" id="mm-largo" min="1" max="150" placeholder="Ej: ${pActual.largo||''}" ${pActual.largo?`value="${pActual.largo}"`:''}>
+    </div>
+    <div class="field">
+      <label>Detalle (opcional, ej: CINT.17)</label>
+      <input type="text" id="mm-detalle" placeholder="Vacío si no tiene" ${pActual.detalle?`value="${pActual.detalle}"`:''}>
+    </div>
+    <div class="text-muted">Se generará una KEY como "${cod}<span id="mm-preview-talla">?</span><span id="mm-preview-largo"></span><span id="mm-preview-detalle"></span>"</div>
+  `;
+  // Listeners para preview
+  ['mm-talla','mm-largo','mm-detalle'].forEach(id => {
+    document.getElementById(id).addEventListener('input', actualizarPreviewKey);
+  });
+  document.getElementById('mini-modal').classList.add('active');
+  setTimeout(() => document.getElementById('mm-talla').focus(), 50);
+}
+
+function actualizarPreviewKey() {
+  const t = document.getElementById('mm-talla').value;
+  const l = document.getElementById('mm-largo').value;
+  const d = document.getElementById('mm-detalle').value;
+  document.getElementById('mm-preview-talla').textContent = t || '?';
+  document.getElementById('mm-preview-largo').textContent = l || '';
+  document.getElementById('mm-preview-detalle').textContent = d || '';
+}
+
+async function abrirSelectorOtraTalla(idFila) {
+  const row = document.getElementById(`ttrazo-${idFila}`);
+  const keyPrincipal = row?.querySelector('[data-ttrazo-key]')?.value.trim();
+  const p = parsearKey(keyPrincipal);
+  if (!p) return;
+
+  miniModalContext = { tipo: 'otraTalla', idFila, cod: p.cod };
+  const prenda = CATALOGO[p.cod];
+
+  // Mostrar todas las keys del mismo cod agrupadas por talla, excluyendo la principal
+  const todas = (prenda.keys || [])
+    .map(k => ({ key: k, ...parsearKey(k) }))
+    .filter(x => x && x.cod === p.cod && x.key !== keyPrincipal);
+  const grupos = {};
+  todas.forEach(x => {
+    const t = x.talla || 0;
+    if (!grupos[t]) grupos[t] = [];
+    grupos[t].push(x);
+  });
+  const tallas = Object.keys(grupos).map(Number).sort((a,b) => b - a);
+
+  document.getElementById('mm-title').textContent = `Elegir otra talla · ${prenda.nombre}`;
+  const body = document.getElementById('mm-body');
+  let html = '<div class="field"><label>Elegir talla del catálogo</label><select id="mm-select" size="10" style="height:auto">';
+  tallas.forEach(t => {
+    html += `<optgroup label="Talla ${t}">`;
+    grupos[t].sort((a,b) => (b.largo||0) - (a.largo||0));
+    grupos[t].forEach(x => {
+      const desc = [x.largo?`largo ${x.largo}`:null, x.detalle].filter(Boolean).join(' · ') || 'sola';
+      html += `<option value="${x.key}">${x.key}  (${desc})</option>`;
+    });
+    html += `</optgroup>`;
+  });
+  html += '</select></div>';
+  body.innerHTML = html;
+  document.getElementById('mini-modal').classList.add('active');
+}
+
+async function confirmarMiniModal() {
+  if (!miniModalContext) return;
+  const ctx = miniModalContext;
+
+  if (ctx.tipo === 'keyNueva') {
+    const t = parseInt(document.getElementById('mm-talla').value);
+    const l = document.getElementById('mm-largo').value ? parseInt(document.getElementById('mm-largo').value) : null;
+    const d = document.getElementById('mm-detalle').value.trim() || null;
+    if (!t) { alert('Talla es obligatoria'); return; }
+    const nuevaKey = construirKey(ctx.cod, t, l, d);
+    // Guardar en catálogo
+    try {
+      await supaFetch('catalogo_key','POST',{ cod_prenda: ctx.cod, key: nuevaKey });
+    } catch(e) { console.warn('catalogo_key:', e.message); }
+    if (!CATALOGO[ctx.cod].keys.includes(nuevaKey)) CATALOGO[ctx.cod].keys.push(nuevaKey);
+
+    cerrarMiniModal();
+    // Resetear el select y asignar
+    const row = document.getElementById(`ttrazo-${ctx.idFila}`);
+    const sel = row?.querySelector('[data-ttrazo-complemento]');
+    if (sel) sel.value = '';
+    await asignarComplementoPorKey(ctx.idFila, nuevaKey);
+    return;
+  }
+
+  if (ctx.tipo === 'otraTalla') {
+    const sel = document.getElementById('mm-select');
+    if (!sel || !sel.value) { alert('Elegí una talla'); return; }
+    const keyElegida = sel.value;
+    cerrarMiniModal();
+    const rowSel = document.getElementById(`ttrazo-${ctx.idFila}`).querySelector('[data-ttrazo-complemento]');
+    if (rowSel) rowSel.value = '';
+    await asignarComplementoPorKey(ctx.idFila, keyElegida);
+    return;
+  }
+}
+
+function cerrarMiniModal() {
+  document.getElementById('mini-modal').classList.remove('active');
+  // Si el select de complemento quedó con valor especial y no se confirmó, volver a vacío
+  if (miniModalContext?.idFila) {
+    const row = document.getElementById(`ttrazo-${miniModalContext.idFila}`);
+    const sel = row?.querySelector('[data-ttrazo-complemento]');
+    if (sel && ['__otra__','__mas_grande__','__nueva__'].includes(sel.value)) {
+      sel.value = '';
+    }
+  }
+  miniModalContext = null;
+}
+
+function recolectarTallasTrazo() {
+  const tallas = [];
+  document.querySelectorAll('.talla-row').forEach(row => {
+    const idLocal = row.dataset.ttId;
+    const letra = (row.querySelector('[data-ttrazo-letra]')?.value || '').toUpperCase().trim();
+    const prenda = row.querySelector('[data-ttrazo-prenda]')?.value || null;
+    const key = row.querySelector('[data-ttrazo-key]')?.value.trim() || '';
+    const tipoEl = row.querySelector('[data-ttrazo-tipo].active');
+    const tipo = tipoEl ? tipoEl.dataset.ttrazoTipo : 'completa';
+    // El valor del complemento ahora es "KEY::xxx" → extraemos la key
+    const selComp = row.querySelector('[data-ttrazo-complemento]')?.value || '';
+    let complementoKey = null;
+    if (selComp.startsWith('KEY::')) complementoKey = selComp.substring(5);
+    if (letra && key) tallas.push({ idLocal, letra, key, tipo, prenda, complementoKey, orden: tallas.length + 1 });
+  });
+  return tallas;
+}
+
+async function guardarTrazo() {
+  const fecha = document.getElementById('t-fecha').value;
+  const letraCorte = (document.getElementById('t-letra-corte').value||'').toUpperCase().trim();
+  if (!fecha) { mostrarAlerta('trazo','error','Fecha es obligatoria.'); return; }
+  if (!letraCorte) { mostrarAlerta('trazo','error','Letra del corte es obligatoria.'); return; }
+  if (coloresSeleccionados.size === 0) { mostrarAlerta('trazo','error','Elegí al menos un color de tela.'); return; }
+
+  const tallas = recolectarTallasTrazo();
+  if (tallas.length === 0) { mostrarAlerta('trazo','error','Agregá al menos 1 talla marcada con letra y KEY.'); return; }
+
+  const letras = tallas.map(t => t.letra);
+  if (new Set(letras).size !== letras.length) { mostrarAlerta('trazo','error','Las letras de tallas deben ser únicas.'); return; }
+
+  const parsSinComp = tallas.filter(t => t.tipo === 'par' && !t.complementoKey);
+  if (parsSinComp.length > 0) {
+    if (!confirm(`Hay ${parsSinComp.length} talla(s) "par" sin complemento asignado. ¿Guardar igual?`)) return;
+  }
+
+  const btn = document.getElementById('btn-guardar-trazo');
+  btn.textContent = '⏳ Guardando...';
+  btn.disabled = true;
+
   try {
-    const completo=document.getElementById('td-completo').value==='true';
-    const letraCorte = (document.getElementById('td-letra-corte').value || '').toUpperCase().trim() || null;
-
-    const [tendido]=await supaFetch('tendido','POST',{
-      fecha,codigo_corte:codigo,
+    const [trazo] = await supaFetch('trazo','POST',{
+      fecha,
+      codigo_corte: letraCorte,
       letra_corte: letraCorte,
-      prendas:document.getElementById('td-prendas').value||null,
-      equipo:document.getElementById('td-equipo').value||null,
-      completo_en_un_dia:completo,
-      fecha_continuacion:(!completo&&document.getElementById('td-continuacion').value)?document.getElementById('td-continuacion').value:null,
-      observaciones_generales:document.getElementById('td-observaciones').value||null
+      colores_tela: [...coloresSeleccionados],
+      capas: parseInt(document.getElementById('t-capas').value) || null,
+      yardas_estimadas: parseFloat(document.getElementById('t-yardas').value) || null,
+      tallas_tendido: tallas.map(t=>t.key).join(', '),
+      observaciones: document.getElementById('t-observaciones').value || null,
+      video_url: document.getElementById('t-video-url').value.trim() || null,
     });
 
-    // Tallas marcadas: construir mapa {tmId_local -> id_remoto}
-    const tmMap = {};   // id_local (string) -> id_remoto (uuid)
-    const tmData = {};  // id_local -> {letra, key, mult}
-    document.querySelectorAll('[data-tm-id]').forEach(el => {
-      const id = el.dataset.tmId;
-      if (!tmData[id]) tmData[id] = {};
-      if (el.dataset.tmLetra) tmData[id].letra = (el.value||'').toUpperCase();
-      if (el.dataset.tmKey) tmData[id].key = el.value.trim();
-      if (el.dataset.tmNotas) tmData[id].notas = el.value.trim();
-      if (el.dataset.tmMult) tmData[id].mult = parseInt(el.value) || 1;
-    });
-
-    let orden = 1;
-    for (const [idLocal, t] of Object.entries(tmData)) {
-      if (!t.letra || !t.key) continue;
-      const [tm] = await supaFetch('tendido_talla_marcada','POST',{
-        tendido_id: tendido.id,
+    // Primera pasada: insertar todas (sin complemento) y guardar map
+    const mapaIds = {}; // idLocal → uuid remoto
+    const mapaKeyAUuid = {}; // key → uuid remoto
+    for (const t of tallas) {
+      const [inserted] = await supaFetch('trazo_talla_marcada','POST',{
+        trazo_id: trazo.id,
         letra_local: t.letra,
         talla_key_original: t.key,
-        multiplicidad: t.mult || 1,
-        orden: orden++,
+        tipo: t.tipo,
+        multiplicidad: 1,
+        cod_prenda: t.prenda,
+        orden: t.orden,
       });
-      tmMap[idLocal] = tm.id;
+      mapaIds[t.idLocal] = inserted.id;
+      mapaKeyAUuid[t.key] = inserted.id;
     }
 
-    // Rollos: primero crearlos, guardar mapping id_local -> id_remoto
-    const rolloMap = {};
-    const rollosData = {};
-    document.querySelectorAll('[data-rollo]').forEach(el=>{
-      const id=el.dataset.rollo;
-      if(!rollosData[id]) rollosData[id]={numero_rollo:parseInt(id)};
-      const v=el.value;
-      const f=el.dataset.field;
-      rollosData[id][f]=['yardas_rollo','lienzos_salidos','pares','yardas_sobrantes'].includes(f)?(v?parseFloat(v):null):(v||null);
-    });
-    for(const[idLocal,rollo] of Object.entries(rollosData)){
-      const [r] = await supaFetch('tendido_rollo','POST',{tendido_id:tendido.id,...rollo});
-      rolloMap[idLocal] = r.id;
-    }
-
-    // Salidas por (rollo × talla)
-    const partidasMap = {}; // "rolloId_tmId" -> [{qty, talla}, ...]
-    document.querySelectorAll('.partida-row').forEach(row => {
-      const qtyInp = row.querySelector('[data-partida-qty]');
-      const tallaInp = row.querySelector('[data-partida-talla]');
-      if (!qtyInp || !tallaInp) return;
-      const rolloId = qtyInp.dataset.partidaRollo;
-      const tmId = qtyInp.dataset.partidaTm;
-      const qty = parseInt(qtyInp.value) || 0;
-      const talla = tallaInp.value.trim();
-      if (qty <= 0 || !talla) return;
-      const key = `${rolloId}_${tmId}`;
-      if (!partidasMap[key]) partidasMap[key] = [];
-      partidasMap[key].push({ qty, talla, rolloId, tmId });
-    });
-
-    for (const [,partidas] of Object.entries(partidasMap)) {
-      let ord = 1;
-      for (const p of partidas) {
-        const rolloRemoto = rolloMap[p.rolloId];
-        const tmRemoto = tmMap[p.tmId];
-        if (!rolloRemoto || !tmRemoto) continue;
-        await supaFetch('tendido_rollo_salida','POST',{
-          tendido_rollo_id: rolloRemoto,
-          tendido_talla_marcada_id: tmRemoto,
-          talla_key_salida: p.talla,
-          cantidad: p.qty,
-          orden: ord++,
+    // Segunda pasada: vincular complementos por KEY
+    for (const t of tallas) {
+      if (t.tipo === 'par' && t.complementoKey && mapaKeyAUuid[t.complementoKey]) {
+        await supaUpdate('trazo_talla_marcada', mapaIds[t.idLocal], {
+          complemento_id: mapaKeyAUuid[t.complementoKey],
         });
       }
     }
 
-    const nBultos = Object.values(partidasMap).reduce((s,arr)=>s+arr.length,0);
-    mostrarAlerta('tendido','success',`✅ Tendido ${codigo} guardado. ${nBultos} bulto(s) derivado(s).`);
-    setTimeout(()=>initTendido(),2000);
-  } catch(e){mostrarAlerta('tendido','error','Error: '+e.message);}
+    if (fotoBlob) {
+      try {
+        const fotoUrl = await supaUploadFoto(fotoBlob, trazo.id);
+        await supaUpdate('trazo', trazo.id, { foto_url: fotoUrl });
+      } catch(e) { console.warn('Foto:', e); }
+    }
+
+    mostrarAlerta('trazo','success',`✅ Trazo ${letraCorte} guardado con ${tallas.length} talla(s).`);
+    setTimeout(() => { btn.textContent='💾 Guardar trazo'; btn.disabled=false; initTrazo(); }, 1800);
+  } catch(e) {
+    mostrarAlerta('trazo','error','Error: ' + e.message);
+    btn.textContent = '💾 Guardar trazo';
+    btn.disabled = false;
+  }
 }
 
-// ── HISTORIAL ─────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════
+// TENDIDO
+// ══════════════════════════════════════════════════════════════════════
+async function initTendido() {
+  document.getElementById('td-fecha').value = new Date().toISOString().split('T')[0];
+  ['td-equipo','td-observaciones'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('td-rollos-container').innerHTML = '';
+  document.getElementById('td-paso-2').style.display = 'none';
+  document.getElementById('td-warnings').innerHTML = '';
+  trazoSeleccionado = null;
+  rollosCountTd = 0;
+
+  // Cargar trazos sin tendido
+  const sel = document.getElementById('td-trazo-select');
+  sel.innerHTML = '<option value="">— Cargando... —</option>';
+  try {
+    const trazos = await supaFetch('vw_trazos_sin_tendido','GET',null,'?limit=50');
+    if (!trazos.length) {
+      sel.innerHTML = '<option value="">— No hay trazos pendientes —</option>';
+      document.getElementById('td-trazo-info').innerHTML = '<div class="alert alert-warn">No hay trazos pendientes de tender. Registrá un trazo primero.</div>';
+      return;
+    }
+    sel.innerHTML = '<option value="">— Elegir un trazo —</option>' + 
+      trazos.map(t => `<option value="${t.id}">${t.codigo_corte} · ${t.fecha} · ${t.n_tallas_marcadas} talla(s)</option>`).join('');
+  } catch(e) {
+    sel.innerHTML = '<option value="">— Error —</option>';
+    mostrarAlerta('tendido','error','Error cargando trazos: ' + e.message);
+  }
+}
+
+async function onElegirTrazo() {
+  const id = document.getElementById('td-trazo-select').value;
+  if (!id) {
+    document.getElementById('td-trazo-info').innerHTML = '';
+    document.getElementById('td-paso-2').style.display = 'none';
+    trazoSeleccionado = null;
+    return;
+  }
+  try {
+    const [trazo] = await supaFetch('trazo','GET',null,`?id=eq.${id}`);
+    const tallas = await supaFetch('trazo_talla_marcada','GET',null,`?trazo_id=eq.${id}&order=orden`);
+    trazoSeleccionado = { trazo, tallas };
+
+    const info = `
+      <div class="trazo-card">
+        <div class="trazo-code">${trazo.codigo_corte} · Corte ${trazo.letra_corte || '?'}</div>
+        <div class="trazo-meta">Trazado el ${trazo.fecha} · ${tallas.length} talla(s) marcada(s) · ${trazo.capas || '?'} capas planeadas</div>
+        <div class="tallas-inline">
+          ${tallas.map(t => `<span class="talla-pill ${t.tipo==='par'?'par':''}">${t.letra_local}: ${t.talla_key_original} ${t.tipo==='par'?'(par)':''}</span>`).join('')}
+        </div>
+      </div>
+    `;
+    document.getElementById('td-trazo-info').innerHTML = info;
+    document.getElementById('td-paso-2').style.display = 'block';
+
+    // Agregar primer rollo si no hay ninguno
+    if (document.querySelectorAll('.rollo-card').length === 0) {
+      agregarRolloTendido();
+    }
+    recalcTotalesTendido();
+  } catch(e) {
+    mostrarAlerta('tendido','error','Error: ' + e.message);
+  }
+}
+
+function agregarRolloTendido() {
+  rollosCountTd++;
+  const id = rollosCountTd;
+  const div = document.createElement('div');
+  div.className = 'rollo-card';
+  div.id = `trollo-${id}`;
+  div.innerHTML = `
+    <div class="rollo-header">
+      <div>
+        <div class="rollo-num">Rollo #${id} <span class="text-muted" style="font-weight:400">(orden de tendido)</span></div>
+        <div class="equivalencia-pares" id="pares-${id}">0 pares</div>
+      </div>
+      ${id>1?`<button class="btn btn-danger" onclick="document.getElementById('trollo-${id}').remove();recalcTotalesTendido()">✕</button>`:''}
+    </div>
+    <div class="row2">
+      <div class="field"><label>Código del rollo</label><input type="text" data-trollo="${id}" data-tfield="codigo_rollo"></div>
+      <div class="field"><label>Yardas del rollo</label><input type="number" step="0.5" data-trollo="${id}" data-tfield="yardas_rollo" oninput="recalcTotalesTendido()"></div>
+    </div>
+    <div class="row3">
+      <div class="field"><label>Capas (lienzos)</label><input type="number" min="0" data-trollo="${id}" data-tfield="lienzos_salidos" oninput="onCapasChange(${id})"></div>
+      <div class="field"><label>Yardas sobrantes</label><input type="number" step="0.5" data-trollo="${id}" data-tfield="yardas_sobrantes" oninput="recalcTotalesTendido()"></div>
+      <div class="field"><label>Obs. de tono</label><input type="text" data-trollo="${id}" data-tfield="observacion_tono"></div>
+    </div>
+  `;
+  document.getElementById('td-rollos-container').appendChild(div);
+  recalcTotalesTendido();
+}
+
+function onCapasChange(rolloId) {
+  const capas = parseInt(document.querySelector(`[data-trollo="${rolloId}"][data-tfield="lienzos_salidos"]`).value) || 0;
+  const pares = Math.floor(capas / 2);
+  const sobra = capas % 2;
+  const paresText = `${pares} pares${sobra? ' + 1 lienzo sobrante':''}`;
+  document.getElementById(`pares-${rolloId}`).textContent = paresText;
+  recalcTotalesTendido();
+  revisarWarnings();
+}
+
+function recalcTotalesTendido() {
+  let capas=0, pares=0;
+  const seen = new Set();
+  document.querySelectorAll('[data-trollo]').forEach(el => {
+    seen.add(el.dataset.trollo);
+    if (el.dataset.tfield === 'lienzos_salidos') {
+      const v = parseInt(el.value) || 0;
+      capas += v;
+      pares += Math.floor(v / 2);
+    }
+  });
+  document.getElementById('td-total-capas').textContent = capas;
+  document.getElementById('td-total-pares').textContent = pares;
+  document.getElementById('td-total-rollos').textContent = seen.size;
+}
+
+function revisarWarnings() {
+  const cont = document.getElementById('td-warnings');
+  cont.innerHTML = '';
+  if (!trazoSeleccionado) return;
+  const tieneParTallas = trazoSeleccionado.tallas.some(t => t.tipo === 'par');
+  if (!tieneParTallas) return;
+  const rollosImpares = [];
+  document.querySelectorAll('[data-tfield="lienzos_salidos"]').forEach(el => {
+    const capas = parseInt(el.value) || 0;
+    if (capas > 0 && capas % 2 !== 0) rollosImpares.push(el.dataset.trollo);
+  });
+  if (rollosImpares.length) {
+    cont.innerHTML = `<div class="alert alert-warn">⚠️ Hay rollo(s) con capas impares (#${rollosImpares.join(', #')}) y el trazo tiene tallas en par. Se perdería 1 lienzo por rollo como desperdicio.</div>`;
+  }
+}
+
+async function guardarTendido() {
+  if (!trazoSeleccionado) { mostrarAlerta('tendido','error','Elegí un trazo primero.'); return; }
+  const fecha = document.getElementById('td-fecha').value;
+  if (!fecha) { mostrarAlerta('tendido','error','Fecha es obligatoria.'); return; }
+  const rollos = document.querySelectorAll('.rollo-card');
+  if (!rollos.length) { mostrarAlerta('tendido','error','Agregá al menos 1 rollo.'); return; }
+
+  const btn = document.getElementById('btn-guardar-tendido');
+  btn.textContent = '⏳ Guardando...';
+  btn.disabled = true;
+
+  try {
+    const completo = document.getElementById('td-completo').value === 'true';
+    // Heredar código, prendas y letra del trazo
+    const [tendido] = await supaFetch('tendido','POST',{
+      fecha,
+      codigo_corte: trazoSeleccionado.trazo.codigo_corte,
+      letra_corte: trazoSeleccionado.trazo.letra_corte,
+      trazo_id: trazoSeleccionado.trazo.id,
+      prendas: null, // se puede inferir de las tallas
+      equipo: document.getElementById('td-equipo').value || null,
+      completo_en_un_dia: completo,
+      fecha_continuacion: (!completo && document.getElementById('td-continuacion').value) ? document.getElementById('td-continuacion').value : null,
+      observaciones_generales: document.getElementById('td-observaciones').value || null,
+    });
+
+    // Copiar tallas marcadas del trazo al tendido (con vinculación)
+    const tmRemoteMap = {}; // letra_local -> id en tendido_talla_marcada
+    for (const t of trazoSeleccionado.tallas) {
+      const [inserted] = await supaFetch('tendido_talla_marcada','POST',{
+        tendido_id: tendido.id,
+        trazo_talla_marcada_id: t.id,
+        letra_local: t.letra_local,
+        talla_key_original: t.talla_key_original,
+        tipo: t.tipo,
+        multiplicidad: t.multiplicidad,
+        orden: t.orden,
+      });
+      tmRemoteMap[t.letra_local] = inserted.id;
+    }
+
+    // Rollos con numeración invertida: último capturado = rollo #1
+    // Orden de captura: trollo-1, trollo-2, ..., trollo-N
+    // Numeración final: el último capturado es rollo 1, el primero es rollo N
+    const rolloElems = Array.from(rollos);
+    const n = rolloElems.length;
+    for (let i = 0; i < n; i++) {
+      const el = rolloElems[i];
+      const id = el.id.replace('trollo-','');
+      const numeroFinal = n - i; // i=0 (primer capturado) → rollo #N; i=n-1 (último) → rollo #1
+      const campos = { tendido_id: tendido.id, numero_rollo: numeroFinal };
+      el.querySelectorAll('[data-trollo]').forEach(inp => {
+        const f = inp.dataset.tfield;
+        const v = inp.value;
+        campos[f] = ['yardas_rollo','lienzos_salidos','yardas_sobrantes'].includes(f) ? (v ? parseFloat(v) : null) : (v || null);
+      });
+      await supaFetch('tendido_rollo','POST',campos);
+    }
+
+    mostrarAlerta('tendido','success',`✅ Tendido guardado. ${n} rollo(s) renumerados (último tendido = bulto #1).`);
+    setTimeout(() => { btn.textContent='💾 Guardar tendido (invierte numeración)'; btn.disabled=false; volverNuevo(); }, 2200);
+  } catch(e) {
+    mostrarAlerta('tendido','error','Error: ' + e.message);
+    btn.textContent = '💾 Guardar tendido (invierte numeración)';
+    btn.disabled = false;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// BULTO (asistente)
+// ══════════════════════════════════════════════════════════════════════
+async function initBulto() {
+  document.getElementById('bu-paso-2').style.display = 'none';
+  document.getElementById('bu-bultos-container').innerHTML = '';
+  tendidoSeleccionado = null;
+  bultosState = [];
+
+  const sel = document.getElementById('bu-tendido-select');
+  sel.innerHTML = '<option value="">— Cargando... —</option>';
+  try {
+    // Cargar tendidos que no tienen salidas registradas aún
+    const tendidos = await supaFetch('vw_tendidos_sin_bultos','GET',null,'?n_salidas=eq.0&order=fecha.desc&limit=50');
+    if (!tendidos.length) {
+      sel.innerHTML = '<option value="">— No hay tendidos pendientes —</option>';
+      document.getElementById('bu-tendido-info').innerHTML = '<div class="alert alert-warn">No hay tendidos pendientes de capturar bultos. Todos los tendidos ya tienen salidas registradas.</div>';
+      return;
+    }
+    sel.innerHTML = '<option value="">— Elegir un tendido —</option>' + 
+      tendidos.map(t => `<option value="${t.id}">${t.codigo_corte} · ${t.fecha} · ${t.n_rollos} rollo(s)</option>`).join('');
+  } catch(e) {
+    sel.innerHTML = '<option value="">— Error —</option>';
+    mostrarAlerta('bulto','error','Error: ' + e.message);
+  }
+}
+
+async function onElegirTendido() {
+  const id = document.getElementById('bu-tendido-select').value;
+  if (!id) {
+    document.getElementById('bu-tendido-info').innerHTML = '';
+    document.getElementById('bu-paso-2').style.display = 'none';
+    return;
+  }
+  try {
+    const [tend] = await supaFetch('tendido','GET',null,`?id=eq.${id}`);
+    const rollos = await supaFetch('tendido_rollo','GET',null,`?tendido_id=eq.${id}&order=numero_rollo`);
+    const tallas = await supaFetch('tendido_talla_marcada','GET',null,`?tendido_id=eq.${id}&order=orden`);
+    const propuestos = await supaFetch('vw_bulto_propuesto','GET',null,`?tendido_id=eq.${id}&order=numero_rollo,letra_local`);
+
+    tendidoSeleccionado = { tendido: tend, rollos, tallas };
+
+    const info = `
+      <div class="trazo-card">
+        <div class="trazo-code">${tend.codigo_corte} · Corte ${tend.letra_corte || '?'}</div>
+        <div class="trazo-meta">Tendido el ${tend.fecha} · ${rollos.length} rollo(s) · ${tallas.length} talla(s)</div>
+        <div class="tallas-inline">
+          ${tallas.map(t => `<span class="talla-pill ${t.tipo==='par'?'par':''}">${t.letra_local}: ${t.talla_key_original}${t.tipo==='par'?' (par)':''}</span>`).join('')}
+        </div>
+      </div>
+    `;
+    document.getElementById('bu-tendido-info').innerHTML = info;
+    document.getElementById('bu-paso-2').style.display = 'block';
+
+    // Inicializar estado de bultos propuestos
+    bultosState = propuestos.map((p, idx) => ({
+      uid: 'b' + idx,
+      rollo_id: p.rollo_id,
+      numero_rollo: p.numero_rollo,
+      talla_marcada_id: p.talla_marcada_id,
+      letra_talla: p.letra_local,
+      tipo_talla: p.tipo,
+      talla_original: p.talla_key,
+      multiplicidad: p.multiplicidad,
+      capas: p.capas,
+      estado: 'propuesto',  // propuesto | confirmado | dividido | sustituido
+      cantidad: p.cantidad_propuesta,
+      talla_salida: p.talla_key,
+      partidas: null,  // si se divide: [{cantidad, talla}, ...]
+      lienzo_sobrante: p.lienzo_sobrante,
+    }));
+
+    renderBultos();
+  } catch(e) {
+    mostrarAlerta('bulto','error','Error: ' + e.message);
+  }
+}
+
+function renderBultos() {
+  const cont = document.getElementById('bu-bultos-container');
+  const letraCorte = tendidoSeleccionado?.tendido?.letra_corte || '?';
+
+  // Agrupar por rollo
+  const porRollo = {};
+  bultosState.forEach(b => {
+    if (!porRollo[b.numero_rollo]) porRollo[b.numero_rollo] = [];
+    porRollo[b.numero_rollo].push(b);
+  });
+
+  cont.innerHTML = Object.entries(porRollo).map(([num, bultos]) => `
+    <div style="margin-bottom:16px">
+      <div style="font-weight:700;color:var(--azul);margin-bottom:8px;font-size:13px">🧻 Rollo / Bulto #${num} (${bultos[0].capas} capas)</div>
+      ${bultos.map(b => renderBulto(b, letraCorte)).join('')}
+    </div>
+  `).join('');
+
+  // Totales
+  const propuestos = bultosState.filter(b => b.estado === 'propuesto').length;
+  const confirmados = bultosState.filter(b => b.estado === 'confirmado' || b.estado === 'sustituido').length;
+  const divididos = bultosState.filter(b => b.estado === 'dividido');
+  let totalPz = 0;
+  bultosState.forEach(b => {
+    if (b.estado === 'dividido' && b.partidas) {
+      b.partidas.forEach(p => totalPz += p.cantidad || 0);
+    } else if (b.estado !== 'dividido') {
+      totalPz += b.cantidad || 0;
+    }
+  });
+  document.getElementById('bu-total-propuestos').textContent = propuestos;
+  document.getElementById('bu-total-confirmados').textContent = confirmados + divididos.length;
+  document.getElementById('bu-total-pz').textContent = totalPz;
+}
+
+function renderBulto(b, letraCorte) {
+  const codigoActual = (b.estado === 'dividido')
+    ? `${b.numero_rollo}${letraCorte}${b.letra_talla}${b.cantidad}-${b.talla_original}`
+    : `${b.numero_rollo}${letraCorte}${b.letra_talla}${b.cantidad}-${b.talla_salida}`;
+  
+  const claseEstado = 'bulto-' + b.estado;
+  const hint = b.tipo_talla === 'par' ? `(par: ${b.capas}÷2×${b.multiplicidad})` : `(completa: ${b.capas}×${b.multiplicidad})`;
+
+  let acciones = '';
+  if (b.estado === 'propuesto') {
+    acciones = `
+      <button class="btn-mini btn-mini-success" onclick="confirmarBulto('${b.uid}')">✓ Confirmar</button>
+      <button class="btn-mini btn-mini-primary" onclick="sustituirBulto('${b.uid}')">🔄 Sustituir</button>
+      <button class="btn-mini" onclick="dividirBulto('${b.uid}')">✂️ Dividir</button>
+    `;
+  } else if (b.estado === 'sustituido') {
+    acciones = `<button class="btn-mini btn-mini-danger" onclick="resetBulto('${b.uid}')">↶ Revertir</button>`;
+  } else if (b.estado === 'dividido') {
+    acciones = `<button class="btn-mini btn-mini-danger" onclick="resetBulto('${b.uid}')">↶ Unir de vuelta</button>`;
+  } else if (b.estado === 'confirmado') {
+    acciones = `<button class="btn-mini btn-mini-danger" onclick="resetBulto('${b.uid}')">↶ Revertir</button>`;
+  }
+
+  let partidasHtml = '';
+  if (b.estado === 'dividido' && b.partidas) {
+    partidasHtml = `
+      <div class="bulto-partidas">
+        ${b.partidas.map((p, i) => `
+          <div class="partida-child">
+            <input type="number" min="0" value="${p.cantidad||''}" placeholder="pz" 
+                   oninput="actualizarPartida('${b.uid}',${i},'cantidad',this.value)">
+            <input type="text" value="${p.talla||''}" placeholder="Talla (KEY)" 
+                   oninput="actualizarPartida('${b.uid}',${i},'talla',this.value)">
+            <button class="btn-mini btn-mini-danger" onclick="quitarPartida('${b.uid}',${i})">✕</button>
+          </div>
+        `).join('')}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+          <button class="btn-mini" onclick="agregarPartidaBulto('${b.uid}')">+ partida</button>
+          <div style="font-size:11px;color:#856404">Total partidas: ${b.partidas.reduce((s,p)=>s+(parseInt(p.cantidad)||0),0)} / ${b.cantidad}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="bulto-card ${claseEstado}" id="bcard-${b.uid}">
+      <div class="bulto-head">
+        <span class="bulto-codigo">${codigoActual}</span>
+        <span class="bulto-meta">${hint} ${b.lienzo_sobrante?'· ⚠ 1 lienzo desperdicio':''}</span>
+      </div>
+      <div class="bulto-acciones">${acciones}</div>
+      ${partidasHtml}
+    </div>
+  `;
+}
+
+function confirmarBulto(uid) {
+  const b = bultosState.find(x => x.uid === uid);
+  if (!b) return;
+  b.estado = 'confirmado';
+  renderBultos();
+}
+
+function sustituirBulto(uid) {
+  const b = bultosState.find(x => x.uid === uid);
+  if (!b) return;
+  const nueva = prompt(`Sustituir talla de salida.\nOriginal: ${b.talla_original}\nCantidad: ${b.cantidad}\n\nEscribí la nueva talla (KEY):`, b.talla_salida);
+  if (nueva === null) return;
+  const trimmed = nueva.trim();
+  if (!trimmed) return;
+  b.talla_salida = trimmed;
+  b.estado = trimmed === b.talla_original ? 'confirmado' : 'sustituido';
+  renderBultos();
+}
+
+function dividirBulto(uid) {
+  const b = bultosState.find(x => x.uid === uid);
+  if (!b) return;
+  b.estado = 'dividido';
+  b.partidas = [
+    { cantidad: '', talla: b.talla_original },
+    { cantidad: '', talla: b.talla_original },
+  ];
+  renderBultos();
+}
+
+function agregarPartidaBulto(uid) {
+  const b = bultosState.find(x => x.uid === uid);
+  if (!b || !b.partidas) return;
+  b.partidas.push({ cantidad: '', talla: b.talla_original });
+  renderBultos();
+}
+
+function quitarPartida(uid, idx) {
+  const b = bultosState.find(x => x.uid === uid);
+  if (!b || !b.partidas) return;
+  b.partidas.splice(idx, 1);
+  if (b.partidas.length === 0) {
+    b.partidas = null;
+    b.estado = 'propuesto';
+  }
+  renderBultos();
+}
+
+function actualizarPartida(uid, idx, campo, valor) {
+  const b = bultosState.find(x => x.uid === uid);
+  if (!b || !b.partidas) return;
+  if (campo === 'cantidad') b.partidas[idx].cantidad = parseInt(valor) || 0;
+  else b.partidas[idx].talla = valor;
+  // Actualizar solo los totales (no re-renderizar completo para no perder el foco)
+  const total = b.partidas.reduce((s,p)=>s+(parseInt(p.cantidad)||0),0);
+  const totEl = document.querySelector(`#bcard-${uid} .bulto-partidas > div:last-child > div`);
+  if (totEl) totEl.textContent = `Total partidas: ${total} / ${b.cantidad}`;
+}
+
+function resetBulto(uid) {
+  const b = bultosState.find(x => x.uid === uid);
+  if (!b) return;
+  b.estado = 'propuesto';
+  b.talla_salida = b.talla_original;
+  b.partidas = null;
+  renderBultos();
+}
+
+async function guardarBultos() {
+  if (!tendidoSeleccionado) { mostrarAlerta('bulto','error','Elegí un tendido.'); return; }
+  // Validar: no quede nada 'propuesto' sin decidir
+  const pendientes = bultosState.filter(b => b.estado === 'propuesto');
+  if (pendientes.length) {
+    if (!confirm(`Hay ${pendientes.length} bulto(s) sin decidir. ¿Querés confirmarlos tal cual como están propuestos?`)) return;
+    pendientes.forEach(b => b.estado = 'confirmado');
+  }
+  // Validar: divididos deben sumar la cantidad original
+  for (const b of bultosState) {
+    if (b.estado === 'dividido') {
+      const sum = b.partidas.reduce((s,p)=>s+(parseInt(p.cantidad)||0),0);
+      if (sum !== b.cantidad) {
+        if (!confirm(`El bulto ${b.numero_rollo}${tendidoSeleccionado.tendido.letra_corte}${b.letra_talla} se dividió en partidas que suman ${sum} pero el bulto original tenía ${b.cantidad}. ¿Guardar igual? (diferencia: ${b.cantidad-sum})`)) return;
+      }
+      for (const p of b.partidas) {
+        if (!p.talla || !p.talla.trim()) { mostrarAlerta('bulto','error','Hay partidas sin talla asignada.'); return; }
+        if (!p.cantidad || p.cantidad <= 0) { mostrarAlerta('bulto','error','Hay partidas sin cantidad.'); return; }
+      }
+    }
+  }
+
+  const btn = document.getElementById('btn-guardar-bulto');
+  btn.textContent = '⏳ Guardando...';
+  btn.disabled = true;
+
+  try {
+    let total = 0;
+    for (const b of bultosState) {
+      if (b.estado === 'dividido' && b.partidas) {
+        let ord = 1;
+        for (const p of b.partidas) {
+          await supaFetch('tendido_rollo_salida','POST',{
+            tendido_rollo_id: b.rollo_id,
+            tendido_talla_marcada_id: b.talla_marcada_id,
+            talla_key_salida: p.talla.trim(),
+            cantidad: parseInt(p.cantidad),
+            orden: ord++,
+          });
+          total++;
+        }
+      } else {
+        await supaFetch('tendido_rollo_salida','POST',{
+          tendido_rollo_id: b.rollo_id,
+          tendido_talla_marcada_id: b.talla_marcada_id,
+          talla_key_salida: b.talla_salida,
+          cantidad: b.cantidad,
+          orden: 1,
+        });
+        total++;
+      }
+    }
+
+    mostrarAlerta('bulto','success',`✅ ${total} bulto(s) guardado(s).`);
+    setTimeout(() => { btn.textContent='💾 Guardar bultos confirmados'; btn.disabled=false; volverNuevo(); }, 2000);
+  } catch(e) {
+    mostrarAlerta('bulto','error','Error: ' + e.message);
+    btn.textContent = '💾 Guardar bultos confirmados';
+    btn.disabled = false;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// HISTORIAL
+// ══════════════════════════════════════════════════════════════════════
 function switchHistorial(tipo) {
   historialTipo = tipo;
-  document.getElementById('hist-btn-trazo').className = tipo==='trazo'?'btn btn-primary btn-sm':'btn btn-ghost btn-sm';
-  document.getElementById('hist-btn-tendido').className = tipo==='tendido'?'btn btn-primary btn-sm':'btn btn-ghost btn-sm';
+  ['trazo','tendido','bulto'].forEach(t => {
+    const btn = document.getElementById(`hist-btn-${t}`);
+    if (btn) btn.className = (t === tipo ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm');
+  });
   cargarHistorial(tipo);
 }
 
@@ -1122,188 +2003,149 @@ async function cargarHistorial(tipo) {
   const container = document.getElementById('historial-content');
   container.innerHTML = '<div class="loading">Cargando...</div>';
   try {
-    const data = await supaFetch(tipo,'GET',null,'?order=creado_en.desc&limit=50');
-    if(!data.length){
-      container.innerHTML=`<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No hay registros todavía</div></div>`;
+    if (tipo === 'bulto') {
+      const data = await supaFetch('vw_bulto_derivado','GET',null,'?order=fecha.desc,numero_rollo,letra_talla&limit=100');
+      if (!data.length) {
+        container.innerHTML = `<div class="empty"><div class="empty-icon">📭</div>Sin bultos todavía</div>`;
+        return;
+      }
+      // Agrupar por tendido
+      const porTendido = {};
+      data.forEach(b => {
+        if (!porTendido[b.tendido_id]) porTendido[b.tendido_id] = { codigo: b.codigo_corte, fecha: b.fecha, bultos: [] };
+        porTendido[b.tendido_id].bultos.push(b);
+      });
+      container.innerHTML = Object.entries(porTendido).map(([tid, g]) => `
+        <div class="registro-item" onclick="verDetalle('tendido','${tid}')">
+          <div class="registro-codigo">${g.codigo}</div>
+          <div class="registro-meta">${g.fecha} · ${g.bultos.length} bulto(s)</div>
+          <div class="tallas-inline">
+            ${g.bultos.slice(0,10).map(b => `<span class="talla-pill ${b.tipo_salida==='sustitucion'?'par':''}">${b.codigo_bulto}</span>`).join('')}
+            ${g.bultos.length>10?`<span class="text-muted">+${g.bultos.length-10} más</span>`:''}
+          </div>
+        </div>
+      `).join('');
       return;
     }
-    container.innerHTML = data.map(r=>`
-      <div class="registro-item" onclick="verDetalle('${tipo}','${r.id}')">
-        <div class="registro-codigo">${r.codigo_corte}</div>
-        <div class="registro-meta">${r.fecha} · ${tipo==='trazo'?`${r.capas||'?'} capas · Tallas: ${r.tallas_tendido||'—'}`:`${r.prendas||''} · ${r.equipo||''}`}</div>
-        <div class="registro-badges">
-          ${r.foto_url?'<span class="rbadge rbadge-foto">📷 Foto</span>':''}
-          ${r.video_url?'<span class="rbadge rbadge-video">🎥 Video</span>':''}
-          ${r.observaciones||r.observaciones_generales?`<span class="rbadge" style="background:#F0F0F0;color:#555">💬 Obs</span>`:''}
+
+    const data = await supaFetch(tipo,'GET',null,'?order=creado_en.desc&limit=50');
+    if (!data.length) {
+      container.innerHTML = `<div class="empty"><div class="empty-icon">📭</div>Sin registros</div>`;
+      return;
+    }
+    container.innerHTML = data.map(r => {
+      let meta = '';
+      if (tipo === 'trazo') meta = `${r.fecha} · ${r.capas||'?'} capas · Corte ${r.letra_corte||'—'}`;
+      if (tipo === 'tendido') meta = `${r.fecha} · ${r.equipo||'sin equipo'} · Corte ${r.letra_corte||'—'}`;
+      return `
+        <div class="registro-item" onclick="verDetalle('${tipo}','${r.id}')">
+          <div class="registro-codigo">${r.codigo_corte}</div>
+          <div class="registro-meta">${meta}</div>
+          <div class="registro-badges">
+            <span class="rbadge rbadge-${tipo}">${tipo}</span>
+            ${r.foto_url?'<span class="rbadge rbadge-foto">📷</span>':''}
+            ${r.video_url?'<span class="rbadge rbadge-video">🎥</span>':''}
+          </div>
         </div>
-      </div>
-    `).join('');
-  } catch(e){
-    container.innerHTML=`<div class="alert alert-error">Error: ${e.message}</div>`;
+      `;
+    }).join('');
+  } catch(e) {
+    container.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }
 }
 
 async function verDetalle(tipo, id) {
   document.getElementById('detalle-overlay').classList.add('active');
   document.getElementById('det-contenido').innerHTML = '<div class="loading">Cargando...</div>';
-
   try {
     if (tipo === 'trazo') {
       const [trazo] = await supaFetch('trazo','GET',null,`?id=eq.${id}`);
-      const prendas = await supaFetch('trazo_prenda','GET',null,`?trazo_id=eq.${id}&order=orden`);
-      const checklistData = prendas.length ? await supaFetch('trazo_checklist','GET',null,`?trazo_prenda_id=in.(${prendas.map(p=>p.id).join(',')})&order=orden`) : [];
-      const secundarias = await supaFetch('trazo_secundaria','GET',null,`?trazo_id=eq.${id}`);
-
-      document.getElementById('det-titulo').textContent = `Trazo ${trazo.codigo_corte}`;
-
+      const tallas = await supaFetch('trazo_talla_marcada','GET',null,`?trazo_id=eq.${id}&order=orden`);
+      document.getElementById('det-titulo').textContent = `Trazo ${trazo.codigo_corte} · Corte ${trazo.letra_corte||'—'}`;
       let html = `
         <div class="detalle-seccion">
-          <div class="detalle-seccion-titulo">Datos generales</div>
-          <div class="detalle-campo"><span class="detalle-campo-label">Fecha</span><span class="detalle-campo-valor">${trazo.fecha}</span></div>
-          <div class="detalle-campo"><span class="detalle-campo-label">Código</span><span class="detalle-campo-valor">${trazo.codigo_corte}</span></div>
-          <div class="detalle-campo"><span class="detalle-campo-label">Capas</span><span class="detalle-campo-valor">${trazo.capas||'—'}</span></div>
-          <div class="detalle-campo"><span class="detalle-campo-label">Yardas</span><span class="detalle-campo-valor">${trazo.yardas_estimadas||'—'}</span></div>
-          <div class="detalle-campo"><span class="detalle-campo-label">Tallas del tendido</span><span class="detalle-campo-valor">${trazo.tallas_tendido||'—'}</span></div>
-          ${trazo.talla_no_entro?`<div class="detalle-campo"><span class="detalle-campo-label">Talla no entró</span><span class="detalle-campo-valor">${trazo.talla_no_entro} — ${trazo.razon_no_entro||''}</span></div>`:''}
-        </div>
-      `;
-
-      for (const prenda of prendas) {
-        const items = checklistData.filter(c => c.trazo_prenda_id === prenda.id);
-        html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo">Prenda: ${prenda.prenda}</div>`;
-        if (items.length === 0) {
-          html += `<p class="text-muted">Sin piezas registradas</p>`;
-        } else {
-          items.forEach(it => {
-            const tallas = it.tallas_estado || {};
-            const tags = Object.entries(tallas).map(([t, ok]) => `<span class="pieza-tag ${ok?'pieza-ok':'pieza-fail'}">${t} ${ok?'✓':'✗'}</span>`).join('');
-            html += `
-              <div style="margin-bottom:10px;padding:8px;background:var(--gris);border-radius:6px">
-                <strong style="font-size:14px">${it.pieza}</strong>
-                ${it.es_secundaria?'<span class="rbadge" style="background:#FFF3CD;color:#856404;margin-left:6px">Secundaria</span>':''}
-                ${it.resuelta?'<span class="rbadge rbadge-foto" style="margin-left:6px">Resuelta</span>':''}
-                <div style="margin-top:6px">${tags}</div>
-                ${it.pieza_faltante?`<div class="text-muted" style="margin-top:4px">Faltante: ${it.pieza_faltante}</div>`:''}
-              </div>
-            `;
-          });
-        }
-        html += `</div>`;
-      }
-
-      if (secundarias.length) {
-        html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo">Piezas secundarias pendientes</div>`;
-        secundarias.forEach(s => {
-          html += `<div class="detalle-campo"><span class="detalle-campo-label">${s.prenda||''} · ${s.pieza||''}</span><span class="detalle-campo-valor">${s.tallas_afectadas||''} — ${s.accion||''}</span></div>`;
-        });
-        html += `</div>`;
-      }
-
-      if (trazo.observaciones) html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo">Observaciones</div><p style="font-size:14px">${trazo.observaciones}</p></div>`;
-
-      html += `
-        <div class="detalle-seccion">
-          <div class="detalle-seccion-titulo">Foto del trazo</div>
-          ${trazo.foto_url ? `<img src="${trazo.foto_url}" style="width:100%;border-radius:8px;margin-bottom:8px">` : '<p class="text-muted">Sin foto</p>'}
-          <div class="foto-upload mt8" onclick="document.getElementById('det-foto-input-${id}').click()" style="padding:12px">
-            <input type="file" id="det-foto-input-${id}" accept="image/*" capture="environment" onchange="actualizarFoto(this,'${id}')">
-            <div style="font-size:13px">📷 ${trazo.foto_url?'Cambiar foto':'Agregar foto'}</div>
-          </div>
+          <div class="detalle-seccion-titulo">Datos</div>
+          <div class="detalle-campo"><span>Fecha</span><span>${trazo.fecha}</span></div>
+          <div class="detalle-campo"><span>Código</span><span>${trazo.codigo_corte}</span></div>
+          <div class="detalle-campo"><span>Letra corte</span><span>${trazo.letra_corte||'—'}</span></div>
+          <div class="detalle-campo"><span>Capas planeadas</span><span>${trazo.capas||'—'}</span></div>
+          <div class="detalle-campo"><span>Yardas</span><span>${trazo.yardas_estimadas||'—'}</span></div>
         </div>
         <div class="detalle-seccion">
-          <div class="detalle-seccion-titulo">Video del trazo</div>
-          <div class="video-row">
-            <input type="url" id="det-video-${id}" value="${trazo.video_url||''}" placeholder="Enlace YouTube o Drive">
-            <button class="btn btn-video btn-sm" onclick="abrirVideo('det-video-${id}')">▶</button>
-          </div>
-          <button class="btn btn-primary btn-sm mt8" onclick="actualizarVideo('${id}','det-video-${id}')">💾 Guardar enlace</button>
+          <div class="detalle-seccion-titulo">Tallas marcadas</div>
+          ${tallas.map(t => `
+            <div class="detalle-campo">
+              <span><strong style="color:var(--azul)">${t.letra_local}</strong> · ${t.talla_key_original}</span>
+              <span>${t.tipo}</span>
+            </div>
+          `).join('')}
         </div>
       `;
-
+      if (trazo.observaciones) html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo">Observaciones</div><p style="font-size:13px">${trazo.observaciones}</p></div>`;
+      if (trazo.foto_url) html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo">Foto</div><img src="${trazo.foto_url}" style="width:100%;border-radius:8px"></div>`;
       document.getElementById('det-contenido').innerHTML = html;
     } else {
+      // tendido
       const [tend] = await supaFetch('tendido','GET',null,`?id=eq.${id}`);
       const rollos = await supaFetch('tendido_rollo','GET',null,`?tendido_id=eq.${id}&order=numero_rollo`);
-      // Nuevo: tallas marcadas y bultos derivados
-      let tallasMarcadas = [];
-      let bultosDerivados = [];
+      const tallas = await supaFetch('tendido_talla_marcada','GET',null,`?tendido_id=eq.${id}&order=orden`);
+      let bultos = [];
       try {
-        tallasMarcadas = await supaFetch('tendido_talla_marcada','GET',null,`?tendido_id=eq.${id}&order=orden`);
-        bultosDerivados = await supaFetch('vw_bulto_derivado','GET',null,`?tendido_id=eq.${id}&order=numero_rollo,letra_talla`);
-      } catch(e) { console.warn('Sin tablas nuevas todavía:', e.message); }
-
-      document.getElementById('det-titulo').textContent = `Tendido ${tend.codigo_corte}${tend.letra_corte?' · Corte '+tend.letra_corte:''}`;
-
-      let totalL=0,totalP=0,totalYC=0,totalYS=0;
-      rollos.forEach(r=>{totalL+=r.lienzos_salidos||0;totalP+=r.pares||0;totalYC+=parseFloat(r.yardas_rollo)||0;totalYS+=parseFloat(r.yardas_sobrantes)||0;});
-
+        bultos = await supaFetch('vw_bulto_derivado','GET',null,`?tendido_id=eq.${id}&order=numero_rollo,letra_talla`);
+      } catch(e) {}
+      document.getElementById('det-titulo').textContent = `Tendido ${tend.codigo_corte} · Corte ${tend.letra_corte||'—'}`;
+      let totalCapas=0, totalPares=0;
+      rollos.forEach(r => {
+        const c = r.lienzos_salidos || 0;
+        totalCapas += c;
+        totalPares += Math.floor(c/2);
+      });
       let html = `
         <div class="detalle-seccion">
-          <div class="detalle-seccion-titulo">Datos generales</div>
-          <div class="detalle-campo"><span class="detalle-campo-label">Fecha</span><span class="detalle-campo-valor">${tend.fecha}</span></div>
-          <div class="detalle-campo"><span class="detalle-campo-label">Código</span><span class="detalle-campo-valor">${tend.codigo_corte}</span></div>
-          ${tend.letra_corte?`<div class="detalle-campo"><span class="detalle-campo-label">Letra de corte</span><span class="detalle-campo-valor"><strong>${tend.letra_corte}</strong></span></div>`:''}
-          <div class="detalle-campo"><span class="detalle-campo-label">Prendas</span><span class="detalle-campo-valor">${tend.prendas||'—'}</span></div>
-          <div class="detalle-campo"><span class="detalle-campo-label">Equipo</span><span class="detalle-campo-valor">${tend.equipo||'—'}</span></div>
-          <div class="detalle-campo"><span class="detalle-campo-label">Completado en un día</span><span class="detalle-campo-valor">${tend.completo_en_un_dia?'Sí':'No — '+tend.fecha_continuacion}</span></div>
+          <div class="detalle-seccion-titulo">Datos</div>
+          <div class="detalle-campo"><span>Fecha</span><span>${tend.fecha}</span></div>
+          <div class="detalle-campo"><span>Equipo</span><span>${tend.equipo||'—'}</span></div>
+          <div class="detalle-campo"><span>Total capas</span><span>${totalCapas}</span></div>
+          <div class="detalle-campo"><span>Total pares</span><span>${totalPares}</span></div>
         </div>
         <div class="detalle-seccion">
-          <div class="detalle-seccion-titulo">Totales</div>
-          <div class="totales-grid">
-            <div class="total-item"><div class="total-valor">${totalL}</div><div class="total-label">Lienzos</div></div>
-            <div class="total-item"><div class="total-valor">${totalP}</div><div class="total-label">Pares</div></div>
-            <div class="total-item"><div class="total-valor">${rollos.length}</div><div class="total-label">Rollos</div></div>
-          </div>
-          <div class="row2 mt8">
-            <div class="total-item"><div class="total-valor">${totalYC.toFixed(1)}</div><div class="total-label">Yds consumidas</div></div>
-            <div class="total-item"><div class="total-valor">${totalYS.toFixed(1)}</div><div class="total-label">Yds sobrantes</div></div>
-          </div>
-        </div>`;
-
-      if (tallasMarcadas.length) {
-        html += `
-        <div class="detalle-seccion">
-          <div class="detalle-seccion-titulo">Tallas marcadas en el trazo</div>
-          ${tallasMarcadas.map(t=>`
+          <div class="detalle-seccion-titulo">Tallas marcadas heredadas</div>
+          ${tallas.map(t => `
             <div class="detalle-campo">
-              <span class="detalle-campo-label"><strong style="color:var(--azul)">${t.letra_local}</strong> · ${t.talla_key_original}</span>
-              <span class="detalle-campo-valor">×${t.multiplicidad}</span>
+              <span><strong style="color:var(--azul)">${t.letra_local}</strong> · ${t.talla_key_original}</span>
+              <span>${t.tipo} · ×${t.multiplicidad}</span>
             </div>
           `).join('')}
-        </div>`;
-      }
-
-      html += `
+        </div>
         <div class="detalle-seccion">
           <div class="detalle-seccion-titulo">Rollos</div>
-          ${rollos.map(r=>`
+          ${rollos.map(r => `
             <div class="rollo-card" style="margin-bottom:8px">
-              <strong>Rollo #${r.numero_rollo||'—'}</strong> · ${r.codigo_rollo||'Sin código'}
-              <div class="row3 mt8">
+              <strong>Rollo / Bulto #${r.numero_rollo}</strong> · ${r.codigo_rollo||'sin cód.'}
+              <div class="row3 mt8" style="font-size:12px">
+                <div><div class="text-muted">Capas</div><strong>${r.lienzos_salidos||0}</strong></div>
+                <div><div class="text-muted">Pares</div><strong>${Math.floor((r.lienzos_salidos||0)/2)}</strong></div>
                 <div><div class="text-muted">Yardas</div><strong>${r.yardas_rollo||'—'}</strong></div>
-                <div><div class="text-muted">Capas</div><strong>${r.lienzos_salidos||'—'}</strong></div>
-                <div><div class="text-muted">Pares</div><strong>${r.pares||'—'}</strong></div>
               </div>
-              ${r.observacion_tono?`<div class="text-muted mt8" style="font-size:12px">⚠️ ${r.observacion_tono}</div>`:''}
+              ${r.observacion_tono?`<div class="text-muted mt8">⚠️ ${r.observacion_tono}</div>`:''}
             </div>
           `).join('')}
         </div>
       `;
-
-      if (bultosDerivados.length) {
-        const normales = bultosDerivados.filter(b=>b.tipo_salida==='normal').length;
-        const subs = bultosDerivados.filter(b=>b.tipo_salida==='sustitucion').length;
+      if (bultos.length) {
+        const sust = bultos.filter(b => b.tipo_salida === 'sustitucion').length;
         html += `
-        <div class="detalle-seccion">
-          <div class="detalle-seccion-titulo">Bultos derivados (${bultosDerivados.length})</div>
-          <div class="text-muted mb8" style="font-size:12px">${normales} normal · ${subs} con sustitución</div>
-          <div class="bultos-preview">
-            ${bultosDerivados.map(b=>`<span class="bulto-chip ${b.tipo_salida==='sustitucion'?'sub':''}">${b.codigo_bulto}</span>`).join('')}
+          <div class="detalle-seccion">
+            <div class="detalle-seccion-titulo">Bultos (${bultos.length}, ${sust} con sustitución)</div>
+            <div class="tallas-inline">
+              ${bultos.map(b => `<span class="talla-pill ${b.tipo_salida==='sustitucion'?'par':''}">${b.codigo_bulto}</span>`).join('')}
+            </div>
           </div>
-        </div>`;
+        `;
+      } else {
+        html += `<div class="detalle-seccion"><div class="alert alert-info">Bultos pendientes de capturar (usá el asistente de Bulto).</div></div>`;
       }
-
-      if (tend.observaciones_generales) html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo">Observaciones</div><p style="font-size:14px">${tend.observaciones_generales}</p></div>`;
+      if (tend.observaciones_generales) html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo">Observaciones</div><p>${tend.observaciones_generales}</p></div>`;
       document.getElementById('det-contenido').innerHTML = html;
     }
   } catch(e) {
@@ -1311,31 +2153,13 @@ async function verDetalle(tipo, id) {
   }
 }
 
-async function actualizarFoto(input, trazoId) {
-  const file = input.files[0];
-  if (!file) return;
-  try {
-    const fotoUrl = await supaUploadFoto(file, trazoId);
-    await supaUpdate('trazo', trazoId, { foto_url: fotoUrl });
-    alert('✅ Foto actualizada');
-    verDetalle('trazo', trazoId);
-  } catch(e) { alert('Error: ' + e.message); }
-}
-
-async function actualizarVideo(trazoId, inputId) {
-  const url = document.getElementById(inputId).value.trim();
-  try {
-    await supaUpdate('trazo', trazoId, { video_url: url || null });
-    alert('✅ Video guardado');
-  } catch(e) { alert('Error: ' + e.message); }
-}
-
 function cerrarDetalle() {
   document.getElementById('detalle-overlay').classList.remove('active');
-  if (historialTipo) cargarHistorial(historialTipo);
 }
 
-// ── CONFIG ────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════════════════
 function initConfig() {
   document.getElementById('cfg-url').value = SUPA_URL;
   document.getElementById('cfg-key').value = SUPA_KEY;
@@ -1348,7 +2172,7 @@ function guardarConfig() {
   localStorage.setItem('supa_url', SUPA_URL);
   localStorage.setItem('supa_key', SUPA_KEY);
   document.getElementById('cfg-url-display').textContent = SUPA_URL;
-  alert('Configuración guardada');
+  alert('Config guardada');
 }
 
 async function verificarConexion() {
@@ -1360,19 +2184,15 @@ async function verificarConexion() {
     badge.textContent = 'Conectado ✓';
     badge.className = 'badge badge-ok';
   } catch(e) {
-    badge.textContent = 'Error de conexión';
+    badge.textContent = 'Error';
     badge.className = 'badge badge-err';
   }
 }
 
-function mostrarAlerta(sec, tipo, msg) {
-  const el = document.getElementById(`alert-${sec}`);
-  el.innerHTML = `<div class="alert alert-${tipo==='error'?'error':'success'}">${msg}</div>`;
-  setTimeout(() => el.innerHTML='', 4000);
-}
-
-initTrazo();
-initTendido();
+// ══════════════════════════════════════════════════════════════════════
+// ARRANQUE
+// ══════════════════════════════════════════════════════════════════════
+// (nada específico, el menú nuevo ya está visible por default)
 </script>
 </body>
 </html>
