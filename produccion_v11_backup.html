@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Taller IMIS — Producción v12</title>
+<title>Taller IMIS — Producción v11</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -130,28 +130,6 @@
   .badge-ok { background: var(--verde-claro); color: #155724; }
   .badge-err { background: var(--rojo-claro); color: #721C24; }
 
-  /* Producción Fase 1 */
-  .prod-corte-card { border: 1px solid var(--borde); border-radius: 10px; margin-bottom: 10px; overflow: hidden; background: white; }
-  .prod-corte-header { padding: 12px; cursor: pointer; background: var(--azul-claro); display: flex; justify-content: space-between; align-items: center; }
-  .prod-corte-header:hover { background: #E0EEFF; }
-  .prod-corte-titulo { font-weight: 700; color: var(--azul); font-size: 14px; }
-  .prod-corte-meta { font-size: 12px; color: #555; margin-top: 2px; }
-  .prod-progress { width: 100%; height: 6px; background: #E0E0E0; border-radius: 3px; overflow: hidden; margin-top: 8px; }
-  .prod-progress-bar { height: 100%; background: linear-gradient(90deg, #4CAF50, #8BC34A); transition: width 0.3s; }
-  .prod-bultos-list { padding: 8px; display: none; }
-  .prod-corte-card.expandido .prod-bultos-list { display: block; }
-  .prod-bulto-row { padding: 8px 10px; border: 1px solid var(--borde); border-radius: 6px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
-  .prod-bulto-row.terminado { background: var(--verde-claro); border-color: #A8D5B3; }
-  .prod-bulto-row.proceso { background: #FFF8E1; border-color: #FFD54F; }
-  .prod-bulto-codigo { font-weight: 700; color: var(--azul); font-family: monospace; }
-  .prod-bulto-cant { font-size: 12px; color: #555; margin-left: 8px; }
-  .prod-bulto-acciones { display: flex; gap: 4px; flex-wrap: wrap; }
-  .prod-btn-accion { padding: 6px 10px; font-size: 12px; border-radius: 6px; border: 1px solid var(--borde); background: white; cursor: pointer; font-weight: 600; }
-  .prod-btn-terminar { background: var(--verde); color: white; border-color: var(--verde); }
-  .prod-btn-terminar:hover { background: #2E7D32; }
-  .prod-btn-revertir { background: white; color: #999; }
-  .prod-btn-iniciar { background: var(--ambar); color: white; border-color: var(--ambar); }
-
   .detalle-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; padding: 16px; overflow-y: auto; }
   .detalle-overlay.active { display: block; }
   .detalle-modal { background: white; max-width: 700px; margin: 20px auto; border-radius: 12px; padding: 20px; }
@@ -236,12 +214,11 @@
 <nav>
   <div class="nav-top">
     <div style="width:32px;height:32px;background:rgba(255,255,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">T</div>
-    <h1>Taller IMIS — Producción v12</h1>
+    <h1>Taller IMIS — Producción v11</h1>
   </div>
   <div class="nav-tabs">
     <div class="nav-tab active" onclick="switchTab('nuevo',this)">➕ Nuevo</div>
     <div class="nav-tab" onclick="switchTab('historial',this)">🗂 Historial</div>
-    <div class="nav-tab" onclick="switchTab('produccion',this)">🏭 Prod.</div>
     <div class="nav-tab" onclick="switchTab('config',this)">⚙️ Config</div>
   </div>
 </nav>
@@ -487,26 +464,6 @@
   </div>
 </div>
 
-<!-- ═══ PRODUCCIÓN (Fase 1) ═══ -->
-<div id="view-produccion" class="view">
-  <div id="alert-produccion"></div>
-
-  <!-- Resumen arriba -->
-  <div class="card">
-    <div class="card-title">🏭 Producción</div>
-    <div id="prod-resumen-hoy" class="alert alert-info" style="margin-bottom:10px">Cargando resumen...</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-      <button class="btn btn-primary btn-sm" id="prod-filtro-todos" onclick="cambiarFiltroProduccion('todos')">Todos los cortes</button>
-      <button class="btn btn-ghost btn-sm" id="prod-filtro-pendientes" onclick="cambiarFiltroProduccion('pendientes')">Solo pendientes</button>
-      <button class="btn btn-ghost btn-sm" id="prod-filtro-terminados" onclick="cambiarFiltroProduccion('terminados')">Solo terminados</button>
-    </div>
-    <div style="font-size:12px;color:#666">Toca un corte para ver sus bultos. Toca un bulto para marcar terminado.</div>
-  </div>
-
-  <!-- Lista de cortes con avance -->
-  <div id="prod-cortes-container"></div>
-</div>
-
 <!-- ═══ CONFIG ═══ -->
 <div id="view-config" class="view">
   <div class="card">
@@ -618,7 +575,6 @@ function switchTab(tab, el) {
   if (el) el.classList.add('active');
   if (tab === 'historial') cargarHistorial('trazo');
   if (tab === 'config') initConfig();
-  if (tab === 'produccion') initProduccion();
   if (tab === 'nuevo') {} // menu se arma en init
   window.scrollTo(0, 0);
 }
@@ -2539,214 +2495,6 @@ async function guardarEdicionTendido(id) {
     mostrarAlerta('tendido','error','Error: ' + e.message);
     btn.textContent = '💾 Guardar cambios';
     btn.disabled = false;
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════
-// PRODUCCIÓN (Fase 1)
-// ══════════════════════════════════════════════════════════════════════
-let produccionFiltro = 'todos';
-let produccionData = [];
-let cortesExpandidos = new Set();
-
-async function initProduccion() {
-  await cargarProduccion();
-}
-
-async function cargarProduccion() {
-  try {
-    document.getElementById('prod-resumen-hoy').textContent = 'Cargando...';
-    document.getElementById('prod-cortes-container').innerHTML = '';
-
-    produccionData = await supaFetch('vw_produccion_estado','GET',null,'?limit=2000');
-
-    // Auto-crear produccion_bulto para salidas sin seguimiento aún
-    const sinIniciar = produccionData.filter(b => b.estado === 'sin_iniciar');
-    for (const b of sinIniciar) {
-      try {
-        const [nuevo] = await supaFetch('produccion_bulto','POST',{
-          tendido_rollo_salida_id: b.salida_id,
-          estado: 'pendiente',
-        });
-        b.produccion_bulto_id = nuevo.id;
-        b.estado = 'pendiente';
-      } catch(e) {
-        console.warn('No se pudo crear produccion_bulto:', e.message);
-      }
-    }
-
-    renderProduccion();
-  } catch(e) {
-    document.getElementById('prod-resumen-hoy').textContent = 'Error: ' + e.message;
-  }
-}
-
-function renderProduccion() {
-  const hoy = new Date().toISOString().split('T')[0];
-  const terminadosHoy = produccionData.filter(b => b.fecha_terminado === hoy);
-  const piezasHoy = terminadosHoy.reduce((s,b) => s + (b.cantidad_final || b.cantidad_original || 0), 0);
-  const totalBultos = produccionData.length;
-  const totalTerminados = produccionData.filter(b => b.estado === 'terminado').length;
-  const pctGeneral = totalBultos > 0 ? Math.round(100 * totalTerminados / totalBultos) : 0;
-
-  document.getElementById('prod-resumen-hoy').innerHTML = `
-    <div><strong>Hoy:</strong> ${terminadosHoy.length} bulto(s) terminado(s) · ${piezasHoy} pieza(s)</div>
-    <div style="margin-top:4px"><strong>General:</strong> ${totalTerminados}/${totalBultos} bultos terminados (${pctGeneral}%)</div>
-  `;
-
-  let filtrados = produccionData;
-  if (produccionFiltro === 'pendientes') {
-    filtrados = produccionData.filter(b => b.estado !== 'terminado');
-  } else if (produccionFiltro === 'terminados') {
-    filtrados = produccionData.filter(b => b.estado === 'terminado');
-  }
-
-  ['todos','pendientes','terminados'].forEach(f => {
-    const btn = document.getElementById(`prod-filtro-${f}`);
-    if (btn) btn.className = (f === produccionFiltro) ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
-  });
-
-  const porCorte = {};
-  filtrados.forEach(b => {
-    const k = b.codigo_corte + '||' + (b.letra_corte || '') + '||' + b.fecha_corte;
-    if (!porCorte[k]) porCorte[k] = { codigo_corte: b.codigo_corte, letra_corte: b.letra_corte, fecha_corte: b.fecha_corte, bultos: [] };
-    porCorte[k].bultos.push(b);
-  });
-
-  const cont = document.getElementById('prod-cortes-container');
-  const keys = Object.keys(porCorte).sort((a,b) => porCorte[b].fecha_corte.localeCompare(porCorte[a].fecha_corte));
-
-  if (keys.length === 0) {
-    cont.innerHTML = '<div class="alert alert-info">No hay bultos para mostrar con este filtro.</div>';
-    return;
-  }
-
-  cont.innerHTML = keys.map(k => {
-    const grupo = porCorte[k];
-    const total = grupo.bultos.length;
-    const terminados = grupo.bultos.filter(b => b.estado === 'terminado').length;
-    const enProceso = grupo.bultos.filter(b => b.estado === 'en_proceso').length;
-    const pct = total > 0 ? Math.round(100 * terminados / total) : 0;
-    const piezasOrig = grupo.bultos.reduce((s,b) => s + (b.cantidad_original || 0), 0);
-    const piezasTerm = grupo.bultos.filter(b => b.estado === 'terminado').reduce((s,b) => s + (b.cantidad_final || b.cantidad_original || 0), 0);
-    const expandido = cortesExpandidos.has(k);
-
-    return `
-      <div class="prod-corte-card ${expandido?'expandido':''}">
-        <div class="prod-corte-header" onclick="toggleCorte('${k.replace(/'/g,"\\'")}')">
-          <div style="flex:1">
-            <div class="prod-corte-titulo">Corte ${grupo.letra_corte||'?'} · ${grupo.codigo_corte}</div>
-            <div class="prod-corte-meta">
-              ${terminados}/${total} bultos (${pct}%) · ${piezasTerm}/${piezasOrig} piezas
-              ${enProceso>0?` · ${enProceso} en proceso`:''}
-            </div>
-            <div class="prod-progress"><div class="prod-progress-bar" style="width:${pct}%"></div></div>
-          </div>
-          <div style="font-size:20px;margin-left:8px">${expandido?'▼':'▶'}</div>
-        </div>
-        <div class="prod-bultos-list">
-          ${grupo.bultos.map(b => renderProdBulto(b)).join('')}
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function renderProdBulto(b) {
-  const clase = b.estado === 'terminado' ? 'terminado' : (b.estado === 'en_proceso' ? 'proceso' : '');
-  const cantFinal = b.cantidad_final && b.cantidad_final !== b.cantidad_original
-    ? `${b.cantidad_final}/${b.cantidad_original} pz`
-    : `${b.cantidad_original} pz`;
-
-  let acciones = '';
-  if (b.estado === 'terminado') {
-    acciones = `<button class="prod-btn-accion prod-btn-revertir" onclick="revertirBulto('${b.produccion_bulto_id}')">↶ Revertir</button>`;
-  } else {
-    acciones = `<button class="prod-btn-accion prod-btn-terminar" onclick="terminarBulto('${b.produccion_bulto_id}', ${b.cantidad_original})">✓ Terminado</button>`;
-  }
-
-  const fechaInfo = b.estado === 'terminado' && b.fecha_terminado 
-    ? ` <span style="font-size:10px;color:#666">· ${b.fecha_terminado}</span>` 
-    : '';
-
-  const obsInfo = b.observaciones ? `<div style="font-size:11px;color:#856404;margin-top:4px">⚠️ ${b.observaciones}</div>` : '';
-
-  return `
-    <div class="prod-bulto-row ${clase}">
-      <div>
-        <span class="prod-bulto-codigo">${b.codigo_bulto}</span>
-        <span class="prod-bulto-cant">${cantFinal}</span>
-        ${fechaInfo}
-        ${obsInfo}
-      </div>
-      <div class="prod-bulto-acciones">${acciones}</div>
-    </div>
-  `;
-}
-
-function toggleCorte(k) {
-  if (cortesExpandidos.has(k)) cortesExpandidos.delete(k);
-  else cortesExpandidos.add(k);
-  renderProduccion();
-}
-
-function cambiarFiltroProduccion(filtro) {
-  produccionFiltro = filtro;
-  renderProduccion();
-}
-
-async function terminarBulto(produccionBultoId, cantidadOriginal) {
-  const cantStr = prompt(
-    `¿Cuántas piezas terminaron?\n\nCantidad original: ${cantidadOriginal}\n\n(Enter para usar el original, o escribí otra cantidad si hubo defectos)`,
-    cantidadOriginal
-  );
-  if (cantStr === null) return;
-  const cantidadFinal = parseInt(cantStr) || cantidadOriginal;
-
-  let observaciones = null;
-  if (cantidadFinal !== cantidadOriginal) {
-    observaciones = prompt(`Hubo diferencia (${cantidadFinal} vs ${cantidadOriginal}). ¿Qué pasó? (opcional)`) || null;
-  }
-
-  try {
-    await supaUpdate('produccion_bulto', produccionBultoId, {
-      estado: 'terminado',
-      fecha_terminado: new Date().toISOString().split('T')[0],
-      cantidad_final: cantidadFinal,
-      observaciones,
-      actualizado_en: new Date().toISOString(),
-    });
-    const b = produccionData.find(x => x.produccion_bulto_id === produccionBultoId);
-    if (b) {
-      b.estado = 'terminado';
-      b.fecha_terminado = new Date().toISOString().split('T')[0];
-      b.cantidad_final = cantidadFinal;
-      b.observaciones = observaciones;
-    }
-    renderProduccion();
-  } catch(e) {
-    alert('Error: ' + e.message);
-  }
-}
-
-async function revertirBulto(produccionBultoId) {
-  if (!confirm('¿Revertir a pendiente? Se borrará la fecha de terminación.')) return;
-  try {
-    await supaUpdate('produccion_bulto', produccionBultoId, {
-      estado: 'pendiente',
-      fecha_terminado: null,
-      cantidad_final: null,
-      actualizado_en: new Date().toISOString(),
-    });
-    const b = produccionData.find(x => x.produccion_bulto_id === produccionBultoId);
-    if (b) {
-      b.estado = 'pendiente';
-      b.fecha_terminado = null;
-      b.cantidad_final = null;
-    }
-    renderProduccion();
-  } catch(e) {
-    alert('Error: ' + e.message);
   }
 }
 
