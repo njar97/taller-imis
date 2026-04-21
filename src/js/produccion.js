@@ -50,8 +50,10 @@ async function cargarProduccion() {
     // Cargar progreso Fase 2 (solo si está activa)
     if (FASE2_ACTIVA) {
       await cargarProgreso();
+      await cargarAsignacionesPorBulto();
     } else {
       progresoCache = {};
+      asignacionesPorBulto = {};
     }
 
     renderProduccion();
@@ -249,6 +251,21 @@ function renderProdBulto(b) {
   if (b.sufijo_division) {
     badges += `<span class="prod-badge prod-badge-div">✂️ derivado ${b.sufijo_division}</span>`;
   }
+  // Chip compacto de asignaciones (solo si Fase 2 activa y hay asignaciones)
+  if (FASE2_ACTIVA && asignacionesPorBulto[b.produccion_bulto_id]?.length > 0) {
+    const asigs = asignacionesPorBulto[b.produccion_bulto_id];
+    const iniciales = asigs.map(a => (a.operaria_nombre || '?')[0].toUpperCase()).join('·');
+    const tooltip = asigs.map(a => `${a.operaria_nombre}: ${a.operacion_nombre}`).join(' | ');
+    badges += `<span class="prod-badge prod-badge-asig" title="${tooltip}">📋 ${iniciales}</span>`;
+  }
+
+  // Chip de asignaciones (si hay)
+  let asigHtml = '';
+  const asignaciones = asignacionesPorBulto[b.produccion_bulto_id] || [];
+  if (asignaciones.length > 0) {
+    const texto = asignaciones.map(a => `${a.operaria_nombre} (${a.operacion_nombre})`).join(' · ');
+    asigHtml = `<div style="font-size:11px;color:#0D47A1;margin-top:4px;background:#E3F2FD;padding:3px 6px;border-radius:4px;border-left:3px solid #1976D2">📋 ${texto}</div>`;
+  }
 
   // Acciones
   let acciones = '';
@@ -284,6 +301,7 @@ function renderProdBulto(b) {
         </div>
         <div class="prod-bulto-corte">Corte ${b.letra_corte||'?'} · ${b.codigo_corte}${fechaInfo}</div>
         ${progresoHtml}
+        ${asigHtml}
         ${badges?`<div class="prod-bulto-badges">${badges}</div>`:''}
         ${obsInfo}
         <div id="etapas-${b.produccion_bulto_id}" style="display:none;margin-top:8px"></div>
@@ -602,19 +620,24 @@ let operariasCache = [];
 let operacionesCache = {}; // cod_prenda -> [operaciones]
 let registrosHoyCache = [];
 let progresoCache = {}; // produccion_bulto_id -> { total, registradas }
+let asignacionesPorBulto = {}; // produccion_bulto_id -> [{ operaria_nombre, operacion_nombre }, ...]
 
 // Features opt-in: se activan desde Config
 let FASE2_ACTIVA = localStorage.getItem('fase2_activa') === 'true';
 let FASE3_ACTIVA = localStorage.getItem('fase3_activa') === 'true';
 
 function switchSubProd(sub) {
-  ['dashboard','captura','operarias'].forEach(s => {
-    document.getElementById(`prod-sub-${s}-view`).style.display = (s===sub) ? 'block' : 'none';
+  ['dashboard','asignaciones','captura','operarias'].forEach(s => {
+    const el = document.getElementById(`prod-sub-${s}-view`);
+    if (el) el.style.display = (s===sub) ? 'block' : 'none';
     const btn = document.getElementById(`prod-sub-${s}`);
-    if (btn) btn.className = (s===sub) ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
-    if (btn) btn.style.flex = '1';
+    if (btn) {
+      btn.className = (s===sub) ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+      btn.style.flex = '1';
+    }
   });
   if (sub === 'dashboard') cargarProduccion();
+  if (sub === 'asignaciones' && typeof initAsignaciones === 'function') initAsignaciones();
   if (sub === 'captura') initCaptura();
   if (sub === 'operarias') cargarOperarias();
 }
@@ -1016,6 +1039,24 @@ async function cargarProgreso() {
     });
   } catch(e) {
     console.warn('Sin progreso (vista vw_produccion_progreso):', e.message);
+  }
+}
+
+async function cargarAsignacionesPorBulto() {
+  try {
+    const data = await supaFetch('vw_bulto_asignaciones','GET',null,'?limit=3000');
+    asignacionesPorBulto = {};
+    data.forEach(a => {
+      const k = a.produccion_bulto_id;
+      if (!asignacionesPorBulto[k]) asignacionesPorBulto[k] = [];
+      asignacionesPorBulto[k].push({
+        operaria_nombre: a.operaria_nombre,
+        operacion_nombre: a.operacion_nombre,
+      });
+    });
+  } catch(e) {
+    console.warn('Sin asignaciones (vista vw_bulto_asignaciones):', e.message);
+    asignacionesPorBulto = {};
   }
 }
 

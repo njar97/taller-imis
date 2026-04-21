@@ -151,6 +151,7 @@
   .prod-badge { font-size: 10px; padding: 2px 6px; border-radius: 8px; font-weight: 700; }
   .prod-badge-div { background: #E1BEE7; color: #4A148C; }
   .prod-badge-unido { background: #BBDEFB; color: #0D47A1; }
+  .prod-badge-asig { background: #FFE0B2; color: #E65100; cursor: help; }
 
   /* Switch toggle */
   .switch-toggle { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
@@ -238,3 +239,10 @@
   .mini-modal-box { background: white; border-radius: 12px; padding: 20px; max-width: 400px; width: 100%; }
   .mini-modal h3 { color: var(--azul); font-size: 16px; margin-bottom: 12px; }
   .mini-modal .actions { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
+
+  /* Modal generico (Asignaciones) */
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1500; align-items: center; justify-content: center; padding: 12px; overflow-y: auto; }
+  .modal-content { background: white; border-radius: 12px; width: 100%; max-width: 600px; max-height: 90vh; display: flex; flex-direction: column; }
+  .modal-header { padding: 14px; border-bottom: 1px solid var(--borde); display: flex; justify-content: space-between; align-items: center; }
+  .modal-body { padding: 14px; overflow-y: auto; flex: 1; }
+  .modal-footer { padding: 12px 14px; border-top: 1px solid var(--borde); display: flex; justify-content: flex-end; gap: 8px; }

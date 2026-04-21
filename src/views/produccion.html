@@ -3,10 +3,11 @@
 
   <!-- Subnav -->
   <div class="card" style="padding:6px;margin-bottom:10px">
-    <div style="display:flex;gap:4px">
-      <button class="btn btn-primary btn-sm" id="prod-sub-dashboard" onclick="switchSubProd('dashboard')" style="flex:1">📊 Dashboard</button>
-      <button class="btn btn-ghost btn-sm" id="prod-sub-captura" onclick="switchSubProd('captura')" style="flex:1">📝 Captura</button>
-      <button class="btn btn-ghost btn-sm" id="prod-sub-operarias" onclick="switchSubProd('operarias')" style="flex:1">👷 Operarias</button>
+    <div style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" id="prod-sub-dashboard" onclick="switchSubProd('dashboard')" style="flex:1;min-width:70px">📊 Dashboard</button>
+      <button class="btn btn-ghost btn-sm" id="prod-sub-asignaciones" onclick="switchSubProd('asignaciones')" style="flex:1;min-width:70px">📋 Asignar</button>
+      <button class="btn btn-ghost btn-sm" id="prod-sub-captura" onclick="switchSubProd('captura')" style="flex:1;min-width:70px">📝 Captura</button>
+      <button class="btn btn-ghost btn-sm" id="prod-sub-operarias" onclick="switchSubProd('operarias')" style="flex:1;min-width:70px">👷 Operarias</button>
     </div>
   </div>
 
@@ -39,6 +40,89 @@
       <div style="font-size:12px;color:#666;margin-top:8px">Toca una talla para ver sus bultos.</div>
     </div>
     <div id="prod-cortes-container"></div>
+  </div>
+
+  <!-- SUB: Asignaciones -->
+  <div id="prod-sub-asignaciones-view" style="display:none">
+    <!-- Toolbar -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="card-title" style="margin:0">📋 Asignaciones</div>
+        <button class="btn btn-success btn-sm" onclick="abrirNuevaAsignacion()">+ Nueva</button>
+      </div>
+      <div class="text-muted mb8" style="font-size:12px">Planificá: a qué operaria le toca qué operación sobre qué bultos.</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" id="asig-tab-activas" onclick="cambiarTabAsignaciones('activas')">🟢 Activas</button>
+        <button class="btn btn-ghost btn-sm" id="asig-tab-completadas" onclick="cambiarTabAsignaciones('completadas')">✅ Completadas</button>
+        <button class="btn btn-ghost btn-sm" id="asig-tab-canceladas" onclick="cambiarTabAsignaciones('canceladas')">✖ Canceladas</button>
+      </div>
+    </div>
+
+    <!-- Lista -->
+    <div id="asig-lista-container"></div>
+
+    <!-- Modal: Nueva asignación -->
+    <div id="asig-modal" class="modal" style="display:none">
+      <div class="modal-content" style="max-width:600px">
+        <div class="modal-header">
+          <div class="card-title">📋 Nueva asignación</div>
+          <button class="btn btn-ghost btn-sm" onclick="cerrarNuevaAsignacion()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="row2">
+            <div class="field">
+              <label>Operaria</label>
+              <select id="asig-operaria"></select>
+            </div>
+            <div class="field">
+              <label>Fecha asignación</label>
+              <input type="date" id="asig-fecha">
+            </div>
+          </div>
+
+          <div class="row2">
+            <div class="field">
+              <label>Filtrar por prenda</label>
+              <select id="asig-prenda" onchange="asigRefrescarOps()"></select>
+            </div>
+            <div class="field">
+              <label>Filtrar por corte</label>
+              <select id="asig-corte" onchange="asigRefrescarBultos()">
+                <option value="">— Todos —</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Operación a asignar</label>
+            <select id="asig-operacion" onchange="asigRefrescarBultos()"></select>
+          </div>
+
+          <div class="field">
+            <label>
+              Bultos disponibles 
+              <span id="asig-cuenta" style="color:var(--verde);font-weight:700"></span>
+            </label>
+            <div style="display:flex;gap:4px;margin-bottom:4px">
+              <button class="btn btn-ghost btn-sm" onclick="asigMarcarTodos(true)">Todos</button>
+              <button class="btn btn-ghost btn-sm" onclick="asigMarcarTodos(false)">Ninguno</button>
+            </div>
+            <div id="asig-bultos-lista" style="max-height:260px;overflow-y:auto;border:1px solid var(--borde);border-radius:6px;padding:6px">
+              <div class="text-muted" style="font-size:12px">Elegí operación primero...</div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Observaciones</label>
+            <input type="text" id="asig-observaciones" placeholder="(opcional)">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="cerrarNuevaAsignacion()">Cancelar</button>
+          <button class="btn btn-success" onclick="guardarAsignacion()">✓ Guardar asignación</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- SUB: Captura -->
