@@ -1,0 +1,175 @@
+<div id="view-produccion" class="view">
+  <div id="alert-produccion"></div>
+
+  <!-- Subnav -->
+  <div class="card" style="padding:6px;margin-bottom:10px">
+    <div style="display:flex;gap:4px">
+      <button class="btn btn-primary btn-sm" id="prod-sub-dashboard" onclick="switchSubProd('dashboard')" style="flex:1">📊 Dashboard</button>
+      <button class="btn btn-ghost btn-sm" id="prod-sub-captura" onclick="switchSubProd('captura')" style="flex:1">📝 Captura</button>
+      <button class="btn btn-ghost btn-sm" id="prod-sub-operarias" onclick="switchSubProd('operarias')" style="flex:1">👷 Operarias</button>
+    </div>
+  </div>
+
+  <!-- SUB: Dashboard -->
+  <div id="prod-sub-dashboard-view">
+    <div class="card">
+      <div class="card-title">🏭 Producción</div>
+      <div id="prod-resumen-hoy" class="alert alert-info" style="margin-bottom:10px">Cargando resumen...</div>
+
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="btn btn-primary btn-sm" id="prod-filtro-todos" onclick="cambiarFiltroProduccion('todos')">Todos</button>
+        <button class="btn btn-ghost btn-sm" id="prod-filtro-pendientes" onclick="cambiarFiltroProduccion('pendientes')">Pendientes</button>
+        <button class="btn btn-ghost btn-sm" id="prod-filtro-terminados" onclick="cambiarFiltroProduccion('terminados')">Terminados</button>
+      </div>
+
+      <div class="row2" style="margin-top:8px">
+        <div class="field" style="margin-bottom:0">
+          <label>Filtrar por corte</label>
+          <select id="prod-filtro-corte" onchange="renderProduccion()">
+            <option value="">Todos los cortes</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Filtrar por prenda</label>
+          <select id="prod-filtro-prenda" onchange="renderProduccion()">
+            <option value="">Todas las prendas</option>
+          </select>
+        </div>
+      </div>
+      <div style="font-size:12px;color:#666;margin-top:8px">Toca una talla para ver sus bultos.</div>
+    </div>
+    <div id="prod-cortes-container"></div>
+  </div>
+
+  <!-- SUB: Captura -->
+  <div id="prod-sub-captura-view" style="display:none">
+    <!-- Resumen del día -->
+    <div class="card">
+      <div class="card-title">📅 Hoy</div>
+      <div id="cap-resumen-hoy" class="alert alert-info" style="margin:0">Cargando...</div>
+    </div>
+
+    <!-- Captura rápida (modo default) -->
+    <div class="card" id="cap-modo-rapido">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="card-title" style="margin:0">⚡ Captura rápida</div>
+        <button class="btn btn-ghost btn-sm" onclick="cambiarModoCap('lote')">Cambiar a lote ▸</button>
+      </div>
+      <div class="text-muted mb8" style="font-size:12px">Un registro individual. Para marcar varios bultos de un corte, usá "Lote".</div>
+
+      <div class="row2">
+        <div class="field">
+          <label>Operaria</label>
+          <select id="cap-operaria"></select>
+        </div>
+        <div class="field">
+          <label>Fecha</label>
+          <input type="date" id="cap-fecha" onchange="cargarRegistrosHoy()">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Bulto</label>
+        <select id="cap-bulto" onchange="onBultoCapChange()"></select>
+      </div>
+
+      <div class="field">
+        <label>Operación (etapa)</label>
+        <select id="cap-operacion"></select>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label>Piezas realizadas</label>
+          <input type="number" id="cap-piezas" min="1" placeholder="25">
+        </div>
+        <div class="field">
+          <label>Tipo</label>
+          <select id="cap-tipo">
+            <option value="normal">Normal</option>
+            <option value="reproceso">Reproceso</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Observaciones</label>
+        <input type="text" id="cap-observaciones" placeholder="(opcional)">
+      </div>
+
+      <button class="btn btn-success btn-block" onclick="guardarCaptura()">✓ Guardar registro</button>
+    </div>
+
+    <!-- Captura por lote (modo alternativo) -->
+    <div class="card" id="cap-modo-lote" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="card-title" style="margin:0">📦 Captura por lote</div>
+        <button class="btn btn-ghost btn-sm" onclick="cambiarModoCap('rapido')">◂ Cambiar a rápido</button>
+      </div>
+      <div class="text-muted mb8" style="font-size:12px">Marca la misma operación como hecha en múltiples bultos (ej: toda una talla o corte).</div>
+
+      <div class="row2">
+        <div class="field">
+          <label>Operaria</label>
+          <select id="lote-operaria"></select>
+        </div>
+        <div class="field">
+          <label>Fecha</label>
+          <input type="date" id="lote-fecha">
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label>Filtrar bultos por corte</label>
+          <select id="lote-corte" onchange="refrescarBultosLote()">
+            <option value="">— Todos —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Filtrar por prenda</label>
+          <select id="lote-prenda" onchange="refrescarBultosLote()">
+            <option value="">— Todas —</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Operación (etapa)</label>
+        <select id="lote-operacion" onchange="refrescarBultosLote()"></select>
+      </div>
+
+      <div class="field">
+        <label>Bultos a marcar <span id="lote-cuenta" style="color:var(--verde);font-weight:700"></span></label>
+        <div id="lote-bultos-lista" style="max-height:260px;overflow-y:auto;border:1px solid var(--borde);border-radius:6px;padding:6px">
+          <div class="text-muted" style="font-size:12px">Elegí operación primero...</div>
+        </div>
+      </div>
+
+      <button class="btn btn-success btn-block" onclick="guardarLote()">✓ Guardar lote</button>
+    </div>
+
+    <!-- Registros del día -->
+    <div class="card">
+      <div class="card-title">📋 Registros de hoy</div>
+      <div id="cap-registros"></div>
+    </div>
+  </div>
+
+  <!-- SUB: Operarias -->
+  <div id="prod-sub-operarias-view" style="display:none">
+    <div class="card">
+      <div class="card-title">👷 Operarias</div>
+      <div class="text-muted mb8" style="font-size:12px">Las inactivas no aparecen en el dropdown de captura pero preservan su historial.</div>
+      <div id="operarias-lista"></div>
+      <div class="field mt8">
+        <label>Agregar nueva operaria</label>
+        <div style="display:flex;gap:6px">
+          <input type="text" id="nueva-operaria" placeholder="Nombre" style="flex:1">
+          <button class="btn btn-primary btn-sm" onclick="agregarOperaria()">➕ Agregar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CONFIG ═══ -->

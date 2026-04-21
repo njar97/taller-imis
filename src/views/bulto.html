@@ -1,0 +1,43 @@
+<div id="view-bulto" class="view">
+  <div id="alert-bulto"></div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div class="card-title" style="margin:0">📦 Asistente de Bulto</div>
+      <button class="btn btn-ghost btn-sm" onclick="volverNuevo()">← Volver</button>
+    </div>
+
+    <!-- Paso 1: elegir tendido -->
+    <div id="bu-paso-1">
+      <div class="field">
+        <label>Elegir tendido sin bultos capturados</label>
+        <select id="bu-tendido-select" onchange="onElegirTendido()">
+          <option value="">— Cargando tendidos pendientes... —</option>
+        </select>
+      </div>
+      <div id="bu-tendido-info"></div>
+    </div>
+  </div>
+
+  <!-- Paso 2: bultos propuestos -->
+  <div id="bu-paso-2" style="display:none">
+    <div class="card">
+      <div class="card-title">Bultos propuestos</div>
+      <div class="alert alert-info">💡 Paty confirma cada bulto conforme corta. Puede <strong>dividir</strong> (ej: partir 15 en 7+8 de distinta talla), <strong>sustituir</strong> la talla (ej: P1595 → P1590), o <strong>confirmar</strong> si salió tal cual.</div>
+      <div id="bu-bultos-container"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Resumen</div>
+      <div class="totales-grid">
+        <div class="total-item"><div class="total-valor" id="bu-total-propuestos">0</div><div class="total-label">Propuestos</div></div>
+        <div class="total-item"><div class="total-valor" id="bu-total-confirmados">0</div><div class="total-label">Confirmados</div></div>
+        <div class="total-item"><div class="total-valor" id="bu-total-pz">0</div><div class="total-label">Piezas total</div></div>
+      </div>
+    </div>
+
+    <button class="btn btn-success btn-block" id="btn-guardar-bulto" onclick="guardarBultos()">💾 Guardar bultos confirmados</button>
+  </div>
+</div>
+
+<!-- ═══ HISTORIAL ═══ -->

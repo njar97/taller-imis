@@ -1,0 +1,26 @@
+<!-- MINI MODAL: crear KEY nueva -->
+<div id="mini-modal" class="mini-modal">
+  <div class="mini-modal-box">
+    <h3 id="mm-title">Agregar talla al catálogo</h3>
+    <div id="mm-body"></div>
+    <div class="actions">
+      <button class="btn btn-ghost btn-sm" onclick="cerrarMiniModal()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="mm-ok" onclick="confirmarMiniModal()">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETALLE OVERLAY -->
+<div id="detalle-overlay" class="detalle-overlay">
+  <div class="detalle-modal">
+    <div class="detalle-header">
+      <div class="detalle-titulo" id="det-titulo">Detalle</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" id="det-btn-editar" onclick="editarRegistro()" style="display:none">✏️ Editar</button>
+        <button class="btn btn-danger btn-sm" id="det-btn-eliminar" onclick="eliminarRegistro()" style="display:none;font-size:12px">🗑️ Eliminar</button>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarDetalle()">✕ Cerrar</button>
+      </div>
+    </div>
+    <div id="det-contenido"></div>
+  </div>
+</div>

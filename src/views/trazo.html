@@ -1,0 +1,82 @@
+<div id="view-trazo" class="view">
+  <div id="alert-trazo"></div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div class="card-title" style="margin:0">✂️ Nuevo Trazo</div>
+      <button class="btn btn-ghost btn-sm" onclick="volverNuevo()">← Volver</button>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Fecha</label><input type="date" id="t-fecha"></div>
+      <div class="field">
+        <label>Letra del corte</label>
+        <input type="text" id="t-letra-corte" class="letra-input" maxlength="1" placeholder="A" oninput="this.value=this.value.toUpperCase();sugerirLetrasTallas()">
+        <div class="text-muted">Una letra única del corte. Va en cada código de bulto.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Color de tela -->
+  <div class="card">
+    <div class="card-title">🎨 Color de la tela</div>
+    <div class="text-muted mb8">Elegí el color que se va a tender. Se pueden combinar Blanco+Celeste o Azul+Beige.</div>
+    <div class="color-chips" id="t-color-chips"></div>
+  </div>
+
+  <!-- Capas + yardas + conversor -->
+  <div class="card">
+    <div class="card-title">📏 Medidas del trazo</div>
+    <div class="row2">
+      <div class="field">
+        <label>Capas planeadas</label>
+        <input type="number" id="t-capas" min="1" placeholder="20" oninput="recalcYardas()">
+      </div>
+      <div class="field">
+        <label>Yardas por lienzo</label>
+        <input type="number" id="t-yd-por-lienzo" step="0.1" value="4" placeholder="4" oninput="recalcYardas()">
+      </div>
+    </div>
+    <div class="field">
+      <label>Yardas estimadas totales</label>
+      <div class="conversor">
+        <input type="number" id="t-yardas" step="0.5" placeholder="Se calcula auto">
+        <button class="btn btn-ghost btn-sm" onclick="aplicarYardasCalc()" title="Aplicar cálculo">🧮 Calc</button>
+      </div>
+      <div class="text-muted" id="t-yardas-hint">Tip: capas × yardas por lienzo. Editable si preferís otro valor.</div>
+    </div>
+  </div>
+
+  <!-- Tallas marcadas -->
+  <div class="card">
+    <div class="card-title">🏷️ Tallas marcadas en el trazo</div>
+    <div class="alert alert-info">💡 Una fila por cada talla dibujada. Si marcaste la misma talla 2 veces, agregala 2 veces (llevará letras distintas). <strong>Completa</strong>: 1 lienzo = 1 pieza. <strong>Par</strong>: 2 lienzos = 1 pieza (elegí cuál talla la complementa).</div>
+    <div id="t-tallas-container"></div>
+    <button class="btn btn-ghost btn-sm mt8" onclick="agregarTallaTrazo()">+ Agregar talla marcada</button>
+  </div>
+
+  <!-- Foto -->
+  <div class="card">
+    <div class="card-title">📷 Foto del trazo (opcional)</div>
+    <div class="foto-upload" onclick="document.getElementById('t-foto-input').click()">
+      <input type="file" id="t-foto-input" accept="image/*" capture="environment" onchange="previewFoto(this,'t-foto-preview','t-foto-label')">
+      <div style="font-size:32px;margin-bottom:8px">📷</div>
+      <div id="t-foto-label" class="text-muted">Toca para tomar o adjuntar foto</div>
+      <img id="t-foto-preview" class="foto-preview" style="display:none">
+    </div>
+  </div>
+
+  <!-- Video -->
+  <div class="card">
+    <div class="card-title">🎥 Video del trazo (opcional)</div>
+    <input type="url" id="t-video-url" placeholder="https://youtube.com/... o https://drive.google.com/...">
+  </div>
+
+  <!-- Observaciones -->
+  <div class="card">
+    <div class="field"><label>Observaciones</label><textarea id="t-observaciones" placeholder="Cualquier detalle relevante..."></textarea></div>
+  </div>
+
+  <button class="btn btn-success btn-block" id="btn-guardar-trazo" onclick="guardarTrazo()">💾 Guardar trazo</button>
+</div>
+
+<!-- ═══ TENDIDO ═══ -->

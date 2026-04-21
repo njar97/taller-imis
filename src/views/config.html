@@ -1,0 +1,57 @@
+<div id="view-config" class="view">
+  <div class="card">
+    <div class="card-title">⚙️ Configuración</div>
+    <div class="config-item">
+      <div>
+        <div class="config-label">Supabase URL</div>
+        <div class="config-sub" id="cfg-url-display">—</div>
+      </div>
+    </div>
+    <div class="config-item">
+      <div><div class="config-label">Estado</div><div><span id="cfg-estado" class="badge badge-err">Sin verificar</span></div></div>
+      <button class="btn btn-ghost btn-sm" onclick="verificarConexion()">Verificar</button>
+    </div>
+    <div class="divider"></div>
+    <div class="field"><label>URL</label><input type="text" id="cfg-url"></div>
+    <div class="field"><label>Anon Key</label><input type="text" id="cfg-key"></div>
+    <button class="btn btn-primary btn-block" onclick="guardarConfig()">Guardar configuración</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🚀 Funciones de producción (por etapas)</div>
+    <div class="text-muted mb8" style="font-size:12px">Activá las funciones avanzadas solo cuando la Fase 1 esté funcionando bien. Si hay problemas, podés volver a desactivarlas.</div>
+
+    <div class="config-item">
+      <div style="flex:1">
+        <div class="config-label">Fase 1 · Seguimiento básico de bultos</div>
+        <div class="config-sub">Siempre activa. Marcar pendiente/terminado, dividir, unir.</div>
+      </div>
+      <span class="badge badge-ok">Activa</span>
+    </div>
+
+    <div class="config-item">
+      <div style="flex:1">
+        <div class="config-label">Fase 2 · Captura por operación y operaria</div>
+        <div class="config-sub">Registrar qué operaria hizo qué operación cada día. Requiere que tengas alguien designado para capturar.</div>
+      </div>
+      <label class="switch-toggle">
+        <input type="checkbox" id="cfg-fase2" onchange="toggleFase(2, this.checked)">
+        <span class="switch-slider"></span>
+      </label>
+    </div>
+
+    <div class="config-item">
+      <div style="flex:1">
+        <div class="config-label">Fase 3 · Reportes y destajo</div>
+        <div class="config-sub">Productividad por operaria, tarifas por pieza, liquidación por destajo. Requiere Fase 2 + 1-2 meses de datos.</div>
+      </div>
+      <label class="switch-toggle">
+        <input type="checkbox" id="cfg-fase3" onchange="toggleFase(3, this.checked)" disabled>
+        <span class="switch-slider"></span>
+      </label>
+    </div>
+    <div class="text-muted" style="font-size:11px;margin-top:8px">💡 Si desactivás una fase, los datos quedan guardados y se pueden volver a usar al reactivarla.</div>
+  </div>
+</div>
+
+</div>

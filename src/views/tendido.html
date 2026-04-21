@@ -1,0 +1,67 @@
+<div id="view-tendido" class="view">
+  <div id="alert-tendido"></div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div class="card-title" style="margin:0">📋 Asistente de Tendido</div>
+      <button class="btn btn-ghost btn-sm" onclick="volverNuevo()">← Volver</button>
+    </div>
+
+    <!-- Paso 1: elegir trazo -->
+    <div id="td-paso-1">
+      <div class="field">
+        <label>1. Elegir trazo pendiente de tender</label>
+        <select id="td-trazo-select" onchange="onElegirTrazo()">
+          <option value="">— Cargando trazos pendientes... —</option>
+        </select>
+      </div>
+      <div id="td-trazo-info"></div>
+    </div>
+  </div>
+
+  <!-- Paso 2: datos del tendido + rollos -->
+  <div id="td-paso-2" style="display:none">
+    <div class="card">
+      <div class="card-title">2. Datos del tendido</div>
+      <div class="row2">
+        <div class="field"><label>Fecha del tendido</label><input type="date" id="td-fecha"></div>
+        <div class="field"><label>Equipo del día</label><input type="text" id="td-equipo" placeholder="Sandra, Blanky, Tere..."></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">3. Rollos tendidos</div>
+      <div class="alert alert-info">💡 Agregá rollos en el orden que se tienden. Al guardar, el sistema invierte la numeración: el último tendido queda como bulto #1.</div>
+      <div id="td-rollos-container"></div>
+      <button class="btn btn-ghost btn-sm mt8" onclick="agregarRolloTendido()">+ Agregar rollo</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">4. Totales del tendido</div>
+      <div class="totales-grid">
+        <div class="total-item"><div class="total-valor" id="td-total-capas">0</div><div class="total-label">Capas (lienzos)</div></div>
+        <div class="total-item"><div class="total-valor" id="td-total-pares">0</div><div class="total-label">Pares</div></div>
+        <div class="total-item"><div class="total-valor" id="td-total-rollos">0</div><div class="total-label">Rollos</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="field"><label>Observaciones generales</label><textarea id="td-observaciones" placeholder="Tono, problemas, notas..."></textarea></div>
+      <div class="row2">
+        <div class="field">
+          <label>¿Se completó en un día?</label>
+          <select id="td-completo" onchange="document.getElementById('td-cont-field').style.display=this.value==='false'?'block':'none'">
+            <option value="true">Sí</option><option value="false">No</option>
+          </select>
+        </div>
+        <div class="field" id="td-cont-field" style="display:none"><label>Fecha de continuación</label><input type="date" id="td-continuacion"></div>
+      </div>
+    </div>
+
+    <div id="td-warnings"></div>
+
+    <button class="btn btn-success btn-block" id="btn-guardar-tendido" onclick="guardarTendido()">💾 Guardar tendido (invierte numeración)</button>
+  </div>
+</div>
+
+<!-- ═══ BULTO ═══ -->
