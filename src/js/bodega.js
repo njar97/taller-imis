@@ -313,7 +313,7 @@ async function registrarEntradaBodegaPorBulto(bulto) {
       nombre_prenda: bulto.nombre_prenda || null,
       talla_key: bulto.talla_salida,
       cantidad: bulto.cantidad_final,
-      bulto_id: bulto.id,
+      produccion_bulto_id: bulto.id,
       observaciones: `Bulto ${bulto.codigo_bulto || bulto.id.slice(0,6)} terminado`
     });
   } catch(e) {

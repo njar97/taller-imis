@@ -30,10 +30,10 @@ CREATE TABLE IF NOT EXISTS bodega_movimiento (
     talla_key       TEXT NOT NULL,
     cantidad        INT NOT NULL CHECK (cantidad > 0),
     -- Enlaces opcionales
-    bulto_id        UUID REFERENCES bulto(id) ON DELETE SET NULL,
-    alumno_id       UUID REFERENCES alumno(id) ON DELETE SET NULL,
-    escuela_id      UUID REFERENCES escuela(id) ON DELETE SET NULL,
-    pedido_id       UUID REFERENCES pedido(id) ON DELETE SET NULL,
+    produccion_bulto_id UUID REFERENCES produccion_bulto(id) ON DELETE SET NULL,
+    alumno_id        UUID REFERENCES alumno(id) ON DELETE SET NULL,
+    escuela_id       UUID REFERENCES escuela(id) ON DELETE SET NULL,
+    pedido_id        UUID REFERENCES pedido(id) ON DELETE SET NULL,
     -- Metadata
     fecha           DATE DEFAULT CURRENT_DATE,
     usuario         TEXT,
@@ -45,7 +45,7 @@ ALTER TABLE bodega_movimiento DISABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS idx_bodega_mov_talla ON bodega_movimiento(cod_prenda, talla_key);
 CREATE INDEX IF NOT EXISTS idx_bodega_mov_fecha ON bodega_movimiento(fecha DESC);
 CREATE INDEX IF NOT EXISTS idx_bodega_mov_tipo ON bodega_movimiento(tipo);
-CREATE INDEX IF NOT EXISTS idx_bodega_mov_bulto ON bodega_movimiento(bulto_id);
+CREATE INDEX IF NOT EXISTS idx_bodega_mov_bulto ON bodega_movimiento(produccion_bulto_id);
 CREATE INDEX IF NOT EXISTS idx_bodega_mov_alumno ON bodega_movimiento(alumno_id);
 
 COMMENT ON TABLE bodega_movimiento IS 'Todos los movimientos de entrada/salida. El stock se calcula sumando.';
