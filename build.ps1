@@ -109,3 +109,5 @@ Write-Host "  Tamano:   $sizeKB KB ($size bytes)"
 Write-Host "  Lineas:   $lines"
 Write-Host "  Fecha:    $buildDate"
 Write-Host ""
+
+exit 0

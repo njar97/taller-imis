@@ -49,7 +49,7 @@ Write-Host ""
 Write-Host "[2/5] Ejecutando build..." -ForegroundColor Yellow
 try {
     & .\build.ps1
-    if ($LASTEXITCODE -ne 0) {
+    if ($null -ne $LASTEXITCODE -and $LASTEXITCODE -ne 0) {
         throw "El build fallo con codigo $LASTEXITCODE"
     }
 } catch {
