@@ -1,0 +1,62 @@
+<!-- ══════════ PEDIDOS ══════════ -->
+<div id="view-pedidos" class="view">
+  <div id="alert-pedidos"></div>
+  
+  <div class="card">
+    <div class="card-title">📚 Pedidos</div>
+    <div id="pedidos-header"></div>
+  </div>
+  
+  <div id="pedidos-lista"></div>
+  
+  <!-- Modal: Detalle de escuela -->
+  <div id="pedidos-detalle-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:700px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" id="pedidos-detalle-titulo" style="margin:0"></div>
+          <div id="pedidos-detalle-subt" style="font-size:12px;color:#666;margin-top:2px"></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarDetalleEscuela()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="pedidos-detalle-tabla"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarDetalleEscuela()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Modal: Nueva escuela -->
+  <div id="pedidos-escuela-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:500px">
+      <div class="modal-header">
+        <div class="card-title">+ Nueva escuela</div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarNuevaEscuela()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Nombre *</label>
+          <input type="text" id="nesc-nombre" placeholder="Ej: Doña Victoria - Pedido privado">
+        </div>
+        <div class="field">
+          <label>Código CDE (si tiene)</label>
+          <input type="text" id="nesc-codigo" placeholder="Opcional - se autogenera">
+        </div>
+        <div class="field">
+          <label>Director o responsable</label>
+          <input type="text" id="nesc-director">
+        </div>
+        <div class="field">
+          <label>Teléfono</label>
+          <input type="text" id="nesc-telefono">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarNuevaEscuela()">Cancelar</button>
+        <button class="btn btn-success" onclick="guardarNuevaEscuela()">✓ Agregar escuela</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,4 +1,4 @@
-﻿# ====================================================================
+# ====================================================================
 # Taller IMIS - Build Script
 # Toma los archivos separados de src/ y genera produccion.html
 # ====================================================================
@@ -27,6 +27,7 @@ $jsOrder = @(
     'historial.js',
     'produccion.js',
     'asignaciones.js',
+    'pedidos.js',
     'config.js'
 )
 
@@ -37,6 +38,7 @@ $viewsOrder = @(
     'bulto.html',
     'historial.html',
     'produccion.html',
+    'pedidos.html',
     'config.html'
 )
 
