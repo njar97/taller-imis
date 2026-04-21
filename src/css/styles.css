@@ -246,3 +246,17 @@
   .modal-header { padding: 14px; border-bottom: 1px solid var(--borde); display: flex; justify-content: space-between; align-items: center; }
   .modal-body { padding: 14px; overflow-y: auto; flex: 1; }
   .modal-footer { padding: 12px 14px; border-top: 1px solid var(--borde); display: flex; justify-content: flex-end; gap: 8px; }
+
+/* ── Sub-tabs (v22) ── */
+.sub-tabs { display: flex; gap: 2px; border-bottom: 2px solid var(--borde); margin-bottom: 10px; overflow-x: auto; }
+.sub-tab { padding: 6px 12px; cursor: pointer; font-size: 12px; font-weight: 500; color: #666; border-bottom: 2px solid transparent; margin-bottom: -2px; white-space: nowrap; }
+.sub-tab:hover { color: var(--azul); }
+.sub-tab.active { color: var(--azul); border-bottom-color: var(--azul); font-weight: 600; }
+
+/* Botones mini (v22) */
+.btn-mini { padding: 3px 8px; border-radius: 4px; border: 1px solid var(--borde); background: white; font-size: 11px; cursor: pointer; }
+.btn-mini:hover { background: #F5F7FA; }
+.btn-mini-primary { background: var(--azul); color: white; border-color: var(--azul); }
+.btn-mini-primary:hover { background: #0052b3; }
+.btn-mini-success { background: var(--verde); color: white; border-color: var(--verde); }
+.btn-mini-success:hover { background: #007a33; }

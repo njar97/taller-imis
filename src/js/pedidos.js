@@ -126,12 +126,34 @@ async function abrirDetalleEscuela(escuelaId) {
   const esc = pedidosCache.escuelas.find(e => e.escuela_id === escuelaId);
   if (!esc) return;
   
+  pedidosCache.escuelaActual = escuelaId;
+  pedidosCache.vistaDetalle = 'pedidos'; // por defecto
+  
   document.getElementById('pedidos-detalle-titulo').textContent = esc.escuela_nombre;
   document.getElementById('pedidos-detalle-subt').textContent = `CDE ${esc.codigo_cde} · ${esc.piezas_entregadas||0}/${esc.piezas_solicitadas||0} piezas`;
-  document.getElementById('pedidos-detalle-tabla').innerHTML = '<div class="text-muted">Cargando pedidos...</div>';
+  
+  // Renderizar sub-tabs
+  document.getElementById('pedidos-detalle-subtabs').innerHTML = `
+    <div class="sub-tabs">
+      <div class="sub-tab active" onclick="cambiarVistaDetalle('pedidos', this)">📋 Pedidos por talla</div>
+      <div class="sub-tab" onclick="cambiarVistaDetalle('alumnos', this)">👥 Alumnos</div>
+    </div>
+  `;
   
   modal.style.display = 'flex';
-  
+  await cargarPedidosEscuela(escuelaId);
+}
+
+function cambiarVistaDetalle(vista, el) {
+  document.querySelectorAll('#pedidos-detalle-subtabs .sub-tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  pedidosCache.vistaDetalle = vista;
+  if (vista === 'pedidos') cargarPedidosEscuela(pedidosCache.escuelaActual);
+  else if (vista === 'alumnos') mostrarAlumnos(pedidosCache.escuelaActual);
+}
+
+async function cargarPedidosEscuela(escuelaId) {
+  document.getElementById('pedidos-detalle-tabla').innerHTML = '<div class="text-muted">Cargando pedidos...</div>';
   try {
     const pedidos = await supaFetch('pedido', 'GET', null, 
       `?escuela_id=eq.${escuelaId}&order=nivel,cod_prenda,talla_key&limit=500`);

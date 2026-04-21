@@ -1,10 +1,10 @@
-<!-- Generado: 2026-04-21 15:47 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-04-21 16:14 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Taller IMIS — Producción v21</title>
+<title>Taller IMIS — Producción v22</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -255,6 +255,20 @@
   .modal-body { padding: 14px; overflow-y: auto; flex: 1; }
   .modal-footer { padding: 12px 14px; border-top: 1px solid var(--borde); display: flex; justify-content: flex-end; gap: 8px; }
 
+/* ── Sub-tabs (v22) ── */
+.sub-tabs { display: flex; gap: 2px; border-bottom: 2px solid var(--borde); margin-bottom: 10px; overflow-x: auto; }
+.sub-tab { padding: 6px 12px; cursor: pointer; font-size: 12px; font-weight: 500; color: #666; border-bottom: 2px solid transparent; margin-bottom: -2px; white-space: nowrap; }
+.sub-tab:hover { color: var(--azul); }
+.sub-tab.active { color: var(--azul); border-bottom-color: var(--azul); font-weight: 600; }
+
+/* Botones mini (v22) */
+.btn-mini { padding: 3px 8px; border-radius: 4px; border: 1px solid var(--borde); background: white; font-size: 11px; cursor: pointer; }
+.btn-mini:hover { background: #F5F7FA; }
+.btn-mini-primary { background: var(--azul); color: white; border-color: var(--azul); }
+.btn-mini-primary:hover { background: #0052b3; }
+.btn-mini-success { background: var(--verde); color: white; border-color: var(--verde); }
+.btn-mini-success:hover { background: #007a33; }
+
 </style>
 </head>
 
@@ -263,13 +277,14 @@
 <nav>
   <div class="nav-top">
     <div style="width:32px;height:32px;background:rgba(255,255,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">T</div>
-    <h1>Taller IMIS — Producción v21</h1>
+    <h1>Taller IMIS — Producción v22</h1>
   </div>
   <div class="nav-tabs">
     <div class="nav-tab active" onclick="switchTab('nuevo',this)">➕ Nuevo</div>
     <div class="nav-tab" onclick="switchTab('historial',this)">🗂 Historial</div>
     <div class="nav-tab" onclick="switchTab('produccion',this)">🏭 Prod.</div>
     <div class="nav-tab" onclick="switchTab('pedidos',this)">📚 Pedidos</div>
+    <div class="nav-tab" onclick="switchTab('bodega',this)">📦 Bodega</div>
     <div class="nav-tab" onclick="switchTab('config',this)">⚙️ Config</div>
   </div>
 </nav>
@@ -803,6 +818,7 @@
         <button class="btn btn-ghost btn-sm" onclick="cerrarDetalleEscuela()">✕</button>
       </div>
       <div class="modal-body">
+        <div id="pedidos-detalle-subtabs"></div>
         <div id="pedidos-detalle-tabla"></div>
       </div>
       <div class="modal-footer">
@@ -839,6 +855,76 @@
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="cerrarNuevaEscuela()">Cancelar</button>
         <button class="btn btn-success" onclick="guardarNuevaEscuela()">✓ Agregar escuela</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Modal: empaque de alumno -->
+  <div id="bodega-empaque-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:550px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" id="emp-alumno-nombre" style="margin:0"></div>
+          <div id="emp-alumno-info" style="font-size:12px;color:#666;margin-top:2px"></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarEmpaque()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="emp-body"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarEmpaque()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ BODEGA ══════════ -->
+<div id="view-bodega" class="view">
+  <div id="alert-bodega"></div>
+  <div class="card">
+    <div class="card-title">📦 Bodega</div>
+    <div id="bodega-tabs"></div>
+  </div>
+  <div id="bodega-contenido"></div>
+  
+  <!-- Modal: entrada manual -->
+  <div id="bodega-entrada-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:500px">
+      <div class="modal-header">
+        <div class="card-title">+ Movimiento de bodega</div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarEntradaManual()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Tipo</label>
+          <select id="ent-tipo">
+            <option value="ENTRADA_MANUAL">📥 Entrada manual</option>
+            <option value="AJUSTE_INVENTARIO">⚖ Ajuste de inventario</option>
+            <option value="SALIDA_ENTREGA">🚚 Salida a escuela</option>
+            <option value="DEFECTO">✗ Defecto (devolver a producción)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Prenda *</label>
+          <input type="text" id="ent-prenda" placeholder="Ej: CAMISA, BLUSA, PANTALON, FALDA, SHORT, CAMISA_CELESTE">
+        </div>
+        <div class="field">
+          <label>Talla (key) *</label>
+          <input type="text" id="ent-talla" placeholder="Ej: C14, B12, P1075, F1050, CC6">
+        </div>
+        <div class="field">
+          <label>Cantidad *</label>
+          <input type="number" id="ent-cantidad" min="1">
+        </div>
+        <div class="field">
+          <label>Observaciones</label>
+          <textarea id="ent-obs" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarEntradaManual()">Cancelar</button>
+        <button class="btn btn-success" onclick="guardarEntradaManual()">✓ Registrar</button>
       </div>
     </div>
   </div>
@@ -992,6 +1078,7 @@ function switchTab(tab, el) {
   if (tab === 'config') initConfig();
   if (tab === 'produccion') initProduccion();
   if (tab === 'pedidos' && typeof initPedidos === 'function') initPedidos();
+  if (tab === 'bodega' && typeof initBodega === 'function') initBodega();
   if (tab === 'nuevo') {} // menu se arma en init
   window.scrollTo(0, 0);
 }
@@ -3322,6 +3409,17 @@ async function terminarBulto(produccionBultoId, cantidadOriginal) {
       b.cantidad_final = cantidadFinal;
       b.observaciones = observaciones;
     }
+    // Hook: registrar entrada a bodega (si la función existe)
+    if (typeof registrarEntradaBodegaPorBulto === 'function' && b) {
+      registrarEntradaBodegaPorBulto({
+        id: b.produccion_bulto_id,
+        codigo_bulto: b.codigo_bulto,
+        cod_prenda: b.cod_prenda,
+        nombre_prenda: b.nombre_prenda,
+        talla_salida: b.talla_key_salida,
+        cantidad_final: cantidadFinal,
+      });
+    }
     renderProduccion();
   } catch(e) {
     alert('Error: ' + e.message);
@@ -4554,12 +4652,34 @@ async function abrirDetalleEscuela(escuelaId) {
   const esc = pedidosCache.escuelas.find(e => e.escuela_id === escuelaId);
   if (!esc) return;
   
+  pedidosCache.escuelaActual = escuelaId;
+  pedidosCache.vistaDetalle = 'pedidos'; // por defecto
+  
   document.getElementById('pedidos-detalle-titulo').textContent = esc.escuela_nombre;
   document.getElementById('pedidos-detalle-subt').textContent = `CDE ${esc.codigo_cde} · ${esc.piezas_entregadas||0}/${esc.piezas_solicitadas||0} piezas`;
-  document.getElementById('pedidos-detalle-tabla').innerHTML = '<div class="text-muted">Cargando pedidos...</div>';
+  
+  // Renderizar sub-tabs
+  document.getElementById('pedidos-detalle-subtabs').innerHTML = `
+    <div class="sub-tabs">
+      <div class="sub-tab active" onclick="cambiarVistaDetalle('pedidos', this)">📋 Pedidos por talla</div>
+      <div class="sub-tab" onclick="cambiarVistaDetalle('alumnos', this)">👥 Alumnos</div>
+    </div>
+  `;
   
   modal.style.display = 'flex';
-  
+  await cargarPedidosEscuela(escuelaId);
+}
+
+function cambiarVistaDetalle(vista, el) {
+  document.querySelectorAll('#pedidos-detalle-subtabs .sub-tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  pedidosCache.vistaDetalle = vista;
+  if (vista === 'pedidos') cargarPedidosEscuela(pedidosCache.escuelaActual);
+  else if (vista === 'alumnos') mostrarAlumnos(pedidosCache.escuelaActual);
+}
+
+async function cargarPedidosEscuela(escuelaId) {
+  document.getElementById('pedidos-detalle-tabla').innerHTML = '<div class="text-muted">Cargando pedidos...</div>';
   try {
     const pedidos = await supaFetch('pedido', 'GET', null, 
       `?escuela_id=eq.${escuelaId}&order=nivel,cod_prenda,talla_key&limit=500`);
@@ -4690,6 +4810,645 @@ async function guardarNuevaEscuela() {
     await cargarEscuelasTemporada();
   } catch(e) {
     alert('Error: ' + e.message);
+  }
+}
+
+// +++++++++++++++++++ alumnos.js +++++++++++++++++++
+// ══════════════════════════════════════════════════════════════════════
+// ALUMNOS + EMPAQUE (v22)
+// Se monta como sub-tab dentro de 📚 Pedidos
+// ══════════════════════════════════════════════════════════════════════
+
+let alumnosCache = {
+  escuelaId: null,
+  alumnos: [],
+  filtroGrado: '',
+  filtroNivel: '',
+  filtroEstado: '', // 'pendiente'|'parcial'|'completo'|'entregado'
+  busqueda: '',
+  stockPorTalla: {}, // talla_key -> stock disponible
+};
+
+async function mostrarAlumnos(escuelaId) {
+  alumnosCache.escuelaId = escuelaId;
+  const cont = document.getElementById('pedidos-detalle-tabla');
+  cont.innerHTML = '<div class="text-muted">Cargando alumnos...</div>';
+  try {
+    const [alumnos, stock] = await Promise.all([
+      supaFetch('alumno', 'GET', null, 
+        `?escuela_id=eq.${escuelaId}&temporada_id=eq.${pedidosCache.temporadaActual}&order=nivel,grado,nombre&limit=2000`),
+      supaFetch('vw_bodega_stock', 'GET', null, '?limit=1000')
+    ]);
+    alumnosCache.alumnos = alumnos;
+    // Indexar stock por talla_key
+    alumnosCache.stockPorTalla = {};
+    for (const s of stock) {
+      alumnosCache.stockPorTalla[s.talla_key] = s.stock_disponible || 0;
+    }
+    renderAlumnosLista();
+  } catch(e) {
+    cont.innerHTML = `<div style="color:red">Error: ${e.message}</div>`;
+  }
+}
+
+function renderAlumnosLista() {
+  const cont = document.getElementById('pedidos-detalle-tabla');
+  let list = alumnosCache.alumnos;
+  
+  // Filtros
+  if (alumnosCache.filtroGrado) list = list.filter(a => a.grado === alumnosCache.filtroGrado);
+  if (alumnosCache.filtroNivel) list = list.filter(a => a.nivel === alumnosCache.filtroNivel);
+  if (alumnosCache.busqueda) {
+    const q = alumnosCache.busqueda.toLowerCase();
+    list = list.filter(a => (a.nombre||'').toLowerCase().includes(q));
+  }
+  if (alumnosCache.filtroEstado) {
+    list = list.filter(a => {
+      const t = a.estado_top, b = a.estado_bottom;
+      if (alumnosCache.filtroEstado === 'pendiente') return t==='pendiente' && b==='pendiente';
+      if (alumnosCache.filtroEstado === 'parcial') 
+        return (t==='empacado' && b!=='empacado') || (b==='empacado' && t!=='empacado');
+      if (alumnosCache.filtroEstado === 'completo') return t==='empacado' && b==='empacado';
+      if (alumnosCache.filtroEstado === 'entregado') return t==='entregado' && b==='entregado';
+      return true;
+    });
+  }
+  
+  // Estadísticas
+  const tot = alumnosCache.alumnos.length;
+  const completos = alumnosCache.alumnos.filter(a => a.estado_top==='empacado' && a.estado_bottom==='empacado').length;
+  const parciales = alumnosCache.alumnos.filter(a => 
+    (a.estado_top==='empacado' && a.estado_bottom!=='empacado') ||
+    (a.estado_bottom==='empacado' && a.estado_top!=='empacado')
+  ).length;
+  
+  // Grados únicos
+  const grados = [...new Set(alumnosCache.alumnos.map(a => a.grado).filter(Boolean))].sort();
+  const niveles = [...new Set(alumnosCache.alumnos.map(a => a.nivel).filter(Boolean))].sort();
+  
+  const header = `
+    <div style="background:white;padding:8px;border-radius:8px;margin-bottom:10px">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin-bottom:8px">
+        <div>Total: <strong>${tot}</strong></div>
+        <div style="color:var(--verde)">Completos: <strong>${completos}</strong></div>
+        <div style="color:var(--naranja)">Parciales: <strong>${parciales}</strong></div>
+        <div style="color:#888">Mostrando: <strong>${list.length}</strong></div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <input type="text" placeholder="Buscar por nombre..." value="${alumnosCache.busqueda}"
+          oninput="alumnosCache.busqueda = this.value; renderAlumnosLista()"
+          style="flex:1;min-width:140px;padding:4px 8px;border:1px solid var(--borde);border-radius:4px">
+        <select onchange="alumnosCache.filtroNivel = this.value; renderAlumnosLista()" style="padding:4px">
+          <option value="">Todo nivel</option>
+          ${niveles.map(n => `<option value="${n}" ${n===alumnosCache.filtroNivel?'selected':''}>${n}</option>`).join('')}
+        </select>
+        <select onchange="alumnosCache.filtroGrado = this.value; renderAlumnosLista()" style="padding:4px">
+          <option value="">Todo grado</option>
+          ${grados.map(g => `<option value="${g}" ${g===alumnosCache.filtroGrado?'selected':''}>${g}</option>`).join('')}
+        </select>
+        <select onchange="alumnosCache.filtroEstado = this.value; renderAlumnosLista()" style="padding:4px">
+          <option value="">Todo estado</option>
+          <option value="pendiente" ${alumnosCache.filtroEstado==='pendiente'?'selected':''}>❌❌ Pendiente</option>
+          <option value="parcial" ${alumnosCache.filtroEstado==='parcial'?'selected':''}>✅❌ Parcial</option>
+          <option value="completo" ${alumnosCache.filtroEstado==='completo'?'selected':''}>✅✅ Completo</option>
+          <option value="entregado" ${alumnosCache.filtroEstado==='entregado'?'selected':''}>🚚 Entregado</option>
+        </select>
+      </div>
+    </div>
+  `;
+  
+  if (list.length === 0) {
+    cont.innerHTML = header + '<div class="text-muted">Sin resultados.</div>';
+    return;
+  }
+  
+  // Limitar a 100 visibles para performance
+  const visible = list.slice(0, 100);
+  const hayMas = list.length > 100;
+  
+  const iconEstado = (e) => {
+    if (e === 'empacado') return '✅';
+    if (e === 'entregado') return '🚚';
+    if (e === 'reservado') return '⏳';
+    return '⬜';
+  };
+  
+  const colorEstado = (t, b) => {
+    if (t === 'entregado' && b === 'entregado') return '#EEE';
+    if (t === 'empacado' && b === 'empacado') return '#DCF5E0';
+    if (t === 'empacado' || b === 'empacado') return '#FFF4D6';
+    return 'white';
+  };
+  
+  const rows = visible.map(a => {
+    const stockT = alumnosCache.stockPorTalla[a.talla_top_key] || 0;
+    const stockB = alumnosCache.stockPorTalla[a.talla_bottom_key] || 0;
+    const puedeT = stockT > 0 || a.estado_top === 'empacado' || a.estado_top === 'entregado';
+    const puedeB = stockB > 0 || a.estado_bottom === 'empacado' || a.estado_bottom === 'entregado';
+    const bg = colorEstado(a.estado_top, a.estado_bottom);
+    
+    return `
+      <tr style="border-top:1px solid #EEE;background:${bg}">
+        <td style="padding:4px 8px;font-size:12px">
+          <div style="font-weight:600">${a.nombre}</div>
+          <div style="color:#666;font-size:10px">${a.grado||'-'} · ${a.sexo==='F'?'♀':'♂'}</div>
+        </td>
+        <td style="padding:4px 8px;text-align:center">
+          <div style="font-size:14px">${iconEstado(a.estado_top)}</div>
+          <div style="font-size:10px;color:#666">${a.talla_top_key||'-'}</div>
+          <div style="font-size:9px;color:${stockT>0?'var(--verde)':'#ccc'}">stock: ${stockT}</div>
+        </td>
+        <td style="padding:4px 8px;text-align:center">
+          <div style="font-size:14px">${iconEstado(a.estado_bottom)}</div>
+          <div style="font-size:10px;color:#666">${a.talla_bottom_key||'-'}</div>
+          <div style="font-size:9px;color:${stockB>0?'var(--verde)':'#ccc'}">stock: ${stockB}</div>
+        </td>
+        <td style="padding:4px 8px;text-align:center">
+          <button class="btn-mini btn-mini-primary" onclick="abrirEmpaqueAlumno('${a.id}')">📦</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+  
+  cont.innerHTML = header + `
+    <div class="card" style="padding:0;overflow:hidden">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:#F5F7FA">
+            <th style="padding:6px 8px;text-align:left">Alumno</th>
+            <th style="padding:6px 8px;text-align:center">Top</th>
+            <th style="padding:6px 8px;text-align:center">Bottom</th>
+            <th style="padding:6px 8px;text-align:center">Empacar</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      ${hayMas ? `<div style="padding:8px;text-align:center;color:#888;font-size:12px">... ${list.length-100} alumnos más. Usá filtros para ver más.</div>` : ''}
+    </div>
+  `;
+}
+
+// ─── Modal empaque individual ──────────────────────────────────────
+let empaqueCache = { alumnoActual: null };
+
+async function abrirEmpaqueAlumno(alumnoId) {
+  const alumno = alumnosCache.alumnos.find(a => a.id === alumnoId);
+  if (!alumno) return;
+  empaqueCache.alumnoActual = alumno;
+  
+  const stockT = alumnosCache.stockPorTalla[alumno.talla_top_key] || 0;
+  const stockB = alumnosCache.stockPorTalla[alumno.talla_bottom_key] || 0;
+  
+  document.getElementById('emp-alumno-nombre').textContent = alumno.nombre;
+  document.getElementById('emp-alumno-info').textContent = 
+    `${alumno.grado || ''} · ${alumno.nivel || ''} · ${alumno.sexo === 'F' ? '♀ Niña' : '♂ Niño'}`;
+  
+  const estadoLabel = {pendiente:'⬜ Pendiente',reservado:'⏳ Reservado',empacado:'✅ Empacado',entregado:'🚚 Entregado',cancelado:'✗ Cancelado'};
+  
+  document.getElementById('emp-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="card" style="padding:10px;border:2px solid ${alumno.estado_top==='empacado'?'var(--verde)':'var(--borde)'}">
+        <div style="font-weight:600;font-size:13px">👕 ${alumno.prenda_top || 'Top'}</div>
+        <div style="font-size:20px;margin:6px 0;font-family:monospace;color:var(--azul);font-weight:700">${alumno.talla_top_key || '-'}</div>
+        <div style="font-size:11px;margin-bottom:4px">Estado: ${estadoLabel[alumno.estado_top]||alumno.estado_top}</div>
+        <div style="font-size:11px;color:${stockT>0?'var(--verde)':'#c44'};margin-bottom:8px">Stock: <strong>${stockT}</strong></div>
+        ${alumno.estado_top === 'pendiente' ? 
+          (stockT > 0 
+            ? `<button class="btn btn-success btn-sm" style="width:100%" onclick="marcarEmpacado('top')">✅ Empacar top</button>`
+            : `<button class="btn btn-sm" style="width:100%" disabled>Sin stock</button>`) :
+         alumno.estado_top === 'empacado' ? 
+          `<button class="btn btn-primary btn-sm" style="width:100%" onclick="marcarEntregado('top')">🚚 Marcar entregado</button>` :
+          `<button class="btn btn-ghost btn-sm" style="width:100%" disabled>Ya ${alumno.estado_top}</button>`}
+      </div>
+      
+      <div class="card" style="padding:10px;border:2px solid ${alumno.estado_bottom==='empacado'?'var(--verde)':'var(--borde)'}">
+        <div style="font-weight:600;font-size:13px">👖 ${alumno.prenda_bottom || 'Bottom'}</div>
+        <div style="font-size:20px;margin:6px 0;font-family:monospace;color:var(--azul);font-weight:700">${alumno.talla_bottom_key || '-'}</div>
+        <div style="font-size:11px;margin-bottom:4px">Estado: ${estadoLabel[alumno.estado_bottom]||alumno.estado_bottom}</div>
+        <div style="font-size:11px;color:${stockB>0?'var(--verde)':'#c44'};margin-bottom:8px">Stock: <strong>${stockB}</strong></div>
+        ${alumno.estado_bottom === 'pendiente' ? 
+          (stockB > 0 
+            ? `<button class="btn btn-success btn-sm" style="width:100%" onclick="marcarEmpacado('bottom')">✅ Empacar bottom</button>`
+            : `<button class="btn btn-sm" style="width:100%" disabled>Sin stock</button>`) :
+         alumno.estado_bottom === 'empacado' ? 
+          `<button class="btn btn-primary btn-sm" style="width:100%" onclick="marcarEntregado('bottom')">🚚 Marcar entregado</button>` :
+          `<button class="btn btn-ghost btn-sm" style="width:100%" disabled>Ya ${alumno.estado_bottom}</button>`}
+      </div>
+    </div>
+    ${(alumno.estado_top==='pendiente' && alumno.estado_bottom==='pendiente' && stockT>0 && stockB>0) ? `
+      <div style="margin-top:10px;text-align:center">
+        <button class="btn btn-success" onclick="empacarAmbos()">✅✅ Empacar completo (ambos)</button>
+      </div>` : ''}
+  `;
+  
+  document.getElementById('bodega-empaque-modal').style.display = 'flex';
+}
+
+function cerrarEmpaque() {
+  document.getElementById('bodega-empaque-modal').style.display = 'none';
+  empaqueCache.alumnoActual = null;
+}
+
+async function marcarEmpacado(tipo) {
+  const a = empaqueCache.alumnoActual;
+  if (!a) return;
+  
+  const prenda = tipo === 'top' ? a.prenda_top : a.prenda_bottom;
+  const talla = tipo === 'top' ? a.talla_top_key : a.talla_bottom_key;
+  if (!prenda || !talla) { alert('El alumno no tiene talla asignada'); return; }
+  
+  const codMap = {
+    'CAMISA':'C','BLUSA':'B','CAMISA_CELESTE':'CC','PANTALON':'P','PANTALON_BEIGE':'PB',
+    'FALDA':'F','FALDA_BEIGE':'FB','FALDA_C.E':'FCE','SHORT':'S'
+  };
+  const codPrenda = codMap[prenda] || prenda.slice(0,3);
+  
+  try {
+    // 1. Actualizar alumno
+    const patch = tipo === 'top' 
+      ? { estado_top: 'empacado', empacado_top_en: new Date().toISOString() }
+      : { estado_bottom: 'empacado', empacado_bottom_en: new Date().toISOString() };
+    patch.actualizado_en = new Date().toISOString();
+    await supaUpdate('alumno', a.id, patch);
+    
+    // 2. Registrar salida de bodega
+    await supaFetch('bodega_movimiento', 'POST', {
+      tipo: 'SALIDA_EMPAQUE',
+      cod_prenda: codPrenda, nombre_prenda: prenda, talla_key: talla,
+      cantidad: 1, alumno_id: a.id, escuela_id: a.escuela_id,
+      observaciones: `Empacado para ${a.nombre}`
+    });
+    
+    // Actualizar cache local
+    Object.assign(a, patch);
+    alumnosCache.stockPorTalla[talla] = Math.max(0, (alumnosCache.stockPorTalla[talla]||0) - 1);
+    
+    cerrarEmpaque();
+    renderAlumnosLista();
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+async function marcarEntregado(tipo) {
+  const a = empaqueCache.alumnoActual;
+  if (!a) return;
+  const prenda = tipo === 'top' ? a.prenda_top : a.prenda_bottom;
+  const talla = tipo === 'top' ? a.talla_top_key : a.talla_bottom_key;
+  const codMap = {
+    'CAMISA':'C','BLUSA':'B','CAMISA_CELESTE':'CC','PANTALON':'P','PANTALON_BEIGE':'PB',
+    'FALDA':'F','FALDA_BEIGE':'FB','FALDA_C.E':'FCE','SHORT':'S'
+  };
+  const codPrenda = codMap[prenda] || prenda.slice(0,3);
+  
+  try {
+    const patch = tipo === 'top' ? { estado_top: 'entregado' } : { estado_bottom: 'entregado' };
+    patch.actualizado_en = new Date().toISOString();
+    await supaUpdate('alumno', a.id, patch);
+    await supaFetch('bodega_movimiento', 'POST', {
+      tipo: 'SALIDA_ENTREGA',
+      cod_prenda: codPrenda, nombre_prenda: prenda, talla_key: talla,
+      cantidad: 1, alumno_id: a.id, escuela_id: a.escuela_id,
+      observaciones: `Entregado a ${a.nombre}`
+    });
+    Object.assign(a, patch);
+    cerrarEmpaque();
+    renderAlumnosLista();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function empacarAmbos() {
+  const a = empaqueCache.alumnoActual;
+  if (!a) return;
+  await marcarEmpacado('top');
+  // Recuperar actualizado
+  empaqueCache.alumnoActual = alumnosCache.alumnos.find(x => x.id === a.id);
+  if (empaqueCache.alumnoActual && empaqueCache.alumnoActual.estado_bottom === 'pendiente') {
+    await marcarEmpacado('bottom');
+  }
+}
+
+// +++++++++++++++++++ bodega.js +++++++++++++++++++
+// ══════════════════════════════════════════════════════════════════════
+// BODEGA (v22)
+// Stock actual de prendas, movimientos, entradas manuales
+// ══════════════════════════════════════════════════════════════════════
+
+let bodegaCache = {
+  stock: [],
+  movimientos: [],
+  filtroPrenda: null,
+  filtroTallaVacia: false,
+  vistaActual: 'stock', // 'stock' | 'movimientos' | 'vs_demanda'
+};
+
+async function initBodega() {
+  renderBodegaTabs();
+  await cargarBodegaStock();
+}
+
+function renderBodegaTabs() {
+  const cont = document.getElementById('bodega-tabs');
+  if (!cont) return;
+  cont.innerHTML = `
+    <div class="sub-tabs">
+      <div class="sub-tab ${bodegaCache.vistaActual==='stock'?'active':''}" onclick="cambiarVistaBodega('stock')">📦 Stock</div>
+      <div class="sub-tab ${bodegaCache.vistaActual==='vs_demanda'?'active':''}" onclick="cambiarVistaBodega('vs_demanda')">📊 Stock vs Demanda</div>
+      <div class="sub-tab ${bodegaCache.vistaActual==='movimientos'?'active':''}" onclick="cambiarVistaBodega('movimientos')">🔄 Movimientos</div>
+    </div>
+  `;
+}
+
+async function cambiarVistaBodega(v) {
+  bodegaCache.vistaActual = v;
+  renderBodegaTabs();
+  if (v === 'stock') await cargarBodegaStock();
+  else if (v === 'vs_demanda') await cargarBodegaVsDemanda();
+  else if (v === 'movimientos') await cargarMovimientos();
+}
+
+async function cargarBodegaStock() {
+  const cont = document.getElementById('bodega-contenido');
+  cont.innerHTML = '<div class="text-muted">Cargando stock...</div>';
+  try {
+    const stock = await supaFetch('vw_bodega_stock', 'GET', null, '?order=nombre_prenda,talla_key&limit=1000');
+    bodegaCache.stock = stock;
+    renderStock();
+  } catch(e) {
+    cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+  }
+}
+
+function renderStock() {
+  const cont = document.getElementById('bodega-contenido');
+  let stock = bodegaCache.stock;
+  
+  if (bodegaCache.filtroPrenda) stock = stock.filter(s => s.nombre_prenda === bodegaCache.filtroPrenda);
+  if (!bodegaCache.filtroTallaVacia) stock = stock.filter(s => (s.stock_actual||0) !== 0 || (s.total_entrado||0) > 0);
+  
+  // Agrupar por prenda
+  const grupos = {};
+  for (const s of stock) {
+    const p = s.nombre_prenda || s.cod_prenda;
+    if (!grupos[p]) grupos[p] = [];
+    grupos[p].push(s);
+  }
+  
+  const prendas = Object.keys(grupos).sort();
+  const filtroBar = `
+    <div style="background:white;padding:8px;border-radius:8px;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <label style="font-size:12px">Prenda:</label>
+      <select onchange="bodegaCache.filtroPrenda = this.value || null; renderStock()" style="padding:4px 8px">
+        <option value="">Todas</option>
+        ${prendas.map(p => `<option value="${p}" ${p===bodegaCache.filtroPrenda?'selected':''}>${p}</option>`).join('')}
+      </select>
+      <label style="font-size:12px;display:flex;align-items:center;gap:4px">
+        <input type="checkbox" ${bodegaCache.filtroTallaVacia?'checked':''} 
+               onchange="bodegaCache.filtroTallaVacia = this.checked; renderStock()">
+        Mostrar vacíos
+      </label>
+      <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()">+ Entrada manual</button>
+      <button class="btn btn-ghost btn-sm" onclick="cargarBodegaStock()">🔄 Refrescar</button>
+    </div>
+  `;
+  
+  if (stock.length === 0) {
+    cont.innerHTML = filtroBar + '<div class="alert alert-info">No hay movimientos de bodega aún. Cuando termines bultos o agregues entradas manuales, aparecerá stock.</div>';
+    return;
+  }
+  
+  const html = Object.entries(grupos).map(([prenda, items]) => {
+    const totStock = items.reduce((a,s)=>a+(s.stock_actual||0),0);
+    const totReserv = items.reduce((a,s)=>a+(s.reservado_empaque||0),0);
+    return `
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:8px">
+      <div style="background:#F5F7FA;padding:8px 12px;font-weight:600;display:flex;justify-content:space-between">
+        <span>${prenda}</span>
+        <span style="font-size:13px">Stock: <strong>${totStock.toLocaleString()}</strong> · Reservado: <strong>${totReserv}</strong></span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:#FAFAFA">
+            <th style="padding:6px 8px;text-align:left">Talla</th>
+            <th style="padding:6px 8px;text-align:right">Entrado</th>
+            <th style="padding:6px 8px;text-align:right">Salido</th>
+            <th style="padding:6px 8px;text-align:right">Reservado</th>
+            <th style="padding:6px 8px;text-align:right">Stock</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(s => `
+            <tr style="border-top:1px solid #EEE">
+              <td style="padding:4px 8px;font-family:monospace;font-weight:600">${s.talla_key}</td>
+              <td style="padding:4px 8px;text-align:right;color:#0a7">${s.total_entrado||0}</td>
+              <td style="padding:4px 8px;text-align:right;color:#c44">${s.total_salido||0}</td>
+              <td style="padding:4px 8px;text-align:right;color:#888">${s.reservado_empaque||0}</td>
+              <td style="padding:4px 8px;text-align:right;font-weight:700;color:${(s.stock_actual||0)>0?'var(--azul)':'#999'}">${s.stock_actual||0}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  }).join('');
+  
+  cont.innerHTML = filtroBar + html;
+}
+
+async function cargarBodegaVsDemanda() {
+  const cont = document.getElementById('bodega-contenido');
+  cont.innerHTML = '<div class="text-muted">Calculando demanda vs stock...</div>';
+  try {
+    const data = await supaFetch('vw_bodega_vs_demanda', 'GET', null, '?order=faltante.desc&limit=500');
+    renderVsDemanda(data);
+  } catch(e) {
+    cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+  }
+}
+
+function renderVsDemanda(data) {
+  const cont = document.getElementById('bodega-contenido');
+  if (!data || data.length === 0) {
+    cont.innerHTML = '<div class="alert alert-info">Sin datos. Carga alumnos para ver la demanda vs stock.</div>';
+    return;
+  }
+  
+  const totFaltante = data.reduce((a,d) => a + (d.faltante||0), 0);
+  const totDemanda = data.reduce((a,d) => a + (d.demandada||0), 0);
+  const totStock = data.reduce((a,d) => a + (d.stock_disponible||0), 0);
+  
+  cont.innerHTML = `
+    <div class="card" style="padding:10px;margin-bottom:10px">
+      <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px">
+        <div>Demanda total: <strong>${totDemanda.toLocaleString()}</strong></div>
+        <div style="color:var(--azul)">Stock disponible: <strong>${totStock.toLocaleString()}</strong></div>
+        <div style="color:var(--naranja)">Faltan producir: <strong>${totFaltante.toLocaleString()}</strong></div>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">📊 Por talla</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:#FAFAFA">
+            <th style="padding:6px 8px;text-align:left">Prenda</th>
+            <th style="padding:6px 8px;text-align:left">Talla</th>
+            <th style="padding:6px 8px;text-align:right">Demanda</th>
+            <th style="padding:6px 8px;text-align:right">Empacado</th>
+            <th style="padding:6px 8px;text-align:right">Stock</th>
+            <th style="padding:6px 8px;text-align:right">Faltan</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map(d => {
+            const falt = d.faltante||0;
+            const color = falt > 0 ? 'var(--naranja)' : 'var(--verde)';
+            return `
+              <tr style="border-top:1px solid #EEE">
+                <td style="padding:4px 8px">${d.prenda||'?'}</td>
+                <td style="padding:4px 8px;font-family:monospace;font-weight:600">${d.talla_key}</td>
+                <td style="padding:4px 8px;text-align:right">${d.demandada||0}</td>
+                <td style="padding:4px 8px;text-align:right;color:#666">${d.empacados||0}</td>
+                <td style="padding:4px 8px;text-align:right;color:var(--azul);font-weight:600">${d.stock_disponible||0}</td>
+                <td style="padding:4px 8px;text-align:right;color:${color};font-weight:700">${falt}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function cargarMovimientos() {
+  const cont = document.getElementById('bodega-contenido');
+  cont.innerHTML = '<div class="text-muted">Cargando movimientos...</div>';
+  try {
+    const movs = await supaFetch('bodega_movimiento', 'GET', null, '?order=creado_en.desc&limit=200');
+    renderMovimientos(movs);
+  } catch(e) {
+    cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+  }
+}
+
+function renderMovimientos(movs) {
+  const cont = document.getElementById('bodega-contenido');
+  if (!movs || movs.length === 0) {
+    cont.innerHTML = `
+      <div style="margin-bottom:10px">
+        <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()">+ Entrada manual</button>
+      </div>
+      <div class="alert alert-info">Sin movimientos registrados.</div>`;
+    return;
+  }
+  
+  const tipoIcon = {
+    ENTRADA_PRODUCCION: '🏭 +',
+    ENTRADA_MANUAL: '📥 +',
+    SALIDA_EMPAQUE: '📦 -',
+    SALIDA_ENTREGA: '🚚 -',
+    AJUSTE_INVENTARIO: '⚖',
+    DEFECTO: '✗',
+  };
+  const tipoColor = {
+    ENTRADA_PRODUCCION: '#0a7',
+    ENTRADA_MANUAL: '#0a7',
+    SALIDA_EMPAQUE: '#888',
+    SALIDA_ENTREGA: '#c44',
+    AJUSTE_INVENTARIO: '#f80',
+    DEFECTO: '#c44',
+  };
+  
+  cont.innerHTML = `
+    <div style="margin-bottom:10px">
+      <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()">+ Entrada manual</button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:#F5F7FA">
+            <th style="padding:6px 8px;text-align:left">Fecha</th>
+            <th style="padding:6px 8px;text-align:left">Tipo</th>
+            <th style="padding:6px 8px;text-align:left">Prenda/Talla</th>
+            <th style="padding:6px 8px;text-align:right">Cant.</th>
+            <th style="padding:6px 8px;text-align:left">Notas</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${movs.map(m => `
+            <tr style="border-top:1px solid #EEE">
+              <td style="padding:4px 8px;color:#666;font-size:11px">${new Date(m.creado_en).toLocaleString('es-SV',{dateStyle:'short',timeStyle:'short'})}</td>
+              <td style="padding:4px 8px;color:${tipoColor[m.tipo]}">${tipoIcon[m.tipo]||''} ${m.tipo.replace('_',' ')}</td>
+              <td style="padding:4px 8px"><strong>${m.nombre_prenda||m.cod_prenda}</strong> · ${m.talla_key}</td>
+              <td style="padding:4px 8px;text-align:right;font-weight:700">${m.cantidad}</td>
+              <td style="padding:4px 8px;font-size:11px;color:#666">${m.observaciones||''}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ─── Modal: entrada manual ─────────────────────────────────────────
+function abrirEntradaManual() {
+  const modal = document.getElementById('bodega-entrada-modal');
+  if (!modal) return;
+  document.getElementById('ent-prenda').value = '';
+  document.getElementById('ent-talla').value = '';
+  document.getElementById('ent-cantidad').value = '';
+  document.getElementById('ent-obs').value = '';
+  document.getElementById('ent-tipo').value = 'ENTRADA_MANUAL';
+  modal.style.display = 'flex';
+}
+
+function cerrarEntradaManual() {
+  document.getElementById('bodega-entrada-modal').style.display = 'none';
+}
+
+async function guardarEntradaManual() {
+  const prenda = document.getElementById('ent-prenda').value.trim();
+  const talla = document.getElementById('ent-talla').value.trim();
+  const cantidad = parseInt(document.getElementById('ent-cantidad').value);
+  const obs = document.getElementById('ent-obs').value.trim() || null;
+  const tipo = document.getElementById('ent-tipo').value;
+  
+  if (!prenda || !talla || !cantidad || cantidad <= 0) {
+    alert('Completá prenda, talla y cantidad > 0'); return;
+  }
+  
+  // Derivar cod_prenda (1ras letras mayus)
+  const codPrenda = ({
+    'CAMISA':'C','BLUSA':'B','CAMISA_CELESTE':'CC','PANTALON':'P','PANTALON_BEIGE':'PB',
+    'FALDA':'F','FALDA_BEIGE':'FB','FALDA_C.E':'FCE','SHORT':'S'
+  })[prenda.toUpperCase()] || prenda.slice(0,3).toUpperCase();
+  
+  try {
+    await supaFetch('bodega_movimiento', 'POST', {
+      tipo, cod_prenda: codPrenda, nombre_prenda: prenda.toUpperCase(), talla_key: talla,
+      cantidad, observaciones: obs
+    });
+    cerrarEntradaManual();
+    await cargarBodegaStock();
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+// ─── Hook: registrar entrada al terminar bulto ──────────────────────
+// Se llama desde producción cuando un bulto pasa a "terminado"
+async function registrarEntradaBodegaPorBulto(bulto) {
+  if (!bulto || !bulto.cod_prenda || !bulto.talla_salida || !bulto.cantidad_final) return;
+  try {
+    await supaFetch('bodega_movimiento', 'POST', {
+      tipo: 'ENTRADA_PRODUCCION',
+      cod_prenda: bulto.cod_prenda,
+      nombre_prenda: bulto.nombre_prenda || null,
+      talla_key: bulto.talla_salida,
+      cantidad: bulto.cantidad_final,
+      bulto_id: bulto.id,
+      observaciones: `Bulto ${bulto.codigo_bulto || bulto.id.slice(0,6)} terminado`
+    });
+  } catch(e) {
+    console.warn('No se pudo registrar entrada bodega:', e.message);
   }
 }
 

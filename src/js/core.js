@@ -57,6 +57,7 @@ function switchTab(tab, el) {
   if (tab === 'config') initConfig();
   if (tab === 'produccion') initProduccion();
   if (tab === 'pedidos' && typeof initPedidos === 'function') initPedidos();
+  if (tab === 'bodega' && typeof initBodega === 'function') initBodega();
   if (tab === 'nuevo') {} // menu se arma en init
   window.scrollTo(0, 0);
 }

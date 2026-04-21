@@ -350,6 +350,17 @@ async function terminarBulto(produccionBultoId, cantidadOriginal) {
       b.cantidad_final = cantidadFinal;
       b.observaciones = observaciones;
     }
+    // Hook: registrar entrada a bodega (si la función existe)
+    if (typeof registrarEntradaBodegaPorBulto === 'function' && b) {
+      registrarEntradaBodegaPorBulto({
+        id: b.produccion_bulto_id,
+        codigo_bulto: b.codigo_bulto,
+        cod_prenda: b.cod_prenda,
+        nombre_prenda: b.nombre_prenda,
+        talla_salida: b.talla_key_salida,
+        cantidad_final: cantidadFinal,
+      });
+    }
     renderProduccion();
   } catch(e) {
     alert('Error: ' + e.message);

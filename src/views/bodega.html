@@ -1,0 +1,50 @@
+<!-- ══════════ BODEGA ══════════ -->
+<div id="view-bodega" class="view">
+  <div id="alert-bodega"></div>
+  <div class="card">
+    <div class="card-title">📦 Bodega</div>
+    <div id="bodega-tabs"></div>
+  </div>
+  <div id="bodega-contenido"></div>
+  
+  <!-- Modal: entrada manual -->
+  <div id="bodega-entrada-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:500px">
+      <div class="modal-header">
+        <div class="card-title">+ Movimiento de bodega</div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarEntradaManual()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Tipo</label>
+          <select id="ent-tipo">
+            <option value="ENTRADA_MANUAL">📥 Entrada manual</option>
+            <option value="AJUSTE_INVENTARIO">⚖ Ajuste de inventario</option>
+            <option value="SALIDA_ENTREGA">🚚 Salida a escuela</option>
+            <option value="DEFECTO">✗ Defecto (devolver a producción)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Prenda *</label>
+          <input type="text" id="ent-prenda" placeholder="Ej: CAMISA, BLUSA, PANTALON, FALDA, SHORT, CAMISA_CELESTE">
+        </div>
+        <div class="field">
+          <label>Talla (key) *</label>
+          <input type="text" id="ent-talla" placeholder="Ej: C14, B12, P1075, F1050, CC6">
+        </div>
+        <div class="field">
+          <label>Cantidad *</label>
+          <input type="number" id="ent-cantidad" min="1">
+        </div>
+        <div class="field">
+          <label>Observaciones</label>
+          <textarea id="ent-obs" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarEntradaManual()">Cancelar</button>
+        <button class="btn btn-success" onclick="guardarEntradaManual()">✓ Registrar</button>
+      </div>
+    </div>
+  </div>
+</div>

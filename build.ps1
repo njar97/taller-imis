@@ -28,6 +28,8 @@ $jsOrder = @(
     'produccion.js',
     'asignaciones.js',
     'pedidos.js',
+    'alumnos.js',
+    'bodega.js',
     'config.js'
 )
 
@@ -39,6 +41,7 @@ $viewsOrder = @(
     'historial.html',
     'produccion.html',
     'pedidos.html',
+    'bodega.html',
     'config.html'
 )
 
