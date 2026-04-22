@@ -56,8 +56,9 @@ function switchTab(tab, el) {
   if (tab === 'historial') cargarHistorial('trazo');
   if (tab === 'config') initConfig();
   if (tab === 'produccion') initProduccion();
-  if (tab === 'pedidos' && typeof initPedidos === 'function') initPedidos();
+  if (tab === 'registro' && typeof initRegistro === 'function') initRegistro();
   if (tab === 'bodega' && typeof initBodega === 'function') initBodega();
+  if (tab === 'inicio' && typeof initDashboard === 'function') initDashboard();
   if (tab === 'nuevo') {} // menu se arma en init
   window.scrollTo(0, 0);
 }
@@ -140,4 +141,11 @@ function previewFoto(input, previewId, labelId) {
 // ══════════════════════════════════════════════════════════════════════
 // ARRANQUE
 // ══════════════════════════════════════════════════════════════════════
-// (nada específico, el menú nuevo ya está visible por default)
+// Al cargar, inicializar el dashboard del tab Inicio
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof initDashboard === 'function') initDashboard();
+  });
+} else {
+  setTimeout(() => { if (typeof initDashboard === 'function') initDashboard(); }, 100);
+}

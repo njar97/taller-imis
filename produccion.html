@@ -1,10 +1,10 @@
-<!-- Generado: 2026-04-21 23:05 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-04-21 23:19 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Taller IMIS — Producción v22</title>
+<title>Taller IMIS — Producción v31</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -277,13 +277,14 @@
 <nav>
   <div class="nav-top">
     <div style="width:32px;height:32px;background:rgba(255,255,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">T</div>
-    <h1>Taller IMIS — Producción v22</h1>
+    <h1>Taller IMIS — Producción v31</h1>
   </div>
   <div class="nav-tabs">
-    <div class="nav-tab active" onclick="switchTab('nuevo',this)">➕ Nuevo</div>
+    <div class="nav-tab active" onclick="switchTab('inicio',this)">🏠 Inicio</div>
+    <div class="nav-tab" onclick="switchTab('nuevo',this)">➕ Nuevo</div>
     <div class="nav-tab" onclick="switchTab('historial',this)">🗂 Historial</div>
     <div class="nav-tab" onclick="switchTab('produccion',this)">🏭 Prod.</div>
-    <div class="nav-tab" onclick="switchTab('pedidos',this)">📚 Pedidos</div>
+    <div class="nav-tab" onclick="switchTab('registro',this)">📋 Registro</div>
     <div class="nav-tab" onclick="switchTab('bodega',this)">📦 Bodega</div>
     <div class="nav-tab" onclick="switchTab('config',this)">⚙️ Config</div>
   </div>
@@ -291,8 +292,15 @@
 
 <div class="container">
 
+<!-- ══════════ INICIO / DASHBOARD ══════════ -->
+<div id="view-inicio" class="view active">
+  <div id="dashboard-contenido">
+    <div class="text-muted" style="padding:20px;text-align:center">Cargando...</div>
+  </div>
+</div>
+
 <!-- ═══ MENÚ NUEVO ═══ -->
-<div id="view-nuevo" class="view active">
+<div id="view-nuevo" class="view">
   <div class="card">
     <div class="card-title">➕ Nuevo registro</div>
     <div class="card-sub">Elegí qué querés registrar según el momento del taller.</div>
@@ -546,6 +554,7 @@
       <button class="btn btn-ghost btn-sm" id="prod-sub-asignaciones" onclick="switchSubProd('asignaciones')" style="flex:1;min-width:70px">📋 Asignar</button>
       <button class="btn btn-ghost btn-sm" id="prod-sub-captura" onclick="switchSubProd('captura')" style="flex:1;min-width:70px">📝 Captura</button>
       <button class="btn btn-ghost btn-sm" id="prod-sub-operarias" onclick="switchSubProd('operarias')" style="flex:1;min-width:70px">👷 Operarias</button>
+      <button class="btn btn-ghost btn-sm" id="prod-sub-grupos" onclick="switchSubProd('grupos')" style="flex:1;min-width:70px">👥 Grupos</button>
     </div>
   </div>
 
@@ -777,17 +786,108 @@
     </div>
   </div>
 
-  <!-- SUB: Operarias -->
-  <div id="prod-sub-operarias-view" style="display:none">
+  <!-- SUB: Grupos (v31) -->
+  <div id="prod-sub-grupos-view" style="display:none">
     <div class="card">
-      <div class="card-title">👷 Operarias</div>
-      <div class="text-muted mb8" style="font-size:12px">Las inactivas no aparecen en el dropdown de captura pero preservan su historial.</div>
-      <div id="operarias-lista"></div>
-      <div class="field mt8">
-        <label>Agregar nueva operaria</label>
-        <div style="display:flex;gap:6px">
-          <input type="text" id="nueva-operaria" placeholder="Nombre" style="flex:1">
-          <button class="btn btn-primary btn-sm" onclick="agregarOperaria()">➕ Agregar</button>
+      <div class="card-title">👥 Grupos de trabajo</div>
+      <div class="text-muted mb8" style="font-size:12px">Equipos para organizar el trabajo. El registro individual es opcional (útil para destajo).</div>
+      <div id="grupos-tabs"></div>
+    </div>
+    <div id="grupos-contenido"></div>
+    
+    <!-- Modal: Nuevo/Editar grupo -->
+    <div id="grupo-modal" class="modal" style="display:none">
+      <div class="modal-content" style="max-width:460px">
+        <div class="modal-header">
+          <div>
+            <div class="card-title" id="grp-modal-title" style="margin:0">+ Nuevo grupo</div>
+            <div id="grp-tipo-label" style="font-size:11px;color:#666;margin-top:2px"></div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="cerrarGrupoModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="grp-id">
+          <input type="hidden" id="grp-tipo">
+          <div class="field">
+            <label>Código corto *</label>
+            <input type="text" id="grp-codigo" placeholder="Ej: G1, CostA">
+          </div>
+          <div class="field">
+            <label>Nombre *</label>
+            <input type="text" id="grp-nombre" placeholder="Ej: Grupo Costura A">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="cerrarGrupoModal()">Cancelar</button>
+          <button class="btn btn-success" onclick="guardarGrupo()">✓ Guardar</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Modal: Miembros -->
+    <div id="miembros-modal" class="modal" style="display:none">
+      <div class="modal-content" style="max-width:500px">
+        <div class="modal-header">
+          <div>
+            <div class="card-title" style="margin:0">👥 Miembros</div>
+            <div id="miembros-titulo" style="font-size:12px;color:#666;margin-top:2px"></div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="cerrarMiembros()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="miembros-body"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" onclick="cerrarMiembros()">✓ Listo</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Modal: Nueva tarea -->
+    <div id="tarea-modal" class="modal" style="display:none">
+      <div class="modal-content" style="max-width:460px">
+        <div class="modal-header">
+          <div class="card-title">+ Asignar tarea a grupo</div>
+          <button class="btn btn-ghost btn-sm" onclick="cerrarTareaModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="field">
+            <label>Grupo *</label>
+            <select id="tarea-grupo"></select>
+          </div>
+          <div class="field">
+            <label>Cantidad asignada *</label>
+            <input type="number" id="tarea-cantidad" min="1" placeholder="Ej: 50 piezas">
+          </div>
+          <div class="field">
+            <label>Observaciones</label>
+            <input type="text" id="tarea-obs" placeholder="(opcional)">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="cerrarTareaModal()">Cancelar</button>
+          <button class="btn btn-success" onclick="guardarTarea()">✓ Asignar</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Modal: Avance -->
+    <div id="avance-modal" class="modal" style="display:none">
+      <div class="modal-content" style="max-width:500px">
+        <div class="modal-header">
+          <div>
+            <div class="card-title" id="avance-titulo" style="margin:0"></div>
+            <div id="avance-progreso" style="font-size:12px;color:#666;margin-top:2px"></div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="cerrarAvance()">✕</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="avance-tarea-id">
+          <div id="avance-body"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="cerrarAvance()">Cancelar</button>
+          <button class="btn btn-success" onclick="guardarAvance()">✓ Registrar avance</button>
         </div>
       </div>
     </div>
@@ -796,30 +896,46 @@
 
 <!-- ═══ CONFIG ═══ -->
 
-<!-- ══════════ PEDIDOS ══════════ -->
-<div id="view-pedidos" class="view">
-  <div id="alert-pedidos"></div>
+<!-- ══════════ REGISTRO (v23, reemplaza Pedidos) ══════════ -->
+<div id="view-registro" class="view">
+  <div id="alert-registro"></div>
   
   <div class="card">
-    <div class="card-title">📚 Pedidos</div>
-    <div id="pedidos-header"></div>
+    <div class="card-title">📋 Registro</div>
+    <div id="registro-header"></div>
   </div>
   
-  <div id="pedidos-lista"></div>
+  <div id="registro-lista"></div>
   
-  <!-- Modal: Detalle de escuela -->
-  <div id="pedidos-detalle-modal" class="modal" style="display:none">
-    <div class="modal-content" style="max-width:700px">
+  <!-- Vista "Todos los alumnos" - siempre disponible debajo de la lista -->
+  <div class="card" style="margin-top:14px">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>👥 Todos los alumnos</span>
+      <button class="btn btn-ghost btn-sm" onclick="toggleAlumnosGlobal()">
+        <span id="alumnos-global-toggle-txt">Mostrar ▼</span>
+      </button>
+    </div>
+    <div id="alumnos-global-panel" style="display:none">
+      <div id="alumnos-global-contenido"></div>
+    </div>
+  </div>
+  
+  <!-- Modal: Detalle de escuela con 4 sub-tabs -->
+  <div id="registro-detalle-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:760px">
       <div class="modal-header">
         <div>
-          <div class="card-title" id="pedidos-detalle-titulo" style="margin:0"></div>
-          <div id="pedidos-detalle-subt" style="font-size:12px;color:#666;margin-top:2px"></div>
+          <div class="card-title" id="registro-detalle-titulo" style="margin:0"></div>
+          <div id="registro-detalle-subt" style="font-size:12px;color:#666;margin-top:2px"></div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="cerrarDetalleEscuela()">✕</button>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-ghost btn-sm" onclick="abrirMenuReportes(registroCache.escuelaActual)" title="Reportes imprimibles">🖨</button>
+          <button class="btn btn-ghost btn-sm" onclick="cerrarDetalleEscuela()">✕</button>
+        </div>
       </div>
       <div class="modal-body">
-        <div id="pedidos-detalle-subtabs"></div>
-        <div id="pedidos-detalle-tabla"></div>
+        <div id="registro-detalle-subtabs"></div>
+        <div id="registro-detalle-tabla"></div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="cerrarDetalleEscuela()">Cerrar</button>
@@ -828,7 +944,7 @@
   </div>
   
   <!-- Modal: Nueva escuela -->
-  <div id="pedidos-escuela-modal" class="modal" style="display:none">
+  <div id="registro-escuela-modal" class="modal" style="display:none">
     <div class="modal-content" style="max-width:500px">
       <div class="modal-header">
         <div class="card-title">+ Nueva escuela</div>
@@ -837,19 +953,23 @@
       <div class="modal-body">
         <div class="field">
           <label>Nombre *</label>
-          <input type="text" id="nesc-nombre" placeholder="Ej: Doña Victoria - Pedido privado">
+          <input type="text" id="nesc-nombre" placeholder="Ej: CE Doña Victoria">
         </div>
         <div class="field">
-          <label>Código CDE (si tiene)</label>
-          <input type="text" id="nesc-codigo" placeholder="Opcional - se autogenera">
+          <label>Código CDE (opcional)</label>
+          <input type="text" id="nesc-codigo" placeholder="Se autogenera si lo dejás vacío">
         </div>
         <div class="field">
-          <label>Director o responsable</label>
+          <label>Director</label>
           <input type="text" id="nesc-director">
         </div>
         <div class="field">
           <label>Teléfono</label>
           <input type="text" id="nesc-telefono">
+        </div>
+        <div class="field">
+          <label>Grupo de producción (C.E)</label>
+          <input type="text" id="nesc-grupo" placeholder="Ej: G1, G2, o nombre propio">
         </div>
       </div>
       <div class="modal-footer">
@@ -859,7 +979,7 @@
     </div>
   </div>
   
-  <!-- Modal: empaque de alumno -->
+  <!-- Modal: empaque de alumno (reutilizado de v22) -->
   <div id="bodega-empaque-modal" class="modal" style="display:none">
     <div class="modal-content" style="max-width:550px">
       <div class="modal-header">
@@ -877,6 +997,219 @@
       </div>
     </div>
   </div>
+  
+  <!-- Modal: Importación masiva (v24) -->
+  <div id="import-alumnos-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:760px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" style="margin:0">📥 Importar alumnos</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">Pegá desde Excel/Sheets o cargá archivo CSV/TSV</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarImportacion()">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- PASO 1: pegar datos -->
+        <div id="import-paso1">
+          <div class="alert alert-info" style="font-size:12px;margin-bottom:10px">
+            <strong>Opción 1:</strong> Copiá un rango de Excel/Sheets (Ctrl+C) y pegá acá (Ctrl+V).<br>
+            <strong>Opción 2:</strong> Cargá un archivo CSV o TSV.<br>
+            La <strong>primera fila debe tener encabezados</strong> (nombre, tallaT, keyT, grado, etc.)
+          </div>
+          
+          <div class="field">
+            <label>Pegá los datos acá</label>
+            <textarea id="import-textarea" rows="10" style="width:100%;font-family:monospace;font-size:12px" 
+              placeholder="Nombre&#9;Grado&#9;Sexo&#9;PrendaT&#9;TallaT&#9;PrendaP&#9;TallaP&#9;LargoP&#10;PEREZ, ANA&#9;1A&#9;F&#9;BLUSA&#9;10&#9;FALDA&#9;10&#9;50"></textarea>
+          </div>
+          
+          <div style="text-align:center;margin:10px 0;color:#888;font-size:12px">— o —</div>
+          
+          <div class="field">
+            <label>Cargar archivo (CSV o TSV)</label>
+            <input type="file" id="import-file" accept=".csv,.tsv,.txt">
+            <button class="btn btn-ghost btn-sm" onclick="procesarArchivo()" style="margin-top:6px">📂 Leer archivo</button>
+          </div>
+          
+          <div style="margin-top:14px;display:flex;gap:8px">
+            <button class="btn btn-ghost" onclick="cerrarImportacion()">Cancelar</button>
+            <button class="btn btn-primary" style="flex:1" onclick="procesarTexto()">→ Siguiente: mapear columnas</button>
+          </div>
+        </div>
+        
+        <!-- PASO 2: mapear columnas -->
+        <div id="import-paso2" style="display:none">
+          <div id="import-mapeo-contenido"></div>
+        </div>
+        
+        <!-- PASO 3: preview y confirmar -->
+        <div id="import-paso3" style="display:none">
+          <div id="import-preview-contenido"></div>
+        </div>
+      </div>
+      <div class="modal-footer" style="display:none"></div>
+    </div>
+  </div>
+  
+  <!-- Modal: Exportación (v30) -->
+  <div id="export-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:500px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" style="margin:0">💾 Exportar datos</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">Descargar como CSV (abrir en Excel)</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarModalExport()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="background:#FFF4D6;padding:8px;border-radius:4px;font-size:11px;margin-bottom:10px">
+          ℹ Los filtros de abajo aplican solo a <strong>Alumnos</strong> y <strong>Pedidos</strong>. Stock y Movimientos siempre exportan todo.
+        </div>
+        
+        <div class="field">
+          <label>Escuela (opcional)</label>
+          <select id="export-escuela">
+            <option value="">— Todas las escuelas —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Temporada (opcional, solo para alumnos)</label>
+          <select id="export-temporada">
+            <option value="">— Toda temporada —</option>
+          </select>
+        </div>
+        
+        <div style="margin-top:14px">
+          <div style="font-weight:600;font-size:13px;margin-bottom:8px">¿Qué querés exportar?</div>
+          <div style="display:grid;gap:6px">
+            <button class="btn btn-primary" onclick="ejecutarExport('alumnos')" style="text-align:left">
+              👥 Alumnos (formato BASE del Excel)
+            </button>
+            <button class="btn btn-primary" onclick="ejecutarExport('pedidos')" style="text-align:left">
+              📊 Pedidos por talla
+            </button>
+            <button class="btn btn-primary" onclick="ejecutarExport('stock')" style="text-align:left">
+              📦 Stock de bodega
+            </button>
+            <button class="btn btn-primary" onclick="ejecutarExport('movimientos')" style="text-align:left">
+              🔄 Movimientos de bodega
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarModalExport()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+  <div id="etiquetas-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:520px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" style="margin:0">🏷 Imprimir etiquetas</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">Filas de 1cm · solo alumnos con tallas</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarModalEtiquetas()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Escuela</label>
+          <select id="et-escuela">
+            <option value="">— Todas las escuelas —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Temporada</label>
+          <select id="et-temporada">
+            <option value="">— Toda temporada —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Columnas por hoja</label>
+          <select id="et-columnas">
+            <option value="2">2 columnas (etiquetas anchas, ~9.5cm)</option>
+            <option value="3" selected>3 columnas (recomendado, ~6.3cm)</option>
+            <option value="4">4 columnas (compactas, ~4.7cm)</option>
+          </select>
+          <div style="font-size:11px;color:#888;margin-top:2px">Altura fija: 1cm por fila</div>
+        </div>
+        <div class="field">
+          <label>Orden</label>
+          <select id="et-orden">
+            <option value="grado_nombre" selected>Grado → Nombre (alfabético)</option>
+            <option value="grado_talla">Grado → Talla (agrupa iguales)</option>
+            <option value="escuela_grado_nombre">Escuela → Grado → Nombre</option>
+            <option value="talla">Solo por talla</option>
+          </select>
+        </div>
+        <div class="field">
+          <label style="display:flex;gap:6px;align-items:center">
+            <input type="checkbox" id="et-solo-empacados">
+            Solo alumnos ya empacados
+          </label>
+          <div style="font-size:11px;color:#888;margin-left:22px">Por defecto imprime todos los que tengan tallas</div>
+        </div>
+        <div class="field">
+          <label style="display:flex;gap:6px;align-items:center">
+            <input type="checkbox" id="et-incluir-obs">
+            Incluir observaciones
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarModalEtiquetas()">Cancelar</button>
+        <button class="btn btn-success" onclick="generarEtiquetas()">🏷 Generar etiquetas</button>
+      </div>
+    </div>
+  </div>
+</div>
+  <div id="reportes-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:500px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" style="margin:0">🖨 Reportes imprimibles</div>
+          <div id="rep-escuela-nombre" style="font-size:12px;color:#666;margin-top:2px"></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarMenuReportes()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="card" style="padding:12px;margin-bottom:8px">
+          <div style="font-weight:600;margin-bottom:4px">📏 Hoja de Tallaje</div>
+          <div style="font-size:11px;color:#666;margin-bottom:8px">
+            Para llevar a la escuela y llenar a mano. Si elegís un grado, trae los alumnos ya cargados.
+          </div>
+          <div class="field">
+            <label style="font-size:11px">Grado (opcional)</label>
+            <select id="rep-grado-select" style="width:100%;padding:4px 8px">
+              <option value="">— (hoja en blanco) —</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="ejecutarReporte('tallaje')" style="width:100%">🖨 Generar hoja de tallaje</button>
+        </div>
+        
+        <div class="card" style="padding:12px;margin-bottom:8px">
+          <div style="font-weight:600;margin-bottom:4px">📦 Lista de Empaque</div>
+          <div style="font-size:11px;color:#666;margin-bottom:8px">
+            Listado completo de alumnos con checkboxes para marcar físicamente lo empacado.
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="ejecutarReporte('empaque')" style="width:100%">🖨 Generar lista de empaque</button>
+        </div>
+        
+        <div class="card" style="padding:12px">
+          <div style="font-weight:600;margin-bottom:4px">📋 Hoja de Entrega</div>
+          <div style="font-size:11px;color:#666;margin-bottom:8px">
+            Para que el director firme recepción. Desglose por talla con columna para firmar.
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="ejecutarReporte('entrega')" style="width:100%">🖨 Generar hoja de entrega</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarMenuReportes()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
 </div>
 
 <!-- ══════════ BODEGA ══════════ -->
@@ -1077,8 +1410,9 @@ function switchTab(tab, el) {
   if (tab === 'historial') cargarHistorial('trazo');
   if (tab === 'config') initConfig();
   if (tab === 'produccion') initProduccion();
-  if (tab === 'pedidos' && typeof initPedidos === 'function') initPedidos();
+  if (tab === 'registro' && typeof initRegistro === 'function') initRegistro();
   if (tab === 'bodega' && typeof initBodega === 'function') initBodega();
+  if (tab === 'inicio' && typeof initDashboard === 'function') initDashboard();
   if (tab === 'nuevo') {} // menu se arma en init
   window.scrollTo(0, 0);
 }
@@ -1161,7 +1495,240 @@ function previewFoto(input, previewId, labelId) {
 // ══════════════════════════════════════════════════════════════════════
 // ARRANQUE
 // ══════════════════════════════════════════════════════════════════════
-// (nada específico, el menú nuevo ya está visible por default)
+// Al cargar, inicializar el dashboard del tab Inicio
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof initDashboard === 'function') initDashboard();
+  });
+} else {
+  setTimeout(() => { if (typeof initDashboard === 'function') initDashboard(); }, 100);
+}
+
+// +++++++++++++++++++ dashboard.js +++++++++++++++++++
+// ══════════════════════════════════════════════════════════════════════
+// DASHBOARD GENERAL (v25)
+// Home con resumen global de la temporada activa
+// ══════════════════════════════════════════════════════════════════════
+
+let dashboardCache = {
+  temporadaActiva: null,
+  resumen: {},
+  cargando: false,
+};
+
+async function initDashboard() {
+  if (dashboardCache.cargando) return;
+  dashboardCache.cargando = true;
+  
+  const cont = document.getElementById('dashboard-contenido');
+  if (!cont) { dashboardCache.cargando = false; return; }
+  
+  // Renderizar sub-tabs primero
+  cont.innerHTML = `
+    <div class="sub-tabs" style="margin-bottom:10px">
+      <div class="sub-tab active" onclick="cambiarVistaDashboard('hoy', this)">📊 Hoy</div>
+      <div class="sub-tab" onclick="cambiarVistaDashboard('historico', this)">📈 Histórico</div>
+    </div>
+    <div id="dashboard-sub-contenido">
+      <div class="text-muted" style="padding:20px;text-align:center">Cargando dashboard...</div>
+    </div>
+  `;
+  
+  await cargarDashboardHoy();
+  dashboardCache.cargando = false;
+}
+
+function cambiarVistaDashboard(vista, el) {
+  document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  if (vista === 'hoy') cargarDashboardHoy();
+  else if (vista === 'historico') {
+    const sub = document.getElementById('dashboard-sub-contenido');
+    if (sub) sub.innerHTML = '<div id="historico-contenido"><div class="text-muted" style="padding:20px;text-align:center">Cargando datos históricos...</div></div>';
+    if (typeof initHistorico === 'function') initHistorico();
+  }
+}
+
+async function cargarDashboardHoy() {
+  const sub = document.getElementById('dashboard-sub-contenido');
+  if (!sub) return;
+  sub.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando...</div>';
+  
+  try {
+    const [
+      temporadasResumen,
+      topEscuelas,
+      stockResumen,
+      produccionHoy,
+      alumnosResumen,
+    ] = await Promise.all([
+      supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.desc&limit=5').catch(() => []),
+      supaFetch('vw_pedido_escuela', 'GET', null, '?order=piezas_pendientes.desc&limit=5').catch(() => []),
+      supaFetch('vw_bodega_stock', 'GET', null, '?order=stock_actual.desc&limit=10').catch(() => []),
+      cargarProduccionHoy(),
+      supaFetch('alumno', 'GET', null, '?activo=eq.true&select=estado_top,estado_bottom&limit=20000').catch(() => []),
+    ]);
+    
+    dashboardCache.resumen = {
+      temporadas: temporadasResumen,
+      topEscuelas,
+      stockResumen,
+      produccionHoy,
+      alumnos: alumnosResumen,
+    };
+    renderDashboard();
+  } catch(e) {
+    sub.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+  }
+}
+
+async function cargarProduccionHoy() {
+  const hoy = new Date().toISOString().split('T')[0];
+  try {
+    const bultos = await supaFetch('produccion_bulto', 'GET', null, 
+      `?fecha_terminado=eq.${hoy}&estado=eq.terminado&limit=500`);
+    const total = bultos.reduce((s,b) => s + (b.cantidad_final || 0), 0);
+    return { bultos: bultos.length, piezas: total };
+  } catch(e) {
+    return { bultos: 0, piezas: 0 };
+  }
+}
+
+function renderDashboard() {
+  const cont = document.getElementById('dashboard-sub-contenido');
+  if (!cont) return;
+  
+  const r = dashboardCache.resumen;
+  const tempActiva = (r.temporadas || []).find(t => t.estado === 'activa') || r.temporadas?.[0];
+  
+  // Alumnos stats
+  const alumnos = r.alumnos || [];
+  const totalAlumnos = alumnos.length;
+  const completos = alumnos.filter(a => a.estado_top === 'empacado' && a.estado_bottom === 'empacado').length;
+  const parciales = alumnos.filter(a => 
+    (a.estado_top === 'empacado' && a.estado_bottom !== 'empacado') ||
+    (a.estado_bottom === 'empacado' && a.estado_top !== 'empacado')
+  ).length;
+  const pendientes = totalAlumnos - completos - parciales;
+  const entregados = alumnos.filter(a => a.estado_top === 'entregado' && a.estado_bottom === 'entregado').length;
+  
+  // Stock
+  const stock = r.stockResumen || [];
+  const stockTotal = stock.reduce((s,x) => s + (x.stock_actual || 0), 0);
+  const stockReservado = stock.reduce((s,x) => s + (x.reservado_empaque || 0), 0);
+  
+  cont.innerHTML = `
+    <!-- Fila 1: Temporada activa -->
+    ${tempActiva ? `
+      <div class="card" style="padding:14px;margin-bottom:10px;background:linear-gradient(135deg,#0065CC,#004999);color:white">
+        <div style="font-size:11px;opacity:0.8">TEMPORADA ACTIVA</div>
+        <div style="font-size:22px;font-weight:700;margin-top:4px">${tempActiva.nombre}</div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:13px">
+          <div><strong>${tempActiva.num_escuelas || 0}</strong> escuelas</div>
+          <div><strong>${(tempActiva.piezas_solicitadas||0).toLocaleString()}</strong> piezas contratadas</div>
+          <div><strong>${tempActiva.porcentaje_avance || 0}%</strong> avance</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.2);height:8px;border-radius:4px;margin-top:8px;overflow:hidden">
+          <div style="background:white;height:100%;width:${tempActiva.porcentaje_avance || 0}%"></div>
+        </div>
+      </div>
+    ` : '<div class="alert alert-info">No hay temporadas. Cargá una primero.</div>'}
+    
+    <!-- Fila 2: 4 KPIs -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px">
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:11px;color:#666">Producido hoy</div>
+        <div style="font-size:24px;font-weight:700;color:var(--azul);margin-top:4px">${(r.produccionHoy?.piezas || 0).toLocaleString()}</div>
+        <div style="font-size:10px;color:#888">${r.produccionHoy?.bultos || 0} bulto(s)</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:11px;color:#666">Stock en bodega</div>
+        <div style="font-size:24px;font-weight:700;color:var(--verde);margin-top:4px">${stockTotal.toLocaleString()}</div>
+        <div style="font-size:10px;color:#888">${stockReservado} reservadas</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:11px;color:#666">Alumnos cargados</div>
+        <div style="font-size:24px;font-weight:700;color:#333;margin-top:4px">${totalAlumnos.toLocaleString()}</div>
+        <div style="font-size:10px;color:#888">${entregados} entregados</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:11px;color:#666">Empaque</div>
+        <div style="font-size:24px;font-weight:700;color:var(--naranja);margin-top:4px">${completos}</div>
+        <div style="font-size:10px;color:#888">+${parciales} parciales</div>
+      </div>
+    </div>
+    
+    <!-- Fila 3: top escuelas pendientes -->
+    ${r.topEscuelas && r.topEscuelas.length > 0 ? `
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
+        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">⚠ Top escuelas con pendientes</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="background:#FAFAFA">
+              <th style="padding:6px 8px;text-align:left">Escuela</th>
+              <th style="padding:6px 8px;text-align:right">Pendiente</th>
+              <th style="padding:6px 8px;text-align:right">Avance</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${r.topEscuelas.slice(0,5).map(e => `
+              <tr style="border-top:1px solid #EEE;cursor:pointer" onclick="switchTab('registro'); setTimeout(() => abrirDetalleEscuelaRegistro('${e.escuela_id}'), 500)">
+                <td style="padding:6px 8px">
+                  <div style="font-weight:600">${e.escuela_nombre}</div>
+                  <div style="font-size:10px;color:#888">CDE ${e.codigo_cde}</div>
+                </td>
+                <td style="padding:6px 8px;text-align:right;color:var(--naranja);font-weight:600">${(e.piezas_pendientes||0).toLocaleString()}</td>
+                <td style="padding:6px 8px;text-align:right">${e.porcentaje_avance || 0}%</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : ''}
+    
+    <!-- Fila 4: stock top -->
+    ${stock.length > 0 ? `
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
+        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">📦 Stock disponible (top 10)</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="background:#FAFAFA">
+              <th style="padding:6px 8px;text-align:left">Prenda</th>
+              <th style="padding:6px 8px;text-align:left">Talla</th>
+              <th style="padding:6px 8px;text-align:right">Stock</th>
+              <th style="padding:6px 8px;text-align:right">Reservado</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${stock.slice(0,10).map(s => `
+              <tr style="border-top:1px solid #EEE">
+                <td style="padding:4px 8px">${s.nombre_prenda || s.cod_prenda}</td>
+                <td style="padding:4px 8px;font-family:monospace;font-weight:600">${s.talla_key}</td>
+                <td style="padding:4px 8px;text-align:right;color:var(--azul);font-weight:700">${s.stock_actual || 0}</td>
+                <td style="padding:4px 8px;text-align:right;color:#888">${s.reservado_empaque || 0}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : ''}
+    
+    <!-- Accesos rápidos -->
+    <div class="card" style="padding:14px">
+      <div style="font-weight:600;margin-bottom:10px">⚡ Accesos rápidos</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">
+        <button class="btn btn-ghost" onclick="switchTab('registro')" style="padding:10px">📋 Registro</button>
+        <button class="btn btn-ghost" onclick="switchTab('produccion')" style="padding:10px">🏭 Producción</button>
+        <button class="btn btn-ghost" onclick="switchTab('bodega')" style="padding:10px">📦 Bodega</button>
+        <button class="btn btn-ghost" onclick="irA('trazo')" style="padding:10px">✂ Nuevo trazo</button>
+      </div>
+    </div>
+    
+    <div style="text-align:center;margin-top:10px">
+      <button class="btn btn-ghost btn-sm" onclick="initDashboard()">🔄 Refrescar</button>
+    </div>
+  `;
+}
 
 // +++++++++++++++++++ trazo.js +++++++++++++++++++
 // ══════════════════════════════════════════════════════════════════════
@@ -3697,7 +4264,7 @@ let FASE2_ACTIVA = localStorage.getItem('fase2_activa') === 'true';
 let FASE3_ACTIVA = localStorage.getItem('fase3_activa') === 'true';
 
 function switchSubProd(sub) {
-  ['dashboard','asignaciones','captura','operarias'].forEach(s => {
+  ['dashboard','asignaciones','captura','operarias','grupos'].forEach(s => {
     const el = document.getElementById(`prod-sub-${s}-view`);
     if (el) el.style.display = (s===sub) ? 'block' : 'none';
     const btn = document.getElementById(`prod-sub-${s}`);
@@ -3710,6 +4277,7 @@ function switchSubProd(sub) {
   if (sub === 'asignaciones' && typeof initAsignaciones === 'function') initAsignaciones();
   if (sub === 'captura') initCaptura();
   if (sub === 'operarias') cargarOperarias();
+  if (sub === 'grupos' && typeof initGrupos === 'function') initGrupos();
 }
 
 // ─── Operarias ────────────────────────────────────────────────────
@@ -4523,89 +5091,153 @@ async function cargarCapturaConAsignacion(asignId) {
   } catch(e) { console.warn('cargarCapturaConAsignacion:', e.message); }
 }
 
-// +++++++++++++++++++ pedidos.js +++++++++++++++++++
+// +++++++++++++++++++ registro.js +++++++++++++++++++
 // ══════════════════════════════════════════════════════════════════════
-// PEDIDOS (v21)
-// Pestaña principal para gestionar los pedidos de cada escuela por temporada
+// REGISTRO (v23) - reemplaza "Pedidos"
+// Módulo central: alumnos, tallaje, empaque, por talla
 // ══════════════════════════════════════════════════════════════════════
 
-let pedidosCache = {
+let registroCache = {
   temporadas: [],
   escuelas: [],
-  pedidosPorEscuela: {},  // escuela_id -> array de pedidos
   temporadaActual: null,
+  escuelaActual: null,
+  vistaDetalle: 'tallaje', // tallaje | alumnos | por_talla | empaque
+  pedidosPorEscuela: {},
+  alumnos: [],
+  stockPorTalla: {},
+  gradosConocidos: [],
+  // Tallaje actual
+  tallajeEscuelaId: null,
+  tallajeGrado: null,
 };
 
-async function initPedidos() {
+// Mantener variable "pedidosCache" para compatibilidad con código viejo
+let pedidosCache = registroCache; // alias
+
+async function initRegistro() {
   try {
-    // Cargar temporadas
-    const temps = await supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.desc&limit=20');
-    pedidosCache.temporadas = temps;
-    // Elegir temporada activa si hay
+    const [temps, grados] = await Promise.all([
+      supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.desc&limit=20'),
+      supaFetch('vw_grados_conocidos', 'GET', null, '?limit=200').catch(() => [])
+    ]);
+    registroCache.temporadas = temps;
+    registroCache.gradosConocidos = grados;
+    
     const activa = temps.find(t => t.estado === 'activa') || temps[0];
-    if (activa) pedidosCache.temporadaActual = activa.id;
+    if (activa) registroCache.temporadaActual = activa.id;
     
-    renderPedidosHeader();
+    renderRegistroHeader();
     
-    if (pedidosCache.temporadaActual) {
+    if (registroCache.temporadaActual) {
       await cargarEscuelasTemporada();
     } else {
-      document.getElementById('pedidos-lista').innerHTML = 
+      document.getElementById('registro-lista').innerHTML = 
         '<div class="alert alert-info">No hay temporadas cargadas. Corré la migración v3.11 y la carga inicial.</div>';
     }
   } catch(e) {
-    document.getElementById('pedidos-lista').innerHTML = 
+    document.getElementById('registro-lista').innerHTML = 
       `<div class="alert alert-error">Error: ${e.message}</div>`;
   }
 }
 
-function renderPedidosHeader() {
-  const cont = document.getElementById('pedidos-header');
+// alias para compat
+const initPedidos = initRegistro;
+
+function renderRegistroHeader() {
+  const cont = document.getElementById('registro-header');
   if (!cont) return;
-  if (pedidosCache.temporadas.length === 0) {
+  if (registroCache.temporadas.length === 0) {
     cont.innerHTML = '<div class="text-muted">Sin temporadas.</div>';
     return;
   }
   
-  const opts = pedidosCache.temporadas.map(t => 
-    `<option value="${t.id}" ${t.id === pedidosCache.temporadaActual ? 'selected' : ''}>${t.codigo} — ${t.estado}</option>`
+  const opts = registroCache.temporadas.map(t => 
+    `<option value="${t.id}" ${t.id === registroCache.temporadaActual ? 'selected' : ''}>${t.codigo} — ${t.estado}</option>`
   ).join('');
   
-  const actual = pedidosCache.temporadas.find(t => t.id === pedidosCache.temporadaActual);
+  const actual = registroCache.temporadas.find(t => t.id === registroCache.temporadaActual);
   const resumen = actual ? `
     <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;font-size:13px">
       <div><strong>${actual.num_escuelas}</strong> escuelas</div>
-      <div><strong>${actual.piezas_solicitadas?.toLocaleString() || 0}</strong> piezas</div>
+      <div><strong>${actual.piezas_solicitadas?.toLocaleString() || 0}</strong> piezas contratadas</div>
       <div style="color:var(--verde)"><strong>${actual.piezas_entregadas?.toLocaleString() || 0}</strong> entregadas</div>
-      <div style="color:var(--naranja)"><strong>${actual.piezas_pendientes?.toLocaleString() || 0}</strong> pendientes</div>
-      <div><strong>${actual.porcentaje_avance}%</strong> avance</div>
+      <div><strong>${actual.porcentaje_avance||0}%</strong> avance</div>
     </div>` : '';
   
   cont.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
       <div style="flex:1;min-width:200px">
         <label style="font-size:11px;color:#666;display:block">Temporada</label>
-        <select onchange="cambiarTemporada(this.value)" style="padding:6px 10px;border-radius:6px;border:1px solid var(--borde)">${opts}</select>
+        <select onchange="cambiarTemporadaRegistro(this.value)" style="padding:6px 10px;border-radius:6px;border:1px solid var(--borde)">${opts}</select>
       </div>
-      <button class="btn btn-primary btn-sm" onclick="abrirNuevaEscuela()">+ Escuela ad-hoc</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalExport()">💾 Exportar</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirNuevaEscuela()">+ Escuela ad-hoc</button>
+      </div>
     </div>
     ${resumen}
   `;
 }
 
-async function cambiarTemporada(tempId) {
-  pedidosCache.temporadaActual = tempId;
-  renderPedidosHeader();
+async function cambiarTemporadaRegistro(tempId) {
+  registroCache.temporadaActual = tempId;
+  renderRegistroHeader();
   await cargarEscuelasTemporada();
 }
+const cambiarTemporada = cambiarTemporadaRegistro; // alias
 
 async function cargarEscuelasTemporada() {
-  const cont = document.getElementById('pedidos-lista');
-  cont.innerHTML = '<div class="text-muted">Cargando...</div>';
+  const cont = document.getElementById('registro-lista');
+  cont.innerHTML = '<div class="text-muted">Cargando escuelas...</div>';
   try {
-    const esc = await supaFetch('vw_pedido_escuela', 'GET', null, 
-      `?temporada_id=eq.${pedidosCache.temporadaActual}&order=piezas_solicitadas.desc&limit=200`);
-    pedidosCache.escuelas = esc;
+    // Obtener escuelas con pedidos O con alumnos en esta temporada
+    const [conPedidos, todasEscuelas] = await Promise.all([
+      supaFetch('vw_pedido_escuela', 'GET', null, 
+        `?temporada_id=eq.${registroCache.temporadaActual}&order=piezas_solicitadas.desc&limit=200`).catch(() => []),
+      supaFetch('escuela', 'GET', null, '?activa=eq.true&order=nombre&limit=500').catch(() => [])
+    ]);
+    
+    // Contar alumnos por escuela en esta temporada
+    const alumnosCount = await supaFetch('alumno', 'GET', null, 
+      `?temporada_id=eq.${registroCache.temporadaActual}&activo=eq.true&select=escuela_id&limit=20000`).catch(() => []);
+    const alumnosPorEscuela = {};
+    for (const a of alumnosCount) {
+      alumnosPorEscuela[a.escuela_id] = (alumnosPorEscuela[a.escuela_id] || 0) + 1;
+    }
+    
+    // Enriquecer
+    const escuelasMap = {};
+    for (const e of todasEscuelas) {
+      escuelasMap[e.id] = {
+        escuela_id: e.id,
+        escuela_nombre: e.nombre,
+        codigo_cde: e.codigo_cde,
+        grupo_produccion: e.grupo_produccion,
+        piezas_solicitadas: 0,
+        piezas_entregadas: 0,
+        piezas_pendientes: 0,
+        porcentaje_avance: 0,
+        lineas_pedido: 0,
+        num_alumnos: alumnosPorEscuela[e.id] || 0,
+      };
+    }
+    for (const p of conPedidos) {
+      if (escuelasMap[p.escuela_id]) {
+        Object.assign(escuelasMap[p.escuela_id], {
+          piezas_solicitadas: p.piezas_solicitadas,
+          piezas_entregadas: p.piezas_entregadas,
+          piezas_pendientes: p.piezas_pendientes,
+          porcentaje_avance: p.porcentaje_avance,
+          lineas_pedido: p.lineas_pedido,
+        });
+      }
+    }
+    
+    // Solo escuelas que tienen pedidos O alumnos en esta temporada
+    registroCache.escuelas = Object.values(escuelasMap).filter(e => 
+      e.piezas_solicitadas > 0 || e.num_alumnos > 0
+    );
     renderListaEscuelas();
   } catch(e) {
     cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
@@ -4613,93 +5245,125 @@ async function cargarEscuelasTemporada() {
 }
 
 function renderListaEscuelas() {
-  const cont = document.getElementById('pedidos-lista');
+  const cont = document.getElementById('registro-lista');
   if (!cont) return;
   
-  if (pedidosCache.escuelas.length === 0) {
-    cont.innerHTML = '<div class="alert alert-info">No hay escuelas en esta temporada.</div>';
+  if (registroCache.escuelas.length === 0) {
+    cont.innerHTML = '<div class="alert alert-info">No hay escuelas con datos en esta temporada.</div>';
     return;
   }
   
-  cont.innerHTML = pedidosCache.escuelas.map(e => {
+  // Ordenar por piezas_solicitadas desc, luego por alumnos
+  const ordenadas = [...registroCache.escuelas].sort((a,b) => 
+    (b.piezas_solicitadas||0) - (a.piezas_solicitadas||0) || (b.num_alumnos||0) - (a.num_alumnos||0)
+  );
+  
+  cont.innerHTML = ordenadas.map(e => {
     const pct = e.porcentaje_avance || 0;
     const colorBar = pct >= 100 ? 'var(--verde)' : (pct > 0 ? 'var(--azul)' : '#CCC');
+    const grupo = e.grupo_produccion ? `<span style="background:#EEF;padding:2px 6px;border-radius:4px;font-size:10px;color:#66F;margin-left:4px">${e.grupo_produccion}</span>` : '';
     return `
-      <div class="card" style="padding:10px;margin-bottom:8px;cursor:pointer" onclick="abrirDetalleEscuela('${e.escuela_id}')">
+      <div class="card" style="padding:10px;margin-bottom:8px;cursor:pointer" onclick="abrirDetalleEscuelaRegistro('${e.escuela_id}')">
         <div style="display:flex;justify-content:space-between;align-items:start">
           <div style="flex:1">
-            <div style="font-weight:700;color:var(--azul)">${e.escuela_nombre}</div>
+            <div style="font-weight:700;color:var(--azul)">${e.escuela_nombre}${grupo}</div>
             <div style="font-size:11px;color:#666">CDE ${e.codigo_cde}</div>
             <div style="font-size:13px;margin-top:4px">
-              <strong>${(e.piezas_entregadas||0).toLocaleString()}/${(e.piezas_solicitadas||0).toLocaleString()}</strong> piezas
-              <span style="color:#999"> · ${e.lineas_pedido} líneas</span>
+              ${e.num_alumnos > 0 ? `<strong>${e.num_alumnos}</strong> alumnos · ` : ''}
+              ${e.piezas_solicitadas > 0 ? `<strong>${(e.piezas_entregadas||0).toLocaleString()}/${e.piezas_solicitadas.toLocaleString()}</strong> piezas` : '<em style="color:#888">Sin pedidos</em>'}
             </div>
           </div>
-          <div style="font-size:20px;font-weight:700;color:${colorBar}">${pct}%</div>
+          ${e.piezas_solicitadas > 0 ? `<div style="font-size:20px;font-weight:700;color:${colorBar}">${pct}%</div>` : ''}
         </div>
-        <div style="background:#EEE;height:6px;border-radius:3px;margin-top:6px;overflow:hidden">
-          <div style="background:${colorBar};height:100%;width:${pct}%"></div>
-        </div>
+        ${e.piezas_solicitadas > 0 ? `
+          <div style="background:#EEE;height:6px;border-radius:3px;margin-top:6px;overflow:hidden">
+            <div style="background:${colorBar};height:100%;width:${pct}%"></div>
+          </div>` : ''}
       </div>
     `;
   }).join('');
 }
 
-async function abrirDetalleEscuela(escuelaId) {
-  const modal = document.getElementById('pedidos-detalle-modal');
+// ─── Detalle de escuela con 4 sub-tabs ──────────────────────────────
+async function abrirDetalleEscuelaRegistro(escuelaId) {
+  const modal = document.getElementById('registro-detalle-modal');
   if (!modal) return;
   
-  const esc = pedidosCache.escuelas.find(e => e.escuela_id === escuelaId);
+  const esc = registroCache.escuelas.find(e => e.escuela_id === escuelaId);
   if (!esc) return;
   
-  pedidosCache.escuelaActual = escuelaId;
-  pedidosCache.vistaDetalle = 'pedidos'; // por defecto
+  registroCache.escuelaActual = escuelaId;
+  registroCache.vistaDetalle = 'tallaje';
   
-  document.getElementById('pedidos-detalle-titulo').textContent = esc.escuela_nombre;
-  document.getElementById('pedidos-detalle-subt').textContent = `CDE ${esc.codigo_cde} · ${esc.piezas_entregadas||0}/${esc.piezas_solicitadas||0} piezas`;
+  document.getElementById('registro-detalle-titulo').textContent = esc.escuela_nombre;
+  const grupo = esc.grupo_produccion ? ` · Grupo ${esc.grupo_produccion}` : '';
+  document.getElementById('registro-detalle-subt').textContent = 
+    `CDE ${esc.codigo_cde}${grupo} · ${esc.num_alumnos||0} alumnos · ${esc.piezas_entregadas||0}/${esc.piezas_solicitadas||0} piezas`;
   
-  // Renderizar sub-tabs
-  document.getElementById('pedidos-detalle-subtabs').innerHTML = `
+  document.getElementById('registro-detalle-subtabs').innerHTML = `
     <div class="sub-tabs">
-      <div class="sub-tab active" onclick="cambiarVistaDetalle('pedidos', this)">📋 Pedidos por talla</div>
+      <div class="sub-tab active" onclick="cambiarVistaDetalle('tallaje', this)">📏 Tallaje</div>
       <div class="sub-tab" onclick="cambiarVistaDetalle('alumnos', this)">👥 Alumnos</div>
+      <div class="sub-tab" onclick="cambiarVistaDetalle('por_talla', this)">📊 Por talla</div>
+      <div class="sub-tab" onclick="cambiarVistaDetalle('empaque', this)">📦 Empaque</div>
     </div>
   `;
   
   modal.style.display = 'flex';
-  await cargarPedidosEscuela(escuelaId);
+  await mostrarVistaDetalle('tallaje');
 }
+// alias
+const abrirDetalleEscuela = abrirDetalleEscuelaRegistro;
 
 function cambiarVistaDetalle(vista, el) {
-  document.querySelectorAll('#pedidos-detalle-subtabs .sub-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#registro-detalle-subtabs .sub-tab').forEach(t => t.classList.remove('active'));
   if (el) el.classList.add('active');
-  pedidosCache.vistaDetalle = vista;
-  if (vista === 'pedidos') cargarPedidosEscuela(pedidosCache.escuelaActual);
-  else if (vista === 'alumnos') mostrarAlumnos(pedidosCache.escuelaActual);
+  registroCache.vistaDetalle = vista;
+  mostrarVistaDetalle(vista);
 }
 
+async function mostrarVistaDetalle(vista) {
+  const cont = document.getElementById('registro-detalle-tabla');
+  cont.innerHTML = '<div class="text-muted">Cargando...</div>';
+  const escuelaId = registroCache.escuelaActual;
+  
+  if (vista === 'tallaje') {
+    renderTallajeInicial(escuelaId);
+  } else if (vista === 'alumnos') {
+    await mostrarAlumnos(escuelaId);
+  } else if (vista === 'por_talla') {
+    await cargarPedidosEscuela(escuelaId);
+  } else if (vista === 'empaque') {
+    await cargarVistaEmpaque(escuelaId);
+  }
+}
+
+function cerrarDetalleEscuela() {
+  document.getElementById('registro-detalle-modal').style.display = 'none';
+}
+
+// ─── Sub-tab: Por Talla ─────────────────────────────────────────────
 async function cargarPedidosEscuela(escuelaId) {
-  document.getElementById('pedidos-detalle-tabla').innerHTML = '<div class="text-muted">Cargando pedidos...</div>';
+  document.getElementById('registro-detalle-tabla').innerHTML = '<div class="text-muted">Cargando pedidos...</div>';
   try {
     const pedidos = await supaFetch('pedido', 'GET', null, 
       `?escuela_id=eq.${escuelaId}&order=nivel,cod_prenda,talla_key&limit=500`);
-    pedidosCache.pedidosPorEscuela[escuelaId] = pedidos;
+    registroCache.pedidosPorEscuela[escuelaId] = pedidos;
     renderDetallePedidos(escuelaId);
   } catch(e) {
-    document.getElementById('pedidos-detalle-tabla').innerHTML = 
+    document.getElementById('registro-detalle-tabla').innerHTML = 
       `<div style="color:red">Error: ${e.message}</div>`;
   }
 }
 
 function renderDetallePedidos(escuelaId) {
-  const pedidos = pedidosCache.pedidosPorEscuela[escuelaId] || [];
-  const cont = document.getElementById('pedidos-detalle-tabla');
+  const pedidos = registroCache.pedidosPorEscuela[escuelaId] || [];
+  const cont = document.getElementById('registro-detalle-tabla');
   if (pedidos.length === 0) {
-    cont.innerHTML = '<div class="text-muted">Sin pedidos.</div>';
+    cont.innerHTML = '<div class="text-muted">Sin pedidos cargados para esta escuela. Agregá alumnos o cargá el contrato.</div>';
     return;
   }
   
-  // Agrupar por nivel + prenda
   const grupos = {};
   for (const p of pedidos) {
     const k = `${p.nivel}|${p.nombre_prenda || p.cod_prenda}`;
@@ -4751,42 +5415,106 @@ function renderDetallePedidos(escuelaId) {
 async function guardarEntrega(pedidoId, escuelaId) {
   const input = document.getElementById(`ped-ent-${pedidoId}`);
   const nuevaCantidad = parseInt(input.value || 0);
-  if (isNaN(nuevaCantidad) || nuevaCantidad < 0) {
-    alert('Cantidad inválida'); return;
-  }
-  
+  if (isNaN(nuevaCantidad) || nuevaCantidad < 0) { alert('Cantidad inválida'); return; }
   try {
     await supaUpdate('pedido', pedidoId, {
       cantidad_entregada: nuevaCantidad,
       actualizado_en: new Date().toISOString()
     });
-    // Mostrar visual feedback
     input.style.background = '#D4EDDA';
     setTimeout(() => { input.style.background = ''; }, 1000);
-    // Refrescar resumen de temporada y lista
     await cargarEscuelasTemporada();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ─── Sub-tab: Empaque (resumen por escuela) ─────────────────────────
+async function cargarVistaEmpaque(escuelaId) {
+  const cont = document.getElementById('registro-detalle-tabla');
+  try {
+    const resumen = await supaFetch('vw_alumno_escuela', 'GET', null, 
+      `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&order=nivel,grado&limit=200`);
+    
+    if (!resumen || resumen.length === 0) {
+      cont.innerHTML = '<div class="alert alert-info">No hay alumnos cargados. Usá la sub-tab 📏 Tallaje para empezar.</div>';
+      return;
+    }
+    
+    const tot = resumen.reduce((a,r) => a + (r.total_alumnos||0), 0);
+    const completos = resumen.reduce((a,r) => a + (r.completos||0), 0);
+    const entregados = resumen.reduce((a,r) => a + (r.entregados||0), 0);
+    const pct = tot > 0 ? Math.round(100 * completos / tot) : 0;
+    
+    cont.innerHTML = `
+      <div class="card" style="padding:10px;margin-bottom:10px">
+        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px">
+          <div>Total alumnos: <strong>${tot}</strong></div>
+          <div style="color:var(--verde)">Completos: <strong>${completos}</strong></div>
+          <div style="color:var(--azul)">Entregados: <strong>${entregados}</strong></div>
+          <div><strong>${pct}%</strong> empacado</div>
+        </div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">Por grado</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="background:#FAFAFA">
+              <th style="padding:6px 8px;text-align:left">Grado</th>
+              <th style="padding:6px 8px;text-align:right">Total</th>
+              <th style="padding:6px 8px;text-align:right">Top ✓</th>
+              <th style="padding:6px 8px;text-align:right">Bottom ✓</th>
+              <th style="padding:6px 8px;text-align:right">Completos</th>
+              <th style="padding:6px 8px;text-align:right">Entregados</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${resumen.map(r => `
+              <tr style="border-top:1px solid #EEE">
+                <td style="padding:4px 8px;font-weight:600">${r.grado || '-'}</td>
+                <td style="padding:4px 8px;text-align:right">${r.total_alumnos}</td>
+                <td style="padding:4px 8px;text-align:right">${r.top_empacados}</td>
+                <td style="padding:4px 8px;text-align:right">${r.bottom_empacados}</td>
+                <td style="padding:4px 8px;text-align:right;color:var(--verde);font-weight:600">${r.completos}</td>
+                <td style="padding:4px 8px;text-align:right;color:var(--azul);font-weight:600">${r.entregados}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:10px;text-align:center">
+        <button class="btn btn-primary" onclick="cambiarVistaDetalle('alumnos', null); document.querySelectorAll('#registro-detalle-subtabs .sub-tab')[1].classList.add('active'); document.querySelectorAll('#registro-detalle-subtabs .sub-tab')[3].classList.remove('active')">→ Empacar alumno por alumno</button>
+      </div>
+      
+      <!-- Sugerencias de empaque automáticas -->
+      <div class="card" style="padding:10px;margin-top:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-weight:600;font-size:13px">✨ Sugerencias automáticas</div>
+          <button class="btn btn-ghost btn-sm" onclick="cargarSugerenciasEmpaque('${escuelaId}')">🔄 Recalcular</button>
+        </div>
+        <div id="sugerencias-empaque-area">
+          <div class="text-muted" style="font-size:12px">Calculando alumnos empacables según stock actual...</div>
+        </div>
+      </div>
+    `;
+    // Auto-cargar sugerencias al abrir vista Empaque
+    setTimeout(() => cargarSugerenciasEmpaque(escuelaId), 100);
   } catch(e) {
-    alert('Error: ' + e.message);
+    cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }
 }
 
-function cerrarDetalleEscuela() {
-  document.getElementById('pedidos-detalle-modal').style.display = 'none';
-}
-
-// ─── Nueva escuela ad-hoc (Doña Victoria tipo cliente) ─────────────
+// ─── Nueva escuela ad-hoc ───────────────────────────────────────────
 function abrirNuevaEscuela() {
-  const modal = document.getElementById('pedidos-escuela-modal');
+  const modal = document.getElementById('registro-escuela-modal');
   if (!modal) return;
-  document.getElementById('nesc-nombre').value = '';
-  document.getElementById('nesc-codigo').value = '';
-  document.getElementById('nesc-director').value = '';
-  document.getElementById('nesc-telefono').value = '';
+  ['nesc-nombre','nesc-codigo','nesc-director','nesc-telefono','nesc-grupo'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
   modal.style.display = 'flex';
 }
 
 function cerrarNuevaEscuela() {
-  document.getElementById('pedidos-escuela-modal').style.display = 'none';
+  const modal = document.getElementById('registro-escuela-modal');
+  if (modal) modal.style.display = 'none';
 }
 
 async function guardarNuevaEscuela() {
@@ -4794,22 +5522,828 @@ async function guardarNuevaEscuela() {
   const codigo = document.getElementById('nesc-codigo').value.trim() || ('ADHOC-' + Date.now().toString(36));
   const director = document.getElementById('nesc-director').value.trim() || null;
   const telefono = document.getElementById('nesc-telefono').value.trim() || null;
+  const grupo = document.getElementById('nesc-grupo').value.trim() || null;
   
   if (!nombre) { alert('Falta el nombre'); return; }
   
   try {
     await supaFetch('escuela', 'POST', {
-      codigo_cde: codigo,
-      nombre,
-      director,
-      telefono,
-      activa: true,
+      codigo_cde: codigo, nombre, director, telefono,
+      grupo_produccion: grupo, activa: true,
     });
-    alert('Escuela agregada. Ahora podés agregarle pedidos desde el detalle.');
+    alert('Escuela agregada. Podés cargar alumnos desde el Tallaje.');
     cerrarNuevaEscuela();
     await cargarEscuelasTemporada();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// Toggle panel "Todos los alumnos" (v28)
+function toggleAlumnosGlobal() {
+  const panel = document.getElementById('alumnos-global-panel');
+  const txt = document.getElementById('alumnos-global-toggle-txt');
+  if (!panel) return;
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    if (txt) txt.textContent = 'Ocultar ▲';
+    if (!alumnosGlobalCache.cargado) initAlumnosGlobal();
+  } else {
+    panel.style.display = 'none';
+    if (txt) txt.textContent = 'Mostrar ▼';
+  }
+}
+
+// +++++++++++++++++++ tallaje.js +++++++++++++++++++
+// ══════════════════════════════════════════════════════════════════════
+// TALLAJE (v23)
+// Captura de alumnos con sus tallas, alumno por alumno
+// ══════════════════════════════════════════════════════════════════════
+
+let tallajeCache = {
+  escuelaId: null,
+  grado: '',
+  nivelSugerido: null,
+  ultimosCargados: [], // últimos alumnos cargados en esta sesión
+  editandoId: null,
+};
+
+// Sugerencia prenda por sexo + nivel
+function sugerenciaPrenda(sexo, nivel) {
+  const M = {
+    'F_PARV':   { top: 'CAMISA_CELESTE', bottom: 'FALDA_C.E' },
+    'M_PARV':   { top: 'CAMISA_CELESTE', bottom: 'SHORT' },
+    'F_BASICA': { top: 'BLUSA',          bottom: 'FALDA' },
+    'M_BASICA': { top: 'CAMISA',         bottom: 'PANTALON' },
+    'F_BACH':   { top: 'BLUSA',          bottom: 'FALDA_BEIGE' },
+    'M_BACH':   { top: 'CAMISA',         bottom: 'PANTALON_BEIGE' },
+  };
+  return M[`${sexo}_${nivel}`] || { top: 'CAMISA', bottom: 'PANTALON' };
+}
+
+// Inferir nivel desde el grado
+function nivelDesdeGrado(grado) {
+  if (!grado) return null;
+  const g = grado.toString().toUpperCase().trim();
+  if (g.startsWith('P')) return 'PARV';
+  if (g.match(/^[1-9][ABCDÉ]/) || g.match(/^[1-9]°?[ABCDEFG]/)) {
+    // si empieza con 1-9 y la primera es básica (1A-9C) vs bach (1°A1, etc)
+    // Bach: tiene "°" o es patrón tipo "1°X"
+    if (g.includes('°') || g.match(/^[12]°/) || g.includes('SALUD') || g.includes('TÉCNICO') || g.includes('GENERAL')) {
+      return 'BACH';
+    }
+    // Numeros 1-9 simples = básica
+    return 'BASICA';
+  }
+  if (g.match(/^ACELERADA/i)) return 'BASICA';
+  return 'OTRO';
+}
+
+// ─── Pantalla inicial del tallaje ─────────────────────────────────
+function renderTallajeInicial(escuelaId) {
+  const cont = document.getElementById('registro-detalle-tabla');
+  tallajeCache.escuelaId = escuelaId;
+  
+  // Grados conocidos para autocomplete
+  const gradosHtml = registroCache.gradosConocidos.slice(0, 50).map(g => `<option value="${g.grado}">`).join('');
+  
+  cont.innerHTML = `
+    <datalist id="grados-datalist">${gradosHtml}</datalist>
+    
+    <div class="card" style="padding:14px;margin-bottom:10px">
+      <div style="font-weight:600;margin-bottom:10px">📏 Iniciar tallaje por grado</div>
+      <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
+        <div style="flex:1;min-width:120px">
+          <label style="font-size:11px;color:#666;display:block">Grado</label>
+          <input type="text" id="tall-grado" list="grados-datalist" 
+                 placeholder="ej: P4A, 1A, 3°SALUD_A"
+                 style="width:100%;padding:6px 10px;border:1px solid var(--borde);border-radius:4px"
+                 value="${tallajeCache.grado || ''}">
+        </div>
+        <button class="btn btn-primary" onclick="iniciarCapturaTallaje()">📝 Capturar alumnos</button>
+      </div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--borde);text-align:center">
+        <div style="font-size:11px;color:#888;margin-bottom:6px">¿Tenés muchos alumnos en un Excel?</div>
+        <button class="btn btn-ghost btn-sm" onclick="abrirImportacion('${escuelaId}')">📥 Importar desde Excel/CSV</button>
+      </div>
+    </div>
+    
+    <div id="tallaje-captura-area"></div>
+    <div id="tallaje-recientes"></div>
+  `;
+  
+  // Cargar últimos alumnos de este escuela
+  cargarUltimosCargados(escuelaId);
+}
+
+async function cargarUltimosCargados(escuelaId) {
+  try {
+    const recientes = await supaFetch('alumno', 'GET', null, 
+      `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&order=creado_en.desc&limit=10`);
+    tallajeCache.ultimosCargados = recientes;
+    renderRecientes();
+  } catch(e) { /* silencioso */ }
+}
+
+function renderRecientes() {
+  const cont = document.getElementById('tallaje-recientes');
+  if (!cont) return;
+  const lista = tallajeCache.ultimosCargados;
+  if (lista.length === 0) {
+    cont.innerHTML = '';
+    return;
+  }
+  cont.innerHTML = `
+    <div class="card" style="padding:10px">
+      <div style="font-weight:600;font-size:13px;margin-bottom:8px">⏱ Últimos cargados</div>
+      ${lista.map(a => `
+        <div style="padding:6px;border-bottom:1px solid #EEE;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-weight:600;font-size:12px">${a.nombre}</div>
+            <div style="font-size:10px;color:#888">${a.grado || '-'} · ${a.talla_top_key || '?'} / ${a.talla_bottom_key || '?'}</div>
+          </div>
+          <button class="btn-mini" onclick="editarAlumno('${a.id}')">✏ Editar</button>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function iniciarCapturaTallaje() {
+  const grado = document.getElementById('tall-grado').value.trim();
+  if (!grado) { alert('Escribí un grado'); return; }
+  tallajeCache.grado = grado;
+  tallajeCache.nivelSugerido = nivelDesdeGrado(grado);
+  renderFormularioTallaje();
+}
+
+// ─── Formulario principal de tallaje ─────────────────────────────
+function renderFormularioTallaje(datos = null) {
+  const area = document.getElementById('tallaje-captura-area');
+  if (!area) return;
+  
+  const esc = registroCache.escuelas.find(e => e.escuela_id === tallajeCache.escuelaId);
+  const escNombre = esc ? esc.escuela_nombre : '';
+  const editando = !!datos;
+  tallajeCache.editandoId = datos?.id || null;
+  
+  // Valores por defecto o de edición
+  const d = datos || {};
+  const nombre = d.nombre || '';
+  const sexo = d.sexo || '';
+  const prenda_top = d.prenda_top || '';
+  const talla_top = d.talla_top_key || '';
+  const prenda_bottom = d.prenda_bottom || '';
+  const talla_bottom = d.talla_bottom_key || '';
+  const largo_bottom = ''; // extraer de la key si hay
+  const obs = d.observaciones || '';
+  
+  area.innerHTML = `
+    <div class="card" style="padding:14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div>
+          <div style="font-weight:700;font-size:14px">${escNombre} · ${tallajeCache.grado}</div>
+          <div style="font-size:11px;color:#666">
+            ${editando ? '✏ Editando alumno' : '➕ Alumno nuevo'} · Nivel sugerido: <strong>${tallajeCache.nivelSugerido}</strong>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cancelarTallaje()">← Volver</button>
+      </div>
+      
+      <!-- NOMBRE -->
+      <div class="field">
+        <label>Nombre *</label>
+        <input type="text" id="tall-nombre" placeholder="Ej: PEREZ GONZALEZ, ANA MARIA" 
+               style="width:100%;font-size:14px" value="${nombre}" autofocus>
+      </div>
+      
+      <!-- SEXO -->
+      <div class="field">
+        <label>Sexo *</label>
+        <div style="display:flex;gap:10px">
+          <label style="flex:1;padding:8px;border:2px solid ${sexo==='F'?'var(--azul)':'var(--borde)'};border-radius:6px;cursor:pointer;text-align:center;background:${sexo==='F'?'#E6F0FF':'white'}">
+            <input type="radio" name="tall-sexo" value="F" ${sexo==='F'?'checked':''} onchange="actualizarSugerencias()" style="margin-right:6px">
+            ♀ Niña
+          </label>
+          <label style="flex:1;padding:8px;border:2px solid ${sexo==='M'?'var(--azul)':'var(--borde)'};border-radius:6px;cursor:pointer;text-align:center;background:${sexo==='M'?'#E6F0FF':'white'}">
+            <input type="radio" name="tall-sexo" value="M" ${sexo==='M'?'checked':''} onchange="actualizarSugerencias()" style="margin-right:6px">
+            ♂ Niño
+          </label>
+        </div>
+      </div>
+      
+      <!-- TOP -->
+      <div style="border:1px solid var(--borde);border-radius:8px;padding:10px;margin:10px 0">
+        <div style="font-weight:600;font-size:13px;margin-bottom:8px">👕 TOP</div>
+        <div class="field">
+          <label>Prenda</label>
+          <select id="tall-prenda-t" onchange="actualizarKey('top')">
+            <option value="">— elegir —</option>
+            <option value="CAMISA" ${prenda_top==='CAMISA'?'selected':''}>CAMISA</option>
+            <option value="BLUSA" ${prenda_top==='BLUSA'?'selected':''}>BLUSA</option>
+            <option value="CAMISA_CELESTE" ${prenda_top==='CAMISA_CELESTE'?'selected':''}>CAMISA_CELESTE (parv)</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px">
+          <div class="field" style="flex:1">
+            <label>Talla *</label>
+            <input type="text" id="tall-talla-t" placeholder="4, 6, 8, 10, 12..." 
+                   oninput="actualizarKey('top')" value="${talla_top.replace(/^(CC|C|B)/,'')}">
+          </div>
+          <div class="field" style="flex:1">
+            <label>Largo (opcional)</label>
+            <input type="text" id="tall-largo-t" placeholder="vacío" oninput="actualizarKey('top')">
+          </div>
+        </div>
+        <div id="tall-key-t" style="font-size:11px;color:#888;font-family:monospace">Código: —</div>
+      </div>
+      
+      <!-- BOTTOM -->
+      <div style="border:1px solid var(--borde);border-radius:8px;padding:10px;margin:10px 0">
+        <div style="font-weight:600;font-size:13px;margin-bottom:8px">👖 BOTTOM</div>
+        <div class="field">
+          <label>Prenda</label>
+          <select id="tall-prenda-b" onchange="actualizarKey('bottom')">
+            <option value="">— elegir —</option>
+            <option value="PANTALON" ${prenda_bottom==='PANTALON'?'selected':''}>PANTALON</option>
+            <option value="PANTALON_BEIGE" ${prenda_bottom==='PANTALON_BEIGE'?'selected':''}>PANTALON_BEIGE</option>
+            <option value="FALDA" ${prenda_bottom==='FALDA'?'selected':''}>FALDA</option>
+            <option value="FALDA_BEIGE" ${prenda_bottom==='FALDA_BEIGE'?'selected':''}>FALDA_BEIGE</option>
+            <option value="FALDA_C.E" ${prenda_bottom==='FALDA_C.E'?'selected':''}>FALDA_C.E (parv)</option>
+            <option value="SHORT" ${prenda_bottom==='SHORT'?'selected':''}>SHORT</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px">
+          <div class="field" style="flex:1">
+            <label>Talla *</label>
+            <input type="text" id="tall-talla-b" placeholder="4, 8, 10, 12..." 
+                   oninput="actualizarKey('bottom')" value="${talla_bottom.replace(/^(PB|P|FB|FCE|F|S)/,'').replace(/\d+$/,match => talla_bottom.match(/\d+\d+$/) ? '' : match)}">
+          </div>
+          <div class="field" style="flex:1">
+            <label>Largo</label>
+            <input type="text" id="tall-largo-b" placeholder="30, 35, 40, 70, 75..." 
+                   oninput="actualizarKey('bottom')">
+          </div>
+        </div>
+        <div id="tall-key-b" style="font-size:11px;color:#888;font-family:monospace">Código: —</div>
+      </div>
+      
+      <!-- OBSERVACIONES -->
+      <div class="field">
+        <label>Observaciones (opcional)</label>
+        <textarea id="tall-obs" rows="2">${obs}</textarea>
+      </div>
+      
+      <!-- BOTONES -->
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn btn-ghost" style="flex:1" onclick="cancelarTallaje()">✗ Cancelar</button>
+        ${editando 
+          ? `<button class="btn btn-success" style="flex:2" onclick="guardarTallaje(false)">✓ Guardar cambios</button>`
+          : `<button class="btn btn-success" style="flex:2" onclick="guardarTallaje(true)">✓ Guardar y siguiente →</button>`}
+      </div>
+    </div>
+  `;
+  
+  // Autocompletar sugerencias si hay sexo
+  if (sexo) setTimeout(actualizarSugerencias, 50);
+  else setTimeout(() => document.getElementById('tall-nombre')?.focus(), 50);
+  
+  // Re-calcular KEYs iniciales
+  setTimeout(() => { actualizarKey('top'); actualizarKey('bottom'); }, 100);
+}
+
+function actualizarSugerencias() {
+  const sexoEl = document.querySelector('input[name="tall-sexo"]:checked');
+  if (!sexoEl) return;
+  const sexo = sexoEl.value;
+  const sug = sugerenciaPrenda(sexo, tallajeCache.nivelSugerido);
+  
+  const pt = document.getElementById('tall-prenda-t');
+  const pb = document.getElementById('tall-prenda-b');
+  // Solo sugerir si está vacío
+  if (pt && !pt.value) pt.value = sug.top;
+  if (pb && !pb.value) pb.value = sug.bottom;
+  
+  actualizarKey('top');
+  actualizarKey('bottom');
+}
+
+const COD_PRENDA = {
+  'CAMISA': 'C', 'BLUSA': 'B', 'CAMISA_CELESTE': 'CC',
+  'PANTALON': 'P', 'PANTALON_BEIGE': 'PB',
+  'FALDA': 'F', 'FALDA_BEIGE': 'FB', 'FALDA_C.E': 'FCE',
+  'SHORT': 'S',
+};
+
+function calcularKey(prenda, talla, largo) {
+  if (!prenda || !talla) return '';
+  const cod = COD_PRENDA[prenda] || prenda.slice(0,3);
+  const t = talla.toString().trim();
+  const l = largo ? largo.toString().trim() : '';
+  return cod + t + l;
+}
+
+function actualizarKey(tipo) {
+  if (tipo === 'top') {
+    const p = document.getElementById('tall-prenda-t')?.value || '';
+    const t = document.getElementById('tall-talla-t')?.value || '';
+    const l = document.getElementById('tall-largo-t')?.value || '';
+    const k = calcularKey(p, t, l);
+    const el = document.getElementById('tall-key-t');
+    if (el) el.innerHTML = `Código: <strong style="color:${k?'var(--azul)':'#888'}">${k || '—'}</strong>`;
+  } else {
+    const p = document.getElementById('tall-prenda-b')?.value || '';
+    const t = document.getElementById('tall-talla-b')?.value || '';
+    const l = document.getElementById('tall-largo-b')?.value || '';
+    const k = calcularKey(p, t, l);
+    const el = document.getElementById('tall-key-b');
+    if (el) el.innerHTML = `Código: <strong style="color:${k?'var(--azul)':'#888'}">${k || '—'}</strong>`;
+  }
+}
+
+function cancelarTallaje() {
+  tallajeCache.editandoId = null;
+  renderTallajeInicial(tallajeCache.escuelaId);
+}
+
+async function guardarTallaje(continuar) {
+  const nombre = document.getElementById('tall-nombre').value.trim();
+  const sexoEl = document.querySelector('input[name="tall-sexo"]:checked');
+  const sexo = sexoEl?.value || null;
+  const prenda_top = document.getElementById('tall-prenda-t').value || null;
+  const talla_top_num = document.getElementById('tall-talla-t').value.trim();
+  const largo_top = document.getElementById('tall-largo-t').value.trim();
+  const prenda_bottom = document.getElementById('tall-prenda-b').value || null;
+  const talla_bottom_num = document.getElementById('tall-talla-b').value.trim();
+  const largo_bottom = document.getElementById('tall-largo-b').value.trim();
+  const obs = document.getElementById('tall-obs').value.trim() || null;
+  
+  if (!nombre) { alert('El nombre es obligatorio'); return; }
+  
+  const talla_top_key = calcularKey(prenda_top, talla_top_num, largo_top);
+  const talla_bottom_key = calcularKey(prenda_bottom, talla_bottom_num, largo_bottom);
+  
+  const payload = {
+    temporada_id: registroCache.temporadaActual,
+    escuela_id: tallajeCache.escuelaId,
+    nombre, sexo,
+    grado: tallajeCache.grado,
+    nivel: tallajeCache.nivelSugerido,
+    prenda_top: prenda_top,
+    talla_top_key: talla_top_key || null,
+    prenda_bottom: prenda_bottom,
+    talla_bottom_key: talla_bottom_key || null,
+    observaciones: obs,
+    activo: true,
+    actualizado_en: new Date().toISOString(),
+  };
+  
+  try {
+    if (tallajeCache.editandoId) {
+      await supaUpdate('alumno', tallajeCache.editandoId, payload);
+    } else {
+      await supaFetch('alumno', 'POST', payload);
+    }
+    tallajeCache.editandoId = null;
+    
+    if (continuar) {
+      renderFormularioTallaje(); // reset
+      await cargarUltimosCargados(tallajeCache.escuelaId);
+    } else {
+      cancelarTallaje();
+      await cargarUltimosCargados(tallajeCache.escuelaId);
+    }
   } catch(e) {
-    alert('Error: ' + e.message);
+    alert('Error al guardar: ' + e.message);
+  }
+}
+
+async function editarAlumno(alumnoId) {
+  try {
+    const res = await supaFetch('alumno', 'GET', null, `?id=eq.${alumnoId}&limit=1`);
+    if (!res || res.length === 0) { alert('Alumno no encontrado'); return; }
+    const a = res[0];
+    tallajeCache.grado = a.grado || '';
+    tallajeCache.nivelSugerido = a.nivel || nivelDesdeGrado(a.grado);
+    renderFormularioTallaje(a);
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// +++++++++++++++++++ importacion.js +++++++++++++++++++
+// ══════════════════════════════════════════════════════════════════════
+// IMPORTACION MASIVA DE ALUMNOS (v24)
+// Pega desde Excel/CSV o carga archivo. Valida y carga en lote.
+// ══════════════════════════════════════════════════════════════════════
+
+let importCache = {
+  filas: [],           // filas parseadas (preview)
+  errores: [],         // problemas detectados por fila
+  columnas: {},        // mapeo col Excel -> campo sistema
+  encabezados: [],     // headers detectados
+  escuelaId: null,
+};
+
+function abrirImportacion(escuelaId) {
+  importCache = { filas: [], errores: [], columnas: {}, encabezados: [], escuelaId };
+  const modal = document.getElementById('import-alumnos-modal');
+  if (!modal) return;
+  document.getElementById('import-paso1').style.display = 'block';
+  document.getElementById('import-paso2').style.display = 'none';
+  document.getElementById('import-paso3').style.display = 'none';
+  document.getElementById('import-textarea').value = '';
+  document.getElementById('import-file').value = '';
+  modal.style.display = 'flex';
+}
+
+function cerrarImportacion() {
+  const modal = document.getElementById('import-alumnos-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+// Parsear texto pegado (TSV o CSV)
+function parsearTexto(texto) {
+  const lineas = texto.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+  if (lineas.length === 0) return { headers: [], filas: [] };
+  
+  // Detectar separador: tab (más común al pegar de Excel) o coma
+  const prim = lineas[0];
+  const sep = prim.includes('\t') ? '\t' : (prim.split(',').length > prim.split(';').length ? ',' : ';');
+  
+  const headers = lineas[0].split(sep).map(h => h.trim().toLowerCase());
+  const filas = lineas.slice(1).map(l => {
+    const cols = l.split(sep).map(c => c.trim());
+    const obj = {};
+    for (let i = 0; i < headers.length; i++) obj[headers[i]] = cols[i] || '';
+    return obj;
+  });
+  return { headers, filas };
+}
+
+async function procesarArchivo() {
+  const fileInput = document.getElementById('import-file');
+  const file = fileInput.files[0];
+  if (!file) { alert('Elegí un archivo'); return; }
+  
+  try {
+    const texto = await file.text();
+    document.getElementById('import-textarea').value = texto;
+    procesarTexto();
+  } catch(e) { alert('Error al leer archivo: ' + e.message); }
+}
+
+function procesarTexto() {
+  const texto = document.getElementById('import-textarea').value;
+  if (!texto.trim()) { alert('Pegá los datos primero'); return; }
+  
+  const { headers, filas } = parsearTexto(texto);
+  
+  if (filas.length === 0) { alert('No se detectaron filas de datos'); return; }
+  
+  importCache.encabezados = headers;
+  importCache.filas = filas;
+  
+  // Mapeo automático por nombre de columna (flexible)
+  const mapeo = detectarMapeo(headers);
+  importCache.columnas = mapeo;
+  
+  document.getElementById('import-paso1').style.display = 'none';
+  document.getElementById('import-paso2').style.display = 'block';
+  renderPaso2Mapeo();
+}
+
+function detectarMapeo(headers) {
+  // Mapeo inteligente: intenta matchear nombres comunes
+  const mapa = {};
+  const patronesCampo = {
+    nombre:           ['nombre', 'nombres', 'alumno', 'name', 'estudiante'],
+    sexo:             ['sexo', 'sexoflag', 'sexo_flag', 'genero', 'sex'],
+    grado:            ['grado', 'grade', 'curso', 'seccion'],
+    prenda_top:       ['prendat', 'prenda_top', 'prenda t', 'prendat', 'prenda_t'],
+    talla_top:        ['tallat', 'talla_top', 'talla t', 'tallat', 'talla_t'],
+    largo_top:        ['largot', 'largo_top', 'largo t'],
+    prenda_bottom:    ['prendap', 'prenda_bottom', 'prenda p', 'prenda_p'],
+    talla_bottom:     ['tallap', 'talla_bottom', 'talla p', 'talla_p'],
+    largo_bottom:     ['largop', 'largo_p', 'largo bottom', 'largo_bottom'],
+    key_top:          ['keyt', 'key_top', 'key t'],
+    key_bottom:       ['keyp', 'key_bottom', 'key p'],
+    observaciones:    ['obs', 'observaciones', 'observacion', 'notas', 'detallet', 'detallep', 'detalle'],
+    estado_top:       ['estadot', 'estado_top', 'estado_t'],
+    estado_bottom:    ['estadop', 'estado_bottom', 'estado_p'],
+  };
+  
+  for (const [campo, patrones] of Object.entries(patronesCampo)) {
+    for (const h of headers) {
+      const hn = h.toLowerCase().replace(/[._\s-]/g, '');
+      if (patrones.some(p => hn === p.replace(/[._\s-]/g, '') || hn.includes(p.replace(/[._\s-]/g, '')))) {
+        mapa[campo] = h;
+        break;
+      }
+    }
+  }
+  return mapa;
+}
+
+function renderPaso2Mapeo() {
+  const cont = document.getElementById('import-mapeo-contenido');
+  const { encabezados, columnas, filas } = importCache;
+  
+  const opts = '<option value="">— ignorar —</option>' + 
+    encabezados.map(h => `<option value="${h}">${h}</option>`).join('');
+  
+  const campos = [
+    { k:'nombre',        l:'Nombre',              req:true },
+    { k:'sexo',          l:'Sexo (F/M o . = niña)', req:false },
+    { k:'grado',         l:'Grado',               req:false },
+    { k:'prenda_top',    l:'Prenda TOP',          req:false },
+    { k:'talla_top',     l:'Talla TOP (num)',     req:false },
+    { k:'largo_top',     l:'Largo TOP',           req:false },
+    { k:'key_top',       l:'KEY TOP (completo)',  req:false, note:'Si lo das, ignora prenda+talla arriba' },
+    { k:'prenda_bottom', l:'Prenda BOTTOM',       req:false },
+    { k:'talla_bottom',  l:'Talla BOTTOM',        req:false },
+    { k:'largo_bottom',  l:'Largo BOTTOM',        req:false },
+    { k:'key_bottom',    l:'KEY BOTTOM',          req:false, note:'Si lo das, ignora prenda+talla arriba' },
+    { k:'observaciones', l:'Observaciones',       req:false },
+    { k:'estado_top',    l:'Estado TOP (OK=empacado)', req:false },
+    { k:'estado_bottom', l:'Estado BOTTOM',       req:false },
+  ];
+  
+  const defaultGrado = (tallajeCache && tallajeCache.grado) || '';
+  
+  cont.innerHTML = `
+    <div class="alert alert-info" style="font-size:12px;margin-bottom:10px">
+      ${filas.length} filas detectadas. Revisá el mapeo de columnas y luego previsualizá.
+    </div>
+    
+    <div class="card" style="padding:10px;margin-bottom:10px">
+      <div style="font-weight:600;font-size:13px;margin-bottom:8px">Valores por defecto (si faltan en las filas)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="field">
+          <label style="font-size:11px">Grado por defecto</label>
+          <input type="text" id="import-default-grado" value="${defaultGrado}" placeholder="ej: 1A">
+        </div>
+        <div class="field">
+          <label style="font-size:11px">Nivel por defecto</label>
+          <select id="import-default-nivel">
+            <option value="">— auto desde grado —</option>
+            <option value="PARV">PARV</option>
+            <option value="BASICA">BASICA</option>
+            <option value="BACH">BACH</option>
+            <option value="OTRO">OTRO</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card" style="padding:10px">
+      <div style="font-weight:600;font-size:13px;margin-bottom:8px">Mapeo de columnas</div>
+      <table style="width:100%;font-size:12px">
+        ${campos.map(c => `
+          <tr>
+            <td style="padding:4px 6px;width:40%">
+              ${c.l}${c.req ? ' <span style="color:#c44">*</span>' : ''}
+              ${c.note ? `<div style="font-size:10px;color:#888">${c.note}</div>` : ''}
+            </td>
+            <td style="padding:4px 6px">
+              <select onchange="importCache.columnas['${c.k}']=this.value" style="width:100%;padding:4px">
+                ${opts.replace(`value="${columnas[c.k]||''}"`, `value="${columnas[c.k]||''}" selected`)}
+              </select>
+            </td>
+          </tr>
+        `).join('')}
+      </table>
+    </div>
+    
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button class="btn btn-ghost" onclick="volverPaso1()">← Volver</button>
+      <button class="btn btn-primary" style="flex:1" onclick="previsualizarImportacion()">👁 Previsualizar y validar →</button>
+    </div>
+  `;
+  
+  // Aplicar valores seleccionados correctamente (el replace de arriba es tricky)
+  for (const c of campos) {
+    const sel = cont.querySelector(`select[onchange*="${c.k}"]`);
+    if (sel && columnas[c.k]) sel.value = columnas[c.k];
+  }
+}
+
+function volverPaso1() {
+  document.getElementById('import-paso1').style.display = 'block';
+  document.getElementById('import-paso2').style.display = 'none';
+  document.getElementById('import-paso3').style.display = 'none';
+}
+
+function previsualizarImportacion() {
+  const { filas, columnas } = importCache;
+  const defaultGrado = document.getElementById('import-default-grado').value.trim();
+  const defaultNivel = document.getElementById('import-default-nivel').value;
+  
+  if (!columnas.nombre) { alert('El campo Nombre es obligatorio'); return; }
+  
+  const procesadas = [];
+  const errores = [];
+  
+  filas.forEach((fila, idx) => {
+    const getCol = (campo) => {
+      const colName = columnas[campo];
+      return colName ? (fila[colName] || '').trim() : '';
+    };
+    
+    const nombre = getCol('nombre');
+    if (!nombre) {
+      errores.push({ fila: idx + 1, error: 'Sin nombre' });
+      return;
+    }
+    
+    // Sexo: '.' = niña en Excel legacy
+    let sexo = getCol('sexo');
+    if (sexo === '.') sexo = 'F';
+    else if (sexo.toUpperCase() === 'F' || sexo.toLowerCase() === 'niña' || sexo.toLowerCase() === 'niñ') sexo = 'F';
+    else if (sexo.toUpperCase() === 'M' || sexo.toLowerCase() === 'niño' || sexo.toLowerCase() === 'nino') sexo = 'M';
+    else sexo = null;
+    
+    const grado = getCol('grado') || defaultGrado || null;
+    const nivel = defaultNivel || (grado ? nivelDesdeGrado(grado) : null);
+    
+    // Top
+    let prenda_top = getCol('prenda_top').toUpperCase() || null;
+    let talla_top_key = getCol('key_top') || null;
+    if (!talla_top_key && prenda_top) {
+      const t = getCol('talla_top');
+      const l = getCol('largo_top');
+      talla_top_key = calcularKey(prenda_top, t, l);
+    } else if (talla_top_key) {
+      // Si dieron la KEY directa, derivar prenda desde el prefijo
+      if (!prenda_top) prenda_top = prendaDesdeKey(talla_top_key);
+    }
+    
+    // Bottom
+    let prenda_bottom = getCol('prenda_bottom').toUpperCase() || null;
+    let talla_bottom_key = getCol('key_bottom') || null;
+    if (!talla_bottom_key && prenda_bottom) {
+      const t = getCol('talla_bottom');
+      const l = getCol('largo_bottom');
+      talla_bottom_key = calcularKey(prenda_bottom, t, l);
+    } else if (talla_bottom_key) {
+      if (!prenda_bottom) prenda_bottom = prendaDesdeKey(talla_bottom_key);
+    }
+    
+    // Estados (del Excel: "OK" = empacado, cualquier otro = pendiente)
+    const est_t = getCol('estado_top');
+    const est_b = getCol('estado_bottom');
+    const estado_top = est_t === 'OK' ? 'empacado' : 'pendiente';
+    const estado_bottom = est_b === 'OK' ? 'empacado' : 'pendiente';
+    
+    procesadas.push({
+      fila: idx + 1,
+      nombre, sexo, grado, nivel,
+      prenda_top, talla_top_key: talla_top_key || null,
+      prenda_bottom, talla_bottom_key: talla_bottom_key || null,
+      estado_top, estado_bottom,
+      observaciones: getCol('observaciones') || null,
+    });
+  });
+  
+  importCache.procesadas = procesadas;
+  importCache.errores = errores;
+  
+  document.getElementById('import-paso2').style.display = 'none';
+  document.getElementById('import-paso3').style.display = 'block';
+  renderPaso3Preview();
+}
+
+// Derivar prenda desde una KEY tipo "C14", "PB1795", "FCE635"
+function prendaDesdeKey(key) {
+  if (!key) return null;
+  const k = key.toUpperCase();
+  if (k.startsWith('CC')) return 'CAMISA_CELESTE';
+  if (k.startsWith('PB')) return 'PANTALON_BEIGE';
+  if (k.startsWith('FB')) return 'FALDA_BEIGE';
+  if (k.startsWith('FCE')) return 'FALDA_C.E';
+  if (k.startsWith('C')) return 'CAMISA';
+  if (k.startsWith('B')) return 'BLUSA';
+  if (k.startsWith('P')) return 'PANTALON';
+  if (k.startsWith('F')) return 'FALDA';
+  if (k.startsWith('S')) return 'SHORT';
+  return null;
+}
+
+function renderPaso3Preview() {
+  const cont = document.getElementById('import-preview-contenido');
+  const { procesadas, errores } = importCache;
+  
+  const ok = procesadas.length;
+  const err = errores.length;
+  
+  const previewRows = procesadas.slice(0, 20);
+  
+  cont.innerHTML = `
+    <div class="alert alert-info" style="font-size:12px">
+      <strong>${ok}</strong> filas OK ${err > 0 ? `· <span style="color:#c44"><strong>${err}</strong> con errores</span>` : ''}
+    </div>
+    
+    ${err > 0 ? `
+      <div class="card" style="padding:8px;margin-bottom:10px;background:#FFF4F0">
+        <div style="font-weight:600;font-size:12px;color:#c44;margin-bottom:6px">Errores (se omiten):</div>
+        ${errores.slice(0, 10).map(e => `<div style="font-size:11px">Fila ${e.fila}: ${e.error}</div>`).join('')}
+        ${err > 10 ? `<div style="font-size:11px;color:#888">...y ${err-10} más</div>` : ''}
+      </div>
+    ` : ''}
+    
+    <div class="card" style="padding:0;overflow:auto;max-height:400px">
+      <div style="background:#F5F7FA;padding:6px 10px;font-weight:600;font-size:13px">Preview (primeras 20 filas)</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead>
+          <tr style="background:#FAFAFA;position:sticky;top:0">
+            <th style="padding:4px 6px;text-align:left">Nombre</th>
+            <th style="padding:4px 6px">Sexo</th>
+            <th style="padding:4px 6px">Grado</th>
+            <th style="padding:4px 6px">Top</th>
+            <th style="padding:4px 6px">Bottom</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${previewRows.map(p => `
+            <tr style="border-top:1px solid #EEE">
+              <td style="padding:3px 6px;font-size:11px">${p.nombre}</td>
+              <td style="padding:3px 6px;text-align:center">${p.sexo === 'F' ? '♀' : (p.sexo === 'M' ? '♂' : '—')}</td>
+              <td style="padding:3px 6px;text-align:center">${p.grado || '—'}</td>
+              <td style="padding:3px 6px;font-family:monospace;color:${p.talla_top_key?'var(--azul)':'#ccc'}">${p.talla_top_key || '—'}</td>
+              <td style="padding:3px 6px;font-family:monospace;color:${p.talla_bottom_key?'var(--azul)':'#ccc'}">${p.talla_bottom_key || '—'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      ${ok > 20 ? `<div style="padding:6px;text-align:center;color:#888;font-size:11px">...y ${ok-20} filas más</div>` : ''}
+    </div>
+    
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn btn-ghost" onclick="volverPaso2()">← Volver al mapeo</button>
+      <button class="btn btn-success" style="flex:1" onclick="ejecutarImportacion()">✓ Importar ${ok} alumnos</button>
+    </div>
+  `;
+}
+
+function volverPaso2() {
+  document.getElementById('import-paso2').style.display = 'block';
+  document.getElementById('import-paso3').style.display = 'none';
+}
+
+async function ejecutarImportacion() {
+  const { procesadas, escuelaId } = importCache;
+  if (!procesadas || procesadas.length === 0) { alert('Nada para importar'); return; }
+  if (!escuelaId) { alert('Falta la escuela'); return; }
+  if (!registroCache.temporadaActual) { alert('Falta la temporada'); return; }
+  
+  if (!confirm(`¿Importar ${procesadas.length} alumnos a esta escuela?`)) return;
+  
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = 'Importando...';
+  
+  let exitosos = 0;
+  let fallidos = 0;
+  const fallos = [];
+  
+  // Procesar en batches de 50 para no saturar
+  const BATCH = 50;
+  for (let i = 0; i < procesadas.length; i += BATCH) {
+    const batch = procesadas.slice(i, i + BATCH);
+    const payloads = batch.map(p => ({
+      temporada_id: registroCache.temporadaActual,
+      escuela_id: escuelaId,
+      nombre: p.nombre,
+      sexo: p.sexo,
+      grado: p.grado,
+      nivel: p.nivel,
+      prenda_top: p.prenda_top,
+      talla_top_key: p.talla_top_key,
+      estado_top: p.estado_top,
+      prenda_bottom: p.prenda_bottom,
+      talla_bottom_key: p.talla_bottom_key,
+      estado_bottom: p.estado_bottom,
+      observaciones: p.observaciones,
+      activo: true,
+    }));
+    
+    try {
+      await supaFetch('alumno', 'POST', payloads);
+      exitosos += batch.length;
+      btn.textContent = `Importando... ${exitosos}/${procesadas.length}`;
+    } catch(e) {
+      fallidos += batch.length;
+      fallos.push(`Batch ${i/BATCH+1}: ${e.message}`);
+    }
+  }
+  
+  btn.disabled = false;
+  btn.textContent = `✓ Importar ${procesadas.length} alumnos`;
+  
+  let msg = `✓ ${exitosos} alumnos importados.`;
+  if (fallidos > 0) msg += `\n\n✗ ${fallidos} fallidos:\n` + fallos.join('\n');
+  alert(msg);
+  
+  if (exitosos > 0) {
+    cerrarImportacion();
+    await cargarEscuelasTemporada();
+    await mostrarAlumnos(escuelaId);
   }
 }
 
@@ -4831,12 +6365,12 @@ let alumnosCache = {
 
 async function mostrarAlumnos(escuelaId) {
   alumnosCache.escuelaId = escuelaId;
-  const cont = document.getElementById('pedidos-detalle-tabla');
+  const cont = document.getElementById('registro-detalle-tabla');
   cont.innerHTML = '<div class="text-muted">Cargando alumnos...</div>';
   try {
     const [alumnos, stock] = await Promise.all([
       supaFetch('alumno', 'GET', null, 
-        `?escuela_id=eq.${escuelaId}&temporada_id=eq.${pedidosCache.temporadaActual}&order=nivel,grado,nombre&limit=2000`),
+        `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&order=nivel,grado,nombre&limit=2000`),
       supaFetch('vw_bodega_stock', 'GET', null, '?limit=1000')
     ]);
     alumnosCache.alumnos = alumnos;
@@ -4852,7 +6386,7 @@ async function mostrarAlumnos(escuelaId) {
 }
 
 function renderAlumnosLista() {
-  const cont = document.getElementById('pedidos-detalle-tabla');
+  const cont = document.getElementById('registro-detalle-tabla');
   let list = alumnosCache.alumnos;
   
   // Filtros
@@ -5449,6 +6983,2127 @@ async function registrarEntradaBodegaPorBulto(bulto) {
     });
   } catch(e) {
     console.warn('No se pudo registrar entrada bodega:', e.message);
+  }
+}
+
+// +++++++++++++++++++ reportes.js +++++++++++++++++++
+// ══════════════════════════════════════════════════════════════════════
+// REPORTES IMPRIMIBLES (v26)
+// Hoja de tallaje, lista de empaque, hoja de entrega
+// ══════════════════════════════════════════════════════════════════════
+
+async function imprimirHojaTallaje(escuelaId, grado) {
+  try {
+    const esc = registroCache.escuelas.find(e => e.escuela_id === escuelaId);
+    if (!esc) { alert('Escuela no encontrada'); return; }
+    
+    // Obtener alumnos del grado (si hay). Si no, genera hoja en blanco
+    const alumnos = grado 
+      ? await supaFetch('alumno', 'GET', null, 
+          `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&grado=eq.${encodeURIComponent(grado)}&order=nombre&limit=200`)
+      : [];
+    
+    const filasVacias = Math.max(30 - alumnos.length, 10);
+    abrirVentanaImpresion(generarHojaTallaje(esc, grado, alumnos, filasVacias));
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function generarHojaTallaje(esc, grado, alumnos, vacias) {
+  const fecha = new Date().toLocaleDateString('es-SV');
+  const rows = [];
+  
+  alumnos.forEach((a, i) => {
+    rows.push(`
+      <tr>
+        <td class="num">${i+1}</td>
+        <td class="nombre">${a.nombre}</td>
+        <td class="sexo">${a.sexo === 'F' ? '♀' : (a.sexo === 'M' ? '♂' : '')}</td>
+        <td class="talla-t">${a.talla_top_key || ''}</td>
+        <td class="talla-b">${a.talla_bottom_key || ''}</td>
+        <td class="largo"></td>
+        <td class="obs"></td>
+      </tr>
+    `);
+  });
+  
+  for (let i = 0; i < vacias; i++) {
+    rows.push(`
+      <tr>
+        <td class="num">${alumnos.length + i + 1}</td>
+        <td class="nombre"></td>
+        <td class="sexo"></td>
+        <td class="talla-t"></td>
+        <td class="talla-b"></td>
+        <td class="largo"></td>
+        <td class="obs"></td>
+      </tr>
+    `);
+  }
+  
+  return `
+    <!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Hoja de Tallaje - ${esc.escuela_nombre} - ${grado || ''}</title>
+    <style>
+      @page { size: A4; margin: 10mm; }
+      body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; margin: 0; }
+      .header { border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px; }
+      .header h1 { font-size: 14pt; margin: 0; }
+      .header-info { display: flex; justify-content: space-between; margin-top: 4px; font-size: 9pt; }
+      .header-info div { flex: 1; }
+      table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+      th, td { border: 1px solid #000; padding: 3px 4px; text-align: left; }
+      th { background: #DDD; text-align: center; font-size: 8pt; }
+      td.num { width: 25px; text-align: center; color: #666; }
+      td.nombre { width: 30%; }
+      td.sexo { width: 20px; text-align: center; }
+      td.talla-t { width: 50px; text-align: center; font-family: monospace; }
+      td.talla-b { width: 50px; text-align: center; font-family: monospace; }
+      td.largo { width: 40px; text-align: center; }
+      td.obs { }
+      tr { height: 18px; }
+      .footer { margin-top: 16px; font-size: 9pt; display: flex; justify-content: space-between; }
+      .firma { border-top: 1px solid #000; padding-top: 4px; width: 45%; text-align: center; }
+      @media print { .no-print { display: none; } }
+    </style></head>
+    <body>
+    <div class="header">
+      <h1>Hoja de Tallaje</h1>
+      <div class="header-info">
+        <div><strong>Centro Escolar:</strong> ${esc.escuela_nombre}</div>
+        <div><strong>CDE:</strong> ${esc.codigo_cde}</div>
+      </div>
+      <div class="header-info">
+        <div><strong>Grado:</strong> ${grado || '____________'}</div>
+        <div><strong>Fecha:</strong> ${fecha}</div>
+        <div><strong>Tallador:</strong> ____________________</div>
+      </div>
+    </div>
+    
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nombre del alumno</th>
+          <th>Sx</th>
+          <th>Camisa/Blusa</th>
+          <th>Pantalón/Falda</th>
+          <th>Largo</th>
+          <th>Observaciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.join('')}
+      </tbody>
+    </table>
+    
+    <div class="footer">
+      <div class="firma">Firma del tallador</div>
+      <div class="firma">Firma del director</div>
+    </div>
+    
+    <div class="no-print" style="margin-top:20px;text-align:center">
+      <button onclick="window.print()" style="padding:10px 20px;font-size:14pt">🖨 Imprimir</button>
+      <button onclick="window.close()" style="padding:10px 20px;font-size:14pt">✕ Cerrar</button>
+    </div>
+    </body></html>
+  `;
+}
+
+async function imprimirListaEmpaque(escuelaId) {
+  try {
+    const esc = registroCache.escuelas.find(e => e.escuela_id === escuelaId);
+    if (!esc) return;
+    
+    const alumnos = await supaFetch('alumno', 'GET', null, 
+      `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&activo=eq.true&order=nivel,grado,nombre&limit=2000`);
+    
+    if (alumnos.length === 0) { alert('Sin alumnos cargados'); return; }
+    
+    abrirVentanaImpresion(generarListaEmpaque(esc, alumnos));
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function generarListaEmpaque(esc, alumnos) {
+  const fecha = new Date().toLocaleDateString('es-SV');
+  
+  // Agrupar por grado
+  const grupos = {};
+  for (const a of alumnos) {
+    const g = `${a.nivel || ''} · ${a.grado || 'Sin grado'}`;
+    if (!grupos[g]) grupos[g] = [];
+    grupos[g].push(a);
+  }
+  
+  let contenido = '';
+  let contador = 0;
+  
+  for (const [grado, lista] of Object.entries(grupos)) {
+    const completos = lista.filter(a => a.estado_top === 'empacado' && a.estado_bottom === 'empacado').length;
+    
+    contenido += `
+      <div class="grupo">
+        <div class="grupo-header">
+          ${grado} 
+          <span style="float:right;font-weight:normal">${completos}/${lista.length} empacados</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:25px">#</th>
+              <th>Nombre</th>
+              <th style="width:60px">Top</th>
+              <th style="width:20px">☑</th>
+              <th style="width:60px">Bottom</th>
+              <th style="width:20px">☑</th>
+              <th style="width:30px">Obs</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    
+    lista.forEach(a => {
+      contador++;
+      const tCheck = a.estado_top === 'empacado' ? '☑' : '☐';
+      const bCheck = a.estado_bottom === 'empacado' ? '☑' : '☐';
+      contenido += `
+        <tr>
+          <td class="num">${contador}</td>
+          <td class="nombre">${a.nombre}</td>
+          <td class="talla">${a.talla_top_key || '—'}</td>
+          <td class="check">${tCheck}</td>
+          <td class="talla">${a.talla_bottom_key || '—'}</td>
+          <td class="check">${bCheck}</td>
+          <td></td>
+        </tr>
+      `;
+    });
+    contenido += `</tbody></table></div>`;
+  }
+  
+  return `
+    <!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Lista de Empaque - ${esc.escuela_nombre}</title>
+    <style>
+      @page { size: A4; margin: 10mm; }
+      body { font-family: Arial, sans-serif; font-size: 9pt; color: #000; margin: 0; }
+      .header { border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px; }
+      .header h1 { font-size: 14pt; margin: 0; }
+      .header-info { display: flex; justify-content: space-between; margin-top: 4px; font-size: 9pt; }
+      .grupo { margin-bottom: 12px; page-break-inside: avoid; }
+      .grupo-header { background: #EEE; padding: 4px 8px; font-weight: bold; border: 1px solid #000; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #000; padding: 2px 4px; font-size: 9pt; }
+      th { background: #DDD; text-align: center; font-size: 8pt; }
+      td.num { text-align: center; color: #666; }
+      td.nombre { }
+      td.talla { text-align: center; font-family: monospace; }
+      td.check { text-align: center; font-size: 14pt; }
+      tr { height: 16px; }
+      .footer { margin-top: 20px; page-break-inside: avoid; }
+      .firma { border-top: 1px solid #000; padding-top: 4px; width: 45%; display: inline-block; text-align: center; margin-right: 10%; }
+      @media print { .no-print { display: none; } }
+    </style></head>
+    <body>
+    <div class="header">
+      <h1>Lista de Empaque</h1>
+      <div class="header-info">
+        <div><strong>Centro Escolar:</strong> ${esc.escuela_nombre}</div>
+        <div><strong>CDE:</strong> ${esc.codigo_cde}</div>
+        <div><strong>Fecha:</strong> ${fecha}</div>
+      </div>
+      <div style="font-size:10pt;margin-top:4px">
+        Total: <strong>${alumnos.length}</strong> alumnos
+      </div>
+    </div>
+    
+    ${contenido}
+    
+    <div class="footer">
+      <div class="firma">Armado por</div>
+      <div class="firma">Revisado por</div>
+    </div>
+    
+    <div class="no-print" style="margin-top:20px;text-align:center">
+      <button onclick="window.print()" style="padding:10px 20px;font-size:14pt">🖨 Imprimir</button>
+      <button onclick="window.close()" style="padding:10px 20px;font-size:14pt">✕ Cerrar</button>
+    </div>
+    </body></html>
+  `;
+}
+
+async function imprimirHojaEntrega(escuelaId) {
+  try {
+    const esc = registroCache.escuelas.find(e => e.escuela_id === escuelaId);
+    if (!esc) return;
+    
+    // Resumen por talla pedido vs entregado
+    const pedidos = await supaFetch('pedido', 'GET', null, 
+      `?escuela_id=eq.${escuelaId}&order=nivel,cod_prenda,talla_key&limit=500`);
+    
+    if (pedidos.length === 0) { alert('Sin pedidos cargados para esta escuela'); return; }
+    
+    abrirVentanaImpresion(generarHojaEntrega(esc, pedidos));
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function generarHojaEntrega(esc, pedidos) {
+  const fecha = new Date().toLocaleDateString('es-SV');
+  
+  // Agrupar por nivel y prenda
+  const grupos = {};
+  for (const p of pedidos) {
+    const k = `${p.nivel} · ${p.nombre_prenda || p.cod_prenda}`;
+    if (!grupos[k]) grupos[k] = [];
+    grupos[k].push(p);
+  }
+  
+  const totalSol = pedidos.reduce((s,p) => s + p.cantidad_solicitada, 0);
+  const totalEnt = pedidos.reduce((s,p) => s + (p.cantidad_entregada || 0), 0);
+  
+  let contenido = '';
+  for (const [grupo, lista] of Object.entries(grupos)) {
+    const sol = lista.reduce((s,p) => s + p.cantidad_solicitada, 0);
+    const ent = lista.reduce((s,p) => s + (p.cantidad_entregada || 0), 0);
+    
+    contenido += `
+      <div class="grupo">
+        <div class="grupo-header">
+          ${grupo} <span style="float:right">${ent}/${sol}</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Talla</th>
+              <th>Pedido</th>
+              <th>Entregado</th>
+              <th>Esta entrega</th>
+              <th>Recibe (firma)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lista.map(p => `
+              <tr>
+                <td class="talla">${p.talla_key}</td>
+                <td class="num">${p.cantidad_solicitada}</td>
+                <td class="num">${p.cantidad_entregada || 0}</td>
+                <td class="num"></td>
+                <td></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+  
+  return `
+    <!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Hoja de Entrega - ${esc.escuela_nombre}</title>
+    <style>
+      @page { size: A4; margin: 10mm; }
+      body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; margin: 0; }
+      .header { border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px; }
+      .header h1 { font-size: 14pt; margin: 0; }
+      .header-info { display: flex; justify-content: space-between; margin-top: 4px; font-size: 9pt; }
+      .resumen { background: #F5F5F5; padding: 6px; margin: 8px 0; border: 1px solid #000; }
+      .grupo { margin-bottom: 10px; page-break-inside: avoid; }
+      .grupo-header { background: #EEE; padding: 4px 8px; font-weight: bold; border: 1px solid #000; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #000; padding: 3px 6px; }
+      th { background: #DDD; font-size: 9pt; }
+      td.talla { font-family: monospace; font-weight: bold; }
+      td.num { text-align: center; }
+      .footer { margin-top: 30px; page-break-inside: avoid; }
+      .firma { border-top: 1px solid #000; padding-top: 4px; width: 30%; display: inline-block; text-align: center; margin: 0 10%; }
+      @media print { .no-print { display: none; } }
+    </style></head>
+    <body>
+    <div class="header">
+      <h1>Hoja de Entrega</h1>
+      <div class="header-info">
+        <div><strong>Centro Escolar:</strong> ${esc.escuela_nombre}</div>
+        <div><strong>CDE:</strong> ${esc.codigo_cde}</div>
+        <div><strong>Fecha:</strong> ${fecha}</div>
+      </div>
+      <div class="header-info">
+        <div><strong>Director:</strong> ${esc.director || '____________________'}</div>
+        <div><strong>Contrato:</strong> ME-03/${(new Date()).getFullYear()}</div>
+      </div>
+    </div>
+    
+    <div class="resumen">
+      <strong>Resumen general:</strong>
+      Piezas contratadas: <strong>${totalSol}</strong> · 
+      Entregadas antes: <strong>${totalEnt}</strong> · 
+      Pendientes: <strong>${totalSol - totalEnt}</strong>
+    </div>
+    
+    ${contenido}
+    
+    <div class="footer">
+      <div class="firma">Entrega (Proveedor)</div>
+      <div class="firma">Recibe (Director)</div>
+      <div class="firma">Sello Centro Escolar</div>
+    </div>
+    
+    <div class="no-print" style="margin-top:20px;text-align:center">
+      <button onclick="window.print()" style="padding:10px 20px;font-size:14pt">🖨 Imprimir</button>
+      <button onclick="window.close()" style="padding:10px 20px;font-size:14pt">✕ Cerrar</button>
+    </div>
+    </body></html>
+  `;
+}
+
+function abrirVentanaImpresion(html) {
+  const win = window.open('', '_blank', 'width=900,height=700');
+  if (!win) { alert('Tu navegador bloqueó la ventana. Permití popups y reintentá.'); return; }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+}
+
+// Menú de reportes para la escuela actual
+function abrirMenuReportes(escuelaId) {
+  const esc = registroCache.escuelas.find(e => e.escuela_id === escuelaId);
+  if (!esc) return;
+  
+  const modal = document.getElementById('reportes-modal');
+  if (!modal) return;
+  
+  document.getElementById('rep-escuela-nombre').textContent = esc.escuela_nombre;
+  
+  // Obtener grados únicos de la escuela para el selector
+  supaFetch('alumno', 'GET', null, 
+    `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&select=grado&limit=5000`)
+    .then(alumnos => {
+      const grados = [...new Set(alumnos.map(a => a.grado).filter(Boolean))].sort();
+      const sel = document.getElementById('rep-grado-select');
+      sel.innerHTML = '<option value="">— (hoja en blanco) —</option>' + 
+        grados.map(g => `<option value="${g}">${g}</option>`).join('');
+    }).catch(() => {});
+  
+  modal.dataset.escuelaId = escuelaId;
+  modal.style.display = 'flex';
+}
+
+function cerrarMenuReportes() {
+  const modal = document.getElementById('reportes-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function ejecutarReporte(tipo) {
+  const modal = document.getElementById('reportes-modal');
+  const escuelaId = modal.dataset.escuelaId;
+  if (!escuelaId) return;
+  
+  if (tipo === 'tallaje') {
+    const grado = document.getElementById('rep-grado-select').value;
+    imprimirHojaTallaje(escuelaId, grado);
+  } else if (tipo === 'empaque') {
+    imprimirListaEmpaque(escuelaId);
+  } else if (tipo === 'entrega') {
+    imprimirHojaEntrega(escuelaId);
+  }
+  cerrarMenuReportes();
+}
+
+// +++++++++++++++++++ matcher.js +++++++++++++++++++
+// ══════════════════════════════════════════════════════════════════════
+// MATCHER: SUGERENCIAS DE EMPAQUE (v27)
+// Cuando hay stock de una talla, sugiere qué alumnos esperan esa talla
+// ══════════════════════════════════════════════════════════════════════
+
+let matcherCache = {
+  sugerencias: [],
+  cargando: false,
+};
+
+async function cargarSugerenciasEmpaque(escuelaId) {
+  const cont = document.getElementById('sugerencias-empaque-area');
+  if (!cont) return;
+  cont.innerHTML = '<div class="text-muted" style="padding:10px">Analizando stock vs alumnos...</div>';
+  
+  try {
+    const [stock, alumnosEscuela] = await Promise.all([
+      supaFetch('vw_bodega_stock', 'GET', null, '?limit=2000'),
+      supaFetch('alumno', 'GET', null, 
+        `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&activo=eq.true&limit=2000`),
+    ]);
+    
+    // Indexar stock disponible por talla_key
+    const stockPorTalla = {};
+    for (const s of stock) {
+      stockPorTalla[s.talla_key] = s.stock_disponible || 0;
+    }
+    
+    // Para cada alumno con estado_top o _bottom pendiente, ver si hay stock
+    const sugerencias = [];
+    const stockUsadoSimulado = {...stockPorTalla};
+    
+    for (const a of alumnosEscuela) {
+      const necesidadT = a.estado_top === 'pendiente' && a.talla_top_key;
+      const necesidadB = a.estado_bottom === 'pendiente' && a.talla_bottom_key;
+      
+      const stockT = necesidadT ? (stockUsadoSimulado[a.talla_top_key] || 0) : 0;
+      const stockB = necesidadB ? (stockUsadoSimulado[a.talla_bottom_key] || 0) : 0;
+      
+      const puedeT = stockT > 0;
+      const puedeB = stockB > 0;
+      
+      if ((necesidadT && puedeT) || (necesidadB && puedeB)) {
+        sugerencias.push({
+          alumno: a,
+          puedeTop: puedeT && necesidadT,
+          puedeBottom: puedeB && necesidadB,
+          completo: (puedeT || !necesidadT) && (puedeB || !necesidadB),
+        });
+        // Reservar el stock simuladamente
+        if (puedeT && necesidadT) stockUsadoSimulado[a.talla_top_key]--;
+        if (puedeB && necesidadB) stockUsadoSimulado[a.talla_bottom_key]--;
+      }
+    }
+    
+    matcherCache.sugerencias = sugerencias;
+    renderSugerenciasEmpaque();
+  } catch(e) {
+    cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+  }
+}
+
+function renderSugerenciasEmpaque() {
+  const cont = document.getElementById('sugerencias-empaque-area');
+  if (!cont) return;
+  
+  const sug = matcherCache.sugerencias;
+  if (sug.length === 0) {
+    cont.innerHTML = `
+      <div class="alert alert-info">
+        No hay alumnos que se puedan empacar con el stock actual. Esto puede ser porque: 
+        ① no hay alumnos pendientes, ② no hay stock de las tallas que necesitan, ③ los pendientes ya fueron empacados.
+      </div>
+    `;
+    return;
+  }
+  
+  const completos = sug.filter(s => s.completo).length;
+  const parciales = sug.length - completos;
+  
+  cont.innerHTML = `
+    <div class="alert alert-info" style="font-size:12px;margin-bottom:10px">
+      <strong>${sug.length}</strong> alumnos podrían empacarse con el stock actual · 
+      <strong style="color:var(--verde)">${completos}</strong> completos · 
+      <strong style="color:var(--naranja)">${parciales}</strong> parciales
+    </div>
+    
+    ${sug.length > 1 ? `
+      <div style="margin-bottom:10px;text-align:right">
+        <button class="btn btn-success btn-sm" onclick="empacarTodosSugeridos()" ${completos === 0 ? 'disabled' : ''}>
+          ✓ Empacar ${completos} completos
+        </button>
+      </div>
+    ` : ''}
+    
+    <div class="card" style="padding:0;overflow:hidden">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:#F5F7FA">
+            <th style="padding:6px 8px;text-align:left">Alumno</th>
+            <th style="padding:6px 8px;text-align:center">Top</th>
+            <th style="padding:6px 8px;text-align:center">Bottom</th>
+            <th style="padding:6px 8px;text-align:center">Estado</th>
+            <th style="padding:6px 8px;text-align:center">Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sug.map((s, i) => {
+            const a = s.alumno;
+            const bg = s.completo ? '#DCF5E0' : '#FFF4D6';
+            const estadoIcon = s.completo ? '✅✅' : (s.puedeTop ? '✅⏳' : '⏳✅');
+            return `
+              <tr style="border-top:1px solid #EEE;background:${bg}">
+                <td style="padding:6px 8px">
+                  <div style="font-weight:600">${a.nombre}</div>
+                  <div style="font-size:10px;color:#666">${a.grado || '-'}</div>
+                </td>
+                <td style="padding:6px 8px;text-align:center">
+                  <div style="font-family:monospace;font-weight:${s.puedeTop?'700':'400'};color:${s.puedeTop?'var(--azul)':'#888'}">${a.talla_top_key || '-'}</div>
+                  ${s.puedeTop ? '<div style="font-size:10px;color:var(--verde)">✓ disponible</div>' : ''}
+                </td>
+                <td style="padding:6px 8px;text-align:center">
+                  <div style="font-family:monospace;font-weight:${s.puedeBottom?'700':'400'};color:${s.puedeBottom?'var(--azul)':'#888'}">${a.talla_bottom_key || '-'}</div>
+                  ${s.puedeBottom ? '<div style="font-size:10px;color:var(--verde)">✓ disponible</div>' : ''}
+                </td>
+                <td style="padding:6px 8px;text-align:center;font-size:14px">${estadoIcon}</td>
+                <td style="padding:6px 8px;text-align:center">
+                  <button class="btn-mini btn-mini-success" onclick="empacarSugerencia(${i})">📦 Empacar</button>
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function empacarSugerencia(idx) {
+  const sug = matcherCache.sugerencias[idx];
+  if (!sug) return;
+  const a = sug.alumno;
+  
+  const codMap = {
+    'CAMISA':'C','BLUSA':'B','CAMISA_CELESTE':'CC','PANTALON':'P','PANTALON_BEIGE':'PB',
+    'FALDA':'F','FALDA_BEIGE':'FB','FALDA_C.E':'FCE','SHORT':'S'
+  };
+  
+  try {
+    const now = new Date().toISOString();
+    const patch = { actualizado_en: now };
+    const movs = [];
+    
+    if (sug.puedeTop && a.prenda_top) {
+      patch.estado_top = 'empacado';
+      patch.empacado_top_en = now;
+      movs.push({
+        tipo: 'SALIDA_EMPAQUE',
+        cod_prenda: codMap[a.prenda_top] || a.prenda_top.slice(0,3),
+        nombre_prenda: a.prenda_top,
+        talla_key: a.talla_top_key,
+        cantidad: 1,
+        alumno_id: a.id,
+        escuela_id: a.escuela_id,
+        observaciones: `Empacado para ${a.nombre}`
+      });
+    }
+    if (sug.puedeBottom && a.prenda_bottom) {
+      patch.estado_bottom = 'empacado';
+      patch.empacado_bottom_en = now;
+      movs.push({
+        tipo: 'SALIDA_EMPAQUE',
+        cod_prenda: codMap[a.prenda_bottom] || a.prenda_bottom.slice(0,3),
+        nombre_prenda: a.prenda_bottom,
+        talla_key: a.talla_bottom_key,
+        cantidad: 1,
+        alumno_id: a.id,
+        escuela_id: a.escuela_id,
+        observaciones: `Empacado para ${a.nombre}`
+      });
+    }
+    
+    await supaUpdate('alumno', a.id, patch);
+    for (const m of movs) {
+      await supaFetch('bodega_movimiento', 'POST', m);
+    }
+    
+    // Refrescar
+    await cargarSugerenciasEmpaque(a.escuela_id);
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function empacarTodosSugeridos() {
+  const completos = matcherCache.sugerencias.filter(s => s.completo);
+  if (completos.length === 0) return;
+  
+  if (!confirm(`¿Empacar ${completos.length} alumnos completos automáticamente?\n\nEsto descontará el stock y los marcará como empacados.`)) return;
+  
+  let exitosos = 0;
+  for (let i = 0; i < matcherCache.sugerencias.length; i++) {
+    if (matcherCache.sugerencias[i].completo) {
+      try {
+        await empacarSugerencia(i);
+        exitosos++;
+      } catch(e) { /* sigue con el siguiente */ }
+    }
+  }
+  alert(`✓ ${exitosos} alumnos empacados`);
+}
+
+// +++++++++++++++++++ alumnos_global.js +++++++++++++++++++
+// ══════════════════════════════════════════════════════════════════════
+// ALUMNOS GLOBAL + ETIQUETAS (v28)
+// Vista con búsqueda/filtros + imprimir etiquetas en filas de 1cm
+// ══════════════════════════════════════════════════════════════════════
+
+let alumnosGlobalCache = {
+  alumnos: [],
+  escuelas: {},
+  busqueda: '',
+  filtroEscuela: '',
+  filtroNivel: '',
+  filtroTemporada: '',
+  filtroEstado: '',   // 'pendiente'|'parcial'|'completo'|'entregado'|'sin_tallas'
+  cargado: false,
+};
+
+async function initAlumnosGlobal() {
+  const cont = document.getElementById('alumnos-global-contenido');
+  if (!cont) return;
+  cont.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando alumnos...</div>';
+  
+  try {
+    const [escuelas, alumnos] = await Promise.all([
+      supaFetch('escuela', 'GET', null, '?limit=500'),
+      // traer TODOS incluso los sin tallas
+      supaFetch('alumno', 'GET', null, '?activo=eq.true&order=nombre&limit=10000'),
+    ]);
+    
+    const escMap = {};
+    for (const e of escuelas) escMap[e.id] = e;
+    alumnosGlobalCache.escuelas = escMap;
+    alumnosGlobalCache.alumnos = alumnos;
+    alumnosGlobalCache.cargado = true;
+    
+    // Asegurar que tenemos la lista de temporadas
+    if (!registroCache.temporadas || registroCache.temporadas.length === 0) {
+      try {
+        registroCache.temporadas = await supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.desc&limit=20');
+      } catch(e) { registroCache.temporadas = []; }
+    }
+    
+    renderAlumnosGlobal();
+  } catch(e) {
+    cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+  }
+}
+
+function alumnoSinTallas(a) {
+  return !a.talla_top_key && !a.talla_bottom_key;
+}
+
+function renderAlumnosGlobal() {
+  const cont = document.getElementById('alumnos-global-contenido');
+  if (!cont) return;
+  
+  const c = alumnosGlobalCache;
+  let lista = c.alumnos;
+  
+  // Filtros
+  if (c.busqueda) {
+    const q = c.busqueda.toLowerCase().trim();
+    lista = lista.filter(a => (a.nombre||'').toLowerCase().includes(q));
+  }
+  if (c.filtroEscuela) lista = lista.filter(a => a.escuela_id === c.filtroEscuela);
+  if (c.filtroNivel) lista = lista.filter(a => a.nivel === c.filtroNivel);
+  if (c.filtroTemporada) lista = lista.filter(a => a.temporada_id === c.filtroTemporada);
+  if (c.filtroEstado) {
+    lista = lista.filter(a => {
+      if (c.filtroEstado === 'sin_tallas') return alumnoSinTallas(a);
+      const t = a.estado_top, b = a.estado_bottom;
+      if (c.filtroEstado === 'pendiente') return t==='pendiente' && b==='pendiente' && !alumnoSinTallas(a);
+      if (c.filtroEstado === 'parcial') 
+        return (t==='empacado' && b!=='empacado') || (b==='empacado' && t!=='empacado');
+      if (c.filtroEstado === 'completo') return t==='empacado' && b==='empacado';
+      if (c.filtroEstado === 'entregado') return t==='entregado' && b==='entregado';
+      return true;
+    });
+  }
+  
+  // Opciones
+  const escuelasUnicas = {};
+  for (const a of c.alumnos) {
+    if (a.escuela_id && c.escuelas[a.escuela_id]) {
+      escuelasUnicas[a.escuela_id] = c.escuelas[a.escuela_id];
+    }
+  }
+  const escuelasOpts = Object.values(escuelasUnicas).sort((a,b) => a.nombre.localeCompare(b.nombre));
+  const temporadasOpts = registroCache.temporadas || [];
+  
+  // Stats
+  const totMostrando = lista.length;
+  const tot = c.alumnos.length;
+  const sinTallas = c.alumnos.filter(alumnoSinTallas).length;
+  const completos = c.alumnos.filter(a => a.estado_top==='empacado' && a.estado_bottom==='empacado').length;
+  
+  const header = `
+    <div class="card" style="padding:12px;margin-bottom:10px">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin-bottom:10px">
+        <div>Total: <strong>${tot.toLocaleString()}</strong></div>
+        <div style="color:#c44">Sin tallas: <strong>${sinTallas}</strong></div>
+        <div style="color:var(--verde)">Completos: <strong>${completos}</strong></div>
+        <div style="color:#888">Mostrando: <strong>${totMostrando.toLocaleString()}</strong></div>
+      </div>
+      
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px">
+        <input type="text" placeholder="🔍 Buscar nombre..." value="${c.busqueda}"
+          oninput="alumnosGlobalCache.busqueda = this.value; renderAlumnosGlobal()"
+          style="padding:6px 10px;border:1px solid var(--borde);border-radius:4px">
+        
+        <select onchange="alumnosGlobalCache.filtroEscuela = this.value; renderAlumnosGlobal()" style="padding:6px">
+          <option value="">Todas escuelas</option>
+          ${escuelasOpts.map(e => `<option value="${e.id}" ${e.id===c.filtroEscuela?'selected':''}>${e.nombre}</option>`).join('')}
+        </select>
+        
+        <select onchange="alumnosGlobalCache.filtroTemporada = this.value; renderAlumnosGlobal()" style="padding:6px">
+          <option value="">Toda temporada</option>
+          ${temporadasOpts.map(t => `<option value="${t.id}" ${t.id===c.filtroTemporada?'selected':''}>${t.codigo}</option>`).join('')}
+        </select>
+        
+        <select onchange="alumnosGlobalCache.filtroNivel = this.value; renderAlumnosGlobal()" style="padding:6px">
+          <option value="">Todo nivel</option>
+          <option value="PARV" ${c.filtroNivel==='PARV'?'selected':''}>PARV</option>
+          <option value="BASICA" ${c.filtroNivel==='BASICA'?'selected':''}>BASICA</option>
+          <option value="BACH" ${c.filtroNivel==='BACH'?'selected':''}>BACH</option>
+          <option value="OTRO" ${c.filtroNivel==='OTRO'?'selected':''}>OTRO</option>
+        </select>
+        
+        <select onchange="alumnosGlobalCache.filtroEstado = this.value; renderAlumnosGlobal()" style="padding:6px">
+          <option value="">Todo estado</option>
+          <option value="sin_tallas" ${c.filtroEstado==='sin_tallas'?'selected':''}>⚠ Sin tallas</option>
+          <option value="pendiente" ${c.filtroEstado==='pendiente'?'selected':''}>❌❌ Pendiente</option>
+          <option value="parcial" ${c.filtroEstado==='parcial'?'selected':''}>✅❌ Parcial</option>
+          <option value="completo" ${c.filtroEstado==='completo'?'selected':''}>✅✅ Completo</option>
+          <option value="entregado" ${c.filtroEstado==='entregado'?'selected':''}>🚚 Entregado</option>
+        </select>
+      </div>
+      
+      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="abrirModalEtiquetas()">🏷 Imprimir etiquetas</button>
+        <button class="btn btn-ghost btn-sm" onclick="initAlumnosGlobal()">🔄 Refrescar</button>
+        ${(c.busqueda || c.filtroEscuela || c.filtroNivel || c.filtroTemporada || c.filtroEstado) ? 
+          `<button class="btn btn-ghost btn-sm" onclick="limpiarFiltros()">✗ Limpiar filtros</button>` : ''}
+      </div>
+    </div>
+  `;
+  
+  if (lista.length === 0) {
+    cont.innerHTML = header + '<div class="alert alert-info">Sin resultados.</div>';
+    return;
+  }
+  
+  // Tabla
+  const visible = lista.slice(0, 500); // cap
+  const hayMas = lista.length > 500;
+  
+  const iconEstado = (e) => e === 'empacado' ? '✅' : (e === 'entregado' ? '🚚' : (e === 'reservado' ? '⏳' : '⬜'));
+  
+  const filas = visible.map(a => {
+    const esc = c.escuelas[a.escuela_id];
+    const sinTallas = alumnoSinTallas(a);
+    const bg = sinTallas ? '#FFF4F0' : 'white';
+    return `
+      <tr style="border-top:1px solid #EEE;background:${bg}">
+        <td style="padding:4px 8px;font-weight:600">${a.nombre}</td>
+        <td style="padding:4px 8px;font-size:11px;color:#666">${esc ? esc.nombre : '-'}</td>
+        <td style="padding:4px 8px;font-size:11px">${a.grado || '-'}</td>
+        <td style="padding:4px 8px;text-align:center">${a.sexo==='F'?'♀':(a.sexo==='M'?'♂':'-')}</td>
+        <td style="padding:4px 8px;text-align:center;font-family:monospace;color:${a.talla_top_key?'var(--azul)':'#c44'}">${a.talla_top_key || '⚠'}</td>
+        <td style="padding:4px 8px;text-align:center;font-family:monospace;color:${a.talla_bottom_key?'var(--azul)':'#c44'}">${a.talla_bottom_key || '⚠'}</td>
+        <td style="padding:4px 8px;text-align:center">${iconEstado(a.estado_top)}${iconEstado(a.estado_bottom)}</td>
+        <td style="padding:4px 8px;text-align:center">
+          <button class="btn-mini" onclick="editarAlumnoGlobal('${a.id}')">✏</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+  
+  cont.innerHTML = header + `
+    <div class="card" style="padding:0;overflow:auto;max-height:70vh">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead style="position:sticky;top:0;background:#F5F7FA;z-index:1">
+          <tr>
+            <th style="padding:6px 8px;text-align:left">Nombre</th>
+            <th style="padding:6px 8px;text-align:left">Escuela</th>
+            <th style="padding:6px 8px;text-align:left">Grado</th>
+            <th style="padding:6px 8px">Sx</th>
+            <th style="padding:6px 8px">Top</th>
+            <th style="padding:6px 8px">Bottom</th>
+            <th style="padding:6px 8px">Estado</th>
+            <th style="padding:6px 8px"></th>
+          </tr>
+        </thead>
+        <tbody>${filas}</tbody>
+      </table>
+      ${hayMas ? `<div style="padding:10px;text-align:center;color:#888;font-size:12px">... ${lista.length-500} alumnos más. Usá filtros para reducir.</div>` : ''}
+    </div>
+  `;
+}
+
+function limpiarFiltros() {
+  alumnosGlobalCache.busqueda = '';
+  alumnosGlobalCache.filtroEscuela = '';
+  alumnosGlobalCache.filtroNivel = '';
+  alumnosGlobalCache.filtroTemporada = '';
+  alumnosGlobalCache.filtroEstado = '';
+  renderAlumnosGlobal();
+}
+
+// Editar alumno desde vista global
+async function editarAlumnoGlobal(alumnoId) {
+  try {
+    const res = await supaFetch('alumno', 'GET', null, `?id=eq.${alumnoId}&limit=1`);
+    if (!res || res.length === 0) return;
+    const a = res[0];
+    
+    // Switchear al tab Registro, abrir escuela, sub-tab Tallaje, editar alumno
+    switchTab('registro');
+    setTimeout(async () => {
+      // Cambiar temporada si hace falta
+      if (a.temporada_id !== registroCache.temporadaActual) {
+        registroCache.temporadaActual = a.temporada_id;
+        renderRegistroHeader();
+        await cargarEscuelasTemporada();
+      }
+      // Abrir detalle de escuela
+      setTimeout(async () => {
+        await abrirDetalleEscuelaRegistro(a.escuela_id);
+        // Ir a Tallaje sub-tab
+        setTimeout(() => {
+          cambiarVistaDetalle('tallaje', document.querySelectorAll('#registro-detalle-subtabs .sub-tab')[0]);
+          setTimeout(() => editarAlumno(alumnoId), 200);
+        }, 200);
+      }, 200);
+    }, 100);
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ETIQUETAS IMPRIMIBLES
+// ═══════════════════════════════════════════════════════════════════
+
+function abrirModalEtiquetas() {
+  const modal = document.getElementById('etiquetas-modal');
+  if (!modal) return;
+  
+  // Pre-llenar con los filtros actuales
+  const c = alumnosGlobalCache;
+  const sel = document.getElementById('et-escuela');
+  if (sel) {
+    // Llenar con escuelas únicas
+    const escuelasUnicas = {};
+    for (const a of c.alumnos) {
+      if (a.escuela_id && c.escuelas[a.escuela_id]) {
+        escuelasUnicas[a.escuela_id] = c.escuelas[a.escuela_id];
+      }
+    }
+    const opts = Object.values(escuelasUnicas).sort((a,b) => a.nombre.localeCompare(b.nombre));
+    sel.innerHTML = '<option value="">— Todas las escuelas —</option>' + 
+      opts.map(e => `<option value="${e.id}" ${e.id===c.filtroEscuela?'selected':''}>${e.nombre}</option>`).join('');
+  }
+  
+  const selT = document.getElementById('et-temporada');
+  if (selT) {
+    selT.innerHTML = '<option value="">— Toda temporada —</option>' + 
+      (registroCache.temporadas || []).map(t => `<option value="${t.id}" ${t.id===c.filtroTemporada?'selected':''}>${t.codigo}</option>`).join('');
+  }
+  
+  modal.style.display = 'flex';
+}
+
+function cerrarModalEtiquetas() {
+  const modal = document.getElementById('etiquetas-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function generarEtiquetas() {
+  const escId = document.getElementById('et-escuela').value;
+  const tempId = document.getElementById('et-temporada').value;
+  const columnas = parseInt(document.getElementById('et-columnas').value) || 3;
+  const orden = document.getElementById('et-orden').value;
+  const soloEmpacados = document.getElementById('et-solo-empacados').checked;
+  const incluirObs = document.getElementById('et-incluir-obs').checked;
+  
+  const c = alumnosGlobalCache;
+  let lista = c.alumnos.filter(a => {
+    // SOLO con tallas (al menos top o bottom)
+    if (alumnoSinTallas(a)) return false;
+    if (escId && a.escuela_id !== escId) return false;
+    if (tempId && a.temporada_id !== tempId) return false;
+    if (soloEmpacados) {
+      const algEmp = a.estado_top === 'empacado' || a.estado_bottom === 'empacado';
+      if (!algEmp) return false;
+    }
+    return true;
+  });
+  
+  if (lista.length === 0) {
+    alert('No hay alumnos para etiquetar con esos filtros.\nAsegurate de que tengan tallas cargadas.');
+    return;
+  }
+  
+  // Ordenar
+  if (orden === 'grado_nombre') {
+    lista.sort((a,b) => {
+      const g = (a.grado||'').localeCompare(b.grado||'');
+      if (g !== 0) return g;
+      return (a.nombre||'').localeCompare(b.nombre||'');
+    });
+  } else if (orden === 'grado_talla') {
+    lista.sort((a,b) => {
+      const g = (a.grado||'').localeCompare(b.grado||'');
+      if (g !== 0) return g;
+      const tt = (a.talla_top_key||'').localeCompare(b.talla_top_key||'');
+      if (tt !== 0) return tt;
+      return (a.nombre||'').localeCompare(b.nombre||'');
+    });
+  } else if (orden === 'escuela_grado_nombre') {
+    lista.sort((a,b) => {
+      const ea = c.escuelas[a.escuela_id]?.nombre || '';
+      const eb = c.escuelas[b.escuela_id]?.nombre || '';
+      const e = ea.localeCompare(eb);
+      if (e !== 0) return e;
+      const g = (a.grado||'').localeCompare(b.grado||'');
+      if (g !== 0) return g;
+      return (a.nombre||'').localeCompare(b.nombre||'');
+    });
+  } else if (orden === 'talla') {
+    lista.sort((a,b) => {
+      const tt = (a.talla_top_key||'').localeCompare(b.talla_top_key||'');
+      if (tt !== 0) return tt;
+      return (a.nombre||'').localeCompare(b.nombre||'');
+    });
+  }
+  
+  // Info de escuela para header
+  const escName = escId ? (c.escuelas[escId]?.nombre || '') : '';
+  const tempCode = tempId ? ((registroCache.temporadas||[]).find(t => t.id === tempId)?.codigo || '') : '';
+  
+  const html = renderHojaEtiquetas(lista, columnas, incluirObs, c.escuelas, escName, tempCode);
+  cerrarModalEtiquetas();
+  abrirVentanaImpresion(html);
+}
+
+function renderHojaEtiquetas(alumnos, cols, incluirObs, escuelasMap, escNameHdr, tempCodeHdr) {
+  const fecha = new Date().toLocaleDateString('es-SV');
+  const total = alumnos.length;
+  
+  // Cada etiqueta: 1 fila del grid CSS
+  const etiquetas = alumnos.map((a, i) => {
+    const esc = escuelasMap[a.escuela_id];
+    const escCorto = esc ? (esc.nombre.length > 20 ? esc.nombre.slice(0, 20) + '…' : esc.nombre) : '';
+    const nombreCorto = a.nombre.length > 35 ? a.nombre.slice(0, 35) + '…' : a.nombre;
+    const obs = incluirObs && a.observaciones ? ` · ${a.observaciones.slice(0, 20)}` : '';
+    const top = a.talla_top_key || '—';
+    const bot = a.talla_bottom_key || '—';
+    
+    return `
+      <div class="etiqueta">
+        <span class="grado">${a.grado || '—'}</span>
+        <span class="nombre">${nombreCorto}</span>
+        <span class="tallas">${top}/${bot}</span>
+        ${obs ? `<span class="obs">${obs}</span>` : ''}
+      </div>
+    `;
+  }).join('');
+  
+  const tituloExtra = [escNameHdr, tempCodeHdr].filter(Boolean).join(' · ');
+  
+  return `
+    <!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Etiquetas${tituloExtra ? ' - ' + tituloExtra : ''}</title>
+    <style>
+      @page { size: A4; margin: 8mm; }
+      body { font-family: Arial, sans-serif; font-size: 9pt; color: #000; margin: 0; padding: 0; }
+      
+      .header {
+        text-align: center;
+        border-bottom: 1px solid #000;
+        padding-bottom: 3px;
+        margin-bottom: 4px;
+        font-size: 9pt;
+      }
+      .header strong { font-size: 11pt; }
+      .header .info { font-size: 8pt; color: #333; }
+      
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(${cols}, 1fr);
+        gap: 0;
+      }
+      
+      .etiqueta {
+        height: 10mm;
+        border: 0.5pt solid #000;
+        padding: 0 3mm;
+        display: flex;
+        align-items: center;
+        gap: 4mm;
+        overflow: hidden;
+        box-sizing: border-box;
+        page-break-inside: avoid;
+      }
+      
+      .etiqueta .grado {
+        font-weight: bold;
+        background: #000;
+        color: white;
+        padding: 1pt 4pt;
+        font-size: 8pt;
+        min-width: 20pt;
+        text-align: center;
+        border-radius: 2pt;
+        flex-shrink: 0;
+      }
+      
+      .etiqueta .nombre {
+        flex: 1;
+        font-size: 9pt;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      
+      .etiqueta .tallas {
+        font-family: monospace;
+        font-weight: bold;
+        font-size: 9pt;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      
+      .etiqueta .obs {
+        font-size: 7pt;
+        color: #444;
+        font-style: italic;
+      }
+      
+      @media print { .no-print { display: none; } }
+    </style></head>
+    <body>
+      <div class="header">
+        <div><strong>Etiquetas de empaque</strong></div>
+        <div class="info">
+          ${tituloExtra ? tituloExtra + ' · ' : ''}${total} etiqueta(s) · ${fecha}
+        </div>
+      </div>
+      
+      <div class="grid">
+        ${etiquetas}
+      </div>
+      
+      <div class="no-print" style="margin-top:20px;text-align:center">
+        <button onclick="window.print()" style="padding:10px 20px;font-size:14pt">🖨 Imprimir</button>
+        <button onclick="window.close()" style="padding:10px 20px;font-size:14pt">✕ Cerrar</button>
+      </div>
+    </body></html>
+  `;
+}
+
+// +++++++++++++++++++ historico.js +++++++++++++++++++
+// ══════════════════════════════════════════════════════════════════════
+// DASHBOARD HISTÓRICO (v29)
+// Comparativo entre temporadas: 2024 vs 2025 vs 2026...
+// ══════════════════════════════════════════════════════════════════════
+
+let historicoCache = {
+  temporadas: [],
+  datosPorTemporada: {}, // temp_id -> { alumnos, pedidos, escuelas }
+  cargando: false,
+};
+
+async function initHistorico() {
+  if (historicoCache.cargando) return;
+  historicoCache.cargando = true;
+  
+  const cont = document.getElementById('historico-contenido');
+  if (!cont) { historicoCache.cargando = false; return; }
+  cont.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando datos históricos...</div>';
+  
+  try {
+    // Cargar temporadas + sus resúmenes
+    const temporadas = await supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.asc&limit=20');
+    historicoCache.temporadas = temporadas;
+    
+    // Para cada temporada: total alumnos y distribución por nivel
+    await Promise.all(temporadas.map(async t => {
+      try {
+        const alumnos = await supaFetch('alumno', 'GET', null, 
+          `?temporada_id=eq.${t.id}&activo=eq.true&select=nivel,sexo,estado_top,estado_bottom,escuela_id&limit=50000`);
+        historicoCache.datosPorTemporada[t.id] = { alumnos };
+      } catch(e) {
+        historicoCache.datosPorTemporada[t.id] = { alumnos: [] };
+      }
+    }));
+    
+    historicoCache.cargando = false;
+    renderHistorico();
+  } catch(e) {
+    historicoCache.cargando = false;
+    cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+  }
+}
+
+function renderHistorico() {
+  const cont = document.getElementById('historico-contenido');
+  if (!cont) return;
+  
+  const temps = historicoCache.temporadas;
+  if (temps.length === 0) {
+    cont.innerHTML = '<div class="alert alert-info">No hay temporadas cargadas aún.</div>';
+    return;
+  }
+  
+  // Stats por temporada
+  const statsPorTemp = temps.map(t => {
+    const alumnos = historicoCache.datosPorTemporada[t.id]?.alumnos || [];
+    const escuelasUnicas = new Set(alumnos.map(a => a.escuela_id)).size;
+    const porNivel = { PARV: 0, BASICA: 0, BACH: 0, OTRO: 0 };
+    const porSexo = { F: 0, M: 0, NA: 0 };
+    let completos = 0, entregados = 0;
+    for (const a of alumnos) {
+      porNivel[a.nivel || 'OTRO'] = (porNivel[a.nivel || 'OTRO'] || 0) + 1;
+      porSexo[a.sexo || 'NA'] = (porSexo[a.sexo || 'NA'] || 0) + 1;
+      if (a.estado_top === 'empacado' && a.estado_bottom === 'empacado') completos++;
+      if (a.estado_top === 'entregado' && a.estado_bottom === 'entregado') entregados++;
+    }
+    return {
+      ...t,
+      num_alumnos_real: alumnos.length,
+      escuelas_con_alumnos: escuelasUnicas,
+      porNivel, porSexo, completos, entregados,
+    };
+  });
+  
+  const maxAlumnos = Math.max(1, ...statsPorTemp.map(s => s.num_alumnos_real));
+  const maxPiezas = Math.max(1, ...statsPorTemp.map(s => s.piezas_solicitadas || 0));
+  
+  // Tarjetas comparativas
+  const tarjetas = statsPorTemp.map(s => {
+    const color = s.estado === 'activa' ? 'var(--azul)' : (s.estado === 'cerrada' ? '#888' : '#f80');
+    const pctAlumnos = (s.num_alumnos_real / maxAlumnos) * 100;
+    const pctPiezas = ((s.piezas_solicitadas || 0) / maxPiezas) * 100;
+    
+    return `
+      <div class="card" style="padding:12px;border-top:4px solid ${color}">
+        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
+          <div>
+            <div style="font-size:22px;font-weight:700">${s.codigo}</div>
+            <div style="font-size:10px;color:#888;text-transform:uppercase">${s.estado}</div>
+          </div>
+          <div style="text-align:right;font-size:11px;color:#666">
+            <div>${s.escuelas_con_alumnos || s.num_escuelas || 0} escuelas</div>
+          </div>
+        </div>
+        
+        <div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+            <span>Alumnos</span>
+            <strong>${(s.num_alumnos_real||0).toLocaleString()}</strong>
+          </div>
+          <div style="background:#EEE;height:4px;border-radius:2px;overflow:hidden">
+            <div style="background:${color};height:100%;width:${pctAlumnos}%"></div>
+          </div>
+        </div>
+        
+        <div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+            <span>Piezas contratadas</span>
+            <strong>${(s.piezas_solicitadas||0).toLocaleString()}</strong>
+          </div>
+          <div style="background:#EEE;height:4px;border-radius:2px;overflow:hidden">
+            <div style="background:${color};height:100%;width:${pctPiezas}%"></div>
+          </div>
+        </div>
+        
+        <div style="border-top:1px solid var(--borde);padding-top:6px;margin-top:6px;font-size:11px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:2px">
+            <span>Por nivel:</span>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;font-size:10px">
+            ${s.porNivel.PARV > 0 ? `<span style="background:#FFE;padding:1px 6px;border-radius:3px">PARV ${s.porNivel.PARV}</span>` : ''}
+            ${s.porNivel.BASICA > 0 ? `<span style="background:#EEF;padding:1px 6px;border-radius:3px">BÁSICA ${s.porNivel.BASICA}</span>` : ''}
+            ${s.porNivel.BACH > 0 ? `<span style="background:#FEF;padding:1px 6px;border-radius:3px">BACH ${s.porNivel.BACH}</span>` : ''}
+          </div>
+        </div>
+        
+        <div style="border-top:1px solid var(--borde);padding-top:6px;margin-top:6px;font-size:11px">
+          <div style="display:flex;justify-content:space-between">
+            <span>Sexo:</span>
+            <span>♀ ${s.porSexo.F || 0} · ♂ ${s.porSexo.M || 0}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:2px;color:var(--verde)">
+            <span>Completos:</span>
+            <strong>${s.completos}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;color:var(--azul)">
+            <span>Entregados:</span>
+            <strong>${s.entregados}</strong>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  // Tabla comparativa resumida
+  const tablaComp = `
+    <div class="card" style="padding:0;overflow:auto;margin-top:12px">
+      <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">📊 Resumen comparativo</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:#FAFAFA">
+            <th style="padding:6px 8px;text-align:left">Temporada</th>
+            <th style="padding:6px 8px;text-align:right">Escuelas</th>
+            <th style="padding:6px 8px;text-align:right">Alumnos</th>
+            <th style="padding:6px 8px;text-align:right">Piezas</th>
+            <th style="padding:6px 8px;text-align:right">Entregadas</th>
+            <th style="padding:6px 8px;text-align:right">% avance</th>
+            <th style="padding:6px 8px;text-align:right">Completos</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${statsPorTemp.map(s => `
+            <tr style="border-top:1px solid #EEE">
+              <td style="padding:6px 8px">
+                <strong>${s.codigo}</strong>
+                <span style="font-size:10px;color:#888;margin-left:4px">${s.estado}</span>
+              </td>
+              <td style="padding:6px 8px;text-align:right">${s.escuelas_con_alumnos || s.num_escuelas || 0}</td>
+              <td style="padding:6px 8px;text-align:right">${(s.num_alumnos_real||0).toLocaleString()}</td>
+              <td style="padding:6px 8px;text-align:right">${(s.piezas_solicitadas||0).toLocaleString()}</td>
+              <td style="padding:6px 8px;text-align:right;color:var(--verde)">${(s.piezas_entregadas||0).toLocaleString()}</td>
+              <td style="padding:6px 8px;text-align:right">${s.porcentaje_avance || 0}%</td>
+              <td style="padding:6px 8px;text-align:right">${s.completos.toLocaleString()}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+  
+  // Comparativo entre temporadas (variación %)
+  let comparativo = '';
+  if (statsPorTemp.length >= 2) {
+    const pares = [];
+    for (let i = 1; i < statsPorTemp.length; i++) {
+      const prev = statsPorTemp[i-1];
+      const cur = statsPorTemp[i];
+      const deltaAlum = cur.num_alumnos_real - prev.num_alumnos_real;
+      const deltaPct = prev.num_alumnos_real > 0 ? Math.round(100 * deltaAlum / prev.num_alumnos_real) : 0;
+      const deltaPiezas = (cur.piezas_solicitadas||0) - (prev.piezas_solicitadas||0);
+      const deltaPctPiezas = (prev.piezas_solicitadas||0) > 0 ? Math.round(100 * deltaPiezas / prev.piezas_solicitadas) : 0;
+      pares.push({ prev, cur, deltaAlum, deltaPct, deltaPiezas, deltaPctPiezas });
+    }
+    
+    comparativo = `
+      <div class="card" style="padding:0;overflow:hidden;margin-top:12px">
+        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">📈 Variación entre temporadas</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="background:#FAFAFA">
+              <th style="padding:6px 8px;text-align:left">Comparación</th>
+              <th style="padding:6px 8px;text-align:right">Δ Alumnos</th>
+              <th style="padding:6px 8px;text-align:right">Δ %</th>
+              <th style="padding:6px 8px;text-align:right">Δ Piezas</th>
+              <th style="padding:6px 8px;text-align:right">Δ %</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${pares.map(p => `
+              <tr style="border-top:1px solid #EEE">
+                <td style="padding:6px 8px">${p.prev.codigo} → ${p.cur.codigo}</td>
+                <td style="padding:6px 8px;text-align:right;color:${p.deltaAlum>=0?'var(--verde)':'#c44'}">${p.deltaAlum>=0?'+':''}${p.deltaAlum.toLocaleString()}</td>
+                <td style="padding:6px 8px;text-align:right;color:${p.deltaPct>=0?'var(--verde)':'#c44'}">${p.deltaPct>=0?'+':''}${p.deltaPct}%</td>
+                <td style="padding:6px 8px;text-align:right;color:${p.deltaPiezas>=0?'var(--verde)':'#c44'}">${p.deltaPiezas>=0?'+':''}${p.deltaPiezas.toLocaleString()}</td>
+                <td style="padding:6px 8px;text-align:right;color:${p.deltaPctPiezas>=0?'var(--verde)':'#c44'}">${p.deltaPctPiezas>=0?'+':''}${p.deltaPctPiezas}%</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+  
+  cont.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">
+      ${tarjetas}
+    </div>
+    ${tablaComp}
+    ${comparativo}
+    <div style="text-align:center;margin-top:10px">
+      <button class="btn btn-ghost btn-sm" onclick="initHistorico()">🔄 Refrescar</button>
+    </div>
+  `;
+}
+
+// +++++++++++++++++++ exportar.js +++++++++++++++++++
+// ══════════════════════════════════════════════════════════════════════
+// EXPORTADOR (v30)
+// Exportar datos a CSV (Excel-compatible)
+// ══════════════════════════════════════════════════════════════════════
+
+function escapeCSVValue(v) {
+  if (v === null || v === undefined) return '';
+  let s = String(v);
+  // Si contiene coma, comilla o salto de linea, envolver en comillas
+  if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+    s = '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function arrayToCSV(rows, columns) {
+  // columns: [{key, label}]
+  const header = columns.map(c => escapeCSVValue(c.label)).join(',');
+  const data = rows.map(r => 
+    columns.map(c => escapeCSVValue(typeof c.get === 'function' ? c.get(r) : r[c.key])).join(',')
+  );
+  // BOM para UTF-8 en Excel
+  return '\uFEFF' + header + '\n' + data.join('\n');
+}
+
+function descargarArchivo(nombre, contenido, mime = 'text/csv;charset=utf-8') {
+  const blob = new Blob([contenido], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function fechaHoyISO() {
+  const d = new Date();
+  return d.toISOString().split('T')[0];
+}
+
+// ─── EXPORTAR ALUMNOS (replica de la hoja BASE del Excel original) ──
+async function exportarAlumnos(filtros = {}) {
+  try {
+    let query = '?activo=eq.true&order=nombre&limit=50000';
+    if (filtros.escuelaId) query += `&escuela_id=eq.${filtros.escuelaId}`;
+    if (filtros.temporadaId) query += `&temporada_id=eq.${filtros.temporadaId}`;
+    
+    const [alumnos, escuelas] = await Promise.all([
+      supaFetch('alumno', 'GET', null, query),
+      supaFetch('escuela', 'GET', null, '?limit=500'),
+    ]);
+    
+    const escMap = {};
+    for (const e of escuelas) escMap[e.id] = e;
+    
+    if (alumnos.length === 0) { alert('No hay alumnos para exportar con esos filtros'); return; }
+    
+    const cols = [
+      { key: 'estado_top_display', label: 'EstadoT', get: r => r.estado_top === 'empacado' || r.estado_top === 'entregado' ? 'OK' : (r.talla_top_key || '') },
+      { key: 'estado_bottom_display', label: 'EstadoP', get: r => r.estado_bottom === 'empacado' || r.estado_bottom === 'entregado' ? 'OK' : (r.talla_bottom_key || '') },
+      { key: 'sexo_flag', label: 'SexoFlag', get: r => r.sexo === 'F' ? '.' : '' },
+      { key: 'nombre', label: 'Nombre' },
+      { key: 'prenda_top', label: 'PRENDAT' },
+      { key: 'talla_top', label: 'TALLAT', get: r => extraerTallaNum(r.talla_top_key, r.prenda_top) },
+      { key: 'largo_top', label: 'LARGOT', get: r => '' },
+      { key: 'key_top', label: 'KEYT', get: r => r.talla_top_key || '' },
+      { key: 'prenda_bottom', label: 'PRENDAP' },
+      { key: 'talla_bottom', label: 'TALLAP', get: r => extraerTallaNum(r.talla_bottom_key, r.prenda_bottom) },
+      { key: 'largo_bottom', label: 'LargoP', get: r => extraerLargo(r.talla_bottom_key, r.prenda_bottom) },
+      { key: 'key_bottom', label: 'KEYP', get: r => r.talla_bottom_key || '' },
+      { key: 'grado', label: 'Grado' },
+      { key: 'centro', label: 'Centro', get: r => { const e = escMap[r.escuela_id]; return e ? (e.alias || e.nombre) : ''; } },
+      { key: 'codigo_cde', label: 'CDE', get: r => { const e = escMap[r.escuela_id]; return e ? e.codigo_cde : ''; } },
+      { key: 'nivel', label: 'NIVEL' },
+      { key: 'ciclo', label: 'CICLO' },
+      { key: 'grupo_prod', label: 'C.E', get: r => { const e = escMap[r.escuela_id]; return e ? (e.grupo_produccion || '') : ''; } },
+      { key: 'observaciones', label: 'Observaciones' },
+    ];
+    
+    const csv = arrayToCSV(alumnos, cols);
+    const nombre = `alumnos_${fechaHoyISO()}.csv`;
+    descargarArchivo(nombre, csv);
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// Extraer parte numérica de una KEY (ej: "C14" -> "14", "P1075" -> "10")
+function extraerTallaNum(key, prenda) {
+  if (!key) return '';
+  const codMap = {
+    'CAMISA':'C','BLUSA':'B','CAMISA_CELESTE':'CC',
+    'PANTALON':'P','PANTALON_BEIGE':'PB',
+    'FALDA':'F','FALDA_BEIGE':'FB','FALDA_C.E':'FCE','SHORT':'S',
+  };
+  const cod = codMap[prenda] || '';
+  let resto = cod ? key.slice(cod.length) : key.replace(/^[A-Z]+/, '');
+  // Para bottoms (pantalon/falda) con largo: la primera parte es talla, resto es largo
+  // Ej: P1075 -> talla 10, largo 75. Heurística: 4 dígitos = 2+2, 5 dígitos = 2+3 o 3+2
+  if (prenda === 'PANTALON' || prenda === 'PANTALON_BEIGE' || prenda === 'FALDA' || prenda === 'FALDA_BEIGE' || prenda === 'FALDA_C.E') {
+    if (resto.length >= 4) {
+      // Asumir talla 2 dígitos + largo resto
+      return resto.slice(0, 2);
+    }
+    if (resto.length === 3) {
+      // Ej: F635 -> talla 6, largo 35
+      return resto.slice(0, 1);
+    }
+  }
+  return resto;
+}
+
+function extraerLargo(key, prenda) {
+  if (!key) return '';
+  if (prenda !== 'PANTALON' && prenda !== 'PANTALON_BEIGE' && prenda !== 'FALDA' && prenda !== 'FALDA_BEIGE' && prenda !== 'FALDA_C.E') return '';
+  const codMap = {
+    'PANTALON':'P','PANTALON_BEIGE':'PB',
+    'FALDA':'F','FALDA_BEIGE':'FB','FALDA_C.E':'FCE',
+  };
+  const cod = codMap[prenda] || '';
+  const resto = cod ? key.slice(cod.length) : key;
+  if (resto.length >= 4) return resto.slice(2);
+  if (resto.length === 3) return resto.slice(1);
+  return '';
+}
+
+// ─── EXPORTAR PEDIDOS (por talla) ───────────────────────────────────
+async function exportarPedidos(filtros = {}) {
+  try {
+    let query = '?order=nivel,cod_prenda,talla_key&limit=5000';
+    if (filtros.escuelaId) query += `&escuela_id=eq.${filtros.escuelaId}`;
+    
+    const [pedidos, escuelas] = await Promise.all([
+      supaFetch('pedido', 'GET', null, query),
+      supaFetch('escuela', 'GET', null, '?limit=500'),
+    ]);
+    
+    const escMap = {};
+    for (const e of escuelas) escMap[e.id] = e;
+    
+    if (pedidos.length === 0) { alert('No hay pedidos para exportar'); return; }
+    
+    const cols = [
+      { key: 'escuela', label: 'Escuela', get: r => { const e = escMap[r.escuela_id]; return e ? e.nombre : ''; } },
+      { key: 'codigo_cde', label: 'CDE', get: r => { const e = escMap[r.escuela_id]; return e ? e.codigo_cde : ''; } },
+      { key: 'nivel', label: 'Nivel' },
+      { key: 'nombre_prenda', label: 'Prenda' },
+      { key: 'cod_prenda', label: 'CodPrenda' },
+      { key: 'talla_key', label: 'Talla' },
+      { key: 'cantidad_solicitada', label: 'Solicitada' },
+      { key: 'cantidad_entregada', label: 'Entregada' },
+      { key: 'pendiente', label: 'Pendiente', get: r => (r.cantidad_solicitada||0) - (r.cantidad_entregada||0) },
+      { key: 'uniforme', label: 'Uniforme' },
+      { key: 'fuente', label: 'Fuente' },
+    ];
+    
+    const csv = arrayToCSV(pedidos, cols);
+    descargarArchivo(`pedidos_${fechaHoyISO()}.csv`, csv);
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ─── EXPORTAR BODEGA STOCK ──────────────────────────────────────────
+async function exportarStockBodega() {
+  try {
+    const stock = await supaFetch('vw_bodega_stock', 'GET', null, '?order=nombre_prenda,talla_key&limit=5000');
+    if (stock.length === 0) { alert('No hay stock para exportar'); return; }
+    
+    const cols = [
+      { key: 'nombre_prenda', label: 'Prenda' },
+      { key: 'cod_prenda', label: 'Código' },
+      { key: 'talla_key', label: 'Talla' },
+      { key: 'total_entrado', label: 'Entrado' },
+      { key: 'total_salido', label: 'Salido' },
+      { key: 'reservado_empaque', label: 'Reservado' },
+      { key: 'stock_actual', label: 'Stock' },
+      { key: 'stock_disponible', label: 'Disponible' },
+    ];
+    
+    descargarArchivo(`bodega_stock_${fechaHoyISO()}.csv`, arrayToCSV(stock, cols));
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ─── EXPORTAR MOVIMIENTOS BODEGA ────────────────────────────────────
+async function exportarMovimientosBodega() {
+  try {
+    const movs = await supaFetch('bodega_movimiento', 'GET', null, '?order=creado_en.desc&limit=5000');
+    if (movs.length === 0) { alert('No hay movimientos para exportar'); return; }
+    
+    const cols = [
+      { key: 'fecha', label: 'Fecha' },
+      { key: 'tipo', label: 'Tipo' },
+      { key: 'nombre_prenda', label: 'Prenda' },
+      { key: 'talla_key', label: 'Talla' },
+      { key: 'cantidad', label: 'Cantidad' },
+      { key: 'usuario', label: 'Usuario' },
+      { key: 'observaciones', label: 'Observaciones' },
+      { key: 'creado_en', label: 'CreadoEn' },
+    ];
+    
+    descargarArchivo(`bodega_movimientos_${fechaHoyISO()}.csv`, arrayToCSV(movs, cols));
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ─── MODAL DE EXPORTACIONES (centralizado) ──────────────────────────
+function abrirModalExport() {
+  const modal = document.getElementById('export-modal');
+  if (!modal) return;
+  
+  // Llenar selectores con escuelas y temporadas actuales
+  const selEsc = document.getElementById('export-escuela');
+  const selTemp = document.getElementById('export-temporada');
+  
+  if (selEsc) {
+    const escs = Object.values(alumnosGlobalCache.escuelas || {}).sort((a,b) => a.nombre.localeCompare(b.nombre));
+    selEsc.innerHTML = '<option value="">— Todas las escuelas —</option>' + 
+      escs.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
+  }
+  if (selTemp) {
+    const temps = registroCache.temporadas || [];
+    selTemp.innerHTML = '<option value="">— Toda temporada —</option>' + 
+      temps.map(t => `<option value="${t.id}">${t.codigo}</option>`).join('');
+  }
+  
+  modal.style.display = 'flex';
+}
+
+function cerrarModalExport() {
+  const modal = document.getElementById('export-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function ejecutarExport(tipo) {
+  const escuelaId = document.getElementById('export-escuela')?.value || null;
+  const temporadaId = document.getElementById('export-temporada')?.value || null;
+  
+  if (tipo === 'alumnos') exportarAlumnos({ escuelaId, temporadaId });
+  else if (tipo === 'pedidos') exportarPedidos({ escuelaId });
+  else if (tipo === 'stock') exportarStockBodega();
+  else if (tipo === 'movimientos') exportarMovimientosBodega();
+  
+  cerrarModalExport();
+}
+
+// +++++++++++++++++++ grupos.js +++++++++++++++++++
+// ══════════════════════════════════════════════════════════════════════
+// GRUPOS DE TRABAJO (v31)
+// Sub-tab dentro de 🏭 Prod. Gestión de grupos + operarias + contribuciones.
+// ══════════════════════════════════════════════════════════════════════
+
+let gruposCache = {
+  grupos: [],
+  operarias: [],
+  tareas: [],
+  grupoSeleccionado: null,
+  vista: 'grupos', // 'grupos' | 'tareas' | 'productividad'
+};
+
+async function initGrupos() {
+  const cont = document.getElementById('grupos-contenido');
+  if (!cont) return;
+  cont.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando grupos...</div>';
+  
+  try {
+    const [grupos, operarias] = await Promise.all([
+      supaFetch('vw_grupo_con_operarias', 'GET', null, '?activo=eq.true&order=codigo&limit=100').catch(() => []),
+      supaFetch('operaria', 'GET', null, '?activo=eq.true&order=nombre&limit=100').catch(() => []),
+    ]);
+    
+    gruposCache.grupos = grupos;
+    gruposCache.operarias = operarias;
+    renderGruposHeader();
+    renderVistaGrupos();
+  } catch(e) {
+    cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+  }
+}
+
+function renderGruposHeader() {
+  const cont = document.getElementById('grupos-tabs');
+  if (!cont) return;
+  cont.innerHTML = `
+    <div class="sub-tabs">
+      <div class="sub-tab ${gruposCache.vista==='grupos'?'active':''}" onclick="cambiarVistaGrupos('grupos')">👥 Grupos</div>
+      <div class="sub-tab ${gruposCache.vista==='tareas'?'active':''}" onclick="cambiarVistaGrupos('tareas')">📝 Tareas activas</div>
+      <div class="sub-tab ${gruposCache.vista==='productividad'?'active':''}" onclick="cambiarVistaGrupos('productividad')">📊 Productividad</div>
+    </div>
+  `;
+}
+
+function cambiarVistaGrupos(v) {
+  gruposCache.vista = v;
+  renderGruposHeader();
+  if (v === 'grupos') renderVistaGrupos();
+  else if (v === 'tareas') cargarVistaTareas();
+  else if (v === 'productividad') cargarVistaProductividad();
+}
+
+function renderVistaGrupos() {
+  const cont = document.getElementById('grupos-contenido');
+  if (!cont) return;
+  
+  const grupos = gruposCache.grupos;
+  
+  cont.innerHTML = `
+    <div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" onclick="abrirNuevoGrupo('permanente')">+ Grupo permanente</button>
+      <button class="btn btn-ghost btn-sm" onclick="abrirNuevoGrupo('adhoc')">+ Grupo ad-hoc</button>
+      <button class="btn btn-ghost btn-sm" onclick="initGrupos()">🔄</button>
+    </div>
+    
+    ${grupos.length === 0 ? `
+      <div class="alert alert-info">
+        No hay grupos aún. Creá el primero con los botones de arriba.<br>
+        <strong>Permanentes:</strong> equipos fijos (Costura, Acabado).<br>
+        <strong>Ad-hoc:</strong> para una tarea específica (se desarma después).
+      </div>
+    ` : grupos.map(g => {
+      const tipoColor = g.tipo === 'permanente' ? 'var(--azul)' : '#f80';
+      const tipoLabel = g.tipo === 'permanente' ? '🔒 Permanente' : '⚡ Ad-hoc';
+      return `
+        <div class="card" style="padding:12px;margin-bottom:8px;border-left:4px solid ${tipoColor}">
+          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:6px">
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:15px">${g.codigo} · ${g.nombre}</div>
+              <div style="font-size:10px;color:${tipoColor};font-weight:600">${tipoLabel}</div>
+            </div>
+            <div style="display:flex;gap:4px">
+              <button class="btn-mini" onclick="abrirMiembros('${g.grupo_id}')">👥 Miembros</button>
+              <button class="btn-mini" onclick="abrirEditarGrupo('${g.grupo_id}')">✏</button>
+              <button class="btn-mini btn-mini-danger" onclick="archivarGrupo('${g.grupo_id}', '${g.nombre}')">✗</button>
+            </div>
+          </div>
+          <div style="font-size:12px;color:#666">
+            <strong>${g.num_operarias || 0}</strong> operaria(s): 
+            <span style="color:#333">${g.operarias_nombres || '(sin miembros)'}</span>
+          </div>
+        </div>
+      `;
+    }).join('')}
+  `;
+}
+
+// ─── Nuevo grupo ───────────────────────────────────────────────────
+function abrirNuevoGrupo(tipo) {
+  const modal = document.getElementById('grupo-modal');
+  if (!modal) return;
+  document.getElementById('grp-id').value = '';
+  document.getElementById('grp-codigo').value = '';
+  document.getElementById('grp-nombre').value = '';
+  document.getElementById('grp-tipo').value = tipo;
+  document.getElementById('grp-tipo-label').textContent = tipo === 'permanente' ? '🔒 Grupo permanente' : '⚡ Grupo ad-hoc';
+  document.getElementById('grp-modal-title').textContent = '+ Nuevo grupo';
+  modal.style.display = 'flex';
+}
+
+async function abrirEditarGrupo(grupoId) {
+  try {
+    const res = await supaFetch('grupo_trabajo', 'GET', null, `?id=eq.${grupoId}&limit=1`);
+    if (!res || res.length === 0) return;
+    const g = res[0];
+    document.getElementById('grp-id').value = g.id;
+    document.getElementById('grp-codigo').value = g.codigo;
+    document.getElementById('grp-nombre').value = g.nombre;
+    document.getElementById('grp-tipo').value = g.tipo;
+    document.getElementById('grp-tipo-label').textContent = g.tipo === 'permanente' ? '🔒 Grupo permanente' : '⚡ Grupo ad-hoc';
+    document.getElementById('grp-modal-title').textContent = '✏ Editar grupo';
+    document.getElementById('grupo-modal').style.display = 'flex';
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function cerrarGrupoModal() {
+  document.getElementById('grupo-modal').style.display = 'none';
+}
+
+async function guardarGrupo() {
+  const id = document.getElementById('grp-id').value;
+  const codigo = document.getElementById('grp-codigo').value.trim();
+  const nombre = document.getElementById('grp-nombre').value.trim();
+  const tipo = document.getElementById('grp-tipo').value;
+  
+  if (!codigo || !nombre) { alert('Código y nombre son obligatorios'); return; }
+  
+  try {
+    if (id) {
+      await supaUpdate('grupo_trabajo', id, { codigo, nombre, tipo });
+    } else {
+      await supaFetch('grupo_trabajo', 'POST', { codigo, nombre, tipo, activo: true });
+    }
+    cerrarGrupoModal();
+    await initGrupos();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function archivarGrupo(grupoId, nombre) {
+  if (!confirm(`¿Archivar el grupo "${nombre}"?\n\nNo se borra, solo se oculta. Las tareas pasadas quedan intactas.`)) return;
+  try {
+    await supaUpdate('grupo_trabajo', grupoId, { activo: false });
+    await initGrupos();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ─── Miembros del grupo ────────────────────────────────────────────
+async function abrirMiembros(grupoId) {
+  const modal = document.getElementById('miembros-modal');
+  if (!modal) return;
+  gruposCache.grupoSeleccionado = grupoId;
+  
+  const g = gruposCache.grupos.find(x => x.grupo_id === grupoId);
+  document.getElementById('miembros-titulo').textContent = g ? `${g.codigo} · ${g.nombre}` : '';
+  
+  try {
+    const [miembros, todasOperarias] = await Promise.all([
+      supaFetch('grupo_operaria', 'GET', null, `?grupo_id=eq.${grupoId}&activo=eq.true&limit=100`),
+      supaFetch('operaria', 'GET', null, '?activo=eq.true&order=nombre&limit=100'),
+    ]);
+    
+    const miembrosIds = new Set(miembros.map(m => m.operaria_id));
+    
+    document.getElementById('miembros-body').innerHTML = `
+      <div style="font-size:11px;color:#666;margin-bottom:8px">
+        Marcá quién está en este grupo. Una operaria puede estar en varios grupos.
+      </div>
+      <div style="max-height:400px;overflow:auto">
+        ${todasOperarias.map(o => `
+          <label style="display:flex;align-items:center;gap:8px;padding:6px;border-bottom:1px solid #EEE;cursor:pointer">
+            <input type="checkbox" value="${o.id}" ${miembrosIds.has(o.id)?'checked':''} onchange="toggleMiembro('${grupoId}','${o.id}',this.checked)">
+            <span style="font-weight:600">${o.nombre}</span>
+          </label>
+        `).join('')}
+      </div>
+    `;
+    modal.style.display = 'flex';
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function cerrarMiembros() {
+  document.getElementById('miembros-modal').style.display = 'none';
+  initGrupos();
+}
+
+async function toggleMiembro(grupoId, operariaId, checked) {
+  try {
+    if (checked) {
+      await supaFetch('grupo_operaria', 'POST', {
+        grupo_id: grupoId, operaria_id: operariaId, activo: true
+      });
+    } else {
+      // Buscar la membresía activa y desactivarla
+      const res = await supaFetch('grupo_operaria', 'GET', null, 
+        `?grupo_id=eq.${grupoId}&operaria_id=eq.${operariaId}&activo=eq.true&limit=1`);
+      if (res && res.length > 0) {
+        await supaUpdate('grupo_operaria', res[0].id, { activo: false, hasta: new Date().toISOString().split('T')[0] });
+      }
+    }
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ─── Vista: Tareas activas ─────────────────────────────────────────
+async function cargarVistaTareas() {
+  const cont = document.getElementById('grupos-contenido');
+  cont.innerHTML = '<div class="text-muted" style="padding:10px">Cargando tareas...</div>';
+  
+  try {
+    const tareas = await supaFetch('grupo_produccion', 'GET', null, '?order=fecha_asignada.desc&limit=100');
+    renderVistaTareas(tareas);
+  } catch(e) {
+    cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+  }
+}
+
+function renderVistaTareas(tareas) {
+  const cont = document.getElementById('grupos-contenido');
+  
+  const enCurso = tareas.filter(t => t.estado === 'en_curso');
+  const terminadas = tareas.filter(t => t.estado === 'terminada').slice(0, 20);
+  
+  // Indexar grupos por id
+  const gMap = {};
+  for (const g of gruposCache.grupos) gMap[g.grupo_id] = g;
+  
+  cont.innerHTML = `
+    <div style="margin-bottom:10px">
+      <button class="btn btn-primary btn-sm" onclick="abrirNuevaTarea()">+ Asignar tarea a grupo</button>
+    </div>
+    
+    ${enCurso.length > 0 ? `
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
+        <div style="background:#E6F0FF;padding:8px 12px;font-weight:600">📝 En curso (${enCurso.length})</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="background:#F5F7FA">
+              <th style="padding:6px 8px;text-align:left">Grupo</th>
+              <th style="padding:6px 8px;text-align:right">Asignado</th>
+              <th style="padding:6px 8px;text-align:right">Terminado</th>
+              <th style="padding:6px 8px;text-align:center">Avance</th>
+              <th style="padding:6px 8px;text-align:right">Asignado</th>
+              <th style="padding:6px 8px;text-align:center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${enCurso.map(t => {
+              const g = gMap[t.grupo_id];
+              const pct = t.cantidad_asignada > 0 ? Math.round(100 * t.cantidad_terminada / t.cantidad_asignada) : 0;
+              return `
+                <tr style="border-top:1px solid #EEE">
+                  <td style="padding:6px 8px"><strong>${g ? g.codigo : '-'}</strong> ${g ? g.nombre : ''}</td>
+                  <td style="padding:6px 8px;text-align:right">${t.cantidad_asignada}</td>
+                  <td style="padding:6px 8px;text-align:right">${t.cantidad_terminada}</td>
+                  <td style="padding:6px 8px;text-align:center">
+                    <div style="background:#EEE;height:6px;border-radius:3px;position:relative;width:80px;margin:auto">
+                      <div style="background:var(--azul);height:100%;width:${pct}%;border-radius:3px"></div>
+                    </div>
+                    <div style="font-size:10px;margin-top:1px">${pct}%</div>
+                  </td>
+                  <td style="padding:6px 8px;text-align:right;font-size:11px;color:#666">${t.fecha_asignada}</td>
+                  <td style="padding:6px 8px;text-align:center">
+                    <button class="btn-mini btn-mini-success" onclick="registrarAvanceTarea('${t.id}')">📝 Avance</button>
+                    <button class="btn-mini" onclick="verContribuciones('${t.id}')">👥</button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : '<div class="alert alert-info">No hay tareas en curso. Asigná una con el botón de arriba.</div>'}
+    
+    ${terminadas.length > 0 ? `
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">✓ Últimas terminadas</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <tbody>
+            ${terminadas.map(t => {
+              const g = gMap[t.grupo_id];
+              return `
+                <tr style="border-top:1px solid #EEE">
+                  <td style="padding:4px 8px">${g ? g.codigo : '-'} · ${g ? g.nombre : ''}</td>
+                  <td style="padding:4px 8px;text-align:right">${t.cantidad_terminada} piezas</td>
+                  <td style="padding:4px 8px;font-size:11px;color:#666">${t.fecha_cerrada || t.fecha_asignada}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : ''}
+  `;
+}
+
+// ─── Nueva tarea para grupo ─────────────────────────────────────────
+function abrirNuevaTarea() {
+  const modal = document.getElementById('tarea-modal');
+  if (!modal) return;
+  
+  const selG = document.getElementById('tarea-grupo');
+  selG.innerHTML = gruposCache.grupos.map(g => 
+    `<option value="${g.grupo_id}">${g.codigo} · ${g.nombre}</option>`
+  ).join('');
+  
+  document.getElementById('tarea-cantidad').value = '';
+  document.getElementById('tarea-obs').value = '';
+  modal.style.display = 'flex';
+}
+
+function cerrarTareaModal() {
+  document.getElementById('tarea-modal').style.display = 'none';
+}
+
+async function guardarTarea() {
+  const grupoId = document.getElementById('tarea-grupo').value;
+  const cantidad = parseInt(document.getElementById('tarea-cantidad').value);
+  const obs = document.getElementById('tarea-obs').value.trim() || null;
+  
+  if (!grupoId || !cantidad || cantidad <= 0) {
+    alert('Elegí grupo y cantidad > 0'); return;
+  }
+  
+  try {
+    await supaFetch('grupo_produccion', 'POST', {
+      grupo_id: grupoId, cantidad_asignada: cantidad, cantidad_terminada: 0,
+      estado: 'en_curso', observaciones: obs,
+    });
+    cerrarTareaModal();
+    cargarVistaTareas();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ─── Registrar avance ──────────────────────────────────────────────
+async function registrarAvanceTarea(tareaId) {
+  try {
+    // Buscar tarea y sus miembros del grupo
+    const res = await supaFetch('grupo_produccion', 'GET', null, `?id=eq.${tareaId}&limit=1`);
+    if (!res || res.length === 0) return;
+    const tarea = res[0];
+    
+    const miembros = await supaFetch('grupo_operaria', 'GET', null, 
+      `?grupo_id=eq.${tarea.grupo_id}&activo=eq.true&limit=50`);
+    
+    const operariasMap = {};
+    for (const o of gruposCache.operarias) operariasMap[o.id] = o;
+    
+    const modal = document.getElementById('avance-modal');
+    document.getElementById('avance-tarea-id').value = tareaId;
+    document.getElementById('avance-titulo').textContent = `Avance · Tarea ${tareaId.slice(0,6)}`;
+    document.getElementById('avance-progreso').textContent = 
+      `${tarea.cantidad_terminada}/${tarea.cantidad_asignada} piezas`;
+    
+    const bodyHtml = `
+      <div style="background:#FFF4D6;padding:8px;border-radius:4px;font-size:11px;margin-bottom:10px">
+        Registrá cuánto hizo cada operaria (opcional). Si dejás "0" en todas y solo ponés el total abajo, se registra sólo como grupo.
+      </div>
+      
+      ${miembros.length === 0 ? `
+        <div class="alert alert-info" style="font-size:12px">Este grupo no tiene miembros asignados. Podés registrar solo el total abajo.</div>
+      ` : `
+        <div style="margin-bottom:10px">
+          ${miembros.map(m => {
+            const op = operariasMap[m.operaria_id];
+            return `
+              <div style="display:flex;align-items:center;gap:8px;padding:6px;border-bottom:1px solid #EEE">
+                <div style="flex:1;font-weight:600;font-size:13px">${op ? op.nombre : '(op)'}</div>
+                <input type="number" min="0" value="0" data-operaria="${m.operaria_id}" class="avance-input"
+                  style="width:60px;padding:3px 6px;text-align:right">
+                <span style="font-size:11px;color:#888">piezas</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `}
+      
+      <div class="field">
+        <label>Total de esta entrada (requerido)</label>
+        <input type="number" id="avance-total" min="1" placeholder="Cantidad que se produjo ahora">
+        <div style="font-size:11px;color:#888;margin-top:2px">Este número se suma al cantidad_terminada</div>
+      </div>
+      
+      <div class="field">
+        <label>Observaciones (opcional)</label>
+        <input type="text" id="avance-obs">
+      </div>
+    `;
+    document.getElementById('avance-body').innerHTML = bodyHtml;
+    modal.style.display = 'flex';
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function cerrarAvance() {
+  document.getElementById('avance-modal').style.display = 'none';
+}
+
+async function guardarAvance() {
+  const tareaId = document.getElementById('avance-tarea-id').value;
+  const totalInput = document.getElementById('avance-total');
+  const total = parseInt(totalInput.value);
+  const obs = document.getElementById('avance-obs').value.trim() || null;
+  
+  if (!total || total <= 0) { alert('El total es requerido y debe ser > 0'); return; }
+  
+  try {
+    // 1. Leer tarea actual
+    const res = await supaFetch('grupo_produccion', 'GET', null, `?id=eq.${tareaId}&limit=1`);
+    if (!res || res.length === 0) return;
+    const tarea = res[0];
+    const nuevoTotal = (tarea.cantidad_terminada || 0) + total;
+    const finalizada = nuevoTotal >= tarea.cantidad_asignada;
+    
+    // 2. Guardar contribuciones individuales
+    const inputs = document.querySelectorAll('.avance-input');
+    for (const inp of inputs) {
+      const cant = parseInt(inp.value || 0);
+      if (cant > 0) {
+        await supaFetch('grupo_contribucion', 'POST', {
+          grupo_produccion_id: tareaId,
+          operaria_id: inp.dataset.operaria,
+          cantidad: cant,
+          observaciones: obs,
+        });
+      }
+    }
+    
+    // 3. Actualizar tarea
+    const patch = { cantidad_terminada: nuevoTotal };
+    if (finalizada) {
+      patch.estado = 'terminada';
+      patch.fecha_cerrada = new Date().toISOString().split('T')[0];
+    }
+    await supaUpdate('grupo_produccion', tareaId, patch);
+    
+    cerrarAvance();
+    cargarVistaTareas();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ─── Ver contribuciones ────────────────────────────────────────────
+async function verContribuciones(tareaId) {
+  try {
+    const contrib = await supaFetch('grupo_contribucion', 'GET', null, 
+      `?grupo_produccion_id=eq.${tareaId}&order=fecha.desc&limit=100`);
+    
+    const opMap = {};
+    for (const o of gruposCache.operarias) opMap[o.id] = o;
+    
+    const porOperaria = {};
+    for (const c of contrib) {
+      if (!porOperaria[c.operaria_id]) porOperaria[c.operaria_id] = 0;
+      porOperaria[c.operaria_id] += c.cantidad;
+    }
+    
+    let msg = 'Contribuciones por operaria:\n\n';
+    if (Object.keys(porOperaria).length === 0) {
+      msg += '(Sin contribuciones individuales registradas)';
+    } else {
+      for (const [opId, cant] of Object.entries(porOperaria)) {
+        const op = opMap[opId];
+        msg += `  ${op ? op.nombre : opId.slice(0,6)}: ${cant} piezas\n`;
+      }
+    }
+    alert(msg);
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ─── Vista: Productividad ──────────────────────────────────────────
+async function cargarVistaProductividad() {
+  const cont = document.getElementById('grupos-contenido');
+  cont.innerHTML = '<div class="text-muted" style="padding:10px">Cargando productividad...</div>';
+  
+  try {
+    const [porOperaria, porGrupo] = await Promise.all([
+      supaFetch('vw_operaria_productividad', 'GET', null, '?order=total_piezas.desc&limit=50'),
+      supaFetch('vw_grupo_productividad', 'GET', null, '?order=total_piezas_terminadas.desc&limit=50'),
+    ]);
+    
+    cont.innerHTML = `
+      <div class="alert alert-info" style="font-size:12px;margin-bottom:10px">
+        ℹ Esta vista muestra las piezas producidas desde que arrancó el sistema. 
+        Útil para comparar productividad entre operarias o grupos (base para destajo).
+      </div>
+      
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
+        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">👤 Por operaria</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="background:#FAFAFA">
+              <th style="padding:6px 8px;text-align:left">Operaria</th>
+              <th style="padding:6px 8px;text-align:right">Tareas</th>
+              <th style="padding:6px 8px;text-align:right">Piezas</th>
+              <th style="padding:6px 8px;text-align:right">Última fecha</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${porOperaria.map(o => `
+              <tr style="border-top:1px solid #EEE">
+                <td style="padding:6px 8px;font-weight:600">${o.nombre}</td>
+                <td style="padding:6px 8px;text-align:right">${o.tareas_participadas || 0}</td>
+                <td style="padding:6px 8px;text-align:right;color:var(--azul);font-weight:700">${(o.total_piezas||0).toLocaleString()}</td>
+                <td style="padding:6px 8px;text-align:right;font-size:11px;color:#666">${o.ultima_fecha || '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">👥 Por grupo</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="background:#FAFAFA">
+              <th style="padding:6px 8px;text-align:left">Grupo</th>
+              <th style="padding:6px 8px;text-align:right">Total tareas</th>
+              <th style="padding:6px 8px;text-align:right">Terminadas</th>
+              <th style="padding:6px 8px;text-align:right">Piezas totales</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${porGrupo.map(g => `
+              <tr style="border-top:1px solid #EEE">
+                <td style="padding:6px 8px"><strong>${g.codigo}</strong> ${g.nombre}</td>
+                <td style="padding:6px 8px;text-align:right">${g.tareas_totales || 0}</td>
+                <td style="padding:6px 8px;text-align:right;color:var(--verde)">${g.tareas_terminadas || 0}</td>
+                <td style="padding:6px 8px;text-align:right;color:var(--azul);font-weight:700">${(g.total_piezas_terminadas||0).toLocaleString()}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch(e) {
+    cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }
 }
 

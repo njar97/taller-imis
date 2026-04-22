@@ -15,12 +15,12 @@ let alumnosCache = {
 
 async function mostrarAlumnos(escuelaId) {
   alumnosCache.escuelaId = escuelaId;
-  const cont = document.getElementById('pedidos-detalle-tabla');
+  const cont = document.getElementById('registro-detalle-tabla');
   cont.innerHTML = '<div class="text-muted">Cargando alumnos...</div>';
   try {
     const [alumnos, stock] = await Promise.all([
       supaFetch('alumno', 'GET', null, 
-        `?escuela_id=eq.${escuelaId}&temporada_id=eq.${pedidosCache.temporadaActual}&order=nivel,grado,nombre&limit=2000`),
+        `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&order=nivel,grado,nombre&limit=2000`),
       supaFetch('vw_bodega_stock', 'GET', null, '?limit=1000')
     ]);
     alumnosCache.alumnos = alumnos;
@@ -36,7 +36,7 @@ async function mostrarAlumnos(escuelaId) {
 }
 
 function renderAlumnosLista() {
-  const cont = document.getElementById('pedidos-detalle-tabla');
+  const cont = document.getElementById('registro-detalle-tabla');
   let list = alumnosCache.alumnos;
   
   // Filtros

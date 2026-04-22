@@ -1,0 +1,315 @@
+<!-- ══════════ REGISTRO (v23, reemplaza Pedidos) ══════════ -->
+<div id="view-registro" class="view">
+  <div id="alert-registro"></div>
+  
+  <div class="card">
+    <div class="card-title">📋 Registro</div>
+    <div id="registro-header"></div>
+  </div>
+  
+  <div id="registro-lista"></div>
+  
+  <!-- Vista "Todos los alumnos" - siempre disponible debajo de la lista -->
+  <div class="card" style="margin-top:14px">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>👥 Todos los alumnos</span>
+      <button class="btn btn-ghost btn-sm" onclick="toggleAlumnosGlobal()">
+        <span id="alumnos-global-toggle-txt">Mostrar ▼</span>
+      </button>
+    </div>
+    <div id="alumnos-global-panel" style="display:none">
+      <div id="alumnos-global-contenido"></div>
+    </div>
+  </div>
+  
+  <!-- Modal: Detalle de escuela con 4 sub-tabs -->
+  <div id="registro-detalle-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:760px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" id="registro-detalle-titulo" style="margin:0"></div>
+          <div id="registro-detalle-subt" style="font-size:12px;color:#666;margin-top:2px"></div>
+        </div>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-ghost btn-sm" onclick="abrirMenuReportes(registroCache.escuelaActual)" title="Reportes imprimibles">🖨</button>
+          <button class="btn btn-ghost btn-sm" onclick="cerrarDetalleEscuela()">✕</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div id="registro-detalle-subtabs"></div>
+        <div id="registro-detalle-tabla"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarDetalleEscuela()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Modal: Nueva escuela -->
+  <div id="registro-escuela-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:500px">
+      <div class="modal-header">
+        <div class="card-title">+ Nueva escuela</div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarNuevaEscuela()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Nombre *</label>
+          <input type="text" id="nesc-nombre" placeholder="Ej: CE Doña Victoria">
+        </div>
+        <div class="field">
+          <label>Código CDE (opcional)</label>
+          <input type="text" id="nesc-codigo" placeholder="Se autogenera si lo dejás vacío">
+        </div>
+        <div class="field">
+          <label>Director</label>
+          <input type="text" id="nesc-director">
+        </div>
+        <div class="field">
+          <label>Teléfono</label>
+          <input type="text" id="nesc-telefono">
+        </div>
+        <div class="field">
+          <label>Grupo de producción (C.E)</label>
+          <input type="text" id="nesc-grupo" placeholder="Ej: G1, G2, o nombre propio">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarNuevaEscuela()">Cancelar</button>
+        <button class="btn btn-success" onclick="guardarNuevaEscuela()">✓ Agregar escuela</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Modal: empaque de alumno (reutilizado de v22) -->
+  <div id="bodega-empaque-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:550px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" id="emp-alumno-nombre" style="margin:0"></div>
+          <div id="emp-alumno-info" style="font-size:12px;color:#666;margin-top:2px"></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarEmpaque()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="emp-body"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarEmpaque()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Modal: Importación masiva (v24) -->
+  <div id="import-alumnos-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:760px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" style="margin:0">📥 Importar alumnos</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">Pegá desde Excel/Sheets o cargá archivo CSV/TSV</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarImportacion()">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- PASO 1: pegar datos -->
+        <div id="import-paso1">
+          <div class="alert alert-info" style="font-size:12px;margin-bottom:10px">
+            <strong>Opción 1:</strong> Copiá un rango de Excel/Sheets (Ctrl+C) y pegá acá (Ctrl+V).<br>
+            <strong>Opción 2:</strong> Cargá un archivo CSV o TSV.<br>
+            La <strong>primera fila debe tener encabezados</strong> (nombre, tallaT, keyT, grado, etc.)
+          </div>
+          
+          <div class="field">
+            <label>Pegá los datos acá</label>
+            <textarea id="import-textarea" rows="10" style="width:100%;font-family:monospace;font-size:12px" 
+              placeholder="Nombre&#9;Grado&#9;Sexo&#9;PrendaT&#9;TallaT&#9;PrendaP&#9;TallaP&#9;LargoP&#10;PEREZ, ANA&#9;1A&#9;F&#9;BLUSA&#9;10&#9;FALDA&#9;10&#9;50"></textarea>
+          </div>
+          
+          <div style="text-align:center;margin:10px 0;color:#888;font-size:12px">— o —</div>
+          
+          <div class="field">
+            <label>Cargar archivo (CSV o TSV)</label>
+            <input type="file" id="import-file" accept=".csv,.tsv,.txt">
+            <button class="btn btn-ghost btn-sm" onclick="procesarArchivo()" style="margin-top:6px">📂 Leer archivo</button>
+          </div>
+          
+          <div style="margin-top:14px;display:flex;gap:8px">
+            <button class="btn btn-ghost" onclick="cerrarImportacion()">Cancelar</button>
+            <button class="btn btn-primary" style="flex:1" onclick="procesarTexto()">→ Siguiente: mapear columnas</button>
+          </div>
+        </div>
+        
+        <!-- PASO 2: mapear columnas -->
+        <div id="import-paso2" style="display:none">
+          <div id="import-mapeo-contenido"></div>
+        </div>
+        
+        <!-- PASO 3: preview y confirmar -->
+        <div id="import-paso3" style="display:none">
+          <div id="import-preview-contenido"></div>
+        </div>
+      </div>
+      <div class="modal-footer" style="display:none"></div>
+    </div>
+  </div>
+  
+  <!-- Modal: Exportación (v30) -->
+  <div id="export-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:500px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" style="margin:0">💾 Exportar datos</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">Descargar como CSV (abrir en Excel)</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarModalExport()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="background:#FFF4D6;padding:8px;border-radius:4px;font-size:11px;margin-bottom:10px">
+          ℹ Los filtros de abajo aplican solo a <strong>Alumnos</strong> y <strong>Pedidos</strong>. Stock y Movimientos siempre exportan todo.
+        </div>
+        
+        <div class="field">
+          <label>Escuela (opcional)</label>
+          <select id="export-escuela">
+            <option value="">— Todas las escuelas —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Temporada (opcional, solo para alumnos)</label>
+          <select id="export-temporada">
+            <option value="">— Toda temporada —</option>
+          </select>
+        </div>
+        
+        <div style="margin-top:14px">
+          <div style="font-weight:600;font-size:13px;margin-bottom:8px">¿Qué querés exportar?</div>
+          <div style="display:grid;gap:6px">
+            <button class="btn btn-primary" onclick="ejecutarExport('alumnos')" style="text-align:left">
+              👥 Alumnos (formato BASE del Excel)
+            </button>
+            <button class="btn btn-primary" onclick="ejecutarExport('pedidos')" style="text-align:left">
+              📊 Pedidos por talla
+            </button>
+            <button class="btn btn-primary" onclick="ejecutarExport('stock')" style="text-align:left">
+              📦 Stock de bodega
+            </button>
+            <button class="btn btn-primary" onclick="ejecutarExport('movimientos')" style="text-align:left">
+              🔄 Movimientos de bodega
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarModalExport()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+  <div id="etiquetas-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:520px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" style="margin:0">🏷 Imprimir etiquetas</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">Filas de 1cm · solo alumnos con tallas</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarModalEtiquetas()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Escuela</label>
+          <select id="et-escuela">
+            <option value="">— Todas las escuelas —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Temporada</label>
+          <select id="et-temporada">
+            <option value="">— Toda temporada —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Columnas por hoja</label>
+          <select id="et-columnas">
+            <option value="2">2 columnas (etiquetas anchas, ~9.5cm)</option>
+            <option value="3" selected>3 columnas (recomendado, ~6.3cm)</option>
+            <option value="4">4 columnas (compactas, ~4.7cm)</option>
+          </select>
+          <div style="font-size:11px;color:#888;margin-top:2px">Altura fija: 1cm por fila</div>
+        </div>
+        <div class="field">
+          <label>Orden</label>
+          <select id="et-orden">
+            <option value="grado_nombre" selected>Grado → Nombre (alfabético)</option>
+            <option value="grado_talla">Grado → Talla (agrupa iguales)</option>
+            <option value="escuela_grado_nombre">Escuela → Grado → Nombre</option>
+            <option value="talla">Solo por talla</option>
+          </select>
+        </div>
+        <div class="field">
+          <label style="display:flex;gap:6px;align-items:center">
+            <input type="checkbox" id="et-solo-empacados">
+            Solo alumnos ya empacados
+          </label>
+          <div style="font-size:11px;color:#888;margin-left:22px">Por defecto imprime todos los que tengan tallas</div>
+        </div>
+        <div class="field">
+          <label style="display:flex;gap:6px;align-items:center">
+            <input type="checkbox" id="et-incluir-obs">
+            Incluir observaciones
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarModalEtiquetas()">Cancelar</button>
+        <button class="btn btn-success" onclick="generarEtiquetas()">🏷 Generar etiquetas</button>
+      </div>
+    </div>
+  </div>
+</div>
+  <div id="reportes-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:500px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" style="margin:0">🖨 Reportes imprimibles</div>
+          <div id="rep-escuela-nombre" style="font-size:12px;color:#666;margin-top:2px"></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarMenuReportes()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="card" style="padding:12px;margin-bottom:8px">
+          <div style="font-weight:600;margin-bottom:4px">📏 Hoja de Tallaje</div>
+          <div style="font-size:11px;color:#666;margin-bottom:8px">
+            Para llevar a la escuela y llenar a mano. Si elegís un grado, trae los alumnos ya cargados.
+          </div>
+          <div class="field">
+            <label style="font-size:11px">Grado (opcional)</label>
+            <select id="rep-grado-select" style="width:100%;padding:4px 8px">
+              <option value="">— (hoja en blanco) —</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="ejecutarReporte('tallaje')" style="width:100%">🖨 Generar hoja de tallaje</button>
+        </div>
+        
+        <div class="card" style="padding:12px;margin-bottom:8px">
+          <div style="font-weight:600;margin-bottom:4px">📦 Lista de Empaque</div>
+          <div style="font-size:11px;color:#666;margin-bottom:8px">
+            Listado completo de alumnos con checkboxes para marcar físicamente lo empacado.
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="ejecutarReporte('empaque')" style="width:100%">🖨 Generar lista de empaque</button>
+        </div>
+        
+        <div class="card" style="padding:12px">
+          <div style="font-weight:600;margin-bottom:4px">📋 Hoja de Entrega</div>
+          <div style="font-size:11px;color:#666;margin-bottom:8px">
+            Para que el director firme recepción. Desglose por talla con columna para firmar.
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="ejecutarReporte('entrega')" style="width:100%">🖨 Generar hoja de entrega</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarMenuReportes()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
