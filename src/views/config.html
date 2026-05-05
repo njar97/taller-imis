@@ -1,5 +1,15 @@
 <div id="view-config" class="view">
   <div class="card">
+    <div class="card-title">🗂 Historial</div>
+    <div class="text-muted mb8" style="font-size:12px">Ver registros guardados de trazos, tendidos y bultos.</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" onclick="abrirHistorial('trazo')">✂️ Trazos</button>
+      <button class="btn btn-ghost btn-sm" onclick="abrirHistorial('tendido')">📋 Tendidos</button>
+      <button class="btn btn-ghost btn-sm" onclick="abrirHistorial('bulto')">📦 Bultos</button>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-title">⚙️ Configuración</div>
     <div class="config-item">
       <div>

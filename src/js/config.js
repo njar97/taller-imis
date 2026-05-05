@@ -55,8 +55,17 @@ async function verificarConexion() {
     badge.textContent = 'Conectado ✓';
     badge.className = 'badge badge-ok';
   } catch(e) {
-    badge.textContent = 'Error';
-    badge.className = 'badge badge-err';
+    const msg = (e.message || '').toLowerCase();
+    const esRed = msg.includes('failed to fetch') || msg.includes('networkerror');
+    if (esRed) {
+      badge.textContent = 'Sin red';
+      badge.className = 'badge badge-err';
+      alert('No se pudo conectar al servidor.\n\nPosibles causas:\n• Sin conexión a internet (revisá WiFi/datos).\n• Proyecto Supabase pausado (entrá al panel y reanudálo).\n• URL/Key incorrectas.');
+    } else {
+      badge.textContent = 'Error';
+      badge.className = 'badge badge-err';
+      alert('Error: ' + e.message);
+    }
   }
 }
 

@@ -1,4 +1,20 @@
 // ══════════════════════════════════════════════════════════════════════
+function abrirHistorial(tipo) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-historial').classList.add('active');
+  window.scrollTo(0, 0);
+  switchHistorial(tipo || 'trazo');
+}
+
+function volverConfig() {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-config').classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  const tabs = document.querySelectorAll('.nav-tab');
+  if (tabs.length) tabs[tabs.length - 1].classList.add('active');
+  window.scrollTo(0, 0);
+}
+
 function switchHistorial(tipo) {
   historialTipo = tipo;
   ['trazo','tendido','bulto'].forEach(t => {
@@ -60,7 +76,12 @@ async function cargarHistorial(tipo) {
       `;
     }).join('');
   } catch(e) {
-    container.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+    const esRed = (e.message || '').toLowerCase().includes('failed to fetch') || (e.message || '').toLowerCase().includes('networkerror');
+    if (esRed) {
+      container.innerHTML = `<div class="alert alert-error">No se pudo conectar al servidor.<br><br>Posibles causas:<br>• Sin conexión a internet (revisá WiFi/datos).<br>• Proyecto Supabase pausado (entrá al panel y reanudálo).<br>• URL/Key incorrectas en Config.</div><div style="margin-top:8px"><button class="btn btn-primary btn-sm" onclick="cargarHistorial('${tipo}')">🔄 Reintentar</button></div>`;
+    } else {
+      container.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+    }
   }
 }
 

@@ -282,7 +282,6 @@
   <div class="nav-tabs">
     <div class="nav-tab active" onclick="switchTab('inicio',this)">🏠 Inicio</div>
     <div class="nav-tab" onclick="switchTab('nuevo',this)">➕ Nuevo</div>
-    <div class="nav-tab" onclick="switchTab('historial',this)">🗂 Historial</div>
     <div class="nav-tab" onclick="switchTab('produccion',this)">🏭 Prod.</div>
     <div class="nav-tab" onclick="switchTab('registro',this)">📋 Registro</div>
     <div class="nav-tab" onclick="switchTab('bodega',this)">📦 Bodega</div>
@@ -532,7 +531,10 @@
 
 <div id="view-historial" class="view">
   <div class="card">
-    <div class="card-title">🗂 Historial</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <button class="btn btn-ghost btn-sm" onclick="volverConfig()">← Config</button>
+      <div class="card-title" style="margin:0;flex:1">🗂 Historial</div>
+    </div>
     <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
       <button class="btn btn-primary btn-sm" id="hist-btn-trazo" onclick="switchHistorial('trazo')">✂️ Trazos</button>
       <button class="btn btn-ghost btn-sm" id="hist-btn-tendido" onclick="switchHistorial('tendido')">📋 Tendidos</button>
@@ -1264,6 +1266,16 @@
 </div>
 
 <div id="view-config" class="view">
+  <div class="card">
+    <div class="card-title">🗂 Historial</div>
+    <div class="text-muted mb8" style="font-size:12px">Ver registros guardados de trazos, tendidos y bultos.</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" onclick="abrirHistorial('trazo')">✂️ Trazos</button>
+      <button class="btn btn-ghost btn-sm" onclick="abrirHistorial('tendido')">📋 Tendidos</button>
+      <button class="btn btn-ghost btn-sm" onclick="abrirHistorial('bulto')">📦 Bultos</button>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-title">⚙️ Configuración</div>
     <div class="config-item">
@@ -3082,6 +3094,22 @@ async function guardarBultos() {
 
 // +++++++++++++++++++ historial.js +++++++++++++++++++
 // ══════════════════════════════════════════════════════════════════════
+function abrirHistorial(tipo) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-historial').classList.add('active');
+  window.scrollTo(0, 0);
+  switchHistorial(tipo || 'trazo');
+}
+
+function volverConfig() {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-config').classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  const tabs = document.querySelectorAll('.nav-tab');
+  if (tabs.length) tabs[tabs.length - 1].classList.add('active');
+  window.scrollTo(0, 0);
+}
+
 function switchHistorial(tipo) {
   historialTipo = tipo;
   ['trazo','tendido','bulto'].forEach(t => {
@@ -3143,7 +3171,12 @@ async function cargarHistorial(tipo) {
       `;
     }).join('');
   } catch(e) {
-    container.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+    const esRed = (e.message || '').toLowerCase().includes('failed to fetch') || (e.message || '').toLowerCase().includes('networkerror');
+    if (esRed) {
+      container.innerHTML = `<div class="alert alert-error">No se pudo conectar al servidor.<br><br>Posibles causas:<br>• Sin conexión a internet (revisá WiFi/datos).<br>• Proyecto Supabase pausado (entrá al panel y reanudálo).<br>• URL/Key incorrectas en Config.</div><div style="margin-top:8px"><button class="btn btn-primary btn-sm" onclick="cargarHistorial('${tipo}')">🔄 Reintentar</button></div>`;
+    } else {
+      container.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+    }
   }
 }
 
@@ -9165,8 +9198,17 @@ async function verificarConexion() {
     badge.textContent = 'Conectado ✓';
     badge.className = 'badge badge-ok';
   } catch(e) {
-    badge.textContent = 'Error';
-    badge.className = 'badge badge-err';
+    const msg = (e.message || '').toLowerCase();
+    const esRed = msg.includes('failed to fetch') || msg.includes('networkerror');
+    if (esRed) {
+      badge.textContent = 'Sin red';
+      badge.className = 'badge badge-err';
+      alert('No se pudo conectar al servidor.\n\nPosibles causas:\n• Sin conexión a internet (revisá WiFi/datos).\n• Proyecto Supabase pausado (entrá al panel y reanudálo).\n• URL/Key incorrectas.');
+    } else {
+      badge.textContent = 'Error';
+      badge.className = 'badge badge-err';
+      alert('Error: ' + e.message);
+    }
   }
 }
 

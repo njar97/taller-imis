@@ -1,6 +1,9 @@
 <div id="view-historial" class="view">
   <div class="card">
-    <div class="card-title">🗂 Historial</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <button class="btn btn-ghost btn-sm" onclick="volverConfig()">← Config</button>
+      <div class="card-title" style="margin:0;flex:1">🗂 Historial</div>
+    </div>
     <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
       <button class="btn btn-primary btn-sm" id="hist-btn-trazo" onclick="switchHistorial('trazo')">✂️ Trazos</button>
       <button class="btn btn-ghost btn-sm" id="hist-btn-tendido" onclick="switchHistorial('tendido')">📋 Tendidos</button>
