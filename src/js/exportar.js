@@ -43,13 +43,13 @@ function fechaHoyISO() {
 // ─── EXPORTAR ALUMNOS (replica de la hoja BASE del Excel original) ──
 async function exportarAlumnos(filtros = {}) {
   try {
-    let query = '?activo=eq.true&order=nombre&limit=50000';
+    let query = '?activo=eq.true&order=nombre';
     if (filtros.escuelaId) query += `&escuela_id=eq.${filtros.escuelaId}`;
     if (filtros.temporadaId) query += `&temporada_id=eq.${filtros.temporadaId}`;
-    
+
     const [alumnos, escuelas] = await Promise.all([
-      supaFetch('alumno', 'GET', null, query),
-      supaFetch('escuela', 'GET', null, '?limit=500'),
+      supaFetchAll('alumno', query),
+      supaFetchAll('escuela'),
     ]);
     
     const escMap = {};
@@ -127,12 +127,12 @@ function extraerLargo(key, prenda) {
 // ─── EXPORTAR PEDIDOS (por talla) ───────────────────────────────────
 async function exportarPedidos(filtros = {}) {
   try {
-    let query = '?order=nivel,cod_prenda,talla_key&limit=5000';
+    let query = '?order=nivel,cod_prenda,talla_key';
     if (filtros.escuelaId) query += `&escuela_id=eq.${filtros.escuelaId}`;
-    
+
     const [pedidos, escuelas] = await Promise.all([
-      supaFetch('pedido', 'GET', null, query),
-      supaFetch('escuela', 'GET', null, '?limit=500'),
+      supaFetchAll('pedido', query),
+      supaFetchAll('escuela'),
     ]);
     
     const escMap = {};
@@ -162,7 +162,7 @@ async function exportarPedidos(filtros = {}) {
 // ─── EXPORTAR BODEGA STOCK ──────────────────────────────────────────
 async function exportarStockBodega() {
   try {
-    const stock = await supaFetch('vw_bodega_stock', 'GET', null, '?order=nombre_prenda,talla_key&limit=5000');
+    const stock = await supaFetchAll('vw_bodega_stock', '?order=nombre_prenda,talla_key');
     if (stock.length === 0) { alert('No hay stock para exportar'); return; }
     
     const cols = [
@@ -183,7 +183,7 @@ async function exportarStockBodega() {
 // ─── EXPORTAR MOVIMIENTOS BODEGA ────────────────────────────────────
 async function exportarMovimientosBodega() {
   try {
-    const movs = await supaFetch('bodega_movimiento', 'GET', null, '?order=creado_en.desc&limit=5000');
+    const movs = await supaFetchAll('bodega_movimiento', '?order=creado_en.desc');
     if (movs.length === 0) { alert('No hay movimientos para exportar'); return; }
     
     const cols = [

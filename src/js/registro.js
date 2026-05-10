@@ -105,8 +105,8 @@ async function cargarEscuelasTemporada() {
     ]);
     
     // Contar alumnos por escuela en esta temporada
-    const alumnosCount = await supaFetch('alumno', 'GET', null, 
-      `?temporada_id=eq.${registroCache.temporadaActual}&activo=eq.true&select=escuela_id&limit=20000`).catch(() => []);
+    const alumnosCount = await supaFetchAll('alumno',
+      `?temporada_id=eq.${registroCache.temporadaActual}&activo=eq.true&select=escuela_id`).catch(() => []);
     const alumnosPorEscuela = {};
     for (const a of alumnosCount) {
       alumnosPorEscuela[a.escuela_id] = (alumnosPorEscuela[a.escuela_id] || 0) + 1;

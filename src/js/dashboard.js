@@ -59,7 +59,7 @@ async function cargarDashboardHoy() {
       supaFetch('vw_pedido_escuela', 'GET', null, '?order=piezas_pendientes.desc&limit=5').catch(() => []),
       supaFetch('vw_bodega_stock', 'GET', null, '?order=stock_actual.desc&limit=10').catch(() => []),
       cargarProduccionHoy(),
-      supaFetch('alumno', 'GET', null, '?activo=eq.true&select=estado_top,estado_bottom&limit=20000').catch(() => []),
+      supaFetchAll('alumno', '?activo=eq.true&select=estado_top,estado_bottom').catch(() => []),
     ]);
     
     dashboardCache.resumen = {

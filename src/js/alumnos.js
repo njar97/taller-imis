@@ -19,9 +19,9 @@ async function mostrarAlumnos(escuelaId) {
   cont.innerHTML = '<div class="text-muted">Cargando alumnos...</div>';
   try {
     const [alumnos, stock] = await Promise.all([
-      supaFetch('alumno', 'GET', null, 
-        `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&order=nivel,grado,nombre&limit=2000`),
-      supaFetch('vw_bodega_stock', 'GET', null, '?limit=1000')
+      supaFetchAll('alumno',
+        `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&order=nivel,grado,nombre`),
+      supaFetchAll('vw_bodega_stock')
     ]);
     alumnosCache.alumnos = alumnos;
     // Indexar stock por talla_key
