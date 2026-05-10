@@ -1,4 +1,4 @@
-<!-- Generado: 2026-04-21 23:19 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-10 05:04 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1448,6 +1448,24 @@ async function supaFetch(table, method = 'GET', body = null, params = '') {
   return method === 'DELETE' ? null : res.json();
 }
 
+// Pagina en chunks para sortear el max-rows del backend (1000 por defecto).
+// Uso: supaFetchAll('alumno', '?escuela_id=eq.X&order=nombre')
+// `params` no debe traer limit/offset; se inyectan acá. pageSize <= max-rows.
+async function supaFetchAll(table, params = '', pageSize = 1000) {
+  const sep = params.includes('?') ? '&' : '?';
+  const out = [];
+  let offset = 0;
+  while (true) {
+    const page = await supaFetch(table, 'GET', null,
+      `${params}${sep}limit=${pageSize}&offset=${offset}`);
+    if (!Array.isArray(page) || page.length === 0) break;
+    out.push(...page);
+    if (page.length < pageSize) break;
+    offset += pageSize;
+  }
+  return out;
+}
+
 async function supaUploadFoto(file, trazoId) {
   const ext = file.name.split('.').pop();
   const path = `${trazoId}.${ext}`;
@@ -1566,7 +1584,7 @@ async function cargarDashboardHoy() {
       supaFetch('vw_pedido_escuela', 'GET', null, '?order=piezas_pendientes.desc&limit=5').catch(() => []),
       supaFetch('vw_bodega_stock', 'GET', null, '?order=stock_actual.desc&limit=10').catch(() => []),
       cargarProduccionHoy(),
-      supaFetch('alumno', 'GET', null, '?activo=eq.true&select=estado_top,estado_bottom&limit=20000').catch(() => []),
+      supaFetchAll('alumno', '?activo=eq.true&select=estado_top,estado_bottom').catch(() => []),
     ]);
     
     dashboardCache.resumen = {
@@ -5199,8 +5217,8 @@ async function cargarEscuelasTemporada() {
     ]);
     
     // Contar alumnos por escuela en esta temporada
-    const alumnosCount = await supaFetch('alumno', 'GET', null, 
-      `?temporada_id=eq.${registroCache.temporadaActual}&activo=eq.true&select=escuela_id&limit=20000`).catch(() => []);
+    const alumnosCount = await supaFetchAll('alumno',
+      `?temporada_id=eq.${registroCache.temporadaActual}&activo=eq.true&select=escuela_id`).catch(() => []);
     const alumnosPorEscuela = {};
     for (const a of alumnosCount) {
       alumnosPorEscuela[a.escuela_id] = (alumnosPorEscuela[a.escuela_id] || 0) + 1;
@@ -6369,9 +6387,9 @@ async function mostrarAlumnos(escuelaId) {
   cont.innerHTML = '<div class="text-muted">Cargando alumnos...</div>';
   try {
     const [alumnos, stock] = await Promise.all([
-      supaFetch('alumno', 'GET', null, 
-        `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&order=nivel,grado,nombre&limit=2000`),
-      supaFetch('vw_bodega_stock', 'GET', null, '?limit=1000')
+      supaFetchAll('alumno',
+        `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&order=nivel,grado,nombre`),
+      supaFetchAll('vw_bodega_stock')
     ]);
     alumnosCache.alumnos = alumnos;
     // Indexar stock por talla_key
@@ -7114,8 +7132,8 @@ async function imprimirListaEmpaque(escuelaId) {
     const esc = registroCache.escuelas.find(e => e.escuela_id === escuelaId);
     if (!esc) return;
     
-    const alumnos = await supaFetch('alumno', 'GET', null, 
-      `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&activo=eq.true&order=nivel,grado,nombre&limit=2000`);
+    const alumnos = await supaFetchAll('alumno',
+      `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&activo=eq.true&order=nivel,grado,nombre`);
     
     if (alumnos.length === 0) { alert('Sin alumnos cargados'); return; }
     
@@ -7373,8 +7391,8 @@ function abrirMenuReportes(escuelaId) {
   document.getElementById('rep-escuela-nombre').textContent = esc.escuela_nombre;
   
   // Obtener grados únicos de la escuela para el selector
-  supaFetch('alumno', 'GET', null, 
-    `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&select=grado&limit=5000`)
+  supaFetchAll('alumno',
+    `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&select=grado`)
     .then(alumnos => {
       const grados = [...new Set(alumnos.map(a => a.grado).filter(Boolean))].sort();
       const sel = document.getElementById('rep-grado-select');
@@ -7425,9 +7443,9 @@ async function cargarSugerenciasEmpaque(escuelaId) {
   
   try {
     const [stock, alumnosEscuela] = await Promise.all([
-      supaFetch('vw_bodega_stock', 'GET', null, '?limit=2000'),
-      supaFetch('alumno', 'GET', null, 
-        `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&activo=eq.true&limit=2000`),
+      supaFetchAll('vw_bodega_stock'),
+      supaFetchAll('alumno',
+        `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&activo=eq.true`),
     ]);
     
     // Indexar stock disponible por talla_key
@@ -7642,9 +7660,9 @@ async function initAlumnosGlobal() {
   
   try {
     const [escuelas, alumnos] = await Promise.all([
-      supaFetch('escuela', 'GET', null, '?limit=500'),
+      supaFetchAll('escuela'),
       // traer TODOS incluso los sin tallas
-      supaFetch('alumno', 'GET', null, '?activo=eq.true&order=nombre&limit=10000'),
+      supaFetchAll('alumno', '?activo=eq.true&order=nombre'),
     ]);
     
     const escMap = {};
@@ -8107,8 +8125,8 @@ async function initHistorico() {
     // Para cada temporada: total alumnos y distribución por nivel
     await Promise.all(temporadas.map(async t => {
       try {
-        const alumnos = await supaFetch('alumno', 'GET', null, 
-          `?temporada_id=eq.${t.id}&activo=eq.true&select=nivel,sexo,estado_top,estado_bottom,escuela_id&limit=50000`);
+        const alumnos = await supaFetchAll('alumno',
+          `?temporada_id=eq.${t.id}&activo=eq.true&select=nivel,sexo,estado_top,estado_bottom,escuela_id`);
         historicoCache.datosPorTemporada[t.id] = { alumnos };
       } catch(e) {
         historicoCache.datosPorTemporada[t.id] = { alumnos: [] };
@@ -8361,13 +8379,13 @@ function fechaHoyISO() {
 // ─── EXPORTAR ALUMNOS (replica de la hoja BASE del Excel original) ──
 async function exportarAlumnos(filtros = {}) {
   try {
-    let query = '?activo=eq.true&order=nombre&limit=50000';
+    let query = '?activo=eq.true&order=nombre';
     if (filtros.escuelaId) query += `&escuela_id=eq.${filtros.escuelaId}`;
     if (filtros.temporadaId) query += `&temporada_id=eq.${filtros.temporadaId}`;
-    
+
     const [alumnos, escuelas] = await Promise.all([
-      supaFetch('alumno', 'GET', null, query),
-      supaFetch('escuela', 'GET', null, '?limit=500'),
+      supaFetchAll('alumno', query),
+      supaFetchAll('escuela'),
     ]);
     
     const escMap = {};
@@ -8445,12 +8463,12 @@ function extraerLargo(key, prenda) {
 // ─── EXPORTAR PEDIDOS (por talla) ───────────────────────────────────
 async function exportarPedidos(filtros = {}) {
   try {
-    let query = '?order=nivel,cod_prenda,talla_key&limit=5000';
+    let query = '?order=nivel,cod_prenda,talla_key';
     if (filtros.escuelaId) query += `&escuela_id=eq.${filtros.escuelaId}`;
-    
+
     const [pedidos, escuelas] = await Promise.all([
-      supaFetch('pedido', 'GET', null, query),
-      supaFetch('escuela', 'GET', null, '?limit=500'),
+      supaFetchAll('pedido', query),
+      supaFetchAll('escuela'),
     ]);
     
     const escMap = {};
@@ -8480,7 +8498,7 @@ async function exportarPedidos(filtros = {}) {
 // ─── EXPORTAR BODEGA STOCK ──────────────────────────────────────────
 async function exportarStockBodega() {
   try {
-    const stock = await supaFetch('vw_bodega_stock', 'GET', null, '?order=nombre_prenda,talla_key&limit=5000');
+    const stock = await supaFetchAll('vw_bodega_stock', '?order=nombre_prenda,talla_key');
     if (stock.length === 0) { alert('No hay stock para exportar'); return; }
     
     const cols = [
@@ -8501,7 +8519,7 @@ async function exportarStockBodega() {
 // ─── EXPORTAR MOVIMIENTOS BODEGA ────────────────────────────────────
 async function exportarMovimientosBodega() {
   try {
-    const movs = await supaFetch('bodega_movimiento', 'GET', null, '?order=creado_en.desc&limit=5000');
+    const movs = await supaFetchAll('bodega_movimiento', '?order=creado_en.desc');
     if (movs.length === 0) { alert('No hay movimientos para exportar'); return; }
     
     const cols = [
