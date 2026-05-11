@@ -1,0 +1,31 @@
+name: Apply Supabase Config
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase-config.yml'
+      - '.github/scripts/apply_supabase_config.py'
+      - '.github/workflows/apply-supabase-config.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar dependencias
+        run: pip install pyyaml requests
+
+      - name: Aplicar configuracion
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: python .github/scripts/apply_supabase_config.py
