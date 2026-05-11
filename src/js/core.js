@@ -94,6 +94,24 @@ async function supaFetch(table, method = 'GET', body = null, params = '') {
   return method === 'DELETE' ? null : res.json();
 }
 
+// Pagina en chunks para sortear el max-rows del backend (1000 por defecto).
+// Uso: supaFetchAll('alumno', '?escuela_id=eq.X&order=nombre')
+// `params` no debe traer limit/offset; se inyectan acá. pageSize <= max-rows.
+async function supaFetchAll(table, params = '', pageSize = 1000) {
+  const sep = params.includes('?') ? '&' : '?';
+  const out = [];
+  let offset = 0;
+  while (true) {
+    const page = await supaFetch(table, 'GET', null,
+      `${params}${sep}limit=${pageSize}&offset=${offset}`);
+    if (!Array.isArray(page) || page.length === 0) break;
+    out.push(...page);
+    if (page.length < pageSize) break;
+    offset += pageSize;
+  }
+  return out;
+}
+
 async function supaUploadFoto(file, trazoId) {
   const ext = file.name.split('.').pop();
   const path = `${trazoId}.${ext}`;

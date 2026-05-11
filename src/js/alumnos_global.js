@@ -21,9 +21,9 @@ async function initAlumnosGlobal() {
   
   try {
     const [escuelas, alumnos] = await Promise.all([
-      supaFetch('escuela', 'GET', null, '?limit=500'),
+      supaFetchAll('escuela'),
       // traer TODOS incluso los sin tallas
-      supaFetch('alumno', 'GET', null, '?activo=eq.true&order=nombre&limit=10000'),
+      supaFetchAll('alumno', '?activo=eq.true&order=nombre'),
     ]);
     
     const escMap = {};

@@ -15,9 +15,9 @@ async function cargarSugerenciasEmpaque(escuelaId) {
   
   try {
     const [stock, alumnosEscuela] = await Promise.all([
-      supaFetch('vw_bodega_stock', 'GET', null, '?limit=2000'),
-      supaFetch('alumno', 'GET', null, 
-        `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&activo=eq.true&limit=2000`),
+      supaFetchAll('vw_bodega_stock'),
+      supaFetchAll('alumno',
+        `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&activo=eq.true`),
     ]);
     
     // Indexar stock disponible por talla_key

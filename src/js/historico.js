@@ -25,8 +25,8 @@ async function initHistorico() {
     // Para cada temporada: total alumnos y distribución por nivel
     await Promise.all(temporadas.map(async t => {
       try {
-        const alumnos = await supaFetch('alumno', 'GET', null, 
-          `?temporada_id=eq.${t.id}&activo=eq.true&select=nivel,sexo,estado_top,estado_bottom,escuela_id&limit=50000`);
+        const alumnos = await supaFetchAll('alumno',
+          `?temporada_id=eq.${t.id}&activo=eq.true&select=nivel,sexo,estado_top,estado_bottom,escuela_id`);
         historicoCache.datosPorTemporada[t.id] = { alumnos };
       } catch(e) {
         historicoCache.datosPorTemporada[t.id] = { alumnos: [] };

@@ -125,8 +125,8 @@ async function imprimirListaEmpaque(escuelaId) {
     const esc = registroCache.escuelas.find(e => e.escuela_id === escuelaId);
     if (!esc) return;
     
-    const alumnos = await supaFetch('alumno', 'GET', null, 
-      `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&activo=eq.true&order=nivel,grado,nombre&limit=2000`);
+    const alumnos = await supaFetchAll('alumno',
+      `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&activo=eq.true&order=nivel,grado,nombre`);
     
     if (alumnos.length === 0) { alert('Sin alumnos cargados'); return; }
     
@@ -384,8 +384,8 @@ function abrirMenuReportes(escuelaId) {
   document.getElementById('rep-escuela-nombre').textContent = esc.escuela_nombre;
   
   // Obtener grados únicos de la escuela para el selector
-  supaFetch('alumno', 'GET', null, 
-    `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&select=grado&limit=5000`)
+  supaFetchAll('alumno',
+    `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&select=grado`)
     .then(alumnos => {
       const grados = [...new Set(alumnos.map(a => a.grado).filter(Boolean))].sort();
       const sel = document.getElementById('rep-grado-select');
