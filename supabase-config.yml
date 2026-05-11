@@ -1,0 +1,11 @@
+# Configuracion del proyecto Supabase
+# Editar este archivo y al mergear a main, el workflow lo aplica via Management API.
+# Documentacion endpoint: https://api.supabase.com/api/v1#tag/postgrest-config
+
+project_ref: kszdievqesveluzcnzsh
+
+postgrest:
+  # Limite maximo de filas que Supabase devuelve en una sola respuesta REST.
+  # Subido a 50000 porque algunas vistas (alumnos, registros historicos) superan 1000.
+  # El codigo igual usa supaFetchAll para paginar; esto es defensa en profundidad.
+  max_rows: 50000
