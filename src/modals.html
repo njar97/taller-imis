@@ -1,3 +1,24 @@
+<!-- LOGIN OVERLAY: bloquea la app hasta que el usuario se autentique -->
+<div id="auth-overlay" class="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-logo">T</div>
+    <h2>Taller IMIS</h2>
+    <p class="auth-sub">Iniciá sesión para continuar</p>
+    <form id="auth-form" onsubmit="return doLogin(event)">
+      <div class="field">
+        <label for="auth-email">Email</label>
+        <input id="auth-email" type="email" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="auth-pass">Contraseña</label>
+        <input id="auth-pass" type="password" autocomplete="current-password" required>
+      </div>
+      <div id="auth-alert"></div>
+      <button id="auth-submit" type="submit" class="btn btn-primary btn-block">Entrar</button>
+    </form>
+  </div>
+</div>
+
 <!-- MINI MODAL: crear KEY nueva -->
 <div id="mini-modal" class="mini-modal">
   <div class="mini-modal-box">

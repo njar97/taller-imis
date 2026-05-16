@@ -1,6 +1,25 @@
 let SUPA_URL = localStorage.getItem('supa_url') || 'https://kszdievqesveluzcnzsh.supabase.co';
 let SUPA_KEY = localStorage.getItem('supa_key') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzemRpZXZxZXN2ZWx1emNuenNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MTgwMTgsImV4cCI6MjA5MDM5NDAxOH0.r28goEyUxZeKK9j0efu1BXC8ssU9lYxRK7dp3BGix1M';
 
+// Cliente Supabase (SDK cargado por CDN en head.html). Maneja sesión + refresh de tokens.
+let supaClient = null;
+let supaSession = null;
+function initSupaClient() {
+  if (supaClient || typeof supabase === 'undefined') return supaClient;
+  supaClient = supabase.createClient(SUPA_URL, SUPA_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, storageKey: 'taller-imis-auth' }
+  });
+  supaClient.auth.onAuthStateChange((_event, session) => {
+    supaSession = session;
+    renderUserChip();
+  });
+  return supaClient;
+}
+function authToken() {
+  // JWT del usuario logueado, o null. Usado por supaFetch para Authorization.
+  return supaSession && supaSession.access_token ? supaSession.access_token : null;
+}
+
 // Catálogo base de KEYs por prenda (extraído del BASE_2025)
 // Se puede extender con la tabla catalogo_key de Supabase
 const CATALOGO_BASE = {
@@ -84,9 +103,10 @@ function volverNuevo() {
 // ══════════════════════════════════════════════════════════════════════
 async function supaFetch(table, method = 'GET', body = null, params = '') {
   const url = `${SUPA_URL}/rest/v1/${table}${params}`;
+  const tok = authToken() || SUPA_KEY;
   const opts = {
     method,
-    headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Prefer': method === 'POST' ? 'return=representation' : '' }
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}`, 'Prefer': method === 'POST' ? 'return=representation' : '' }
   };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(url, opts);
@@ -115,9 +135,10 @@ async function supaFetchAll(table, params = '', pageSize = 1000) {
 async function supaUploadFoto(file, trazoId) {
   const ext = file.name.split('.').pop();
   const path = `${trazoId}.${ext}`;
+  const tok = authToken() || SUPA_KEY;
   const res = await fetch(`${SUPA_URL}/storage/v1/object/trazo-fotos/${path}`, {
     method: 'POST',
-    headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': file.type },
+    headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}`, 'Content-Type': file.type },
     body: file
   });
   if (!res.ok) throw new Error('Error subiendo foto');
@@ -125,12 +146,90 @@ async function supaUploadFoto(file, trazoId) {
 }
 
 async function supaUpdate(table, id, data) {
+  const tok = authToken() || SUPA_KEY;
   const res = await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` },
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}` },
     body: JSON.stringify(data)
   });
   if (!res.ok) throw new Error(await res.text());
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// AUTH (Supabase Auth + login overlay)
+// ══════════════════════════════════════════════════════════════════════
+function showAuthOverlay(show) {
+  const ov = document.getElementById('auth-overlay');
+  if (!ov) return;
+  ov.classList.toggle('active', !!show);
+}
+
+function renderUserChip() {
+  const chip = document.getElementById('user-chip');
+  const emailEl = document.getElementById('user-chip-email');
+  if (!chip || !emailEl) return;
+  if (supaSession && supaSession.user) {
+    emailEl.textContent = supaSession.user.email || 'logueado';
+    chip.style.display = 'inline-flex';
+  } else {
+    chip.style.display = 'none';
+  }
+}
+
+async function doLogin(ev) {
+  if (ev) ev.preventDefault();
+  const email = document.getElementById('auth-email').value.trim();
+  const pass = document.getElementById('auth-pass').value;
+  const alertEl = document.getElementById('auth-alert');
+  const btn = document.getElementById('auth-submit');
+  alertEl.innerHTML = '';
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  try {
+    const cli = initSupaClient();
+    if (!cli) throw new Error('SDK de Supabase no cargado');
+    const { data, error } = await cli.auth.signInWithPassword({ email, password: pass });
+    if (error) throw error;
+    supaSession = data.session;
+    showAuthOverlay(false);
+    renderUserChip();
+    document.getElementById('auth-pass').value = '';
+    if (typeof initDashboard === 'function') initDashboard();
+  } catch (e) {
+    alertEl.innerHTML = `<div class="alert alert-error">${e.message || 'Error de login'}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+  }
+  return false;
+}
+
+async function doLogout() {
+  try {
+    const cli = initSupaClient();
+    if (cli) await cli.auth.signOut();
+  } catch (e) { /* ignore */ }
+  supaSession = null;
+  renderUserChip();
+  showAuthOverlay(true);
+}
+
+async function gateApp() {
+  // Llamado al arranque. Si hay sesión válida, deja pasar; si no, muestra el login.
+  const cli = initSupaClient();
+  if (!cli) {
+    // SDK no cargó (offline / CDN bloqueado): dejá pasar con anon key como fallback.
+    console.warn('Supabase SDK no disponible — modo legacy con anon key');
+    return;
+  }
+  const { data } = await cli.auth.getSession();
+  supaSession = data.session;
+  if (supaSession) {
+    showAuthOverlay(false);
+    renderUserChip();
+  } else {
+    showAuthOverlay(true);
+  }
 }
 
 function mostrarAlerta(sec, tipo, msg) {
@@ -159,11 +258,14 @@ function previewFoto(input, previewId, labelId) {
 // ══════════════════════════════════════════════════════════════════════
 // ARRANQUE
 // ══════════════════════════════════════════════════════════════════════
-// Al cargar, inicializar el dashboard del tab Inicio
+// Gate de auth + dashboard. Si no hay sesión, gateApp muestra el overlay
+// de login y bloquea la app hasta que el usuario se loguee.
+async function bootApp() {
+  await gateApp();
+  if (supaSession && typeof initDashboard === 'function') initDashboard();
+}
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    if (typeof initDashboard === 'function') initDashboard();
-  });
+  document.addEventListener('DOMContentLoaded', bootApp);
 } else {
-  setTimeout(() => { if (typeof initDashboard === 'function') initDashboard(); }, 100);
+  setTimeout(bootApp, 100);
 }

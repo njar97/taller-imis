@@ -1,10 +1,11 @@
-<!-- Generado: 2026-05-10 05:04 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-12 05:15 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Taller IMIS — Producción v31</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -241,6 +242,17 @@
   .talla-complemento optgroup { font-weight: 700; color: var(--azul); }
   .complemento-info { font-size: 11px; color: #666; margin-top: 4px; font-style: italic; }
 
+  /* Login overlay (bloquea la app hasta autenticar) */
+  .auth-overlay { position: fixed; inset: 0; background: linear-gradient(135deg, var(--azul) 0%, #0d2c4a 100%); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 16px; }
+  .auth-overlay.active { display: flex; }
+  .auth-box { background: white; border-radius: 14px; padding: 28px 24px; max-width: 380px; width: 100%; box-shadow: 0 8px 32px rgba(0,0,0,0.25); }
+  .auth-logo { width: 56px; height: 56px; background: var(--azul); color: white; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 24px; margin: 0 auto 12px; }
+  .auth-box h2 { text-align: center; color: var(--azul); font-size: 20px; margin-bottom: 4px; }
+  .auth-sub { text-align: center; color: #666; font-size: 13px; margin-bottom: 18px; }
+  .auth-box .btn-block { margin-top: 14px; }
+  .user-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 12px; background: rgba(255,255,255,0.15); color: white; font-size: 11px; font-weight: 600; }
+  .user-chip .logout-link { color: #FFD700; cursor: pointer; text-decoration: underline; margin-left: 4px; }
+
   /* Modal simple para crear talla nueva */
   .mini-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1500; display: none; align-items: center; justify-content: center; padding: 16px; }
   .mini-modal.active { display: flex; }
@@ -278,6 +290,10 @@
   <div class="nav-top">
     <div style="width:32px;height:32px;background:rgba(255,255,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">T</div>
     <h1>Taller IMIS — Producción v31</h1>
+    <div id="user-chip" class="user-chip" style="display:none">
+      <span id="user-chip-email"></span>
+      <span class="logout-link" onclick="doLogout()">salir</span>
+    </div>
   </div>
   <div class="nav-tabs">
     <div class="nav-tab active" onclick="switchTab('inicio',this)">🏠 Inicio</div>
@@ -1323,6 +1339,27 @@
 
 </div>
 
+<!-- LOGIN OVERLAY: bloquea la app hasta que el usuario se autentique -->
+<div id="auth-overlay" class="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-logo">T</div>
+    <h2>Taller IMIS</h2>
+    <p class="auth-sub">Iniciá sesión para continuar</p>
+    <form id="auth-form" onsubmit="return doLogin(event)">
+      <div class="field">
+        <label for="auth-email">Email</label>
+        <input id="auth-email" type="email" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="auth-pass">Contraseña</label>
+        <input id="auth-pass" type="password" autocomplete="current-password" required>
+      </div>
+      <div id="auth-alert"></div>
+      <button id="auth-submit" type="submit" class="btn btn-primary btn-block">Entrar</button>
+    </form>
+  </div>
+</div>
+
 <!-- MINI MODAL: crear KEY nueva -->
 <div id="mini-modal" class="mini-modal">
   <div class="mini-modal-box">
@@ -1354,6 +1391,25 @@
 // +++++++++++++++++++ core.js +++++++++++++++++++
 let SUPA_URL = localStorage.getItem('supa_url') || 'https://kszdievqesveluzcnzsh.supabase.co';
 let SUPA_KEY = localStorage.getItem('supa_key') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzemRpZXZxZXN2ZWx1emNuenNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MTgwMTgsImV4cCI6MjA5MDM5NDAxOH0.r28goEyUxZeKK9j0efu1BXC8ssU9lYxRK7dp3BGix1M';
+
+// Cliente Supabase (SDK cargado por CDN en head.html). Maneja sesión + refresh de tokens.
+let supaClient = null;
+let supaSession = null;
+function initSupaClient() {
+  if (supaClient || typeof supabase === 'undefined') return supaClient;
+  supaClient = supabase.createClient(SUPA_URL, SUPA_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, storageKey: 'taller-imis-auth' }
+  });
+  supaClient.auth.onAuthStateChange((_event, session) => {
+    supaSession = session;
+    renderUserChip();
+  });
+  return supaClient;
+}
+function authToken() {
+  // JWT del usuario logueado, o null. Usado por supaFetch para Authorization.
+  return supaSession && supaSession.access_token ? supaSession.access_token : null;
+}
 
 // Catálogo base de KEYs por prenda (extraído del BASE_2025)
 // Se puede extender con la tabla catalogo_key de Supabase
@@ -1438,9 +1494,10 @@ function volverNuevo() {
 // ══════════════════════════════════════════════════════════════════════
 async function supaFetch(table, method = 'GET', body = null, params = '') {
   const url = `${SUPA_URL}/rest/v1/${table}${params}`;
+  const tok = authToken() || SUPA_KEY;
   const opts = {
     method,
-    headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Prefer': method === 'POST' ? 'return=representation' : '' }
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}`, 'Prefer': method === 'POST' ? 'return=representation' : '' }
   };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(url, opts);
@@ -1469,9 +1526,10 @@ async function supaFetchAll(table, params = '', pageSize = 1000) {
 async function supaUploadFoto(file, trazoId) {
   const ext = file.name.split('.').pop();
   const path = `${trazoId}.${ext}`;
+  const tok = authToken() || SUPA_KEY;
   const res = await fetch(`${SUPA_URL}/storage/v1/object/trazo-fotos/${path}`, {
     method: 'POST',
-    headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': file.type },
+    headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}`, 'Content-Type': file.type },
     body: file
   });
   if (!res.ok) throw new Error('Error subiendo foto');
@@ -1479,12 +1537,90 @@ async function supaUploadFoto(file, trazoId) {
 }
 
 async function supaUpdate(table, id, data) {
+  const tok = authToken() || SUPA_KEY;
   const res = await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` },
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}` },
     body: JSON.stringify(data)
   });
   if (!res.ok) throw new Error(await res.text());
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// AUTH (Supabase Auth + login overlay)
+// ══════════════════════════════════════════════════════════════════════
+function showAuthOverlay(show) {
+  const ov = document.getElementById('auth-overlay');
+  if (!ov) return;
+  ov.classList.toggle('active', !!show);
+}
+
+function renderUserChip() {
+  const chip = document.getElementById('user-chip');
+  const emailEl = document.getElementById('user-chip-email');
+  if (!chip || !emailEl) return;
+  if (supaSession && supaSession.user) {
+    emailEl.textContent = supaSession.user.email || 'logueado';
+    chip.style.display = 'inline-flex';
+  } else {
+    chip.style.display = 'none';
+  }
+}
+
+async function doLogin(ev) {
+  if (ev) ev.preventDefault();
+  const email = document.getElementById('auth-email').value.trim();
+  const pass = document.getElementById('auth-pass').value;
+  const alertEl = document.getElementById('auth-alert');
+  const btn = document.getElementById('auth-submit');
+  alertEl.innerHTML = '';
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  try {
+    const cli = initSupaClient();
+    if (!cli) throw new Error('SDK de Supabase no cargado');
+    const { data, error } = await cli.auth.signInWithPassword({ email, password: pass });
+    if (error) throw error;
+    supaSession = data.session;
+    showAuthOverlay(false);
+    renderUserChip();
+    document.getElementById('auth-pass').value = '';
+    if (typeof initDashboard === 'function') initDashboard();
+  } catch (e) {
+    alertEl.innerHTML = `<div class="alert alert-error">${e.message || 'Error de login'}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+  }
+  return false;
+}
+
+async function doLogout() {
+  try {
+    const cli = initSupaClient();
+    if (cli) await cli.auth.signOut();
+  } catch (e) { /* ignore */ }
+  supaSession = null;
+  renderUserChip();
+  showAuthOverlay(true);
+}
+
+async function gateApp() {
+  // Llamado al arranque. Si hay sesión válida, deja pasar; si no, muestra el login.
+  const cli = initSupaClient();
+  if (!cli) {
+    // SDK no cargó (offline / CDN bloqueado): dejá pasar con anon key como fallback.
+    console.warn('Supabase SDK no disponible — modo legacy con anon key');
+    return;
+  }
+  const { data } = await cli.auth.getSession();
+  supaSession = data.session;
+  if (supaSession) {
+    showAuthOverlay(false);
+    renderUserChip();
+  } else {
+    showAuthOverlay(true);
+  }
 }
 
 function mostrarAlerta(sec, tipo, msg) {
@@ -1513,13 +1649,16 @@ function previewFoto(input, previewId, labelId) {
 // ══════════════════════════════════════════════════════════════════════
 // ARRANQUE
 // ══════════════════════════════════════════════════════════════════════
-// Al cargar, inicializar el dashboard del tab Inicio
+// Gate de auth + dashboard. Si no hay sesión, gateApp muestra el overlay
+// de login y bloquea la app hasta que el usuario se loguee.
+async function bootApp() {
+  await gateApp();
+  if (supaSession && typeof initDashboard === 'function') initDashboard();
+}
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    if (typeof initDashboard === 'function') initDashboard();
-  });
+  document.addEventListener('DOMContentLoaded', bootApp);
 } else {
-  setTimeout(() => { if (typeof initDashboard === 'function') initDashboard(); }, 100);
+  setTimeout(bootApp, 100);
 }
 
 // +++++++++++++++++++ dashboard.js +++++++++++++++++++
