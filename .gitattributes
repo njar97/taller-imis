@@ -1,0 +1,2 @@
+# Shell hooks deben mantenerse con LF — Git Bash no ejecuta scripts con CRLF.
+hooks/pre-commit text eol=lf
