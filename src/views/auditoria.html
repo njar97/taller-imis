@@ -1,0 +1,59 @@
+<!-- ══════════ AUDITORÍA (v3.21+) — solo admin ══════════ -->
+<div id="view-auditoria" class="view">
+  <div id="alert-auditoria"></div>
+
+  <div class="card">
+    <div class="card-title">🔍 Auditoría</div>
+    <div class="card-sub">Quién hizo qué en las tablas críticas. Solo visible para admin.</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="field" style="margin:0">
+        <label>Tabla</label>
+        <select id="audit-f-tabla" onchange="cargarAuditoria()">
+          <option value="">— Todas —</option>
+          <option value="trazo">trazo</option>
+          <option value="tendido">tendido</option>
+          <option value="pedido">pedido</option>
+          <option value="asignacion">asignacion</option>
+          <option value="produccion_bulto">produccion_bulto</option>
+          <option value="produccion_registro_operacion">produccion_registro_operacion</option>
+          <option value="bodega_movimiento">bodega_movimiento</option>
+        </select>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Desde</label>
+        <input id="audit-f-desde" type="date" onchange="cargarAuditoria()">
+      </div>
+      <div class="field" style="margin:0">
+        <label>Hasta</label>
+        <input id="audit-f-hasta" type="date" onchange="cargarAuditoria()">
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center;font-size:12px">
+      <div id="audit-meta" style="color:#666"></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="limpiarFiltrosAuditoria()">Limpiar filtros</button>
+        <button class="btn btn-primary btn-sm" onclick="cargarAuditoria()">🔄 Recargar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="audit-lista"></div>
+</div>
+
+<!-- Modal de detalle: row_before / row_after / changed_cols -->
+<div id="audit-detalle-modal" class="modal" style="display:none">
+  <div class="modal-content" style="max-width:760px">
+    <div class="modal-header">
+      <div>
+        <div class="card-title" id="audit-detalle-titulo" style="margin:0"></div>
+        <div id="audit-detalle-subt" style="font-size:12px;color:#666;margin-top:2px"></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="cerrarDetalleAudit()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="audit-detalle-body"></div>
+    </div>
+  </div>
+</div>

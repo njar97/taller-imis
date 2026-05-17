@@ -32,6 +32,7 @@ JS_ORDER = [
     "historico.js",
     "exportar.js",
     "grupos.js",
+    "auditoria.js",
     "config.js",
 ]
 
@@ -45,6 +46,7 @@ VIEWS_ORDER = [
     "produccion.html",
     "registro.html",
     "bodega.html",
+    "auditoria.html",
     "config.html",
 ]
 
