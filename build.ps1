@@ -39,6 +39,7 @@ $jsOrder = @(
     'historico.js',
     'exportar.js',
     'grupos.js',
+    'auditoria.js',
     'config.js'
 )
 
@@ -52,6 +53,7 @@ $viewsOrder = @(
     'produccion.html',
     'registro.html',
     'bodega.html',
+    'auditoria.html',
     'config.html'
 )
 

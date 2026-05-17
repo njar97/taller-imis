@@ -78,6 +78,7 @@ function switchTab(tab, el) {
   if (tab === 'registro' && typeof initRegistro === 'function') initRegistro();
   if (tab === 'bodega' && typeof initBodega === 'function') initBodega();
   if (tab === 'inicio' && typeof initDashboard === 'function') initDashboard();
+  if (tab === 'auditoria' && typeof initAuditoria === 'function') initAuditoria();
   if (tab === 'nuevo') {} // menu se arma en init
   window.scrollTo(0, 0);
 }
@@ -195,6 +196,7 @@ async function doLogin(ev) {
     renderUserChip();
     document.getElementById('auth-pass').value = '';
     if (typeof initDashboard === 'function') initDashboard();
+    if (typeof initAuditRoleTab === 'function') initAuditRoleTab();
   } catch (e) {
     alertEl.innerHTML = `<div class="alert alert-error">${e.message || 'Error de login'}</div>`;
   } finally {
@@ -211,6 +213,8 @@ async function doLogout() {
   } catch (e) { /* ignore */ }
   supaSession = null;
   renderUserChip();
+  const auditTab = document.getElementById('nav-tab-audit');
+  if (auditTab) auditTab.style.display = 'none';
   showAuthOverlay(true);
 }
 
@@ -263,6 +267,7 @@ function previewFoto(input, previewId, labelId) {
 async function bootApp() {
   await gateApp();
   if (supaSession && typeof initDashboard === 'function') initDashboard();
+  if (supaSession && typeof initAuditRoleTab === 'function') initAuditRoleTab();
 }
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', bootApp);
