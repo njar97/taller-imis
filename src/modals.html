@@ -1,21 +1,29 @@
-<!-- LOGIN OVERLAY: bloquea la app hasta que el usuario se autentique -->
+<!-- AUTH OVERLAY: 3 modos (login / forgot / reset) controlados por setAuthMode() -->
 <div id="auth-overlay" class="auth-overlay">
   <div class="auth-box">
     <div class="auth-logo">T</div>
     <h2>Taller IMIS</h2>
-    <p class="auth-sub">Iniciá sesión para continuar</p>
-    <form id="auth-form" onsubmit="return doLogin(event)">
-      <div class="field">
+    <p id="auth-sub" class="auth-sub">Iniciá sesión para continuar</p>
+    <form id="auth-form" onsubmit="return doAuthSubmit(event)">
+      <div id="auth-field-email" class="field">
         <label for="auth-email">Email</label>
         <input id="auth-email" type="email" autocomplete="username" required>
       </div>
-      <div class="field">
+      <div id="auth-field-pass" class="field">
         <label for="auth-pass">Contraseña</label>
         <input id="auth-pass" type="password" autocomplete="current-password" required>
+      </div>
+      <div id="auth-field-newpass" class="field" style="display:none">
+        <label for="auth-newpass">Nueva contraseña (mínimo 6)</label>
+        <input id="auth-newpass" type="password" autocomplete="new-password" minlength="6">
       </div>
       <div id="auth-alert"></div>
       <button id="auth-submit" type="submit" class="btn btn-primary btn-block">Entrar</button>
     </form>
+    <div style="margin-top:12px;text-align:center;font-size:13px">
+      <a id="auth-link-forgot" href="javascript:void(0)" onclick="setAuthMode('forgot')" style="color:var(--azul2);cursor:pointer;text-decoration:none">¿Olvidaste tu contraseña?</a>
+      <a id="auth-link-login" href="javascript:void(0)" onclick="setAuthMode('login')" style="color:var(--azul2);cursor:pointer;text-decoration:none;display:none">← Volver al login</a>
+    </div>
   </div>
 </div>
 
