@@ -1,0 +1,39 @@
+#!/bin/sh
+# =========================================================
+# Pre-commit hook: regenera produccion.html desde src/ si
+# hay cambios staged en src/. Si el build cambia el HTML,
+# lo re-stagea para que el commit incluya un produccion.html
+# sincronizado.
+#
+# Aborta el commit si el build falla.
+#
+# Para activar: ./hooks/install.ps1 (o bien
+#     git config core.hooksPath hooks)
+# =========================================================
+set -e
+
+# Si no hay nada staged dentro de src/, no hay nada que rebuildear.
+if ! git diff --cached --name-only | grep -q '^src/'; then
+    exit 0
+fi
+
+echo "[pre-commit] Cambios en src/ detectados — regenerando produccion.html..."
+
+# Preferir PowerShell (mismo build que usa el usuario); fallback a python.
+if command -v pwsh >/dev/null 2>&1; then
+    pwsh -NoProfile -ExecutionPolicy Bypass -File ./build.ps1 >/dev/null
+elif command -v powershell >/dev/null 2>&1; then
+    powershell -NoProfile -ExecutionPolicy Bypass -File ./build.ps1 >/dev/null
+elif command -v python >/dev/null 2>&1; then
+    python build.py >/dev/null
+elif command -v python3 >/dev/null 2>&1; then
+    python3 build.py >/dev/null
+else
+    echo "[pre-commit] ERROR: no encontre pwsh/powershell ni python para correr build."
+    echo "[pre-commit] Instala uno o corre el build a mano antes de commitear."
+    exit 1
+fi
+
+# Re-stagear produccion.html si cambió (no-op si no).
+git add produccion.html
+echo "[pre-commit] produccion.html actualizado y re-stageado."

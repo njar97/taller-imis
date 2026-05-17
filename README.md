@@ -100,6 +100,18 @@ taller-imis/
 
 Si lo editás por error, se regenera con `.\build.ps1`.
 
+## Pre-commit hook (opcional, recomendado)
+
+Para que cada `git commit` que toque `src/` regenere `produccion.html` automáticamente y lo incluya en el commit:
+
+```powershell
+.\hooks\install.ps1
+```
+
+Se corre una sola vez por clon del repo. Después, si te olvidás de `.\build.ps1` antes de commitear, el hook lo hace por vos. Si el build falla, el commit se aborta.
+
+Para desactivar: `git config --unset core.hooksPath`.
+
 ## Fases de producción
 
 Activables desde Config:
