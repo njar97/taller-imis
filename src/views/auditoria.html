@@ -6,7 +6,7 @@
     <div class="card-title">🔍 Auditoría</div>
     <div class="card-sub">Quién hizo qué en las tablas críticas. Solo visible para admin.</div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px">
       <div class="field" style="margin:0">
         <label>Tabla</label>
         <select id="audit-f-tabla" onchange="cargarAuditoria()">
