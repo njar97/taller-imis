@@ -9,9 +9,16 @@ function initSupaClient() {
   supaClient = supabase.createClient(SUPA_URL, SUPA_KEY, {
     auth: { persistSession: true, autoRefreshToken: true, storageKey: 'taller-imis-auth' }
   });
-  supaClient.auth.onAuthStateChange((_event, session) => {
+  supaClient.auth.onAuthStateChange((event, session) => {
     supaSession = session;
     renderUserChip();
+    // Cuando el user vuelve desde el email de recovery, Supabase emite
+    // PASSWORD_RECOVERY y deja una sesión temporal lista para updateUser.
+    // Mostramos el overlay en modo "reset" para que setee password nueva.
+    if (event === 'PASSWORD_RECOVERY') {
+      setAuthMode('reset');
+      showAuthOverlay(true);
+    }
   });
   return supaClient;
 }
@@ -177,6 +184,58 @@ function renderUserChip() {
   }
 }
 
+// ── Multi-mode auth overlay ──────────────────────────────────────────
+// 'login'  → email + password, signInWithPassword
+// 'forgot' → email, resetPasswordForEmail (mail con link de recovery)
+// 'reset'  → nueva password, updateUser (después de clicar el link)
+let authMode = 'login';
+
+function setAuthMode(mode) {
+  authMode = mode;
+  const fE = document.getElementById('auth-field-email');
+  const fP = document.getElementById('auth-field-pass');
+  const fN = document.getElementById('auth-field-newpass');
+  const btn = document.getElementById('auth-submit');
+  const sub = document.getElementById('auth-sub');
+  const lF = document.getElementById('auth-link-forgot');
+  const lL = document.getElementById('auth-link-login');
+  const al = document.getElementById('auth-alert');
+  if (al) al.innerHTML = '';
+  if (mode === 'login') {
+    fE.style.display = ''; fP.style.display = ''; fN.style.display = 'none';
+    btn.textContent = 'Entrar';
+    sub.textContent = 'Iniciá sesión para continuar';
+    lF.style.display = ''; lL.style.display = 'none';
+    document.getElementById('auth-pass').required = true;
+    document.getElementById('auth-email').required = true;
+    document.getElementById('auth-newpass').required = false;
+  } else if (mode === 'forgot') {
+    fE.style.display = ''; fP.style.display = 'none'; fN.style.display = 'none';
+    btn.textContent = 'Enviar instrucciones';
+    sub.textContent = 'Te enviamos un email con un link para resetear tu contraseña';
+    lF.style.display = 'none'; lL.style.display = '';
+    document.getElementById('auth-pass').required = false;
+    document.getElementById('auth-email').required = true;
+    document.getElementById('auth-newpass').required = false;
+  } else if (mode === 'reset') {
+    fE.style.display = 'none'; fP.style.display = 'none'; fN.style.display = '';
+    btn.textContent = 'Guardar nueva contraseña';
+    sub.textContent = 'Ingresá tu nueva contraseña';
+    lF.style.display = 'none'; lL.style.display = '';
+    document.getElementById('auth-pass').required = false;
+    document.getElementById('auth-email').required = false;
+    document.getElementById('auth-newpass').required = true;
+  }
+}
+
+function doAuthSubmit(ev) {
+  if (ev) ev.preventDefault();
+  if (authMode === 'login')  return doLogin(ev);
+  if (authMode === 'forgot') return doForgotPassword(ev);
+  if (authMode === 'reset')  return doSetNewPassword(ev);
+  return false;
+}
+
 async function doLogin(ev) {
   if (ev) ev.preventDefault();
   const email = document.getElementById('auth-email').value.trim();
@@ -202,6 +261,73 @@ async function doLogin(ev) {
   } finally {
     btn.disabled = false;
     btn.textContent = 'Entrar';
+  }
+  return false;
+}
+
+async function doForgotPassword(ev) {
+  if (ev) ev.preventDefault();
+  const email = document.getElementById('auth-email').value.trim();
+  const alertEl = document.getElementById('auth-alert');
+  const btn = document.getElementById('auth-submit');
+  alertEl.innerHTML = '';
+  if (!email) {
+    alertEl.innerHTML = '<div class="alert alert-error">Ingresá tu email</div>';
+    return false;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  try {
+    const cli = initSupaClient();
+    if (!cli) throw new Error('SDK de Supabase no cargado');
+    const redirectTo = window.location.origin + window.location.pathname;
+    const { error } = await cli.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) throw error;
+    alertEl.innerHTML = '<div class="alert alert-success">Listo. Revisá tu email — el link expira en 1 hora.</div>';
+  } catch (e) {
+    alertEl.innerHTML = `<div class="alert alert-error">${e.message || 'No se pudo enviar el mail'}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Enviar instrucciones';
+  }
+  return false;
+}
+
+async function doSetNewPassword(ev) {
+  if (ev) ev.preventDefault();
+  const newPass = document.getElementById('auth-newpass').value;
+  const alertEl = document.getElementById('auth-alert');
+  const btn = document.getElementById('auth-submit');
+  alertEl.innerHTML = '';
+  if (!newPass || newPass.length < 6) {
+    alertEl.innerHTML = '<div class="alert alert-error">Mínimo 6 caracteres</div>';
+    return false;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+  try {
+    const cli = initSupaClient();
+    if (!cli) throw new Error('SDK de Supabase no cargado');
+    const { error } = await cli.auth.updateUser({ password: newPass });
+    if (error) throw error;
+    // Limpiamos el hash del recovery (token en la URL) y cerramos el overlay.
+    if (window.location.hash) {
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+    document.getElementById('auth-newpass').value = '';
+    alertEl.innerHTML = '<div class="alert alert-success">Contraseña actualizada. Entrando...</div>';
+    setTimeout(() => {
+      showAuthOverlay(false);
+      setAuthMode('login');
+      renderUserChip();
+      if (typeof initDashboard === 'function') initDashboard();
+      if (typeof initAuditRoleTab === 'function') initAuditRoleTab();
+    }, 800);
+  } catch (e) {
+    alertEl.innerHTML = `<div class="alert alert-error">${e.message || 'No se pudo actualizar la contraseña'}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Guardar nueva contraseña';
   }
   return false;
 }
