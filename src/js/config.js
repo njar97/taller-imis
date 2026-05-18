@@ -8,6 +8,55 @@ function initConfig() {
   const f3 = document.getElementById('cfg-fase3');
   if (f2) f2.checked = FASE2_ACTIVA;
   if (f3) { f3.checked = FASE3_ACTIVA; f3.disabled = !FASE2_ACTIVA; }
+  // Mostrar card de invitar solo si admin (reusa role cacheado por initAuditRoleTab)
+  const card = document.getElementById('cfg-invitar-card');
+  if (card) {
+    const rol = (typeof auditCache !== 'undefined' && auditCache.rolDelUser) || null;
+    card.style.display = (rol === 'admin') ? '' : 'none';
+  }
+}
+
+async function invitarUsuario() {
+  const emailEl = document.getElementById('cfg-inv-email');
+  const roleEl = document.getElementById('cfg-inv-role');
+  const alertEl = document.getElementById('cfg-inv-alert');
+  const email = emailEl.value.trim().toLowerCase();
+  const role = roleEl.value;
+  alertEl.innerHTML = '';
+  if (!email) {
+    alertEl.innerHTML = '<div class="alert alert-error">Ingresá un email.</div>';
+    return;
+  }
+  if (!supaSession || !supaSession.access_token) {
+    alertEl.innerHTML = '<div class="alert alert-error">Sin sesión válida. Volvé a loguearte.</div>';
+    return;
+  }
+  const btn = alertEl.parentElement.querySelector('button.btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+  try {
+    const redirectTo = window.location.origin + window.location.pathname;
+    const res = await fetch(`${SUPA_URL}/functions/v1/invite-user`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${supaSession.access_token}`,
+      },
+      body: JSON.stringify({ email, role, redirectTo }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    const warn = data.warning ? `<br><small>${data.warning}</small>` : '';
+    alertEl.innerHTML = `<div class="alert alert-success">Invitación enviada a <strong>${email}</strong> (${role}).${warn}</div>`;
+    emailEl.value = '';
+    roleEl.value = 'operador';
+  } catch (e) {
+    alertEl.innerHTML = `<div class="alert alert-error">${e.message || 'Error al invitar'}</div>`;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar invitación'; }
+  }
 }
 
 function toggleFase(n, activar) {
