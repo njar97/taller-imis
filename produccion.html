@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-17 13:26 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-17 20:45 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1396,6 +1396,31 @@
     </div>
     <div class="text-muted" style="font-size:11px;margin-top:8px">💡 Si desactivás una fase, los datos quedan guardados y se pueden volver a usar al reactivarla.</div>
   </div>
+
+  <!-- Invitar usuario (solo admin) -->
+  <div id="cfg-invitar-card" class="card" style="display:none">
+    <div class="card-title">👥 Invitar usuario</div>
+    <div class="text-muted mb8" style="font-size:12px">
+      Le mandamos un email al invitado con un link para que defina su contraseña inicial. El link expira en 24 horas.
+    </div>
+
+    <div class="row2" style="margin-bottom:10px">
+      <div class="field" style="margin:0">
+        <label>Email</label>
+        <input type="email" id="cfg-inv-email" placeholder="nuevo@correo.com" autocomplete="email">
+      </div>
+      <div class="field" style="margin:0">
+        <label>Rol</label>
+        <select id="cfg-inv-role">
+          <option value="operador" selected>Operador</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-block" onclick="invitarUsuario()">Enviar invitación</button>
+    <div id="cfg-inv-alert" style="margin-top:10px"></div>
+  </div>
 </div>
 
 </div>
@@ -1474,16 +1499,35 @@ function initSupaClient() {
   supaClient.auth.onAuthStateChange((event, session) => {
     supaSession = session;
     renderUserChip();
-    // Cuando el user vuelve desde el email de recovery, Supabase emite
+    // Recovery: user vuelve desde "olvidé contraseña". Supabase emite
     // PASSWORD_RECOVERY y deja una sesión temporal lista para updateUser.
-    // Mostramos el overlay en modo "reset" para que setee password nueva.
     if (event === 'PASSWORD_RECOVERY') {
+      setAuthMode('reset');
+      showAuthOverlay(true);
+      return;
+    }
+    // Invite: user nuevo recién aceptó la invitación. La URL trae
+    // #type=invite (o lo trajo, ya consumida por el SDK). El user está
+    // logueado pero necesita setear una password. Lo forzamos al modo
+    // "reset" en lugar de dejarlo entrar a la app sin password.
+    if (event === 'SIGNED_IN' && urlHashIndicatesInvite()) {
       setAuthMode('reset');
       showAuthOverlay(true);
     }
   });
   return supaClient;
 }
+// Devuelve true si la URL actual venía con type=invite (link de
+// inviteUserByEmail). El SDK ya consumió el hash al inicializar, pero
+// guardamos pista en sessionStorage al detectarlo en bootApp.
+function urlHashIndicatesInvite() {
+  try {
+    const h = window.location.hash || '';
+    if (h.includes('type=invite')) return true;
+    return sessionStorage.getItem('taller-imis-invite-pending') === '1';
+  } catch (_e) { return false; }
+}
+
 function authToken() {
   // JWT del usuario logueado, o null. Usado por supaFetch para Authorization.
   return supaSession && supaSession.access_token ? supaSession.access_token : null;
@@ -1776,6 +1820,7 @@ async function doSetNewPassword(ev) {
     if (window.location.hash) {
       history.replaceState(null, '', window.location.pathname + window.location.search);
     }
+    try { sessionStorage.removeItem('taller-imis-invite-pending'); } catch (_e) {}
     document.getElementById('auth-newpass').value = '';
     alertEl.innerHTML = '<div class="alert alert-success">Contraseña actualizada. Entrando...</div>';
     setTimeout(() => {
@@ -1853,6 +1898,14 @@ function previewFoto(input, previewId, labelId) {
 // Gate de auth + dashboard. Si no hay sesión, gateApp muestra el overlay
 // de login y bloquea la app hasta que el usuario se loguee.
 async function bootApp() {
+  // Si la URL trae type=invite, persistimos la pista antes de que el
+  // SDK consuma el hash. onAuthStateChange la usa para forzar el
+  // overlay de "setear password inicial" cuando emita SIGNED_IN.
+  try {
+    if ((window.location.hash || '').includes('type=invite')) {
+      sessionStorage.setItem('taller-imis-invite-pending', '1');
+    }
+  } catch (_e) {}
   await gateApp();
   if (supaSession && typeof initDashboard === 'function') initDashboard();
   if (supaSession && typeof initAuditRoleTab === 'function') initAuditRoleTab();
@@ -9699,6 +9752,55 @@ function initConfig() {
   const f3 = document.getElementById('cfg-fase3');
   if (f2) f2.checked = FASE2_ACTIVA;
   if (f3) { f3.checked = FASE3_ACTIVA; f3.disabled = !FASE2_ACTIVA; }
+  // Mostrar card de invitar solo si admin (reusa role cacheado por initAuditRoleTab)
+  const card = document.getElementById('cfg-invitar-card');
+  if (card) {
+    const rol = (typeof auditCache !== 'undefined' && auditCache.rolDelUser) || null;
+    card.style.display = (rol === 'admin') ? '' : 'none';
+  }
+}
+
+async function invitarUsuario() {
+  const emailEl = document.getElementById('cfg-inv-email');
+  const roleEl = document.getElementById('cfg-inv-role');
+  const alertEl = document.getElementById('cfg-inv-alert');
+  const email = emailEl.value.trim().toLowerCase();
+  const role = roleEl.value;
+  alertEl.innerHTML = '';
+  if (!email) {
+    alertEl.innerHTML = '<div class="alert alert-error">Ingresá un email.</div>';
+    return;
+  }
+  if (!supaSession || !supaSession.access_token) {
+    alertEl.innerHTML = '<div class="alert alert-error">Sin sesión válida. Volvé a loguearte.</div>';
+    return;
+  }
+  const btn = alertEl.parentElement.querySelector('button.btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+  try {
+    const redirectTo = window.location.origin + window.location.pathname;
+    const res = await fetch(`${SUPA_URL}/functions/v1/invite-user`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${supaSession.access_token}`,
+      },
+      body: JSON.stringify({ email, role, redirectTo }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    const warn = data.warning ? `<br><small>${data.warning}</small>` : '';
+    alertEl.innerHTML = `<div class="alert alert-success">Invitación enviada a <strong>${email}</strong> (${role}).${warn}</div>`;
+    emailEl.value = '';
+    roleEl.value = 'operador';
+  } catch (e) {
+    alertEl.innerHTML = `<div class="alert alert-error">${e.message || 'Error al invitar'}</div>`;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar invitación'; }
+  }
 }
 
 function toggleFase(n, activar) {

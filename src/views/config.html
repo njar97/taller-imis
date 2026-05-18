@@ -52,6 +52,31 @@
     </div>
     <div class="text-muted" style="font-size:11px;margin-top:8px">💡 Si desactivás una fase, los datos quedan guardados y se pueden volver a usar al reactivarla.</div>
   </div>
+
+  <!-- Invitar usuario (solo admin) -->
+  <div id="cfg-invitar-card" class="card" style="display:none">
+    <div class="card-title">👥 Invitar usuario</div>
+    <div class="text-muted mb8" style="font-size:12px">
+      Le mandamos un email al invitado con un link para que defina su contraseña inicial. El link expira en 24 horas.
+    </div>
+
+    <div class="row2" style="margin-bottom:10px">
+      <div class="field" style="margin:0">
+        <label>Email</label>
+        <input type="email" id="cfg-inv-email" placeholder="nuevo@correo.com" autocomplete="email">
+      </div>
+      <div class="field" style="margin:0">
+        <label>Rol</label>
+        <select id="cfg-inv-role">
+          <option value="operador" selected>Operador</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-block" onclick="invitarUsuario()">Enviar invitación</button>
+    <div id="cfg-inv-alert" style="margin-top:10px"></div>
+  </div>
 </div>
 
 </div>

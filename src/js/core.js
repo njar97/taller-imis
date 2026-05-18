@@ -12,16 +12,35 @@ function initSupaClient() {
   supaClient.auth.onAuthStateChange((event, session) => {
     supaSession = session;
     renderUserChip();
-    // Cuando el user vuelve desde el email de recovery, Supabase emite
+    // Recovery: user vuelve desde "olvidé contraseña". Supabase emite
     // PASSWORD_RECOVERY y deja una sesión temporal lista para updateUser.
-    // Mostramos el overlay en modo "reset" para que setee password nueva.
     if (event === 'PASSWORD_RECOVERY') {
+      setAuthMode('reset');
+      showAuthOverlay(true);
+      return;
+    }
+    // Invite: user nuevo recién aceptó la invitación. La URL trae
+    // #type=invite (o lo trajo, ya consumida por el SDK). El user está
+    // logueado pero necesita setear una password. Lo forzamos al modo
+    // "reset" en lugar de dejarlo entrar a la app sin password.
+    if (event === 'SIGNED_IN' && urlHashIndicatesInvite()) {
       setAuthMode('reset');
       showAuthOverlay(true);
     }
   });
   return supaClient;
 }
+// Devuelve true si la URL actual venía con type=invite (link de
+// inviteUserByEmail). El SDK ya consumió el hash al inicializar, pero
+// guardamos pista en sessionStorage al detectarlo en bootApp.
+function urlHashIndicatesInvite() {
+  try {
+    const h = window.location.hash || '';
+    if (h.includes('type=invite')) return true;
+    return sessionStorage.getItem('taller-imis-invite-pending') === '1';
+  } catch (_e) { return false; }
+}
+
 function authToken() {
   // JWT del usuario logueado, o null. Usado por supaFetch para Authorization.
   return supaSession && supaSession.access_token ? supaSession.access_token : null;
@@ -314,6 +333,7 @@ async function doSetNewPassword(ev) {
     if (window.location.hash) {
       history.replaceState(null, '', window.location.pathname + window.location.search);
     }
+    try { sessionStorage.removeItem('taller-imis-invite-pending'); } catch (_e) {}
     document.getElementById('auth-newpass').value = '';
     alertEl.innerHTML = '<div class="alert alert-success">Contraseña actualizada. Entrando...</div>';
     setTimeout(() => {
@@ -391,6 +411,14 @@ function previewFoto(input, previewId, labelId) {
 // Gate de auth + dashboard. Si no hay sesión, gateApp muestra el overlay
 // de login y bloquea la app hasta que el usuario se loguee.
 async function bootApp() {
+  // Si la URL trae type=invite, persistimos la pista antes de que el
+  // SDK consuma el hash. onAuthStateChange la usa para forzar el
+  // overlay de "setear password inicial" cuando emita SIGNED_IN.
+  try {
+    if ((window.location.hash || '').includes('type=invite')) {
+      sessionStorage.setItem('taller-imis-invite-pending', '1');
+    }
+  } catch (_e) {}
   await gateApp();
   if (supaSession && typeof initDashboard === 'function') initDashboard();
   if (supaSession && typeof initAuditRoleTab === 'function') initAuditRoleTab();
