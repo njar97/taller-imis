@@ -16,34 +16,15 @@ async function initDashboard() {
   const cont = document.getElementById('dashboard-contenido');
   if (!cont) { dashboardCache.cargando = false; return; }
   
-  // Renderizar sub-tabs primero
+  // Inicio = dashboard "Hoy" únicamente. Por-escuela e histórico viven ahora en Estadística.
   cont.innerHTML = `
-    <div class="sub-tabs" style="margin-bottom:10px">
-      <div class="sub-tab active" onclick="cambiarVistaDashboard('hoy', this)">📊 Hoy</div>
-      <div class="sub-tab" onclick="cambiarVistaDashboard('escuela', this)">🏫 Por escuela</div>
-      <div class="sub-tab" onclick="cambiarVistaDashboard('historico', this)">📈 Histórico</div>
-    </div>
     <div id="dashboard-sub-contenido">
       <div class="text-muted" style="padding:20px;text-align:center">Cargando dashboard...</div>
     </div>
   `;
-  
+
   await cargarDashboardHoy();
   dashboardCache.cargando = false;
-}
-
-function cambiarVistaDashboard(vista, el) {
-  document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
-  if (el) el.classList.add('active');
-  if (vista === 'hoy') cargarDashboardHoy();
-  else if (vista === 'escuela') {
-    if (typeof initResumenEscuela === 'function') initResumenEscuela();
-  }
-  else if (vista === 'historico') {
-    const sub = document.getElementById('dashboard-sub-contenido');
-    if (sub) sub.innerHTML = '<div id="historico-contenido"><div class="text-muted" style="padding:20px;text-align:center">Cargando datos históricos...</div></div>';
-    if (typeof initHistorico === 'function') initHistorico();
-  }
 }
 
 async function cargarDashboardHoy() {

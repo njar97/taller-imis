@@ -1,14 +1,12 @@
 <div id="view-produccion" class="view">
   <div id="alert-produccion"></div>
 
-  <!-- Subnav -->
+  <!-- Subnav (Operarias y Grupos viven ahora en Config) -->
   <div class="card" style="padding:6px;margin-bottom:10px">
     <div style="display:flex;gap:4px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" id="prod-sub-dashboard" onclick="switchSubProd('dashboard')" style="flex:1;min-width:70px">📊 Dashboard</button>
-      <button class="btn btn-ghost btn-sm" id="prod-sub-asignaciones" onclick="switchSubProd('asignaciones')" style="flex:1;min-width:70px">📋 Asignar</button>
-      <button class="btn btn-ghost btn-sm" id="prod-sub-captura" onclick="switchSubProd('captura')" style="flex:1;min-width:70px">📝 Captura</button>
-      <button class="btn btn-ghost btn-sm" id="prod-sub-operarias" onclick="switchSubProd('operarias')" style="flex:1;min-width:70px">👷 Operarias</button>
-      <button class="btn btn-ghost btn-sm" id="prod-sub-grupos" onclick="switchSubProd('grupos')" style="flex:1;min-width:70px">👥 Grupos</button>
+      <button class="btn btn-primary btn-sm" id="prod-sub-dashboard" onclick="switchSubProd('dashboard')" style="flex:1;min-width:80px">📊 Dashboard</button>
+      <button class="btn btn-ghost btn-sm" id="prod-sub-asignaciones" onclick="switchSubProd('asignaciones')" style="flex:1;min-width:80px">📋 Asignar</button>
+      <button class="btn btn-ghost btn-sm" id="prod-sub-captura" onclick="switchSubProd('captura')" style="flex:1;min-width:80px">📝 Captura</button>
     </div>
   </div>
 
@@ -237,6 +235,19 @@
     <div class="card">
       <div class="card-title">📋 Registros de hoy</div>
       <div id="cap-registros"></div>
+    </div>
+  </div>
+
+  <!-- SUB: Operarias (acceso desde Config) -->
+  <div id="prod-sub-operarias-view" style="display:none">
+    <div class="card">
+      <div class="card-title">👷 Operarias</div>
+      <div class="text-muted mb8" style="font-size:12px">Catálogo de operarias del taller. Usalo para asignar tareas en Producción.</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <input type="text" id="nueva-operaria" placeholder="Nombre de la operaria" style="flex:1;padding:6px">
+        <button class="btn btn-primary btn-sm" onclick="agregarOperaria()">+ Agregar</button>
+      </div>
+      <div id="operarias-lista"></div>
     </div>
   </div>
 

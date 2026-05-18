@@ -1,0 +1,36 @@
+<!-- ═══ ESTADÍSTICA ═══ reportes que cruzan etapas (porteado del RESUMEN/ESTADISTICA del Excel) -->
+<div id="view-estadistica" class="view">
+  <div id="alert-estadistica"></div>
+
+  <!-- Subnav -->
+  <div class="card" style="padding:6px;margin-bottom:10px">
+    <div style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" id="est-sub-escuela"   onclick="switchSubEst('escuela')"   style="flex:1;min-width:80px">🏫 Por escuela</button>
+      <button class="btn btn-ghost   btn-sm" id="est-sub-historico" onclick="switchSubEst('historico')" style="flex:1;min-width:80px">📈 Histórico</button>
+      <button class="btn btn-ghost   btn-sm" id="est-sub-inventario" onclick="switchSubEst('inventario')" style="flex:1;min-width:80px" disabled title="Pendiente">📦 Inventario</button>
+      <button class="btn btn-ghost   btn-sm" id="est-sub-costos"    onclick="switchSubEst('costos')"    style="flex:1;min-width:80px" disabled title="Pendiente">💰 Costos</button>
+    </div>
+  </div>
+
+  <!-- SUB: Por escuela (RESUMEN del Excel) -->
+  <div id="est-sub-escuela-view">
+    <div id="dashboard-sub-contenido">
+      <div class="text-muted" style="padding:20px;text-align:center">Cargando estadística por escuela...</div>
+    </div>
+  </div>
+
+  <!-- SUB: Histórico -->
+  <div id="est-sub-historico-view" style="display:none">
+    <div id="historico-contenido"><div class="text-muted" style="padding:20px;text-align:center">Cargando datos históricos...</div></div>
+  </div>
+
+  <!-- SUB: Inventario (pendiente V3) -->
+  <div id="est-sub-inventario-view" style="display:none">
+    <div class="card"><div class="card-title">📦 Inventario por prenda × talla</div><div class="text-muted">Pendiente — próxima iteración.</div></div>
+  </div>
+
+  <!-- SUB: Costos (pendiente V2/V3) -->
+  <div id="est-sub-costos-view" style="display:none">
+    <div class="card"><div class="card-title">💰 Costos y yardaje</div><div class="text-muted">Pendiente — próxima iteración (RESUMEN V2/V3).</div></div>
+  </div>
+</div>

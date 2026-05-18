@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-18 09:50 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-18 11:31 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -299,12 +299,11 @@
   </div>
   <div class="nav-tabs">
     <div class="nav-tab active" onclick="switchTab('inicio',this)">🏠 Inicio</div>
-    <div class="nav-tab" onclick="switchTab('nuevo',this)">➕ Nuevo</div>
-    <div class="nav-tab" onclick="switchTab('historial',this)">🗂 Historial</div>
+    <div class="nav-tab" onclick="switchTab('corte',this)">✂️ Corte</div>
     <div class="nav-tab" onclick="switchTab('produccion',this)">🏭 Prod.</div>
-    <div class="nav-tab" onclick="switchTab('registro',this)">📋 Registro</div>
     <div class="nav-tab" onclick="switchTab('bodega',this)">📦 Bodega</div>
-    <div id="nav-tab-audit" class="nav-tab" onclick="switchTab('auditoria',this)" style="display:none">🔍 Audit</div>
+    <div class="nav-tab" onclick="switchTab('estadistica',this)">📊 Estadística</div>
+    <div class="nav-tab" onclick="switchTab('registro',this)">📋 Registro</div>
     <div class="nav-tab" onclick="switchTab('config',this)">⚙️ Config</div>
   </div>
 </nav>
@@ -315,6 +314,63 @@
 <div id="view-inicio" class="view active">
   <div id="dashboard-contenido">
     <div class="text-muted" style="padding:20px;text-align:center">Cargando...</div>
+  </div>
+</div>
+
+<!-- ═══ CORTE ═══ unifica Nuevo (Trazo/Tendido/Bulto) + Historial -->
+<div id="view-corte" class="view">
+  <div id="alert-corte"></div>
+
+  <!-- Subnav -->
+  <div class="card" style="padding:6px;margin-bottom:10px">
+    <div style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" id="corte-sub-nuevo"    onclick="switchSubCorte('nuevo')"    style="flex:1;min-width:80px">➕ Nuevo</button>
+      <button class="btn btn-ghost   btn-sm" id="corte-sub-trazos"   onclick="switchSubCorte('trazos')"   style="flex:1;min-width:80px">✂️ Trazos</button>
+      <button class="btn btn-ghost   btn-sm" id="corte-sub-tendidos" onclick="switchSubCorte('tendidos')" style="flex:1;min-width:80px">📋 Tendidos</button>
+      <button class="btn btn-ghost   btn-sm" id="corte-sub-bultos"   onclick="switchSubCorte('bultos')"   style="flex:1;min-width:80px">📦 Bultos</button>
+    </div>
+  </div>
+
+  <!-- SUB: Nuevo -->
+  <div id="corte-sub-nuevo-view">
+    <div class="card">
+      <div class="card-title">➕ Nuevo registro de corte</div>
+      <div class="card-sub">Elegí qué querés registrar según el momento del taller.</div>
+      <div class="menu-nuevo">
+        <div class="menu-tarjeta" onclick="irA('trazo')">
+          <div class="menu-icono">✂️</div>
+          <div class="menu-info">
+            <div class="menu-titulo">Trazo</div>
+            <div class="menu-desc">Imelda dibuja la plancha con las tallas marcadas. Se puede dejar pendiente de tender para después.</div>
+          </div>
+          <div style="font-size:22px;color:#ccc">›</div>
+        </div>
+        <div class="menu-tarjeta" onclick="irA('tendido')">
+          <div class="menu-icono">📋</div>
+          <div class="menu-info">
+            <div class="menu-titulo">Tendido</div>
+            <div class="menu-desc">Sobre un trazo existente. Registrar rollo por rollo mientras se tiende.</div>
+          </div>
+          <div style="font-size:22px;color:#ccc">›</div>
+        </div>
+        <div class="menu-tarjeta" onclick="irA('bulto')">
+          <div class="menu-icono">📦</div>
+          <div class="menu-info">
+            <div class="menu-titulo">Bulto</div>
+            <div class="menu-desc">Después del corte. Propone bultos automáticamente; Paty confirma, divide o sustituye.</div>
+          </div>
+          <div style="font-size:22px;color:#ccc">›</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUB: Trazos / Tendidos / Bultos -->
+  <div id="corte-sub-lista-view" style="display:none">
+    <div class="card">
+      <div class="card-title" id="corte-lista-titulo">Trazos</div>
+      <div id="corte-lista-content"><div class="loading">Cargando...</div></div>
+    </div>
   </div>
 </div>
 
@@ -566,14 +622,12 @@
 <div id="view-produccion" class="view">
   <div id="alert-produccion"></div>
 
-  <!-- Subnav -->
+  <!-- Subnav (Operarias y Grupos viven ahora en Config) -->
   <div class="card" style="padding:6px;margin-bottom:10px">
     <div style="display:flex;gap:4px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" id="prod-sub-dashboard" onclick="switchSubProd('dashboard')" style="flex:1;min-width:70px">📊 Dashboard</button>
-      <button class="btn btn-ghost btn-sm" id="prod-sub-asignaciones" onclick="switchSubProd('asignaciones')" style="flex:1;min-width:70px">📋 Asignar</button>
-      <button class="btn btn-ghost btn-sm" id="prod-sub-captura" onclick="switchSubProd('captura')" style="flex:1;min-width:70px">📝 Captura</button>
-      <button class="btn btn-ghost btn-sm" id="prod-sub-operarias" onclick="switchSubProd('operarias')" style="flex:1;min-width:70px">👷 Operarias</button>
-      <button class="btn btn-ghost btn-sm" id="prod-sub-grupos" onclick="switchSubProd('grupos')" style="flex:1;min-width:70px">👥 Grupos</button>
+      <button class="btn btn-primary btn-sm" id="prod-sub-dashboard" onclick="switchSubProd('dashboard')" style="flex:1;min-width:80px">📊 Dashboard</button>
+      <button class="btn btn-ghost btn-sm" id="prod-sub-asignaciones" onclick="switchSubProd('asignaciones')" style="flex:1;min-width:80px">📋 Asignar</button>
+      <button class="btn btn-ghost btn-sm" id="prod-sub-captura" onclick="switchSubProd('captura')" style="flex:1;min-width:80px">📝 Captura</button>
     </div>
   </div>
 
@@ -805,6 +859,19 @@
     </div>
   </div>
 
+  <!-- SUB: Operarias (acceso desde Config) -->
+  <div id="prod-sub-operarias-view" style="display:none">
+    <div class="card">
+      <div class="card-title">👷 Operarias</div>
+      <div class="text-muted mb8" style="font-size:12px">Catálogo de operarias del taller. Usalo para asignar tareas en Producción.</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <input type="text" id="nueva-operaria" placeholder="Nombre de la operaria" style="flex:1;padding:6px">
+        <button class="btn btn-primary btn-sm" onclick="agregarOperaria()">+ Agregar</button>
+      </div>
+      <div id="operarias-lista"></div>
+    </div>
+  </div>
+
   <!-- SUB: Grupos (v31) -->
   <div id="prod-sub-grupos-view" style="display:none">
     <div class="card">
@@ -914,6 +981,43 @@
 </div>
 
 <!-- ═══ CONFIG ═══ -->
+
+<!-- ═══ ESTADÍSTICA ═══ reportes que cruzan etapas (porteado del RESUMEN/ESTADISTICA del Excel) -->
+<div id="view-estadistica" class="view">
+  <div id="alert-estadistica"></div>
+
+  <!-- Subnav -->
+  <div class="card" style="padding:6px;margin-bottom:10px">
+    <div style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" id="est-sub-escuela"   onclick="switchSubEst('escuela')"   style="flex:1;min-width:80px">🏫 Por escuela</button>
+      <button class="btn btn-ghost   btn-sm" id="est-sub-historico" onclick="switchSubEst('historico')" style="flex:1;min-width:80px">📈 Histórico</button>
+      <button class="btn btn-ghost   btn-sm" id="est-sub-inventario" onclick="switchSubEst('inventario')" style="flex:1;min-width:80px" disabled title="Pendiente">📦 Inventario</button>
+      <button class="btn btn-ghost   btn-sm" id="est-sub-costos"    onclick="switchSubEst('costos')"    style="flex:1;min-width:80px" disabled title="Pendiente">💰 Costos</button>
+    </div>
+  </div>
+
+  <!-- SUB: Por escuela (RESUMEN del Excel) -->
+  <div id="est-sub-escuela-view">
+    <div id="dashboard-sub-contenido">
+      <div class="text-muted" style="padding:20px;text-align:center">Cargando estadística por escuela...</div>
+    </div>
+  </div>
+
+  <!-- SUB: Histórico -->
+  <div id="est-sub-historico-view" style="display:none">
+    <div id="historico-contenido"><div class="text-muted" style="padding:20px;text-align:center">Cargando datos históricos...</div></div>
+  </div>
+
+  <!-- SUB: Inventario (pendiente V3) -->
+  <div id="est-sub-inventario-view" style="display:none">
+    <div class="card"><div class="card-title">📦 Inventario por prenda × talla</div><div class="text-muted">Pendiente — próxima iteración.</div></div>
+  </div>
+
+  <!-- SUB: Costos (pendiente V2/V3) -->
+  <div id="est-sub-costos-view" style="display:none">
+    <div class="card"><div class="card-title">💰 Costos y yardaje</div><div class="text-muted">Pendiente — próxima iteración (RESUMEN V2/V3).</div></div>
+  </div>
+</div>
 
 <!-- ══════════ REGISTRO (v23, reemplaza Pedidos) ══════════ -->
 <div id="view-registro" class="view">
@@ -1398,6 +1502,26 @@
     <div class="text-muted" style="font-size:11px;margin-top:8px">💡 Si desactivás una fase, los datos quedan guardados y se pueden volver a usar al reactivarla.</div>
   </div>
 
+  <!-- Catálogos y accesos administrativos -->
+  <div class="card">
+    <div class="card-title">📚 Catálogos y otros accesos</div>
+    <div class="text-muted mb8" style="font-size:12px">Funciones de catálogo y herramientas que antes vivían en otros tabs.</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px">
+      <button class="btn btn-ghost" onclick="abrirCatalogoOperarias()" style="padding:10px;text-align:left">
+        <div style="font-weight:600">👷 Operarias</div>
+        <div style="font-size:11px;color:#666;margin-top:2px">Listado y alta de operarias</div>
+      </button>
+      <button class="btn btn-ghost" onclick="abrirCatalogoGrupos()" style="padding:10px;text-align:left">
+        <div style="font-weight:600">👥 Grupos de producción</div>
+        <div style="font-size:11px;color:#666;margin-top:2px">Definir grupos para asignación</div>
+      </button>
+      <button id="cfg-acceso-audit" class="btn btn-ghost" onclick="switchTab('auditoria')" style="padding:10px;text-align:left;display:none">
+        <div style="font-weight:600">🔍 Audit log</div>
+        <div style="font-size:11px;color:#666;margin-top:2px">Historial de cambios (admin)</div>
+      </button>
+    </div>
+  </div>
+
   <!-- Invitar usuario (solo admin) -->
   <div id="cfg-invitar-card" class="card" style="display:none">
     <div class="card-title">👥 Invitar usuario</div>
@@ -1599,16 +1723,17 @@ const COMPATIBLES = {
 function switchTab(tab, el) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('view-' + tab).classList.add('active');
+  const view = document.getElementById('view-' + tab);
+  if (view) view.classList.add('active');
   if (el) el.classList.add('active');
-  if (tab === 'historial') cargarHistorial('trazo');
+  if (tab === 'corte' && typeof initCorte === 'function') initCorte();
+  if (tab === 'estadistica' && typeof initEstadistica === 'function') initEstadistica();
   if (tab === 'config') initConfig();
   if (tab === 'produccion') initProduccion();
   if (tab === 'registro' && typeof initRegistro === 'function') initRegistro();
   if (tab === 'bodega' && typeof initBodega === 'function') initBodega();
   if (tab === 'inicio' && typeof initDashboard === 'function') initDashboard();
   if (tab === 'auditoria' && typeof initAuditoria === 'function') initAuditoria();
-  if (tab === 'nuevo') {} // menu se arma en init
   window.scrollTo(0, 0);
 }
 
@@ -1951,34 +2076,15 @@ async function initDashboard() {
   const cont = document.getElementById('dashboard-contenido');
   if (!cont) { dashboardCache.cargando = false; return; }
   
-  // Renderizar sub-tabs primero
+  // Inicio = dashboard "Hoy" únicamente. Por-escuela e histórico viven ahora en Estadística.
   cont.innerHTML = `
-    <div class="sub-tabs" style="margin-bottom:10px">
-      <div class="sub-tab active" onclick="cambiarVistaDashboard('hoy', this)">📊 Hoy</div>
-      <div class="sub-tab" onclick="cambiarVistaDashboard('escuela', this)">🏫 Por escuela</div>
-      <div class="sub-tab" onclick="cambiarVistaDashboard('historico', this)">📈 Histórico</div>
-    </div>
     <div id="dashboard-sub-contenido">
       <div class="text-muted" style="padding:20px;text-align:center">Cargando dashboard...</div>
     </div>
   `;
-  
+
   await cargarDashboardHoy();
   dashboardCache.cargando = false;
-}
-
-function cambiarVistaDashboard(vista, el) {
-  document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
-  if (el) el.classList.add('active');
-  if (vista === 'hoy') cargarDashboardHoy();
-  else if (vista === 'escuela') {
-    if (typeof initResumenEscuela === 'function') initResumenEscuela();
-  }
-  else if (vista === 'historico') {
-    const sub = document.getElementById('dashboard-sub-contenido');
-    if (sub) sub.innerHTML = '<div id="historico-contenido"><div class="text-muted" style="padding:20px;text-align:center">Cargando datos históricos...</div></div>';
-    if (typeof initHistorico === 'function') initHistorico();
-  }
 }
 
 async function cargarDashboardHoy() {
@@ -2381,6 +2487,89 @@ function renderResumenEscuelaDetalle() {
       <button class="btn btn-ghost btn-sm" onclick="cargarResumenEscuela('${resumenEscuelaCache.escuelaSel}')">🔄 Refrescar</button>
     </div>
   `;
+}
+
+// +++++++++++++++++++ corte.js +++++++++++++++++++
+// ══════════════════════════════════════════════════════════════════════
+// CORTE — tab unificado de Nuevo (Trazo/Tendido/Bulto) + Historial
+// ══════════════════════════════════════════════════════════════════════
+
+let corteSubActual = 'nuevo';
+
+function initCorte() {
+  // Si veníamos de otra sub-tab, dejarla. Si es la primera entrada, 'nuevo'.
+  switchSubCorte(corteSubActual || 'nuevo');
+}
+
+function switchSubCorte(sub) {
+  corteSubActual = sub;
+  const subs = ['nuevo', 'trazos', 'tendidos', 'bultos'];
+  subs.forEach(s => {
+    const btn = document.getElementById('corte-sub-' + s);
+    if (btn) {
+      btn.classList.toggle('btn-primary', s === sub);
+      btn.classList.toggle('btn-ghost', s !== sub);
+    }
+  });
+
+  const nuevoView = document.getElementById('corte-sub-nuevo-view');
+  const listaView = document.getElementById('corte-sub-lista-view');
+  if (!nuevoView || !listaView) return;
+
+  if (sub === 'nuevo') {
+    nuevoView.style.display = '';
+    listaView.style.display = 'none';
+    return;
+  }
+
+  // sub ∈ {trazos, tendidos, bultos}
+  nuevoView.style.display = 'none';
+  listaView.style.display = '';
+
+  const titulos = { trazos: '✂️ Trazos', tendidos: '📋 Tendidos', bultos: '📦 Bultos' };
+  const tipos   = { trazos: 'trazo',     tendidos: 'tendido',     bultos: 'bulto' };
+  const tit = document.getElementById('corte-lista-titulo');
+  if (tit) tit.textContent = titulos[sub] || '';
+
+  // Reutilizamos historial.js: renderea dentro de #historial-content.
+  // Como ese div vive en otra view, lo puenteamos creando el div temporal.
+  const cont = document.getElementById('corte-lista-content');
+  if (cont) {
+    cont.innerHTML = '<div id="historial-content"><div class="loading">Cargando...</div></div>';
+  }
+  if (typeof cargarHistorial === 'function') cargarHistorial(tipos[sub]);
+}
+
+// +++++++++++++++++++ estadistica.js +++++++++++++++++++
+// ══════════════════════════════════════════════════════════════════════
+// ESTADÍSTICA — reportes cruzados (porteado del RESUMEN/ESTADISTICA del Excel)
+// Sub-tabs: Por escuela · Histórico · Inventario (pendiente) · Costos (pendiente)
+// ══════════════════════════════════════════════════════════════════════
+
+let estSubActual = 'escuela';
+
+function initEstadistica() {
+  switchSubEst(estSubActual || 'escuela');
+}
+
+function switchSubEst(sub) {
+  estSubActual = sub;
+  const subs = ['escuela', 'historico', 'inventario', 'costos'];
+  subs.forEach(s => {
+    const btn = document.getElementById('est-sub-' + s);
+    if (btn) {
+      btn.classList.toggle('btn-primary', s === sub);
+      btn.classList.toggle('btn-ghost', s !== sub);
+    }
+    const view = document.getElementById('est-sub-' + s + '-view');
+    if (view) view.style.display = (s === sub) ? '' : 'none';
+  });
+
+  if (sub === 'escuela' && typeof initResumenEscuela === 'function') {
+    initResumenEscuela();
+  } else if (sub === 'historico' && typeof initHistorico === 'function') {
+    initHistorico();
+  }
 }
 
 // +++++++++++++++++++ trazo.js +++++++++++++++++++
@@ -10000,7 +10189,20 @@ function initConfig() {
   if (cardInv) cardInv.style.display = isAdmin ? '' : 'none';
   const cardUsr = document.getElementById('cfg-usuarios-card');
   if (cardUsr) cardUsr.style.display = isAdmin ? '' : 'none';
+  const btnAudit = document.getElementById('cfg-acceso-audit');
+  if (btnAudit) btnAudit.style.display = isAdmin ? '' : 'none';
   if (isAdmin) cargarUsuarios();
+}
+
+// Accesos rápidos a sub-tabs que vivían en Producción.
+// Navega a Producción y activa la sub-tab correspondiente.
+function abrirCatalogoOperarias() {
+  switchTab('produccion');
+  if (typeof switchSubProd === 'function') setTimeout(() => switchSubProd('operarias'), 50);
+}
+function abrirCatalogoGrupos() {
+  switchTab('produccion');
+  if (typeof switchSubProd === 'function') setTimeout(() => switchSubProd('grupos'), 50);
 }
 
 // ── Gestión de usuarios ────────────────────────────────────────────
