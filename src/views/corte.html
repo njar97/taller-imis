@@ -1,0 +1,56 @@
+<!-- ═══ CORTE ═══ unifica Nuevo (Trazo/Tendido/Bulto) + Historial -->
+<div id="view-corte" class="view">
+  <div id="alert-corte"></div>
+
+  <!-- Subnav -->
+  <div class="card" style="padding:6px;margin-bottom:10px">
+    <div style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" id="corte-sub-nuevo"    onclick="switchSubCorte('nuevo')"    style="flex:1;min-width:80px">➕ Nuevo</button>
+      <button class="btn btn-ghost   btn-sm" id="corte-sub-trazos"   onclick="switchSubCorte('trazos')"   style="flex:1;min-width:80px">✂️ Trazos</button>
+      <button class="btn btn-ghost   btn-sm" id="corte-sub-tendidos" onclick="switchSubCorte('tendidos')" style="flex:1;min-width:80px">📋 Tendidos</button>
+      <button class="btn btn-ghost   btn-sm" id="corte-sub-bultos"   onclick="switchSubCorte('bultos')"   style="flex:1;min-width:80px">📦 Bultos</button>
+    </div>
+  </div>
+
+  <!-- SUB: Nuevo -->
+  <div id="corte-sub-nuevo-view">
+    <div class="card">
+      <div class="card-title">➕ Nuevo registro de corte</div>
+      <div class="card-sub">Elegí qué querés registrar según el momento del taller.</div>
+      <div class="menu-nuevo">
+        <div class="menu-tarjeta" onclick="irA('trazo')">
+          <div class="menu-icono">✂️</div>
+          <div class="menu-info">
+            <div class="menu-titulo">Trazo</div>
+            <div class="menu-desc">Imelda dibuja la plancha con las tallas marcadas. Se puede dejar pendiente de tender para después.</div>
+          </div>
+          <div style="font-size:22px;color:#ccc">›</div>
+        </div>
+        <div class="menu-tarjeta" onclick="irA('tendido')">
+          <div class="menu-icono">📋</div>
+          <div class="menu-info">
+            <div class="menu-titulo">Tendido</div>
+            <div class="menu-desc">Sobre un trazo existente. Registrar rollo por rollo mientras se tiende.</div>
+          </div>
+          <div style="font-size:22px;color:#ccc">›</div>
+        </div>
+        <div class="menu-tarjeta" onclick="irA('bulto')">
+          <div class="menu-icono">📦</div>
+          <div class="menu-info">
+            <div class="menu-titulo">Bulto</div>
+            <div class="menu-desc">Después del corte. Propone bultos automáticamente; Paty confirma, divide o sustituye.</div>
+          </div>
+          <div style="font-size:22px;color:#ccc">›</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUB: Trazos / Tendidos / Bultos -->
+  <div id="corte-sub-lista-view" style="display:none">
+    <div class="card">
+      <div class="card-title" id="corte-lista-titulo">Trazos</div>
+      <div id="corte-lista-content"><div class="loading">Cargando...</div></div>
+    </div>
+  </div>
+</div>

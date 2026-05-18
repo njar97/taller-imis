@@ -96,16 +96,17 @@ const COMPATIBLES = {
 function switchTab(tab, el) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('view-' + tab).classList.add('active');
+  const view = document.getElementById('view-' + tab);
+  if (view) view.classList.add('active');
   if (el) el.classList.add('active');
-  if (tab === 'historial') cargarHistorial('trazo');
+  if (tab === 'corte' && typeof initCorte === 'function') initCorte();
+  if (tab === 'estadistica' && typeof initEstadistica === 'function') initEstadistica();
   if (tab === 'config') initConfig();
   if (tab === 'produccion') initProduccion();
   if (tab === 'registro' && typeof initRegistro === 'function') initRegistro();
   if (tab === 'bodega' && typeof initBodega === 'function') initBodega();
   if (tab === 'inicio' && typeof initDashboard === 'function') initDashboard();
   if (tab === 'auditoria' && typeof initAuditoria === 'function') initAuditoria();
-  if (tab === 'nuevo') {} // menu se arma en init
   window.scrollTo(0, 0);
 }
 

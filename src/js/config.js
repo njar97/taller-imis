@@ -15,7 +15,20 @@ function initConfig() {
   if (cardInv) cardInv.style.display = isAdmin ? '' : 'none';
   const cardUsr = document.getElementById('cfg-usuarios-card');
   if (cardUsr) cardUsr.style.display = isAdmin ? '' : 'none';
+  const btnAudit = document.getElementById('cfg-acceso-audit');
+  if (btnAudit) btnAudit.style.display = isAdmin ? '' : 'none';
   if (isAdmin) cargarUsuarios();
+}
+
+// Accesos rápidos a sub-tabs que vivían en Producción.
+// Navega a Producción y activa la sub-tab correspondiente.
+function abrirCatalogoOperarias() {
+  switchTab('produccion');
+  if (typeof switchSubProd === 'function') setTimeout(() => switchSubProd('operarias'), 50);
+}
+function abrirCatalogoGrupos() {
+  switchTab('produccion');
+  if (typeof switchSubProd === 'function') setTimeout(() => switchSubProd('grupos'), 50);
 }
 
 // ── Gestión de usuarios ────────────────────────────────────────────

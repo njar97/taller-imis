@@ -15,6 +15,9 @@ OUT = ROOT / "produccion.html"
 JS_ORDER = [
     "core.js",
     "dashboard.js",
+    "resumen_escuela.js",
+    "corte.js",
+    "estadistica.js",
     "trazo.js",
     "tendido.js",
     "bulto.js",
@@ -38,12 +41,14 @@ JS_ORDER = [
 
 VIEWS_ORDER = [
     "inicio.html",
+    "corte.html",
     "nuevo.html",
     "trazo.html",
     "tendido.html",
     "bulto.html",
     "historial.html",
     "produccion.html",
+    "estadistica.html",
     "registro.html",
     "bodega.html",
     "auditoria.html",

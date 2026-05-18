@@ -22,6 +22,9 @@ Write-Host "====================================================" -ForegroundCol
 $jsOrder = @(
     'core.js',
     'dashboard.js',
+    'resumen_escuela.js',
+    'corte.js',
+    'estadistica.js',
     'trazo.js',
     'tendido.js',
     'bulto.js',
@@ -45,12 +48,14 @@ $jsOrder = @(
 
 $viewsOrder = @(
     'inicio.html',
+    'corte.html',
     'nuevo.html',
     'trazo.html',
     'tendido.html',
     'bulto.html',
     'historial.html',
     'produccion.html',
+    'estadistica.html',
     'registro.html',
     'bodega.html',
     'auditoria.html',

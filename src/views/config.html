@@ -53,6 +53,26 @@
     <div class="text-muted" style="font-size:11px;margin-top:8px">💡 Si desactivás una fase, los datos quedan guardados y se pueden volver a usar al reactivarla.</div>
   </div>
 
+  <!-- Catálogos y accesos administrativos -->
+  <div class="card">
+    <div class="card-title">📚 Catálogos y otros accesos</div>
+    <div class="text-muted mb8" style="font-size:12px">Funciones de catálogo y herramientas que antes vivían en otros tabs.</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px">
+      <button class="btn btn-ghost" onclick="abrirCatalogoOperarias()" style="padding:10px;text-align:left">
+        <div style="font-weight:600">👷 Operarias</div>
+        <div style="font-size:11px;color:#666;margin-top:2px">Listado y alta de operarias</div>
+      </button>
+      <button class="btn btn-ghost" onclick="abrirCatalogoGrupos()" style="padding:10px;text-align:left">
+        <div style="font-weight:600">👥 Grupos de producción</div>
+        <div style="font-size:11px;color:#666;margin-top:2px">Definir grupos para asignación</div>
+      </button>
+      <button id="cfg-acceso-audit" class="btn btn-ghost" onclick="switchTab('auditoria')" style="padding:10px;text-align:left;display:none">
+        <div style="font-weight:600">🔍 Audit log</div>
+        <div style="font-size:11px;color:#666;margin-top:2px">Historial de cambios (admin)</div>
+      </button>
+    </div>
+  </div>
+
   <!-- Invitar usuario (solo admin) -->
   <div id="cfg-invitar-card" class="card" style="display:none">
     <div class="card-title">👥 Invitar usuario</div>
