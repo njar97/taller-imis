@@ -15,6 +15,7 @@ OUT = ROOT / "produccion.html"
 JS_ORDER = [
     "core.js",
     "dashboard.js",
+    "resumen_escuela.js",
     "trazo.js",
     "tendido.js",
     "bulto.js",
