@@ -8,11 +8,120 @@ function initConfig() {
   const f3 = document.getElementById('cfg-fase3');
   if (f2) f2.checked = FASE2_ACTIVA;
   if (f3) { f3.checked = FASE3_ACTIVA; f3.disabled = !FASE2_ACTIVA; }
-  // Mostrar card de invitar solo si admin (reusa role cacheado por initAuditRoleTab)
-  const card = document.getElementById('cfg-invitar-card');
-  if (card) {
-    const rol = (typeof auditCache !== 'undefined' && auditCache.rolDelUser) || null;
-    card.style.display = (rol === 'admin') ? '' : 'none';
+  // Mostrar cards de admin solo si admin (reusa role cacheado por initAuditRoleTab)
+  const rol = (typeof auditCache !== 'undefined' && auditCache.rolDelUser) || null;
+  const isAdmin = (rol === 'admin');
+  const cardInv = document.getElementById('cfg-invitar-card');
+  if (cardInv) cardInv.style.display = isAdmin ? '' : 'none';
+  const cardUsr = document.getElementById('cfg-usuarios-card');
+  if (cardUsr) cardUsr.style.display = isAdmin ? '' : 'none';
+  if (isAdmin) cargarUsuarios();
+}
+
+// ── Gestión de usuarios ────────────────────────────────────────────
+async function callUsersAdmin(body) {
+  if (!supaSession || !supaSession.access_token) {
+    throw new Error('Sin sesión válida. Volvé a loguearte.');
+  }
+  const res = await fetch(`${SUPA_URL}/functions/v1/users-admin`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${supaSession.access_token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+async function cargarUsuarios() {
+  const cont = document.getElementById('cfg-usuarios-lista');
+  const alertEl = document.getElementById('cfg-usuarios-alert');
+  cont.innerHTML = '<div class="text-muted" style="padding:6px">Cargando...</div>';
+  alertEl.innerHTML = '';
+  try {
+    const { users } = await callUsersAdmin({ action: 'list' });
+    renderUsuarios(users || []);
+  } catch (e) {
+    cont.innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+  }
+}
+
+function renderUsuarios(users) {
+  const cont = document.getElementById('cfg-usuarios-lista');
+  if (!users.length) {
+    cont.innerHTML = '<div class="text-muted" style="padding:6px">No hay usuarios.</div>';
+    return;
+  }
+  const rows = users.map(u => {
+    const created = u.created_at ? new Date(u.created_at).toISOString().slice(0,10) : '—';
+    const lastLogin = u.last_sign_in_at
+      ? new Date(u.last_sign_in_at).toISOString().slice(0,16).replace('T',' ')
+      : '—';
+    const role = u.role || 'sin role';
+    const selfBadge = u.is_self ? ' <span style="background:var(--ambar-claro);color:#856404;padding:1px 5px;border-radius:3px;font-size:10px">vos</span>' : '';
+    const disableDel = u.is_self ? 'disabled title="No podés eliminarte a vos mismo"' : '';
+    const selectHtml = `
+      <select onchange="cambiarRolUsuario('${u.id}', this.value, '${u.email.replace(/'/g,"&#39;")}')" style="padding:4px 6px;font-size:12px;border-radius:4px;border:1px solid var(--borde)">
+        <option value="operador" ${role==='operador'?'selected':''}>operador</option>
+        <option value="admin" ${role==='admin'?'selected':''}>admin</option>
+      </select>`;
+    return `
+      <tr>
+        <td style="font-size:12px;padding:6px 4px;word-break:break-all">${escapeHtmlSafe(u.email||'')}${selfBadge}</td>
+        <td style="font-size:11px;padding:6px 4px;color:#666;white-space:nowrap">${lastLogin}</td>
+        <td style="padding:6px 4px">${selectHtml}</td>
+        <td style="padding:6px 4px"><button class="btn-mini btn-mini-danger" onclick="eliminarUsuario('${u.id}', '${u.email.replace(/'/g,"&#39;")}')" ${disableDel}>🗑</button></td>
+      </tr>
+    `;
+  }).join('');
+  cont.innerHTML = `
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead style="background:var(--gris)">
+          <tr>
+            <th style="text-align:left;padding:6px 4px;font-size:11px;color:#555;text-transform:uppercase">Email</th>
+            <th style="text-align:left;padding:6px 4px;font-size:11px;color:#555;text-transform:uppercase">Último login</th>
+            <th style="text-align:left;padding:6px 4px;font-size:11px;color:#555;text-transform:uppercase">Rol</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function escapeHtmlSafe(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+async function cambiarRolUsuario(userId, newRole, email) {
+  const alertEl = document.getElementById('cfg-usuarios-alert');
+  alertEl.innerHTML = '';
+  try {
+    await callUsersAdmin({ action: 'set-role', user_id: userId, role: newRole });
+    alertEl.innerHTML = `<div class="alert alert-success">${email} → ${newRole}</div>`;
+    setTimeout(() => { alertEl.innerHTML = ''; }, 3000);
+  } catch (e) {
+    alertEl.innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+    cargarUsuarios();  // recargar para mostrar el role real
+  }
+}
+
+async function eliminarUsuario(userId, email) {
+  if (!confirm(`¿Eliminar a ${email}? Esta acción no se puede deshacer.`)) return;
+  const alertEl = document.getElementById('cfg-usuarios-alert');
+  alertEl.innerHTML = '';
+  try {
+    await callUsersAdmin({ action: 'delete', user_id: userId });
+    alertEl.innerHTML = `<div class="alert alert-success">${email} eliminado.</div>`;
+    cargarUsuarios();
+  } catch (e) {
+    alertEl.innerHTML = `<div class="alert alert-error">${e.message}</div>`;
   }
 }
 

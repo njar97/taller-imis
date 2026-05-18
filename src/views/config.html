@@ -77,6 +77,21 @@
     <button class="btn btn-primary btn-block" onclick="invitarUsuario()">Enviar invitación</button>
     <div id="cfg-inv-alert" style="margin-top:10px"></div>
   </div>
+
+  <!-- Lista de usuarios (solo admin) -->
+  <div id="cfg-usuarios-card" class="card" style="display:none">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>👤 Usuarios</span>
+      <button class="btn btn-ghost btn-sm" onclick="cargarUsuarios()">🔄</button>
+    </div>
+    <div class="text-muted mb8" style="font-size:12px">
+      Cambiá el rol con el select, o tocá 🗑 para eliminar el usuario. No te podés eliminar a vos mismo ni dejar al sistema sin admins.
+    </div>
+    <div id="cfg-usuarios-lista">
+      <div class="text-muted" style="padding:6px">Tocá 🔄 para cargar.</div>
+    </div>
+    <div id="cfg-usuarios-alert" style="margin-top:10px"></div>
+  </div>
 </div>
 
 </div>
