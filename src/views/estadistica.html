@@ -7,7 +7,7 @@
     <div style="display:flex;gap:4px;flex-wrap:wrap">
       <button class="btn btn-primary btn-sm" id="est-sub-escuela"   onclick="switchSubEst('escuela')"   style="flex:1;min-width:80px">🏫 Por escuela</button>
       <button class="btn btn-ghost   btn-sm" id="est-sub-historico" onclick="switchSubEst('historico')" style="flex:1;min-width:80px">📈 Histórico</button>
-      <button class="btn btn-ghost   btn-sm" id="est-sub-inventario" onclick="switchSubEst('inventario')" style="flex:1;min-width:80px" disabled title="Pendiente">📦 Inventario</button>
+      <button class="btn btn-ghost   btn-sm" id="est-sub-inventario" onclick="switchSubEst('inventario')" style="flex:1;min-width:80px">📦 Inventario</button>
       <button class="btn btn-ghost   btn-sm" id="est-sub-costos"    onclick="switchSubEst('costos')"    style="flex:1;min-width:80px" disabled title="Pendiente">💰 Costos</button>
     </div>
   </div>
@@ -24,9 +24,9 @@
     <div id="historico-contenido"><div class="text-muted" style="padding:20px;text-align:center">Cargando datos históricos...</div></div>
   </div>
 
-  <!-- SUB: Inventario (pendiente V3) -->
+  <!-- SUB: Inventario — demanda (alumnos) vs stock (bodega) por prenda × talla -->
   <div id="est-sub-inventario-view" style="display:none">
-    <div class="card"><div class="card-title">📦 Inventario por prenda × talla</div><div class="text-muted">Pendiente — próxima iteración.</div></div>
+    <div class="text-muted" style="padding:20px;text-align:center">Cargando inventario...</div>
   </div>
 
   <!-- SUB: Costos (pendiente V2/V3) -->

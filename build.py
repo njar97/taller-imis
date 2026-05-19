@@ -18,6 +18,7 @@ JS_ORDER = [
     "resumen_escuela.js",
     "corte.js",
     "estadistica.js",
+    "inventario.js",
     "trazo.js",
     "tendido.js",
     "bulto.js",
