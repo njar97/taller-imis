@@ -10,6 +10,7 @@
       <button class="btn btn-ghost   btn-sm" id="est-sub-inventario" onclick="switchSubEst('inventario')" style="flex:1;min-width:80px">📦 Inventario</button>
       <button class="btn btn-ghost   btn-sm" id="est-sub-costos"    onclick="switchSubEst('costos')"    style="flex:1;min-width:80px">💰 Costos</button>
       <button class="btn btn-ghost   btn-sm" id="est-sub-yardaje"   onclick="switchSubEst('yardaje')"   style="flex:1;min-width:80px">📐 Yardaje</button>
+      <button class="btn btn-ghost   btn-sm" id="est-sub-contratos" onclick="switchSubEst('contratos')" style="flex:1;min-width:80px">📑 Contratos</button>
     </div>
   </div>
 
@@ -38,5 +39,10 @@
   <!-- SUB: Yardaje — tela necesaria por color, factores del RESUMEN del Excel -->
   <div id="est-sub-yardaje-view" style="display:none">
     <div class="text-muted" style="padding:20px;text-align:center">Cargando yardaje...</div>
+  </div>
+
+  <!-- SUB: Contratos — cruce contrato (Excel) vs producido/entregado -->
+  <div id="est-sub-contratos-view" style="display:none">
+    <div class="text-muted" style="padding:20px;text-align:center">Cargando contratos...</div>
   </div>
 </div>
