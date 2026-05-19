@@ -26,5 +26,7 @@ function switchSubEst(sub) {
     initResumenEscuela();
   } else if (sub === 'historico' && typeof initHistorico === 'function') {
     initHistorico();
+  } else if (sub === 'inventario' && typeof initInventario === 'function') {
+    initInventario();
   }
 }
