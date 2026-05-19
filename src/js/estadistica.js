@@ -11,7 +11,7 @@ function initEstadistica() {
 
 function switchSubEst(sub) {
   estSubActual = sub;
-  const subs = ['escuela', 'historico', 'inventario', 'costos', 'yardaje'];
+  const subs = ['escuela', 'historico', 'inventario', 'costos', 'yardaje', 'contratos'];
   subs.forEach(s => {
     const btn = document.getElementById('est-sub-' + s);
     if (btn) {
@@ -32,5 +32,7 @@ function switchSubEst(sub) {
     initCostos();
   } else if (sub === 'yardaje' && typeof initYardaje === 'function') {
     initYardaje();
+  } else if (sub === 'contratos' && typeof initContratos === 'function') {
+    initContratos();
   }
 }
