@@ -19,6 +19,8 @@ JS_ORDER = [
     "corte.js",
     "estadistica.js",
     "inventario.js",
+    "costos.js",
+    "yardaje.js",
     "trazo.js",
     "tendido.js",
     "bulto.js",
