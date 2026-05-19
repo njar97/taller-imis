@@ -28,5 +28,7 @@ function switchSubEst(sub) {
     initHistorico();
   } else if (sub === 'inventario' && typeof initInventario === 'function') {
     initInventario();
+  } else if (sub === 'costos' && typeof initCostos === 'function') {
+    initCostos();
   }
 }
