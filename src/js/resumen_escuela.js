@@ -19,7 +19,7 @@ let resumenEscuelaCache = {
 };
 
 async function initResumenEscuela() {
-  const cont = document.getElementById('dashboard-sub-contenido');
+  const cont = document.getElementById('resumen-esc-contenido');
   if (!cont) return;
   cont.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando escuelas...</div>';
 
@@ -45,7 +45,7 @@ async function initResumenEscuela() {
 }
 
 function renderResumenEscuela() {
-  const cont = document.getElementById('dashboard-sub-contenido');
+  const cont = document.getElementById('resumen-esc-contenido');
   if (!cont) return;
   const escuelas = resumenEscuelaCache.escuelas || [];
 
