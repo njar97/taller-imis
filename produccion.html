@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-18 23:11 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-19 11:34 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -999,7 +999,7 @@
 
   <!-- SUB: Por escuela (RESUMEN del Excel) -->
   <div id="est-sub-escuela-view">
-    <div id="dashboard-sub-contenido">
+    <div id="resumen-esc-contenido">
       <div class="text-muted" style="padding:20px;text-align:center">Cargando estadística por escuela...</div>
     </div>
   </div>
@@ -2296,7 +2296,7 @@ let resumenEscuelaCache = {
 };
 
 async function initResumenEscuela() {
-  const cont = document.getElementById('dashboard-sub-contenido');
+  const cont = document.getElementById('resumen-esc-contenido');
   if (!cont) return;
   cont.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando escuelas...</div>';
 
@@ -2322,7 +2322,7 @@ async function initResumenEscuela() {
 }
 
 function renderResumenEscuela() {
-  const cont = document.getElementById('dashboard-sub-contenido');
+  const cont = document.getElementById('resumen-esc-contenido');
   if (!cont) return;
   const escuelas = resumenEscuelaCache.escuelas || [];
 
