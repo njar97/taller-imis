@@ -57,19 +57,28 @@ function renderInventario() {
   const f = invCache.filtros;
   const escuelas = invCache.escuelas || [];
 
-  // ─── Computar demanda por (prenda, talla) ─────────────────────────
+  // ─── Computar demanda por (prenda, talla) + cobertura de tallaje ───
   const demanda = new Map(); // key = "PRENDA||TALLA" → count
+  let alumnosFiltrados = 0;
+  let topConTalla = 0, botConTalla = 0;
   for (const a of (invCache.alumnos || [])) {
     if (f.escuela && a.escuela_id !== f.escuela) continue;
+    alumnosFiltrados++;
     if (a.prenda_top && a.talla_top_key) {
+      topConTalla++;
       const k = a.prenda_top + '||' + a.talla_top_key;
       demanda.set(k, (demanda.get(k) || 0) + 1);
     }
     if (a.prenda_bottom && a.talla_bottom_key) {
+      botConTalla++;
       const k = a.prenda_bottom + '||' + a.talla_bottom_key;
       demanda.set(k, (demanda.get(k) || 0) + 1);
     }
   }
+  const piezasPosibles = alumnosFiltrados * 2;
+  const piezasConocidas = topConTalla + botConTalla;
+  const piezasSinTallar = Math.max(0, piezasPosibles - piezasConocidas);
+  const pctTallaje = piezasPosibles > 0 ? Math.round((piezasConocidas / piezasPosibles) * 100) : 0;
 
   // ─── Indexar stock ────────────────────────────────────────────────
   const stockIdx = new Map(); // key = "PRENDA||TALLA" → {stock, reservado}
@@ -116,6 +125,17 @@ function renderInventario() {
   const totalFalta = rows.reduce((s, r) => s + r.falta, 0);
 
   root.innerHTML = `
+    <!-- Banner cobertura de tallaje -->
+    <div class="alert ${pctTallaje >= 80 ? 'alert-info' : 'alert-warn'}" style="margin-bottom:10px;font-size:12px">
+      <strong>Cobertura de tallaje:</strong>
+      ${alumnosFiltrados.toLocaleString()} alumnos × 2 = ${piezasPosibles.toLocaleString()} piezas posibles ·
+      <strong style="color:var(--verde)">${piezasConocidas.toLocaleString()} con talla cargada</strong> (${pctTallaje}%) ·
+      <strong style="color:var(--naranja)">${piezasSinTallar.toLocaleString()} pendientes de tallar</strong>
+      <div style="font-size:11px;color:#666;margin-top:4px">
+        El detalle de abajo solo muestra las piezas con prenda+talla conocida. Los alumnos sin tallar no generan demanda hasta que se complete la medición.
+      </div>
+    </div>
+
     <!-- Filtros -->
     <div class="card" style="padding:10px;margin-bottom:10px">
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;align-items:end">
