@@ -906,6 +906,12 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
       /* Tamaño carta · margen izquierdo amplio para engrapar varias hojas y cortar */
       @page { size: letter; margin: 8mm 5mm 5mm 10mm; }
       body { font-family: Arial, sans-serif; font-size: 9pt; color: #000; margin: 0; padding: 0; }
+      /* En pantalla, simulamos el ancho exacto de Letter menos márgenes
+         (8.5in - 5mm derecho - 10mm izquierdo ≈ 8.91in - 0.59in ≈ 760px @96dpi)
+         para que el auto-fit del nombre mida con el ancho real de impresión. */
+      @media screen {
+        body { width: 760px; margin: 0 auto; padding: 8mm 5mm 5mm 10mm; box-sizing: border-box; }
+      }
 
       .header {
         text-align: center;
@@ -1026,25 +1032,24 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
         <button onclick="window.close()" style="padding:10px 20px;font-size:14pt">✕ Cerrar</button>
       </div>
       <script>
-        // Auto-fit del nombre: busca el font-size más grande que entra sin overflow.
-        // Cada nombre se mide individualmente. Empieza en 16pt y baja en pasos
-        // de 0.5pt hasta 8pt mínimo o hasta que scrollWidth <= clientWidth.
+        // Auto-fit del nombre: cada elemento se mide individualmente.
+        // Empieza en 16pt, baja en 0.5pt hasta que scrollWidth <= clientWidth.
+        // Mínimo 7pt. Margen de 2px para evitar truncamientos marginales.
         function autoFitNombres() {
           var els = document.querySelectorAll('.etiqueta .nombre');
           for (var i = 0; i < els.length; i++) {
             var el = els[i];
             var size = 16;
             el.style.fontSize = size + 'pt';
-            // Si entra al primer intento (lo más común), seguir
-            // Si overflow, ir bajando hasta que entre o llegue al mínimo
-            while (size > 8 && el.scrollWidth > el.clientWidth + 1) {
+            while (size > 7 && el.scrollWidth > el.clientWidth + 2) {
               size -= 0.5;
               el.style.fontSize = size + 'pt';
             }
           }
         }
+        // Correr el fit al cargar Y antes de imprimir (el browser puede
+        // reflowear al pasar a print y los anchos cambian).
         window.addEventListener('load', function() {
-          // 2 frames para asegurar layout completo, después fit y print
           requestAnimationFrame(function() {
             requestAnimationFrame(function() {
               autoFitNombres();
@@ -1052,6 +1057,7 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
             });
           });
         });
+        window.addEventListener('beforeprint', autoFitNombres);
       <\/script>
     </body></html>
   `;
