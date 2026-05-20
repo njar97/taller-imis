@@ -303,21 +303,27 @@
       </div>
       <div class="modal-body">
         <div class="field">
-          <label>Escuela</label>
-          <select id="et-escuela">
-            <option value="">— Todas las escuelas —</option>
+          <label>Escuelas (podés elegir varias con Ctrl/⌘)</label>
+          <select id="et-escuelas-multi" multiple size="6" style="width:100%">
+            <option value="__all__" selected>Todas las escuelas</option>
           </select>
+          <div style="font-size:11px;color:#888;margin-top:2px">Por defecto cada escuela arranca en hoja nueva. Para mezclar, elegí un orden "mezclado" abajo.</div>
         </div>
+        <input type="hidden" id="et-escuela" value="">
         <input type="hidden" id="et-temporada" value="">
         <input type="hidden" id="et-columnas" value="1">
         <div style="font-size:11px;color:#888;margin:-2px 0 10px 2px">Tira completa ancho carta · cada fila 1cm · margen izquierdo para engrapar y cortar</div>
         <div class="field">
           <label>Orden</label>
           <select id="et-orden">
-            <option value="grado_nombre" selected>Grado → Nombre (alfabético)</option>
-            <option value="grado_talla">Grado → Talla (agrupa iguales)</option>
-            <option value="escuela_grado_nombre">Escuela → Grado → Nombre</option>
-            <option value="talla">Solo por talla</option>
+            <option value="esc_sexo_grado_nombre" selected>Por escuela → ♀ luego ♂ → Grado → Nombre (recomendado)</option>
+            <option value="esc_grado_sexo_nombre">Por escuela → Grado → ♀ luego ♂ → Nombre</option>
+            <option value="esc_grado_nombre">Por escuela → Grado → Nombre (sin separar sexo)</option>
+            <option value="esc_grado_talla">Por escuela → Grado → Talla (agrupa iguales)</option>
+            <option value="esc_talla">Por escuela → Talla</option>
+            <option value="mix_sexo_grado_nombre">⚠️ MEZCLADO: ♀ luego ♂ → Grado → Nombre</option>
+            <option value="mix_grado_nombre">⚠️ MEZCLADO: Grado → Nombre</option>
+            <option value="mix_talla">⚠️ MEZCLADO: solo por talla</option>
           </select>
         </div>
         <div class="field">
