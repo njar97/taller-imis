@@ -865,10 +865,22 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
   const fecha = new Date().toLocaleDateString('es-SV');
   const total = totalAlumnos != null ? totalAlumnos : (Array.isArray(grupos) ? grupos.reduce((s,g)=>s+g.alumnos.length,0) : 0);
 
+  // Font-size por longitud del nombre: que entre completo sin cortar.
+  // Mediciones empíricas: con flex 2.2 caben ~22 chars a 16pt sin overflow.
+  // Bajamos progresivamente cuando supera.
+  function tamFuenteNombre(nombre) {
+    const n = (nombre || '').length;
+    if (n <= 22) return 16;     // tamaño full
+    if (n <= 28) return 14;
+    if (n <= 34) return 12;
+    if (n <= 42) return 11;
+    return 10;                  // mínimo legible para nombres muy largos
+  }
   const renderUnaEtiqueta = (a) => {
     const esc = escuelasMap[a.escuela_id];
     const escAbrev = esc ? (esc.alias || (esc.nombre || '').replace(/^CDE\s+/i, '').slice(0, 22)) : '';
-    const nombreCorto = a.nombre.length > 38 ? a.nombre.slice(0, 38) + '…' : a.nombre;
+    const nombreCompleto = a.nombre || '';
+    const fsNombre = tamFuenteNombre(nombreCompleto);
     const top = a.talla_top_key || '—';
     const bot = a.talla_bottom_key || '—';
     const obs = incluirObs && a.observaciones ? a.observaciones.slice(0, 18) : '';
@@ -876,7 +888,7 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
     return `
       <div class="etiqueta">
         <span class="grado">${a.grado || '—'}</span>
-        <span class="nombre">${nombreCorto}</span>
+        <span class="nombre" style="font-size:${fsNombre}pt">${nombreCompleto}</span>
         <span class="centro">${escAbrev}</span>
         <span class="sexo">${sexIcon}</span>
         <span class="tallas"><b>${top}</b>&nbsp;&nbsp;<b>${bot}</b></span>
