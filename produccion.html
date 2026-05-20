@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-20 13:56 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-20 14:03 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -10274,10 +10274,17 @@ async function generarPdfDirecto(html, filename) {
     if (!ok) return;
   }
 
-  // 1) Overlay de progreso
+  // 1) Container EN PANTALLA — visible para html2canvas (visibility:hidden
+  //    o left:-99999 hacían que se capturara como blanco). Lo tapamos con
+  //    un overlay opaco sobre todo. Se borra al terminar.
+  const wrap = document.createElement('div');
+  wrap.id = 'etiq-pdf-wrap';
+  wrap.style.cssText = 'position:absolute;left:0;top:0;width:8.5in;background:white;z-index:0;pointer-events:none;';
+
+  // 2) Overlay de progreso — z-index altísimo para tapar el container
   const overlay = document.createElement('div');
   overlay.id = 'pdf-progress-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;color:white;font-size:18px;text-align:center;padding:20px';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;display:flex;align-items:center;justify-content:center;color:white;font-size:18px;text-align:center;padding:20px';
   overlay.innerHTML = `
     <div>
       <div style="font-size:48px;margin-bottom:10px">📄</div>
@@ -10286,12 +10293,6 @@ async function generarPdfDirecto(html, filename) {
     </div>
   `;
   document.body.appendChild(overlay);
-
-  // 2) Container ON-screen pero invisible. html2canvas necesita el layout
-  //    realmente renderizado, no off-screen con coords negativas.
-  const wrap = document.createElement('div');
-  wrap.id = 'etiq-pdf-wrap';
-  wrap.style.cssText = 'position:fixed;left:0;top:0;width:8.5in;background:white;visibility:hidden;z-index:-1;pointer-events:none;';
   // Extraer body y estilos
   const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
   const bodyHtml = m ? m[1] : html;
