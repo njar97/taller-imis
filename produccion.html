@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-19 16:07 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-19 22:57 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1034,25 +1034,30 @@
 <!-- ══════════ REGISTRO (v23, reemplaza Pedidos) ══════════ -->
 <div id="view-registro" class="view">
   <div id="alert-registro"></div>
-  
-  <div class="card">
-    <div class="card-title">📋 Registro</div>
-    <div id="registro-header"></div>
+
+  <!-- Sub-tabs Registro -->
+  <div class="card" style="padding:6px;margin-bottom:10px">
+    <div style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" id="reg-sub-alumnos"  onclick="switchSubRegistro('alumnos')"  style="flex:1;min-width:90px">👥 Alumnos</button>
+      <button class="btn btn-ghost   btn-sm" id="reg-sub-sintalla" onclick="switchSubRegistro('sintalla')" style="flex:1;min-width:90px">⚠️ Sin tallar</button>
+      <button class="btn btn-ghost   btn-sm" id="reg-sub-escuelas" onclick="switchSubRegistro('escuelas')" style="flex:1;min-width:90px">🏫 Escuelas</button>
+    </div>
   </div>
-  
-  <div id="registro-lista"></div>
-  
-  <!-- Vista "Todos los alumnos" - siempre disponible debajo de la lista -->
-  <div class="card" style="margin-top:14px">
-    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
-      <span>👥 Todos los alumnos</span>
-      <button class="btn btn-ghost btn-sm" onclick="toggleAlumnosGlobal()">
-        <span id="alumnos-global-toggle-txt">Mostrar ▼</span>
-      </button>
+
+  <!-- SUB: Alumnos / Sin tallar (mismo render, distinto filtro pre-aplicado) -->
+  <div id="reg-sub-alumnos-view">
+    <div id="alumnos-global-contenido">
+      <div class="text-muted" style="padding:20px;text-align:center">Cargando alumnos...</div>
     </div>
-    <div id="alumnos-global-panel" style="display:none">
-      <div id="alumnos-global-contenido"></div>
+  </div>
+
+  <!-- SUB: Escuelas -->
+  <div id="reg-sub-escuelas-view" style="display:none">
+    <div class="card">
+      <div class="card-title">🏫 Escuelas</div>
+      <div id="registro-header"></div>
     </div>
+    <div id="registro-lista"></div>
   </div>
   
   <!-- Modal: Detalle de escuela con 4 sub-tabs -->
@@ -6798,6 +6803,9 @@ let registroCache = {
 let pedidosCache = registroCache; // alias
 
 async function initRegistro() {
+  // Sub-tabs: Alumnos (default) · Sin tallar · Escuelas
+  // Por defecto arrancamos en Alumnos (es lo que el user usa más para cargar/completar tallas).
+  // Las temporadas/escuelas las cargamos igual porque varias vistas las necesitan.
   try {
     const [temps, grados] = await Promise.all([
       supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.desc&limit=20'),
@@ -6805,22 +6813,51 @@ async function initRegistro() {
     ]);
     registroCache.temporadas = temps;
     registroCache.gradosConocidos = grados;
-    
+
     const activa = temps.find(t => t.estado === 'activa') || temps[0];
     if (activa) registroCache.temporadaActual = activa.id;
-    
-    renderRegistroHeader();
-    
-    if (registroCache.temporadaActual) {
-      await cargarEscuelasTemporada();
-    } else {
-      document.getElementById('registro-lista').innerHTML = 
-        '<div class="alert alert-info">No hay temporadas cargadas. Corré la migración v3.11 y la carga inicial.</div>';
-    }
+
+    // Estado inicial del sub-tab: respetar lo que ya esté (si el user volvió de otro tab),
+    // sino arrancar en 'alumnos'.
+    const subActual = window.regSubActual || 'alumnos';
+    switchSubRegistro(subActual);
   } catch(e) {
-    document.getElementById('registro-lista').innerHTML = 
-      `<div class="alert alert-error">Error: ${e.message}</div>`;
+    const cont = document.getElementById('alumnos-global-contenido');
+    if (cont) cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }
+}
+
+// Cambia el sub-tab activo de Registro (Alumnos / Sin tallar / Escuelas)
+function switchSubRegistro(sub) {
+  window.regSubActual = sub;
+  ['alumnos', 'sintalla', 'escuelas'].forEach(s => {
+    const btn = document.getElementById('reg-sub-' + s);
+    if (btn) {
+      btn.classList.toggle('btn-primary', s === sub);
+      btn.classList.toggle('btn-ghost', s !== sub);
+    }
+  });
+  // Hay 2 views (alumnos y escuelas) — "sintalla" reusa el view de alumnos pero con filtro forzado.
+  const aV = document.getElementById('reg-sub-alumnos-view');
+  const eV = document.getElementById('reg-sub-escuelas-view');
+  if (aV && eV) {
+    aV.style.display = (sub === 'escuelas') ? 'none' : '';
+    eV.style.display = (sub === 'escuelas') ? '' : 'none';
+  }
+
+  if (sub === 'escuelas') {
+    renderRegistroHeader();
+    if (registroCache.temporadaActual) cargarEscuelasTemporada();
+    return;
+  }
+  // Alumnos o Sin tallar — ambos rendean alumnos_global con un filtro distinto
+  if (sub === 'sintalla') {
+    alumnosGlobalCache.filtroEstado = 'sin_tallas';
+  } else if (alumnosGlobalCache.filtroEstado === 'sin_tallas') {
+    // si veníamos de "sin tallar" y ahora cliquea Alumnos, limpiar ese filtro
+    alumnosGlobalCache.filtroEstado = '';
+  }
+  if (typeof initAlumnosGlobal === 'function') initAlumnosGlobal();
 }
 
 // alias para compat
@@ -9439,9 +9476,10 @@ function renderAlumnosGlobal() {
       </div>
       
       <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-success btn-sm" onclick="abrirNuevoAlumno()">+ Nuevo alumno</button>
         <button class="btn btn-primary btn-sm" onclick="abrirModalEtiquetas()">🏷 Imprimir etiquetas</button>
         <button class="btn btn-ghost btn-sm" onclick="initAlumnosGlobal()">🔄 Refrescar</button>
-        ${(c.busqueda || c.filtroEscuela || c.filtroNivel || c.filtroTemporada || c.filtroEstado) ? 
+        ${(c.busqueda || c.filtroEscuela || c.filtroNivel || c.filtroTemporada || c.filtroEstado) ?
           `<button class="btn btn-ghost btn-sm" onclick="limpiarFiltros()">✗ Limpiar filtros</button>` : ''}
       </div>
     </div>
@@ -9536,6 +9574,49 @@ async function editarAlumnoGlobal(alumnoId) {
       }, 200);
     }, 100);
   } catch(e) { alert('Error: ' + e.message); }
+}
+
+// Abre flow de nuevo alumno: pide escuela y redirige al sub-tab Tallaje
+// (donde el form ya existe). Si solo hay una escuela activa, va directo.
+async function abrirNuevoAlumno() {
+  const c = alumnosGlobalCache;
+  // Si hay un filtro de escuela activo, usar esa
+  let escuelaId = c.filtroEscuela;
+  if (!escuelaId) {
+    // Pedirle al user que elija una de las escuelas
+    const opts = Object.values(c.escuelas)
+      .filter(e => e.activa !== false)
+      .sort((a,b) => (a.alias||a.nombre).localeCompare(b.alias||b.nombre));
+    if (opts.length === 0) { alert('No hay escuelas activas. Cargá una primero.'); return; }
+    const lista = opts.map((e,i) => `${i+1}. ${e.alias || e.nombre}`).join('\n');
+    const ans = prompt(`Para qué escuela?\n\n${lista}\n\nEscribí el número o el alias:`);
+    if (!ans) return;
+    const num = parseInt(ans, 10);
+    if (!isNaN(num) && num >= 1 && num <= opts.length) {
+      escuelaId = opts[num - 1].id;
+    } else {
+      const match = opts.find(e =>
+        (e.alias || '').toLowerCase() === ans.toLowerCase() ||
+        (e.nombre || '').toLowerCase().includes(ans.toLowerCase())
+      );
+      if (!match) { alert('No encontré esa escuela. Probá con el número.'); return; }
+      escuelaId = match.id;
+    }
+  }
+  // Navegar a Registro > Escuelas > detalle de esa escuela > sub-tab Tallaje
+  if (typeof switchSubRegistro === 'function') switchSubRegistro('escuelas');
+  setTimeout(async () => {
+    if (typeof abrirDetalleEscuelaRegistro === 'function') {
+      await abrirDetalleEscuelaRegistro(escuelaId);
+      // Activar sub-tab tallaje y nuevo alumno
+      setTimeout(() => {
+        if (typeof cambiarVistaDetalle === 'function') {
+          const subT = document.querySelectorAll('#registro-detalle-subtabs .sub-tab')[0];
+          cambiarVistaDetalle('tallaje', subT);
+        }
+      }, 200);
+    }
+  }, 100);
 }
 
 // ═══════════════════════════════════════════════════════════════════
