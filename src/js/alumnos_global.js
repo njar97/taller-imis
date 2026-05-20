@@ -161,7 +161,7 @@ function renderAlumnosGlobal() {
     const sinTallas = alumnoSinTallas(a);
     const bg = sinTallas ? '#FFF4F0' : 'white';
     return `
-      <tr style="border-top:1px solid #EEE;background:${bg}">
+      <tr style="border-top:1px solid #EEE;background:${bg};cursor:pointer" onclick="editarAlumnoRapido('${a.id}')" title="Clic para editar">
         <td style="padding:4px 8px;font-weight:600">${a.nombre}</td>
         <td style="padding:4px 8px;font-size:11px;color:#666">${esc ? esc.nombre : '-'}</td>
         <td style="padding:4px 8px;font-size:11px">${a.grado || '-'}</td>
@@ -169,8 +169,8 @@ function renderAlumnosGlobal() {
         <td style="padding:4px 8px;text-align:center;font-family:monospace;color:${a.talla_top_key?'var(--azul)':'#c44'}">${a.talla_top_key || '⚠'}</td>
         <td style="padding:4px 8px;text-align:center;font-family:monospace;color:${a.talla_bottom_key?'var(--azul)':'#c44'}">${a.talla_bottom_key || '⚠'}</td>
         <td style="padding:4px 8px;text-align:center">${iconEstado(a.estado_top)}${iconEstado(a.estado_bottom)}</td>
-        <td style="padding:4px 8px;text-align:center">
-          <button class="btn-mini" onclick="editarAlumnoGlobal('${a.id}')">✏</button>
+        <td style="padding:4px 8px;text-align:center" onclick="event.stopPropagation()">
+          <button class="btn-mini" onclick="editarAlumnoRapido('${a.id}')" title="Editar">✏</button>
         </td>
       </tr>
     `;
@@ -207,7 +207,90 @@ function limpiarFiltros() {
   renderAlumnosGlobal();
 }
 
-// Editar alumno desde vista global
+// Edición rápida: modal in-place sin salir de la vista global.
+// El path viejo "ir a escuela > tallaje > editar" hacía switchTab que
+// reiniciaba el sub-tab a Alumnos y cerraba el modal — bug reportado
+// por user 2026-05-20 ("le doy editar, sale cagando y vuelvo a la misma página").
+async function editarAlumnoRapido(alumnoId) {
+  try {
+    const res = await supaFetch('alumno', 'GET', null, `?id=eq.${alumnoId}&limit=1`);
+    if (!res || res.length === 0) { alert('Alumno no encontrado'); return; }
+    const a = res[0];
+    const esc = alumnosGlobalCache.escuelas[a.escuela_id];
+    document.getElementById('ae-id').value         = a.id;
+    document.getElementById('ae-nombre').value     = a.nombre || '';
+    document.getElementById('ae-sexo').value       = a.sexo || '';
+    document.getElementById('ae-grado').value      = a.grado || '';
+    document.getElementById('ae-nivel').value      = a.nivel || '';
+    document.getElementById('ae-prenda-top').value = a.prenda_top || '';
+    document.getElementById('ae-talla-top').value  = a.talla_top_key || '';
+    document.getElementById('ae-prenda-bot').value = a.prenda_bottom || '';
+    document.getElementById('ae-talla-bot').value  = a.talla_bottom_key || '';
+    document.getElementById('ae-obs').value        = a.observaciones || '';
+    document.getElementById('ae-subt').textContent = esc ? (esc.alias || esc.nombre) : '';
+    document.getElementById('alumno-edit-modal').style.display = 'flex';
+    // Foco en el primer campo vacío (típicamente talla_top si está cargando tallas)
+    setTimeout(() => {
+      const focusId = !a.talla_top_key ? 'ae-talla-top'
+                    : !a.talla_bottom_key ? 'ae-talla-bot'
+                    : 'ae-nombre';
+      const el = document.getElementById(focusId);
+      if (el) { el.focus(); el.select && el.select(); }
+    }, 100);
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+function cerrarAlumnoEdit() {
+  document.getElementById('alumno-edit-modal').style.display = 'none';
+}
+
+async function guardarAlumnoEdit(continuar) {
+  const id = document.getElementById('ae-id').value;
+  const nombre = document.getElementById('ae-nombre').value.trim();
+  if (!nombre) { alert('El nombre es obligatorio'); return; }
+  const payload = {
+    nombre,
+    sexo:             document.getElementById('ae-sexo').value || null,
+    grado:            document.getElementById('ae-grado').value.trim() || null,
+    nivel:            document.getElementById('ae-nivel').value || null,
+    prenda_top:       document.getElementById('ae-prenda-top').value || null,
+    talla_top_key:    document.getElementById('ae-talla-top').value.trim().toUpperCase() || null,
+    prenda_bottom:    document.getElementById('ae-prenda-bot').value || null,
+    talla_bottom_key: document.getElementById('ae-talla-bot').value.trim().toUpperCase() || null,
+    observaciones:    document.getElementById('ae-obs').value.trim() || null,
+    actualizado_en:   new Date().toISOString(),
+  };
+  // Si no se eligió nivel manualmente y hay grado, inferirlo
+  if (!payload.nivel && payload.grado && typeof nivelDesdeGrado === 'function') {
+    payload.nivel = nivelDesdeGrado(payload.grado);
+  }
+  try {
+    await supaUpdate('alumno', id, payload);
+    // Actualizar cache local sin recargar todo
+    const idx = alumnosGlobalCache.alumnos.findIndex(a => a.id === id);
+    if (idx >= 0) Object.assign(alumnosGlobalCache.alumnos[idx], payload);
+    if (continuar) {
+      // Buscar el siguiente alumno en la lista filtrada actual que esté sin tallar
+      const lista = alumnosGlobalCache.alumnos;
+      const siguiente = lista.find(a => a.id !== id && (!a.talla_top_key || !a.talla_bottom_key));
+      if (siguiente) {
+        cerrarAlumnoEdit();
+        setTimeout(() => editarAlumnoRapido(siguiente.id), 50);
+        renderAlumnosGlobal();
+        return;
+      }
+    }
+    cerrarAlumnoEdit();
+    renderAlumnosGlobal();
+  } catch(e) {
+    alert('Error al guardar: ' + e.message);
+  }
+}
+
+// Editar alumno desde vista global (path completo a Escuela > Tallaje)
+// Mantenido por compatibilidad — la vista global ahora usa editarAlumnoRapido.
 async function editarAlumnoGlobal(alumnoId) {
   try {
     const res = await supaFetch('alumno', 'GET', null, `?id=eq.${alumnoId}&limit=1`);
