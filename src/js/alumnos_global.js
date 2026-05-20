@@ -950,21 +950,30 @@ async function generarPdfDirecto(html, filename) {
   wrap.querySelectorAll('.no-print').forEach(el => el.remove());
   document.body.appendChild(wrap);
 
-  // 3) Forzar reflow + auto-fit por celda
+  // 3) Forzar reflow + auto-fit por celda (DOBLE PASADA)
+  // El grid con minmax(...,1fr) puede redistribuir tracks DESPUÉS del primer
+  // autoFit, dejando contenido cortado. La segunda pasada agarra esos casos.
   try {
-    void wrap.offsetHeight; // trigger layout
-    await new Promise(r => setTimeout(r, 200)); // tiempo extra para mobile
-    const cells = wrap.querySelectorAll('[data-fit-max]');
-    cells.forEach(el => {
+    void wrap.offsetHeight;
+    await new Promise(r => setTimeout(r, 200));
+
+    const fitOne = (el) => {
       const max = parseFloat(el.getAttribute('data-fit-max')) || 14;
       const min = parseFloat(el.getAttribute('data-fit-min')) || 7;
       let size = max;
       el.style.fontSize = size + 'pt';
-      while (size > min && el.scrollWidth > el.clientWidth + 1) {
+      while (size > min && el.scrollWidth > el.clientWidth) {
         size -= 0.5;
         el.style.fontSize = size + 'pt';
       }
-    });
+    };
+
+    const cells = wrap.querySelectorAll('[data-fit-max]');
+    cells.forEach(fitOne);
+    // Forzar nuevo reflow y volver a medir
+    void wrap.offsetHeight;
+    await new Promise(r => setTimeout(r, 150));
+    cells.forEach(fitOne);
     void wrap.offsetHeight;
     await new Promise(r => setTimeout(r, 100));
   } catch (e) { /* ignore */ }
@@ -1146,6 +1155,12 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
         font-weight: 900;
         letter-spacing: 0.5pt;
         text-align: center;
+      }
+      /* Aire extra antes de talla-top: el user corta la etiqueta acá
+         para pegarla en 2 filas en la bolsa. */
+      .etiqueta .talla-top {
+        padding-left: 4mm;
+        border-left: 1px dashed #ccc;
       }
 
       .etiqueta .obs {
