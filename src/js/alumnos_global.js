@@ -901,9 +901,15 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
 
   const tituloExtra = tempCodeHdr ? `Temporada ${tempCodeHdr}` : '';
 
+  // Sugerencia de nombre de archivo
+  const fechaCorta = new Date().toISOString().slice(0,10);
+  const filename = `etiquetas_${fechaCorta}.pdf`;
+
   return `
     <!DOCTYPE html><html><head><meta charset="UTF-8">
     <title>Etiquetas${tituloExtra ? ' - ' + tituloExtra : ''}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"><\/script>
     <style>
       /* Tamaño carta · margen izquierdo amplio para engrapar varias hojas y cortar */
       @page { size: letter; margin: 8mm 5mm 5mm 10mm; }
@@ -1011,19 +1017,29 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
         </div>
       </div>
 
-      ${bloquesPorGrupo}
+      <!-- Botonera arriba (no se imprime) — más visible en mobile -->
+      <div class="no-print" style="text-align:center;padding:14px;background:#0065CC;color:white;margin-bottom:10px;border-radius:6px">
+        <div style="font-size:11pt;margin-bottom:8px">${total.toLocaleString()} etiqueta(s) listas</div>
+        <button onclick="descargarPdf()" id="btn-pdf"
+          style="padding:12px 28px;font-size:14pt;background:white;color:#0065CC;border:none;border-radius:6px;font-weight:700;cursor:pointer">
+          📥 Descargar PDF
+        </button>
+        <button onclick="window.print()" style="padding:12px 18px;font-size:14pt;background:transparent;color:white;border:1px solid white;border-radius:6px;cursor:pointer;margin-left:6px">
+          🖨 Imprimir
+        </button>
+      </div>
+
+      <div id="contenido-pdf">
+        ${bloquesPorGrupo}
+      </div>
 
       <div class="no-print" style="margin-top:20px;text-align:center;padding:10px;background:#F5F7FA;border-radius:6px">
-        <div style="font-size:12pt;margin-bottom:8px;color:#333">
-          💡 En el diálogo elegí <strong>"Guardar como PDF"</strong> como destino para descargar el archivo.
-        </div>
-        <button onclick="window.print()" style="padding:10px 20px;font-size:14pt">🖨 Imprimir / PDF</button>
-        <button onclick="window.close()" style="padding:10px 20px;font-size:14pt">✕ Cerrar</button>
+        <button onclick="window.close()" style="padding:8px 16px;font-size:12pt">✕ Cerrar</button>
       </div>
+
       <script>
-        // Auto-fit por celda: cada elemento con [data-fit-max] arranca en
-        // su tamaño máximo y baja en 0.5pt hasta que entre en su columna fija.
-        // El mínimo lo da data-fit-min (o 7pt por defecto).
+        // Auto-fit por celda: cada [data-fit-max] arranca en su máximo
+        // y baja 0.5pt hasta entrar en su columna fija.
         function autoFitCeldas() {
           var els = document.querySelectorAll('[data-fit-max]');
           for (var i = 0; i < els.length; i++) {
@@ -1038,12 +1054,30 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
             }
           }
         }
+        // Descarga PDF directa con html2pdf — funciona en desktop y mobile.
+        function descargarPdf() {
+          var btn = document.getElementById('btn-pdf');
+          if (btn) { btn.textContent = '⏳ Generando…'; btn.disabled = true; }
+          autoFitCeldas();
+          var element = document.getElementById('contenido-pdf');
+          var opt = {
+            margin: [8, 5, 5, 10],            // top, right, bottom, left (mm)
+            filename: '${filename}',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
+            pagebreak: { mode: ['css', 'legacy'], before: '.page-break' }
+          };
+          html2pdf().set(opt).from(element).save().then(function(){
+            if (btn) { btn.textContent = '📥 Descargar PDF'; btn.disabled = false; }
+          }).catch(function(e){
+            if (btn) { btn.textContent = '📥 Descargar PDF'; btn.disabled = false; }
+            alert('Error generando PDF: ' + e.message + '\\n\\nUsá el botón "Imprimir" como alternativa.');
+          });
+        }
         window.addEventListener('load', function() {
           requestAnimationFrame(function() {
-            requestAnimationFrame(function() {
-              autoFitCeldas();
-              setTimeout(function(){ window.print(); }, 200);
-            });
+            requestAnimationFrame(autoFitCeldas);
           });
         });
         window.addEventListener('beforeprint', autoFitCeldas);
