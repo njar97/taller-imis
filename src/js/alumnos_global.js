@@ -7,13 +7,27 @@ let alumnosGlobalCache = {
   alumnos: [],
   escuelas: {},
   busqueda: '',
-  filtroEscuela: '',
+  filtroEscuela: '',           // (deprecated, se mantiene por compat con código viejo)
+  filtroEscuelas: [],          // array de escuela_id seleccionadas (multi)
   filtroNivel: '',
   filtroTemporada: '',
-  filtroEstado: '',   // 'pendiente'|'parcial'|'completo'|'entregado'|'sin_tallas'
+  filtroEstado: '',            // 'pendiente'|'parcial'|'completo'|'entregado'|'sin_tallas'
   masFiltrosAbierto: false,
   cargado: false,
 };
+
+// Preferencia de orden para etiquetas — persistida en localStorage
+const ET_ORDEN_DEFAULT = ['escuela', 'sexo_fm', 'grado', 'nombre'];
+function etOrdenGuardado() {
+  try {
+    const v = JSON.parse(localStorage.getItem('et_orden') || '');
+    if (Array.isArray(v) && v.length === 4) return v;
+  } catch(_) {}
+  return [...ET_ORDEN_DEFAULT];
+}
+function etOrdenSet(arr) {
+  localStorage.setItem('et_orden', JSON.stringify(arr));
+}
 
 async function initAlumnosGlobal() {
   const cont = document.getElementById('alumnos-global-contenido');
@@ -64,7 +78,12 @@ function renderAlumnosGlobal() {
     const q = c.busqueda.toLowerCase().trim();
     lista = lista.filter(a => (a.nombre||'').toLowerCase().includes(q));
   }
-  if (c.filtroEscuela) lista = lista.filter(a => a.escuela_id === c.filtroEscuela);
+  if (c.filtroEscuelas && c.filtroEscuelas.length > 0) {
+    const set = new Set(c.filtroEscuelas);
+    lista = lista.filter(a => set.has(a.escuela_id));
+  } else if (c.filtroEscuela) {
+    lista = lista.filter(a => a.escuela_id === c.filtroEscuela);
+  }
   if (c.filtroNivel) lista = lista.filter(a => a.nivel === c.filtroNivel);
   if (c.filtroTemporada) lista = lista.filter(a => a.temporada_id === c.filtroTemporada);
   if (c.filtroEstado) {
@@ -96,40 +115,60 @@ function renderAlumnosGlobal() {
   const sinTallas = c.alumnos.filter(alumnoSinTallas).length;  // ahora = "le falta al menos una"
   const completos = c.alumnos.filter(a => a.estado_top==='empacado' && a.estado_bottom==='empacado').length;
   
-  const escuelaSelObj = c.filtroEscuela ? c.escuelas[c.filtroEscuela] : null;
-  const algunFiltro = (c.busqueda || c.filtroEscuela || c.filtroNivel || c.filtroEstado);
+  // Compat: si hay filtroEscuela (string, viejo) y filtroEscuelas (array) está vacío, migrar
+  if (c.filtroEscuela && (!c.filtroEscuelas || c.filtroEscuelas.length === 0)) {
+    c.filtroEscuelas = [c.filtroEscuela];
+    c.filtroEscuela = '';
+  }
+  const escuelasSel = c.filtroEscuelas || [];
+  const algunFiltro = (c.busqueda || escuelasSel.length || c.filtroNivel || c.filtroEstado);
   const masFiltrosAbierto = !!c.masFiltrosAbierto;
+
+  // Opciones de escuela que aún NO están seleccionadas
+  const escuelasDisponibles = escuelasOpts.filter(e => !escuelasSel.includes(e.id));
 
   const header = `
     <div class="card" style="padding:10px 12px;margin-bottom:10px">
-      <!-- Fila 1: chips con stats integrados -->
+      <!-- Fila 1: chips de estado con stats integrados -->
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-        <button class="btn btn-sm ${!c.filtroEstado && !c.filtroEscuela && !c.busqueda?'btn-primary':'btn-ghost'}"
+        <button class="btn btn-sm ${!c.filtroEstado && escuelasSel.length===0 && !c.busqueda?'btn-primary':'btn-ghost'}"
           onclick="limpiarFiltros()">👥 Todos (${tot.toLocaleString()})</button>
         <button class="btn btn-sm ${c.filtroEstado==='sin_tallas'?'btn-primary':'btn-ghost'}"
           onclick="aplicarFiltroEstado('sin_tallas')">⚠️ Falta tallar (${sinTallas})</button>
         <button class="btn btn-sm ${c.filtroEstado==='completo'?'btn-primary':'btn-ghost'}"
           onclick="aplicarFiltroEstado('completo')">✅ Completos (${completos})</button>
-        ${escuelaSelObj ? `<span class="btn btn-sm btn-primary" style="cursor:default">🏫 ${escuelaSelObj.alias || escuelaSelObj.nombre} <span style="margin-left:6px;cursor:pointer" onclick="aplicarFiltroEscuela('')">✕</span></span>` : ''}
         <span style="margin-left:auto;color:#888;font-size:11px;align-self:center">Mostrando ${totMostrando.toLocaleString()}</span>
       </div>
 
-      <!-- Fila 2: buscar + acciones -->
+      <!-- Fila 2: chips de escuelas seleccionadas + agregar -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
+        ${escuelasSel.length === 0 ? `<span style="color:#888;font-size:12px">🏫 Todas las escuelas</span>` : ''}
+        ${escuelasSel.map(eid => {
+          const e = c.escuelas[eid];
+          if (!e) return '';
+          return `<span class="btn btn-sm btn-primary" style="cursor:default">🏫 ${e.alias || e.nombre} <span style="margin-left:6px;cursor:pointer" onclick="quitarFiltroEscuela('${eid}')">✕</span></span>`;
+        }).join('')}
+        ${escuelasDisponibles.length > 0 ? `
+          <select onchange="if(this.value){agregarFiltroEscuela(this.value); this.value='';}" style="padding:4px 6px;font-size:12px;border:1px solid var(--borde);border-radius:4px">
+            <option value="">+ Agregar escuela…</option>
+            ${escuelasDisponibles.map(e => `<option value="${e.id}">${e.alias ? e.alias + ' · ' : ''}${e.nombre}</option>`).join('')}
+          </select>
+        ` : ''}
+      </div>
+
+      <!-- Fila 3: buscar + acciones -->
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
         <input type="text" placeholder="🔍 Buscar nombre..." value="${c.busqueda}"
           oninput="alumnosGlobalCache.busqueda = this.value; renderAlumnosGlobal()"
           style="flex:1;min-width:140px;padding:6px 10px;border:1px solid var(--borde);border-radius:4px">
         <button class="btn btn-success btn-sm" onclick="abrirNuevoAlumno()">+ Nuevo alumno</button>
-        <button class="btn btn-primary btn-sm" onclick="imprimirEtiquetasConFiltros()">🏷 Imprimir etiquetas</button>
+        <button class="btn btn-primary btn-sm" onclick="generarEtiquetasDirecto()" title="Genera PDF según los filtros aplicados">🏷 Imprimir etiquetas</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirOpcionesEtiquetas()" title="Cambiar orden de las etiquetas">⚙️</button>
         <button class="btn btn-ghost btn-sm" onclick="initAlumnosGlobal()" title="Refrescar">🔄</button>
       </div>
 
-      <!-- Fila 3: escuela + toggle más filtros -->
+      <!-- Fila 4: toggle más filtros + limpiar -->
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <select onchange="alumnosGlobalCache.filtroEscuela = this.value; renderAlumnosGlobal()" style="flex:1;min-width:160px;padding:6px">
-          <option value="">🏫 Todas las escuelas</option>
-          ${escuelasOpts.map(e => `<option value="${e.id}" ${e.id===c.filtroEscuela?'selected':''}>${e.alias ? e.alias + ' · ' : ''}${e.nombre}</option>`).join('')}
-        </select>
         <button class="btn btn-ghost btn-sm" onclick="alumnosGlobalCache.masFiltrosAbierto = !alumnosGlobalCache.masFiltrosAbierto; renderAlumnosGlobal()">
           ⚙️ Más filtros ${masFiltrosAbierto?'▲':'▼'}
         </button>
@@ -213,6 +252,7 @@ function renderAlumnosGlobal() {
 function limpiarFiltros() {
   alumnosGlobalCache.busqueda = '';
   alumnosGlobalCache.filtroEscuela = '';
+  alumnosGlobalCache.filtroEscuelas = [];
   alumnosGlobalCache.filtroNivel = '';
   alumnosGlobalCache.filtroTemporada = '';
   alumnosGlobalCache.filtroEstado = '';
@@ -221,12 +261,26 @@ function limpiarFiltros() {
 
 // Helpers para los chips de filtro rápido
 function aplicarFiltroEstado(estado) {
-  // Toggle: si ya estaba ese, quitarlo
   alumnosGlobalCache.filtroEstado = (alumnosGlobalCache.filtroEstado === estado) ? '' : estado;
   renderAlumnosGlobal();
 }
+// Compat: setea una sola escuela (limpia las demás)
 function aplicarFiltroEscuela(escuelaId) {
-  alumnosGlobalCache.filtroEscuela = escuelaId || '';
+  alumnosGlobalCache.filtroEscuela = '';
+  alumnosGlobalCache.filtroEscuelas = escuelaId ? [escuelaId] : [];
+  renderAlumnosGlobal();
+}
+// Nuevos: multi-escuela
+function agregarFiltroEscuela(escuelaId) {
+  if (!escuelaId) return;
+  const arr = alumnosGlobalCache.filtroEscuelas || [];
+  if (!arr.includes(escuelaId)) arr.push(escuelaId);
+  alumnosGlobalCache.filtroEscuelas = arr;
+  alumnosGlobalCache.filtroEscuela = '';
+  renderAlumnosGlobal();
+}
+function quitarFiltroEscuela(escuelaId) {
+  alumnosGlobalCache.filtroEscuelas = (alumnosGlobalCache.filtroEscuelas || []).filter(id => id !== escuelaId);
   renderAlumnosGlobal();
 }
 
@@ -602,11 +656,16 @@ async function abrirNuevoAlumno() {
 // ETIQUETAS IMPRIMIBLES
 // ═══════════════════════════════════════════════════════════════════
 
-// Atajo: imprimir directamente con los filtros activos en la página
-// (ya no hace falta abrir el modal). Aún abrimos modal para que el user
-// confirme el orden si quiere uno distinto al default. Pero precarga
-// todo desde la página y un Enter genera.
-function imprimirEtiquetasConFiltros() { abrirModalEtiquetas(); }
+// Genera el PDF de etiquetas DIRECTO con los filtros aplicados en la página
+// y el orden guardado en localStorage. Sin popup.
+function generarEtiquetasDirecto() {
+  _ejecutarGenerarEtiquetas(etOrdenGuardado(), { soloEmpacados: false, incluirObs: false });
+}
+
+// Abre el modal SOLO con orden + opciones (sin filtros — esos van en la página)
+function abrirOpcionesEtiquetas() { abrirModalEtiquetas(); }
+// Alias por compat
+function imprimirEtiquetasConFiltros() { generarEtiquetasDirecto(); }
 
 // Campos disponibles para el orden personalizado
 const ET_ORDEN_OPCIONES = [
@@ -633,7 +692,8 @@ function etRenderOrdenSelects(seleccion) {
 }
 
 function etOrdenDefault() {
-  etRenderOrdenSelects(['escuela', 'sexo_fm', 'grado', 'nombre']);
+  etOrdenSet([...ET_ORDEN_DEFAULT]);
+  etRenderOrdenSelects([...ET_ORDEN_DEFAULT]);
 }
 
 function etSelEscuelas(modo) {
@@ -645,31 +705,11 @@ function etSelEscuelas(modo) {
 function abrirModalEtiquetas() {
   const modal = document.getElementById('etiquetas-modal');
   if (!modal) return;
-  const c = alumnosGlobalCache;
-
-  // Multiselect de escuelas: cargar y pre-seleccionar según filtro de página
-  const sel = document.getElementById('et-escuelas-multi');
-  if (sel) {
-    const escuelasUnicas = {};
-    for (const a of c.alumnos) {
-      if (a.escuela_id && c.escuelas[a.escuela_id]) escuelasUnicas[a.escuela_id] = c.escuelas[a.escuela_id];
-    }
-    const opts = Object.values(escuelasUnicas).sort((a,b) =>
-      (a.alias||a.nombre).localeCompare(b.alias||b.nombre));
-    sel.innerHTML = opts.map(e =>
-      `<option value="${e.id}" ${c.filtroEscuela === e.id ? 'selected' : ''}>${e.alias ? e.alias + ' · ' : ''}${e.nombre}</option>`
-    ).join('');
-    // Si no había filtro de escuela en la página, dejar todas marcadas
-    if (!c.filtroEscuela) for (const opt of sel.options) opt.selected = true;
-  }
-
-  // Orden: cargar con default
-  etOrdenDefault();
-
-  // Resumen de otros filtros aplicados (no escuela, esa se elige acá)
+  // Orden: cargar el guardado en localStorage (no el hardcoded default)
+  etRenderOrdenSelects(etOrdenGuardado());
+  // Resumen de filtros que se van a aplicar
   const resumen = document.getElementById('et-resumen-filtros');
   if (resumen) resumen.innerHTML = generarResumenFiltros();
-
   modal.style.display = 'flex';
   setTimeout(() => {
     const btn = document.getElementById('et-btn-generar');
@@ -679,17 +719,23 @@ function abrirModalEtiquetas() {
 
 function generarResumenFiltros() {
   const c = alumnosGlobalCache;
-  // No incluimos escuela porque se elige en el multiselect del modal.
-  // Sí mostramos los otros filtros aplicados desde la página (nivel, estado, búsqueda).
   const partes = [];
+  const escSel = c.filtroEscuelas || [];
+  if (escSel.length === 0) {
+    partes.push('🏫 Todas las escuelas');
+  } else if (escSel.length <= 3) {
+    const nombres = escSel.map(id => c.escuelas[id]?.alias || c.escuelas[id]?.nombre || '?').join(', ');
+    partes.push(`🏫 ${nombres}`);
+  } else {
+    partes.push(`🏫 ${escSel.length} escuelas`);
+  }
   if (c.filtroNivel)  partes.push(`nivel ${c.filtroNivel}`);
   if (c.filtroEstado && c.filtroEstado !== 'sin_tallas') partes.push(`estado ${c.filtroEstado}`);
   if (c.busqueda)     partes.push(`búsqueda "${c.busqueda}"`);
-  if (partes.length === 0) {
-    return `<div style="font-size:12px;color:#555">Sin filtros adicionales de la página.</div>
-            <div style="font-size:10px;color:#888;margin-top:2px">Si necesitás filtrar (ej: solo "falta tallar"), cerrá este diálogo, aplicá el filtro en la página y volvé a abrir.</div>`;
-  }
-  return `<div style="font-size:12px;color:#555"><strong>Filtros de la página:</strong> ${partes.join(' · ')}</div>`;
+  return `
+    <div style="font-size:12px;color:#555"><strong>Filtros activos:</strong> ${partes.join(' · ')}</div>
+    <div style="font-size:10px;color:#888;margin-top:2px">Para cambiarlos, cerrá este diálogo y ajustá en la página.</div>
+  `;
 }
 
 function cerrarModalEtiquetas() {
@@ -697,31 +743,42 @@ function cerrarModalEtiquetas() {
   if (modal) modal.style.display = 'none';
 }
 
+// generarEtiquetas: lee opciones del modal (orden custom + checkboxes) y dispara.
+// Guarda el orden elegido en localStorage para próximas impresiones directas.
 function generarEtiquetas() {
-  const c = alumnosGlobalCache;
-  const tempActiva = (registroCache.temporadas || []).find(t => t.estado === 'activa');
-  const tempId = tempActiva ? tempActiva.id : '';
-  const columnas = parseInt(document.getElementById('et-columnas').value) || 1;
-  const soloEmpacados = document.getElementById('et-solo-empacados').checked;
-  const incluirObs = document.getElementById('et-incluir-obs').checked;
-
-  // Escuelas seleccionadas en el multiselect (puede ser una, varias o ninguna)
-  const selMulti = document.getElementById('et-escuelas-multi');
-  const seleccionadas = selMulti ? Array.from(selMulti.selectedOptions).map(o => o.value) : [];
-  const escuelasFiltro = seleccionadas.length > 0 ? new Set(seleccionadas) : null;
-
-  // Orden custom: leer los 4 dropdowns
   const ordenSeleccion = [
     document.getElementById('et-orden-1')?.value || '',
     document.getElementById('et-orden-2')?.value || '',
     document.getElementById('et-orden-3')?.value || '',
     document.getElementById('et-orden-4')?.value || '',
-  ].filter(Boolean);
+  ];
+  const soloEmpacados = document.getElementById('et-solo-empacados').checked;
+  const incluirObs = document.getElementById('et-incluir-obs').checked;
+  // Guardar preferencia
+  etOrdenSet(ordenSeleccion);
+  cerrarModalEtiquetas();
+  _ejecutarGenerarEtiquetas(ordenSeleccion.filter(Boolean), { soloEmpacados, incluirObs });
+}
+
+// Núcleo de generación de etiquetas. Usa los filtros vigentes en la página.
+// Multi-escuela: si filtroEscuelas tiene items, filtra por esos; si está vacío, todas.
+function _ejecutarGenerarEtiquetas(ordenSeleccion, { soloEmpacados = false, incluirObs = false } = {}) {
+  const c = alumnosGlobalCache;
+  const tempActiva = (registroCache.temporadas || []).find(t => t.estado === 'activa');
+  const tempId = tempActiva ? tempActiva.id : '';
+  const columnas = 1; // hardcoded — tira tipo Excel
+  ordenSeleccion = (ordenSeleccion || []).filter(Boolean);
+  if (ordenSeleccion.length === 0) ordenSeleccion = [...ET_ORDEN_DEFAULT];
+
+  // Multi-escuela desde la página
+  const escuelasSel = (c.filtroEscuelas && c.filtroEscuelas.length > 0)
+    ? new Set(c.filtroEscuelas)
+    : (c.filtroEscuela ? new Set([c.filtroEscuela]) : null);
 
   let lista = c.alumnos.filter(a => {
     if (!a.talla_top_key && !a.talla_bottom_key) return false;
     if (tempId && a.temporada_id !== tempId) return false;
-    if (escuelasFiltro && !escuelasFiltro.has(a.escuela_id)) return false;
+    if (escuelasSel && !escuelasSel.has(a.escuela_id)) return false;
     if (c.filtroNivel && a.nivel !== c.filtroNivel) return false;
     if (c.filtroEstado === 'completo'  && !(a.estado_top==='empacado' && a.estado_bottom==='empacado')) return false;
     if (c.filtroEstado === 'entregado' && !(a.estado_top==='entregado' && a.estado_bottom==='entregado')) return false;

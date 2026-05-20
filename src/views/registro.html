@@ -293,34 +293,21 @@
   </div>
 </div>
   <div id="etiquetas-modal" class="modal" style="display:none">
-    <div class="modal-content" style="max-width:520px">
+    <div class="modal-content" style="max-width:480px">
       <div class="modal-header">
         <div>
-          <div class="card-title" style="margin:0">🏷 Imprimir etiquetas</div>
-          <div style="font-size:12px;color:#666;margin-top:2px">Tiras de 1cm a lo ancho · listas para cortar y pegar en bolsas</div>
+          <div class="card-title" style="margin:0">⚙️ Opciones de etiquetas</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">Cambiá el orden y se guarda como tu preferencia</div>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="cerrarModalEtiquetas()">✕</button>
       </div>
       <div class="modal-body">
-        <!-- Resumen de filtros aplicados desde la página (no editable acá) -->
+        <!-- Resumen de filtros que ya están aplicados en la página -->
         <div id="et-resumen-filtros" style="padding:10px;background:#F5F7FA;border-radius:6px;margin-bottom:10px"></div>
-
-        <!-- Escuelas: multi-select. Default = la de la página (si hay) -->
-        <div class="field">
-          <label style="display:flex;justify-content:space-between;align-items:center">
-            <span>Escuelas a incluir</span>
-            <span style="font-size:11px;color:#888">Ctrl/⌘ para varias · vacío = todas</span>
-          </label>
-          <select id="et-escuelas-multi" multiple size="5" style="width:100%;padding:6px"></select>
-          <div style="margin-top:4px;display:flex;gap:6px">
-            <button type="button" class="btn btn-ghost btn-sm" onclick="etSelEscuelas('all')">Marcar todas</button>
-            <button type="button" class="btn btn-ghost btn-sm" onclick="etSelEscuelas('none')">Desmarcar</button>
-          </div>
-        </div>
 
         <input type="hidden" id="et-temporada" value="">
         <input type="hidden" id="et-columnas" value="1">
-        <div style="font-size:11px;color:#888;margin:-4px 0 10px 2px">Tira completa ancho carta · cada fila 1cm · margen izquierdo para engrapar y cortar</div>
+        <div style="font-size:11px;color:#888;margin:-4px 0 10px 2px">Tira completa ancho carta · 1cm por fila · margen izquierdo para engrapar y cortar</div>
 
         <!-- Orden personalizable: 4 niveles de prioridad -->
         <div class="field">
@@ -358,7 +345,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="cerrarModalEtiquetas()">Cancelar</button>
-        <button class="btn btn-success" id="et-btn-generar" onclick="generarEtiquetas()">🏷 Generar PDF</button>
+        <button class="btn btn-success" id="et-btn-generar" onclick="generarEtiquetas()">💾 Guardar y generar PDF</button>
       </div>
     </div>
   </div>
