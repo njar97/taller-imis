@@ -858,6 +858,21 @@ function _ejecutarGenerarEtiquetas(ordenSeleccion, { soloEmpacados = false, incl
   generarPdfDirecto(html, `etiquetas_${new Date().toISOString().slice(0,10)}.pdf`);
 }
 
+// Lazy-loader de html2pdf — NO se carga en head.html para no bloquear
+// el load inicial de la app (700KB importa en mobile).
+function cargarHtml2Pdf() {
+  if (typeof html2pdf === 'function') return Promise.resolve();
+  if (window._html2pdfPromise) return window._html2pdfPromise;
+  window._html2pdfPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js';
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('No se pudo cargar la librería PDF (verificá conexión).'));
+    document.head.appendChild(s);
+  });
+  return window._html2pdfPromise;
+}
+
 // Inserta el HTML en un contenedor del documento actual, genera el PDF
 // con html2pdf y lo descarga. Sin ventana nueva.
 async function generarPdfDirecto(html, filename) {
@@ -873,6 +888,14 @@ async function generarPdfDirecto(html, filename) {
       `¿Continuar igual?`
     );
     if (!ok) return;
+  }
+
+  // Cargar html2pdf si no estaba (es lazy)
+  try {
+    await cargarHtml2Pdf();
+  } catch (e) {
+    alert(e.message);
+    return;
   }
 
   // 1) Container EN PANTALLA — visible para html2canvas (visibility:hidden
