@@ -27,6 +27,94 @@
     <div id="registro-lista"></div>
   </div>
   
+  <!-- Modal: edición rápida de alumno (desde lista global) -->
+  <div id="alumno-edit-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:520px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" id="ae-titulo" style="margin:0">✏ Editar alumno</div>
+          <div id="ae-subt" style="font-size:12px;color:#666;margin-top:2px"></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarAlumnoEdit()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="ae-id">
+        <div class="row2">
+          <div class="field">
+            <label>Nombre *</label>
+            <input type="text" id="ae-nombre" placeholder="Apellido, Nombre">
+          </div>
+          <div class="field">
+            <label>Sexo</label>
+            <select id="ae-sexo">
+              <option value="">—</option>
+              <option value="M">Masculino</option>
+              <option value="F">Femenino</option>
+            </select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Grado</label>
+            <input type="text" id="ae-grado" list="grados-datalist" placeholder="Ej: 3A, P5B">
+          </div>
+          <div class="field">
+            <label>Nivel</label>
+            <select id="ae-nivel">
+              <option value="">(auto)</option>
+              <option value="PARV">PARV</option>
+              <option value="BASICA">BASICA</option>
+              <option value="BACH">BACH</option>
+              <option value="OTRO">OTRO</option>
+            </select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Prenda top</label>
+            <select id="ae-prenda-top">
+              <option value="">—</option>
+              <option value="CAMISA">CAMISA</option>
+              <option value="BLUSA">BLUSA</option>
+              <option value="CAMISA_CELESTE">CAMISA_CELESTE</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Talla top (KEY ej C12, B10)</label>
+            <input type="text" id="ae-talla-top" placeholder="C12">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Prenda bottom</label>
+            <select id="ae-prenda-bot">
+              <option value="">—</option>
+              <option value="PANTALON">PANTALON</option>
+              <option value="FALDA">FALDA</option>
+              <option value="PANTALON_BEIGE">PANTALON_BEIGE</option>
+              <option value="FALDA_BEIGE">FALDA_BEIGE</option>
+              <option value="FALDA_C.E">FALDA_C.E</option>
+              <option value="SHORT">SHORT</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Talla bottom (KEY ej P1075, F745)</label>
+            <input type="text" id="ae-talla-bot" placeholder="P1075">
+          </div>
+        </div>
+        <div class="field">
+          <label>Observaciones</label>
+          <textarea id="ae-obs" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer" style="gap:6px;flex-wrap:wrap">
+        <button class="btn btn-ghost" onclick="cerrarAlumnoEdit()">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarAlumnoEdit(true)">💾 Guardar y siguiente</button>
+        <button class="btn btn-success" onclick="guardarAlumnoEdit(false)">✓ Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Detalle de escuela con 4 sub-tabs -->
   <div id="registro-detalle-modal" class="modal" style="display:none">
     <div class="modal-content" style="max-width:760px">
