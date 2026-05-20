@@ -308,21 +308,9 @@
             <option value="">— Todas las escuelas —</option>
           </select>
         </div>
-        <div class="field">
-          <label>Temporada</label>
-          <select id="et-temporada">
-            <option value="">— Toda temporada —</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Formato</label>
-          <select id="et-columnas">
-            <option value="1" selected>1 columna — tira completa ancho carta (recomendado)</option>
-            <option value="2">2 columnas (etiquetas medianas)</option>
-            <option value="3">3 columnas (compactas)</option>
-          </select>
-          <div style="font-size:11px;color:#888;margin-top:2px">Cada fila = 1cm · margen izquierdo 1cm para engrapar y cortar</div>
-        </div>
+        <input type="hidden" id="et-temporada" value="">
+        <input type="hidden" id="et-columnas" value="1">
+        <div style="font-size:11px;color:#888;margin:-2px 0 10px 2px">Tira completa ancho carta · cada fila 1cm · margen izquierdo para engrapar y cortar</div>
         <div class="field">
           <label>Orden</label>
           <select id="et-orden">

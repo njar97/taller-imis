@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-20 08:33 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-20 08:41 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1341,21 +1341,9 @@
             <option value="">— Todas las escuelas —</option>
           </select>
         </div>
-        <div class="field">
-          <label>Temporada</label>
-          <select id="et-temporada">
-            <option value="">— Toda temporada —</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Formato</label>
-          <select id="et-columnas">
-            <option value="1" selected>1 columna — tira completa ancho carta (recomendado)</option>
-            <option value="2">2 columnas (etiquetas medianas)</option>
-            <option value="3">3 columnas (compactas)</option>
-          </select>
-          <div style="font-size:11px;color:#888;margin-top:2px">Cada fila = 1cm · margen izquierdo 1cm para engrapar y cortar</div>
-        </div>
+        <input type="hidden" id="et-temporada" value="">
+        <input type="hidden" id="et-columnas" value="1">
+        <div style="font-size:11px;color:#888;margin:-2px 0 10px 2px">Tira completa ancho carta · cada fila 1cm · margen izquierdo para engrapar y cortar</div>
         <div class="field">
           <label>Orden</label>
           <select id="et-orden">
@@ -10041,8 +10029,10 @@ function cerrarModalEtiquetas() {
 
 function generarEtiquetas() {
   const escId = document.getElementById('et-escuela').value;
-  const tempId = document.getElementById('et-temporada').value;
-  const columnas = parseInt(document.getElementById('et-columnas').value) || 3;
+  // Temporada: siempre la activa (campo oculto). Si el user quiere otra, debe activarla primero.
+  const tempActiva = (registroCache.temporadas || []).find(t => t.estado === 'activa');
+  const tempId = tempActiva ? tempActiva.id : '';
+  const columnas = parseInt(document.getElementById('et-columnas').value) || 1;
   const orden = document.getElementById('et-orden').value;
   const soloEmpacados = document.getElementById('et-solo-empacados').checked;
   const incluirObs = document.getElementById('et-incluir-obs').checked;
@@ -10127,7 +10117,7 @@ function renderHojaEtiquetas(alumnos, cols, incluirObs, escuelasMap, escNameHdr,
         <span class="grado">${a.grado || '—'}</span>
         <span class="nombre">${nombreCorto}</span>
         <span class="centro">${escAbrev}</span>
-        <span class="tallas">C:<b>${top}</b>&nbsp;&nbsp;P:<b>${bot}</b></span>
+        <span class="tallas"><b>${top}</b>&nbsp;&nbsp;<b>${bot}</b></span>
         ${obs ? `<span class="obs">${obs}</span>` : ''}
       </div>
     `;
