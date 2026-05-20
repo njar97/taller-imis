@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-20 14:39 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-20 14:47 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -10298,12 +10298,12 @@ async function generarPdfDirecto(html, filename) {
     return;
   }
 
-  // 1) Container EN PANTALLA — visible para html2canvas (visibility:hidden
-  //    o left:-99999 hacían que se capturara como blanco). Lo tapamos con
-  //    un overlay opaco sobre todo. Se borra al terminar.
+  // 1) Container en FLUJO NORMAL del documento. Sin position:absolute ni
+  //    visibility:hidden — html2canvas necesita el render real. El overlay
+  //    (z-index:99999) tapa la pantalla así el user no ve la inyección.
   const wrap = document.createElement('div');
   wrap.id = 'etiq-pdf-wrap';
-  wrap.style.cssText = 'position:absolute;left:0;top:0;width:8.5in;background:white;z-index:0;pointer-events:none;';
+  wrap.style.cssText = 'width:8.5in;background:white;color:#000;font-family:Arial,sans-serif;';
 
   // 2) Overlay de progreso — z-index altísimo para tapar el container
   const overlay = document.createElement('div');
@@ -10317,22 +10317,43 @@ async function generarPdfDirecto(html, filename) {
     </div>
   `;
   document.body.appendChild(overlay);
-  // Extraer body y estilos
+
+  // Extraer body y estilos del HTML template
   const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-  const bodyHtml = m ? m[1] : html;
+  let bodyHtml = m ? m[1] : html;
+  // Quitar <script> que vino en el template (no aplica para PDF) y elementos no-print
+  bodyHtml = bodyHtml.replace(/<script[\s\S]*?<\/script>/gi, '');
+
+  // Estilos: inyectar en document.head con scope #etiq-pdf-wrap para no
+  // pisar los estilos de la app. Esto los hace globales (más confiable que
+  // un <style> dentro del div, que algunos navegadores no aplican bien).
+  let styleEl = null;
   const sm = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
   if (sm) {
-    const styleEl = document.createElement('style');
-    styleEl.textContent = sm[1].replace(/@page[^}]*\}/g, '');
-    wrap.appendChild(styleEl);
+    let css = sm[1].replace(/@page[^}]*\}/g, '');
+    css = css.replace(/@media\s+screen\s*\{[\s\S]*?\}\s*\}/g, ''); // sacar @media screen
+    // Scope: prefijar todos los selectores con #etiq-pdf-wrap (no cubrimos
+    // todos los casos pero suficiente para nuestras reglas)
+    css = css.replace(/(^|\})\s*([^@{}]+)\{/g, (m, pre, sel) => {
+      const scoped = sel.split(',').map(s => s.trim()).filter(Boolean)
+        .map(s => s === 'body' ? '#etiq-pdf-wrap' : '#etiq-pdf-wrap ' + s)
+        .join(',');
+      return (pre || '') + scoped + '{';
+    });
+    styleEl = document.createElement('style');
+    styleEl.id = 'etiq-pdf-style';
+    styleEl.textContent = css;
+    document.head.appendChild(styleEl);
   }
+
   wrap.insertAdjacentHTML('beforeend', bodyHtml);
   wrap.querySelectorAll('.no-print').forEach(el => el.remove());
   document.body.appendChild(wrap);
 
-  // 3) Auto-fit por celda
+  // 3) Forzar reflow + auto-fit por celda
   try {
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    void wrap.offsetHeight; // trigger layout
+    await new Promise(r => setTimeout(r, 200)); // tiempo extra para mobile
     const cells = wrap.querySelectorAll('[data-fit-max]');
     cells.forEach(el => {
       const max = parseFloat(el.getAttribute('data-fit-max')) || 14;
@@ -10344,6 +10365,8 @@ async function generarPdfDirecto(html, filename) {
         el.style.fontSize = size + 'pt';
       }
     });
+    void wrap.offsetHeight;
+    await new Promise(r => setTimeout(r, 100));
   } catch (e) { /* ignore */ }
 
   // 4) Verificar html2pdf
@@ -10376,6 +10399,7 @@ async function generarPdfDirecto(html, filename) {
   } finally {
     if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    if (styleEl && styleEl.parentNode) styleEl.parentNode.removeChild(styleEl);
   }
 }
 
