@@ -640,8 +640,10 @@ function cerrarModalEtiquetas() {
 
 function generarEtiquetas() {
   const escId = document.getElementById('et-escuela').value;
-  const tempId = document.getElementById('et-temporada').value;
-  const columnas = parseInt(document.getElementById('et-columnas').value) || 3;
+  // Temporada: siempre la activa (campo oculto). Si el user quiere otra, debe activarla primero.
+  const tempActiva = (registroCache.temporadas || []).find(t => t.estado === 'activa');
+  const tempId = tempActiva ? tempActiva.id : '';
+  const columnas = parseInt(document.getElementById('et-columnas').value) || 1;
   const orden = document.getElementById('et-orden').value;
   const soloEmpacados = document.getElementById('et-solo-empacados').checked;
   const incluirObs = document.getElementById('et-incluir-obs').checked;
@@ -726,7 +728,7 @@ function renderHojaEtiquetas(alumnos, cols, incluirObs, escuelasMap, escNameHdr,
         <span class="grado">${a.grado || '—'}</span>
         <span class="nombre">${nombreCorto}</span>
         <span class="centro">${escAbrev}</span>
-        <span class="tallas">C:<b>${top}</b>&nbsp;&nbsp;P:<b>${bot}</b></span>
+        <span class="tallas"><b>${top}</b>&nbsp;&nbsp;<b>${bot}</b></span>
         ${obs ? `<span class="obs">${obs}</span>` : ''}
       </div>
     `;
