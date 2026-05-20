@@ -918,7 +918,7 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
       .grupo-header {
         font-weight: bold;
         font-size: 11pt;
-        padding: 3mm 0 2mm 0;
+        padding: 2mm 0 1mm 0;
         border-bottom: 1pt solid #000;
         margin-bottom: 1mm;
       }
@@ -931,12 +931,12 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
       }
       .grid.page-break { page-break-before: always; }
 
-      /* Cada etiqueta es una tira de ~10mm. Las fuentes están dimensionadas
-         para ocupar buena parte de esa altura (10mm ≈ 28pt). */
+      /* Cada etiqueta es una tira de ~10mm = 28pt de alto. Las fuentes
+         están al máximo razonable: ~18-20pt para info clave. */
       .etiqueta {
         height: 10mm;
         border-top: 0.5pt dashed #888;
-        padding: 0 3mm;
+        padding: 0 2mm;
         display: flex;
         align-items: center;
         gap: 3mm;
@@ -948,19 +948,19 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
       .etiqueta:last-child { border-bottom: 0.5pt dashed #888; }
 
       .etiqueta .sexo {
-        font-size: 14pt;
+        font-size: 18pt;
         color: #000;
-        min-width: 14pt;
+        min-width: 16pt;
         text-align: center;
         flex-shrink: 0;
       }
 
       .etiqueta .grado {
-        font-weight: bold;
+        font-weight: 900;
         background: #000;
         color: white;
-        padding: 2pt 6pt;
-        font-size: 11pt;
+        padding: 1.5pt 5pt;
+        font-size: 14pt;
         min-width: 28pt;
         text-align: center;
         border-radius: 2pt;
@@ -968,8 +968,8 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
       }
 
       .etiqueta .nombre {
-        flex: 2;
-        font-size: 13pt;
+        flex: 2.2;
+        font-size: 16pt;
         font-weight: 700;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -978,9 +978,10 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
 
       .etiqueta .centro {
         flex: 1;
-        font-size: 10pt;
+        font-size: 12pt;
         font-weight: 600;
-        color: #333;
+        color: #222;
+        font-family: 'Arial Narrow', Arial, sans-serif;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -988,10 +989,11 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
 
       .etiqueta .tallas {
         font-family: 'Courier New', monospace;
-        font-size: 14pt;
-        font-weight: 700;
+        font-size: 18pt;
+        font-weight: 900;
         white-space: nowrap;
         flex-shrink: 0;
+        letter-spacing: 0.5pt;
       }
       .etiqueta .tallas b { color: #000; }
 
@@ -1014,10 +1016,20 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
 
       ${bloquesPorGrupo}
 
-      <div class="no-print" style="margin-top:20px;text-align:center">
-        <button onclick="window.print()" style="padding:10px 20px;font-size:14pt">🖨 Imprimir</button>
+      <div class="no-print" style="margin-top:20px;text-align:center;padding:10px;background:#F5F7FA;border-radius:6px">
+        <div style="font-size:12pt;margin-bottom:8px;color:#333">
+          💡 En el diálogo elegí <strong>"Guardar como PDF"</strong> como destino para descargar el archivo.
+        </div>
+        <button onclick="window.print()" style="padding:10px 20px;font-size:14pt">🖨 Imprimir / PDF</button>
         <button onclick="window.close()" style="padding:10px 20px;font-size:14pt">✕ Cerrar</button>
       </div>
+      <script>
+        // Disparar el diálogo de impresión/guardar PDF automáticamente al cargar.
+        // El user puede elegir "Guardar como PDF" en el destino para descargar.
+        window.addEventListener('load', function() {
+          setTimeout(function(){ window.print(); }, 400);
+        });
+      </script>
     </body></html>
   `;
 }
