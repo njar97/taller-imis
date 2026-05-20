@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-20 13:12 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-20 13:46 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Taller IMIS — Producción v31</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -10252,7 +10253,72 @@ function _ejecutarGenerarEtiquetas(ordenSeleccion, { soloEmpacados = false, incl
   const tempCode = tempActiva ? (tempActiva.codigo || tempActiva.nombre || tempActiva.anio) : '';
   const html = renderHojaEtiquetas(grupos, columnas, incluirObs, c.escuelas, tempCode, lista.length);
   cerrarModalEtiquetas();
-  abrirVentanaImpresion(html);
+  // Generación directa de PDF sin ventana nueva (mobile-friendly)
+  generarPdfDirecto(html, `etiquetas_${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+// Inserta el HTML en un contenedor oculto del documento actual,
+// genera el PDF con html2pdf y lo descarga. Sin ventana nueva.
+async function generarPdfDirecto(html, filename) {
+  // 1) Container temporal off-screen (no display:none — html2canvas necesita layout)
+  const wrap = document.createElement('div');
+  wrap.id = 'etiq-pdf-wrap';
+  wrap.style.cssText = 'position:absolute;left:-99999px;top:0;width:8.5in;background:white;';
+  // Extraemos solo el body content del template
+  const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  const bodyHtml = m ? m[1] : html;
+  // Extraemos también el <style> para inyectarlo
+  const sm = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+  if (sm) {
+    const styleEl = document.createElement('style');
+    styleEl.textContent = sm[1].replace(/@page[^}]*\}/g, ''); // @page no aplica fuera de print
+    wrap.appendChild(styleEl);
+  }
+  wrap.insertAdjacentHTML('beforeend', bodyHtml);
+  // Quitar la botonera (.no-print) — no debe ir en el PDF
+  wrap.querySelectorAll('.no-print').forEach(el => el.remove());
+  document.body.appendChild(wrap);
+
+  // 2) Auto-fit cada celda con [data-fit-max]
+  try {
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const cells = wrap.querySelectorAll('[data-fit-max]');
+    cells.forEach(el => {
+      const max = parseFloat(el.getAttribute('data-fit-max')) || 14;
+      const min = parseFloat(el.getAttribute('data-fit-min')) || 7;
+      let size = max;
+      el.style.fontSize = size + 'pt';
+      while (size > min && el.scrollWidth > el.clientWidth + 1) {
+        size -= 0.5;
+        el.style.fontSize = size + 'pt';
+      }
+    });
+  } catch (e) { /* ignore */ }
+
+  // 3) Verificar que html2pdf esté disponible
+  if (typeof html2pdf !== 'function') {
+    document.body.removeChild(wrap);
+    alert('No se pudo cargar la librería PDF. Verificá tu conexión a internet y reintentá.');
+    return;
+  }
+
+  // 4) Generar PDF
+  const opt = {
+    margin: [8, 5, 5, 10],
+    filename: filename,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+    jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
+    pagebreak: { mode: ['css', 'legacy'], before: '.page-break' }
+  };
+
+  try {
+    await html2pdf().set(opt).from(wrap).save();
+  } catch (e) {
+    alert('Error generando PDF: ' + (e.message || e));
+  } finally {
+    if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+  }
 }
 
 // `grupos` puede ser:
