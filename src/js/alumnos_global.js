@@ -207,35 +207,253 @@ function limpiarFiltros() {
   renderAlumnosGlobal();
 }
 
-// Edición rápida: modal in-place sin salir de la vista global.
-// El path viejo "ir a escuela > tallaje > editar" hacía switchTab que
-// reiniciaba el sub-tab a Alumnos y cerraba el modal — bug reportado
-// por user 2026-05-20 ("le doy editar, sale cagando y vuelvo a la misma página").
+// Estado del modal de edición — todo el wizard depende de esto
+let aeState = {
+  alumnoId: null,
+  sexo: '',
+  prendaTop: '',
+  prendaBot: '',
+  tallaTopNum: '',     // talla número (sin prefijo)
+  tallaBotNum: '',
+  largoBot: '',        // largo (sólo si la prenda lo usa)
+  manualTop: false,    // si el user override la prenda manualmente
+  manualBot: false,
+};
+
+// Código de prenda → prefijo de KEY (mismo orden que CATALOGO_BASE)
+const AE_PRENDA_PREFIX = {
+  'CAMISA':         'C',
+  'BLUSA':          'B',
+  'CAMISA_CELESTE': 'CC',
+  'PANTALON':       'P',
+  'FALDA':          'F',
+  'PANTALON_BEIGE': 'PB',
+  'FALDA_BEIGE':    'FB',
+  'FALDA_C.E':      'FCE',
+  'SHORT':          'S',
+};
+
+// Si la prenda usa largo en la KEY (pantalon/falda)
+function aeUsaLargo(prenda) {
+  return ['PANTALON','FALDA','PANTALON_BEIGE','FALDA_BEIGE','FALDA_C.E'].includes(prenda);
+}
+
+// Devuelve la lista de tallas y largos posibles para una prenda
+// extrayéndolos del CATALOGO_BASE (que ya está cargado en core.js).
+function aeOpcionesParaPrenda(prenda) {
+  const prefix = AE_PRENDA_PREFIX[prenda];
+  if (!prefix) return { tallas: [], largos: [] };
+  // Buscar en CATALOGO global (extiende CATALOGO_BASE)
+  const cat = (typeof CATALOGO !== 'undefined' ? CATALOGO : CATALOGO_BASE)[prefix];
+  if (!cat || !cat.keys) return { tallas: [], largos: [] };
+  const tallasSet = new Set();
+  const largosSet = new Set();
+  const usaLargo = aeUsaLargo(prenda);
+  for (const k of cat.keys) {
+    const rest = k.startsWith(prefix) ? k.slice(prefix.length) : k;
+    if (!usaLargo) {
+      // KEY = prefix + numero (camisa/blusa/cc/short)
+      tallasSet.add(rest);
+    } else {
+      // KEY = prefix + talla + largo. Las tallas son 1-2 dígitos, los largos 2 dígitos.
+      // Heurística: el largo son los últimos 2 dígitos numéricos antes de cualquier sufijo.
+      const m = rest.match(/^(\d+)(\d{2})(.*)$/);
+      if (m) {
+        tallasSet.add(m[1]);
+        largosSet.add(m[2]);
+      }
+    }
+  }
+  const sortNum = (a,b) => parseInt(a,10) - parseInt(b,10);
+  return {
+    tallas: [...tallasSet].sort(sortNum),
+    largos: [...largosSet].sort(sortNum),
+  };
+}
+
+function aeSugerirPrenda(sexo, nivel) {
+  if (typeof sugerenciaPrenda === 'function') return sugerenciaPrenda(sexo, nivel);
+  return { top: '', bottom: '' };
+}
+
+// Renderiza chips de talla/largo y refresca KEY preview
+function aeRender() {
+  // Nivel desde grado
+  const grado = document.getElementById('ae-grado').value.trim();
+  const nivel = (typeof nivelDesdeGrado === 'function') ? nivelDesdeGrado(grado) : null;
+  document.getElementById('ae-nivel-info').innerHTML = 'Nivel: <strong>' + (nivel || '—') + '</strong>';
+
+  // Sexo + nivel → sugerencia de prenda (si no override manual)
+  if (aeState.sexo && nivel) {
+    const sug = aeSugerirPrenda(aeState.sexo, nivel);
+    if (!aeState.manualTop) aeState.prendaTop = sug.top || '';
+    if (!aeState.manualBot) aeState.prendaBot = sug.bottom || '';
+  }
+
+  // Botones de sexo
+  document.querySelectorAll('.ae-sexo-btn').forEach(b => {
+    const sel = b.dataset.val === aeState.sexo;
+    b.className = 'ae-sexo-btn btn btn-sm ' + (sel ? 'btn-primary' : 'btn-ghost');
+  });
+
+  // Labels de prenda sugerida
+  document.getElementById('ae-pt-label').textContent = aeState.prendaTop || '— elegí sexo + grado —';
+  document.getElementById('ae-pb-label').textContent = aeState.prendaBot || '— elegí sexo + grado —';
+
+  // Selects de override
+  document.getElementById('ae-prenda-top-sel').value = aeState.manualTop ? aeState.prendaTop : '';
+  document.getElementById('ae-prenda-bot-sel').value = aeState.manualBot ? aeState.prendaBot : '';
+
+  // Chips de talla TOP
+  aeRenderChips('top');
+  aeRenderChips('bot');
+
+  // KEY preview
+  aeActualizarKeys();
+}
+
+function aeRenderChips(slot) {
+  const prenda = slot === 'top' ? aeState.prendaTop : aeState.prendaBot;
+  const opts = aeOpcionesParaPrenda(prenda);
+  const tallaSel = slot === 'top' ? aeState.tallaTopNum : aeState.tallaBotNum;
+  const cont = document.getElementById(slot === 'top' ? 'ae-tt-chips' : 'ae-tb-chips');
+  if (!cont) return;
+  if (!prenda) {
+    cont.innerHTML = '<span style="color:#aaa;font-size:11px">elegí prenda primero</span>';
+  } else if (opts.tallas.length === 0) {
+    cont.innerHTML = '<span style="color:#aaa;font-size:11px">sin tallas en catálogo</span>';
+  } else {
+    cont.innerHTML = opts.tallas.map(t => `
+      <button type="button"
+        class="btn btn-sm ${t===tallaSel?'btn-primary':'btn-ghost'}"
+        style="min-width:42px;padding:4px 8px"
+        onclick="aeSetTalla('${slot}','${t}')">${t}</button>
+    `).join('');
+  }
+  // Largos (solo bottom y solo si prenda usa largo)
+  if (slot === 'bot') {
+    const wrap = document.getElementById('ae-tb-largo-wrap');
+    const contL = document.getElementById('ae-tb-largos');
+    if (aeUsaLargo(prenda) && opts.largos.length > 0) {
+      wrap.style.display = '';
+      contL.innerHTML = opts.largos.map(l => `
+        <button type="button"
+          class="btn btn-sm ${l===aeState.largoBot?'btn-primary':'btn-ghost'}"
+          style="min-width:42px;padding:4px 8px"
+          onclick="aeSetLargo('${l}')">${l}</button>
+      `).join('');
+    } else {
+      wrap.style.display = 'none';
+      aeState.largoBot = '';
+    }
+  }
+}
+
+function aeActualizarKeys() {
+  // TOP: prefix + talla
+  let keyTop = '';
+  if (aeState.prendaTop && aeState.tallaTopNum) {
+    keyTop = (AE_PRENDA_PREFIX[aeState.prendaTop] || '') + aeState.tallaTopNum;
+  }
+  document.getElementById('ae-talla-top').value = keyTop;
+  document.getElementById('ae-tt-key').textContent = keyTop ? 'KEY: ' + keyTop + ' ✓' : '';
+
+  // BOT: prefix + talla + (largo si aplica)
+  let keyBot = '';
+  if (aeState.prendaBot && aeState.tallaBotNum) {
+    const pref = AE_PRENDA_PREFIX[aeState.prendaBot] || '';
+    if (aeUsaLargo(aeState.prendaBot)) {
+      if (aeState.largoBot) keyBot = pref + aeState.tallaBotNum + aeState.largoBot;
+    } else {
+      keyBot = pref + aeState.tallaBotNum;
+    }
+  }
+  document.getElementById('ae-talla-bot').value = keyBot;
+  document.getElementById('ae-tb-key').textContent = keyBot ? 'KEY: ' + keyBot + ' ✓' : '';
+}
+
+// Handlers de la UI (llamados desde el HTML)
+function aeSetSexo(sexo) {
+  aeState.sexo = sexo;
+  aeState.manualTop = false;
+  aeState.manualBot = false;
+  aeRender();
+}
+function aeRecalcular() { aeRender(); }
+function aeSetTalla(slot, t) {
+  if (slot === 'top') aeState.tallaTopNum = t; else aeState.tallaBotNum = t;
+  aeRender();
+}
+function aeSetLargo(l) { aeState.largoBot = l; aeRender(); }
+function aeSetPrenda(slot, prenda) {
+  if (slot === 'top') {
+    aeState.prendaTop = prenda || '';
+    aeState.manualTop = !!prenda;
+    aeState.tallaTopNum = '';
+  } else {
+    aeState.prendaBot = prenda || '';
+    aeState.manualBot = !!prenda;
+    aeState.tallaBotNum = '';
+    aeState.largoBot = '';
+  }
+  aeRender();
+}
+
+// Parsea una KEY existente (ej "P1075") al state: prenda, talla_num, largo
+function aeParsearKey(prenda, key) {
+  if (!prenda || !key) return { tallaNum: '', largo: '' };
+  const pref = AE_PRENDA_PREFIX[prenda] || '';
+  const rest = key.startsWith(pref) ? key.slice(pref.length) : key;
+  if (aeUsaLargo(prenda)) {
+    const m = rest.match(/^(\d+)(\d{2})/);
+    if (m) return { tallaNum: m[1], largo: m[2] };
+  }
+  return { tallaNum: rest.replace(/\D.*/g, ''), largo: '' };
+}
+
 async function editarAlumnoRapido(alumnoId) {
   try {
     const res = await supaFetch('alumno', 'GET', null, `?id=eq.${alumnoId}&limit=1`);
     if (!res || res.length === 0) { alert('Alumno no encontrado'); return; }
     const a = res[0];
     const esc = alumnosGlobalCache.escuelas[a.escuela_id];
-    document.getElementById('ae-id').value         = a.id;
-    document.getElementById('ae-nombre').value     = a.nombre || '';
-    document.getElementById('ae-sexo').value       = a.sexo || '';
-    document.getElementById('ae-grado').value      = a.grado || '';
-    document.getElementById('ae-nivel').value      = a.nivel || '';
-    document.getElementById('ae-prenda-top').value = a.prenda_top || '';
-    document.getElementById('ae-talla-top').value  = a.talla_top_key || '';
-    document.getElementById('ae-prenda-bot').value = a.prenda_bottom || '';
-    document.getElementById('ae-talla-bot').value  = a.talla_bottom_key || '';
-    document.getElementById('ae-obs').value        = a.observaciones || '';
+
+    // Reset y poblar state
+    aeState = {
+      alumnoId: a.id,
+      sexo: a.sexo || '',
+      prendaTop: a.prenda_top || '',
+      prendaBot: a.prenda_bottom || '',
+      tallaTopNum: '',
+      tallaBotNum: '',
+      largoBot: '',
+      // Considerar manual si la prenda ya está cargada (no sobreescribir con sugerencia)
+      manualTop: !!a.prenda_top,
+      manualBot: !!a.prenda_bottom,
+    };
+    const pt = aeParsearKey(a.prenda_top,    a.talla_top_key);
+    const pb = aeParsearKey(a.prenda_bottom, a.talla_bottom_key);
+    aeState.tallaTopNum = pt.tallaNum;
+    aeState.tallaBotNum = pb.tallaNum;
+    aeState.largoBot    = pb.largo;
+
+    document.getElementById('ae-id').value      = a.id;
+    document.getElementById('ae-nombre').value  = a.nombre || '';
+    document.getElementById('ae-grado').value   = a.grado || '';
+    document.getElementById('ae-obs').value     = a.observaciones || '';
     document.getElementById('ae-subt').textContent = esc ? (esc.alias || esc.nombre) : '';
+
+    aeRender();
     document.getElementById('alumno-edit-modal').style.display = 'flex';
-    // Foco en el primer campo vacío (típicamente talla_top si está cargando tallas)
     setTimeout(() => {
-      const focusId = !a.talla_top_key ? 'ae-talla-top'
-                    : !a.talla_bottom_key ? 'ae-talla-bot'
+      const focusId = !a.sexo ? 'ae-grado'
+                    : !aeState.tallaTopNum ? null   // los chips toman foco con clic
+                    : !aeState.tallaBotNum ? null
                     : 'ae-nombre';
-      const el = document.getElementById(focusId);
-      if (el) { el.focus(); el.select && el.select(); }
+      if (focusId) {
+        const el = document.getElementById(focusId);
+        if (el) { el.focus(); el.select && el.select(); }
+      }
     }, 100);
   } catch(e) {
     alert('Error: ' + e.message);
@@ -250,31 +468,26 @@ async function guardarAlumnoEdit(continuar) {
   const id = document.getElementById('ae-id').value;
   const nombre = document.getElementById('ae-nombre').value.trim();
   if (!nombre) { alert('El nombre es obligatorio'); return; }
+  const grado = document.getElementById('ae-grado').value.trim() || null;
+  const nivel = grado && typeof nivelDesdeGrado === 'function' ? nivelDesdeGrado(grado) : null;
   const payload = {
     nombre,
-    sexo:             document.getElementById('ae-sexo').value || null,
-    grado:            document.getElementById('ae-grado').value.trim() || null,
-    nivel:            document.getElementById('ae-nivel').value || null,
-    prenda_top:       document.getElementById('ae-prenda-top').value || null,
-    talla_top_key:    document.getElementById('ae-talla-top').value.trim().toUpperCase() || null,
-    prenda_bottom:    document.getElementById('ae-prenda-bot').value || null,
-    talla_bottom_key: document.getElementById('ae-talla-bot').value.trim().toUpperCase() || null,
+    sexo:             aeState.sexo || null,
+    grado:            grado,
+    nivel:            nivel,
+    prenda_top:       aeState.prendaTop || null,
+    talla_top_key:    document.getElementById('ae-talla-top').value || null,
+    prenda_bottom:    aeState.prendaBot || null,
+    talla_bottom_key: document.getElementById('ae-talla-bot').value || null,
     observaciones:    document.getElementById('ae-obs').value.trim() || null,
     actualizado_en:   new Date().toISOString(),
   };
-  // Si no se eligió nivel manualmente y hay grado, inferirlo
-  if (!payload.nivel && payload.grado && typeof nivelDesdeGrado === 'function') {
-    payload.nivel = nivelDesdeGrado(payload.grado);
-  }
   try {
     await supaUpdate('alumno', id, payload);
-    // Actualizar cache local sin recargar todo
     const idx = alumnosGlobalCache.alumnos.findIndex(a => a.id === id);
     if (idx >= 0) Object.assign(alumnosGlobalCache.alumnos[idx], payload);
     if (continuar) {
-      // Buscar el siguiente alumno en la lista filtrada actual que esté sin tallar
-      const lista = alumnosGlobalCache.alumnos;
-      const siguiente = lista.find(a => a.id !== id && (!a.talla_top_key || !a.talla_bottom_key));
+      const siguiente = alumnosGlobalCache.alumnos.find(a => a.id !== id && (!a.talla_top_key || !a.talla_bottom_key));
       if (siguiente) {
         cerrarAlumnoEdit();
         setTimeout(() => editarAlumnoRapido(siguiente.id), 50);
