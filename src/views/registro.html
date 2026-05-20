@@ -297,7 +297,7 @@
       <div class="modal-header">
         <div>
           <div class="card-title" style="margin:0">🏷 Imprimir etiquetas</div>
-          <div style="font-size:12px;color:#666;margin-top:2px">Filas de 1cm · solo alumnos con tallas</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">Tiras de 1cm a lo ancho · listas para cortar y pegar en bolsas</div>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="cerrarModalEtiquetas()">✕</button>
       </div>
@@ -315,13 +315,13 @@
           </select>
         </div>
         <div class="field">
-          <label>Columnas por hoja</label>
+          <label>Formato</label>
           <select id="et-columnas">
-            <option value="2">2 columnas (etiquetas anchas, ~9.5cm)</option>
-            <option value="3" selected>3 columnas (recomendado, ~6.3cm)</option>
-            <option value="4">4 columnas (compactas, ~4.7cm)</option>
+            <option value="1" selected>1 columna — tira completa ancho carta (recomendado)</option>
+            <option value="2">2 columnas (etiquetas medianas)</option>
+            <option value="3">3 columnas (compactas)</option>
           </select>
-          <div style="font-size:11px;color:#888;margin-top:2px">Altura fija: 1cm por fila</div>
+          <div style="font-size:11px;color:#888;margin-top:2px">Cada fila = 1cm · margen izquierdo 1cm para engrapar y cortar</div>
         </div>
         <div class="field">
           <label>Orden</label>

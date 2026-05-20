@@ -709,98 +709,113 @@ function generarEtiquetas() {
 function renderHojaEtiquetas(alumnos, cols, incluirObs, escuelasMap, escNameHdr, tempCodeHdr) {
   const fecha = new Date().toLocaleDateString('es-SV');
   const total = alumnos.length;
-  
-  // Cada etiqueta: 1 fila del grid CSS
-  const etiquetas = alumnos.map((a, i) => {
+
+  // Etiqueta = tira de 1cm: GRADO | NOMBRE | CENTRO | C: top | P: bottom
+  // Pensada para engrapar 2-3 hojas y cortar las tiras desde el borde izquierdo.
+  const etiquetas = alumnos.map((a) => {
     const esc = escuelasMap[a.escuela_id];
-    const escCorto = esc ? (esc.nombre.length > 20 ? esc.nombre.slice(0, 20) + '…' : esc.nombre) : '';
-    const nombreCorto = a.nombre.length > 35 ? a.nombre.slice(0, 35) + '…' : a.nombre;
-    const obs = incluirObs && a.observaciones ? ` · ${a.observaciones.slice(0, 20)}` : '';
+    // Centro abreviado: alias si existe, sino primer + último de nombre
+    const escAbrev = esc ? (esc.alias || (esc.nombre || '').replace(/^CDE\s+/i, '').slice(0, 22)) : '';
+    const nombreCorto = a.nombre.length > 38 ? a.nombre.slice(0, 38) + '…' : a.nombre;
     const top = a.talla_top_key || '—';
     const bot = a.talla_bottom_key || '—';
-    
+    const obs = incluirObs && a.observaciones ? a.observaciones.slice(0, 18) : '';
+
     return `
       <div class="etiqueta">
         <span class="grado">${a.grado || '—'}</span>
         <span class="nombre">${nombreCorto}</span>
-        <span class="tallas">${top}/${bot}</span>
+        <span class="centro">${escAbrev}</span>
+        <span class="tallas">C:<b>${top}</b>&nbsp;&nbsp;P:<b>${bot}</b></span>
         ${obs ? `<span class="obs">${obs}</span>` : ''}
       </div>
     `;
   }).join('');
-  
+
   const tituloExtra = [escNameHdr, tempCodeHdr].filter(Boolean).join(' · ');
-  
+
   return `
     <!DOCTYPE html><html><head><meta charset="UTF-8">
     <title>Etiquetas${tituloExtra ? ' - ' + tituloExtra : ''}</title>
     <style>
-      @page { size: A4; margin: 8mm; }
+      /* Tamaño carta · margen izquierdo amplio para engrapar varias hojas y cortar */
+      @page { size: letter; margin: 8mm 5mm 5mm 10mm; }
       body { font-family: Arial, sans-serif; font-size: 9pt; color: #000; margin: 0; padding: 0; }
-      
+
       .header {
         text-align: center;
         border-bottom: 1px solid #000;
-        padding-bottom: 3px;
-        margin-bottom: 4px;
-        font-size: 9pt;
+        padding-bottom: 2px;
+        margin-bottom: 3px;
+        font-size: 8pt;
       }
-      .header strong { font-size: 11pt; }
-      .header .info { font-size: 8pt; color: #333; }
-      
+      .header strong { font-size: 10pt; }
+      .header .info { font-size: 7pt; color: #333; }
+
       .grid {
         display: grid;
         grid-template-columns: repeat(${cols}, 1fr);
         gap: 0;
       }
-      
+
       .etiqueta {
         height: 10mm;
-        border: 0.5pt solid #000;
+        border-top: 0.5pt dashed #888;       /* solo top: borde inferior es el top del siguiente */
         padding: 0 3mm;
         display: flex;
         align-items: center;
-        gap: 4mm;
+        gap: 3mm;
         overflow: hidden;
         box-sizing: border-box;
         page-break-inside: avoid;
       }
-      
+      .etiqueta:last-child { border-bottom: 0.5pt dashed #888; }
+
       .etiqueta .grado {
         font-weight: bold;
         background: #000;
         color: white;
         padding: 1pt 4pt;
         font-size: 8pt;
-        min-width: 20pt;
+        min-width: 22pt;
         text-align: center;
         border-radius: 2pt;
         flex-shrink: 0;
       }
-      
+
       .etiqueta .nombre {
-        flex: 1;
+        flex: 2;
         font-size: 9pt;
         font-weight: 600;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
-      
+
+      .etiqueta .centro {
+        flex: 1;
+        font-size: 8pt;
+        color: #333;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
       .etiqueta .tallas {
-        font-family: monospace;
-        font-weight: bold;
+        font-family: 'Courier New', monospace;
         font-size: 9pt;
         white-space: nowrap;
         flex-shrink: 0;
       }
-      
+      .etiqueta .tallas b { color: #000; }
+
       .etiqueta .obs {
         font-size: 7pt;
         color: #444;
         font-style: italic;
+        flex-shrink: 0;
       }
-      
+
       @media print { .no-print { display: none; } }
     </style></head>
     <body>
