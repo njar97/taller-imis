@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-20 14:47 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-20 15:06 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -10430,7 +10430,8 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
         <span class="sexo">${sexIcon}</span>
         <span class="nombre" data-fit-max="16" data-fit-min="7">${nombreCompleto}</span>
         <span class="centro" data-fit-max="12" data-fit-min="7">${escAbrev}</span>
-        <span class="tallas" data-fit-max="18" data-fit-min="9"><b>${top}</b>&nbsp;<b>${bot}</b></span>
+        <span class="talla-top" data-fit-max="18" data-fit-min="8">${top}</span>
+        <span class="talla-bot" data-fit-max="18" data-fit-min="7">${bot}</span>
       </div>
     `;
   };
@@ -10490,13 +10491,14 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
       .grid.page-break { page-break-before: always; }
 
       /* Columnas FIJAS en mm. Total ancho usable (Letter - márgenes) ≈ 200mm.
-         Distribución: grado 14 + sexo 7 + nombre 90 + centro 45 + tallas 32 + gaps. */
+         grado 14 + sexo 7 + nombre 88 + centro 38 + talla_top 16 + talla_bot 25
+         = 188 + 5gaps×2 + 2padding ≈ 200mm. */
       .etiqueta {
         height: 10mm;
         border-top: 0.5pt dashed #888;
         padding: 0 1mm;
         display: grid;
-        grid-template-columns: 14mm 7mm 90mm 45mm 32mm;
+        grid-template-columns: 14mm 7mm 88mm 38mm 16mm 25mm;
         column-gap: 2mm;
         align-items: center;
         overflow: hidden;
@@ -10538,14 +10540,13 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
         color: #222;
         font-family: 'Arial Narrow', Arial, sans-serif;
       }
-      .etiqueta .tallas {
+      .etiqueta .talla-top, .etiqueta .talla-bot {
         font-family: 'Courier New', monospace;
         font-size: 18pt;
         font-weight: 900;
         letter-spacing: 0.5pt;
-        text-align: right;
+        text-align: center;
       }
-      .etiqueta .tallas b { color: #000; }
 
       .etiqueta .obs {
         font-size: 8pt;
