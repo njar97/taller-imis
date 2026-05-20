@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-20 11:56 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-20 12:12 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -10263,24 +10263,26 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
   const fecha = new Date().toLocaleDateString('es-SV');
   const total = totalAlumnos != null ? totalAlumnos : (Array.isArray(grupos) ? grupos.reduce((s,g)=>s+g.alumnos.length,0) : 0);
 
-  // El nombre arranca con tamaño máximo (16pt) y la ventana de impresión
-  // tiene un script que mide cada elemento y achica hasta que entre.
+  // Columnas FIJAS — cada celda tiene su font-size máximo y un mínimo.
+  // El script en la ventana de impresión achica cada celda independiente
+  // hasta que entre en su ancho fijo.
+  // Orden de columnas: grado · sexo · nombre · centro · tallas
   const renderUnaEtiqueta = (a) => {
     const esc = escuelasMap[a.escuela_id];
-    const escAbrev = esc ? (esc.alias || (esc.nombre || '').replace(/^CDE\s+/i, '').slice(0, 22)) : '';
+    let escAbrev = esc ? (esc.alias || (esc.nombre || '').replace(/^CDE\s+/i, '').slice(0, 30)) : '';
     const nombreCompleto = a.nombre || '';
     const top = a.talla_top_key || '—';
     const bot = a.talla_bottom_key || '—';
     const obs = incluirObs && a.observaciones ? a.observaciones.slice(0, 18) : '';
     const sexIcon = a.sexo === 'F' ? '♀' : (a.sexo === 'M' ? '♂' : '');
+    if (obs) escAbrev = escAbrev + ' · ' + obs;
     return `
       <div class="etiqueta">
-        <span class="grado">${a.grado || '—'}</span>
-        <span class="nombre">${nombreCompleto}</span>
-        <span class="centro">${escAbrev}</span>
+        <span class="grado" data-fit-max="14" data-fit-min="9">${a.grado || '—'}</span>
         <span class="sexo">${sexIcon}</span>
-        <span class="tallas"><b>${top}</b>&nbsp;&nbsp;<b>${bot}</b></span>
-        ${obs ? `<span class="obs">${obs}</span>` : ''}
+        <span class="nombre" data-fit-max="16" data-fit-min="7">${nombreCompleto}</span>
+        <span class="centro" data-fit-max="12" data-fit-min="7">${escAbrev}</span>
+        <span class="tallas" data-fit-max="18" data-fit-min="9"><b>${top}</b>&nbsp;<b>${bot}</b></span>
       </div>
     `;
   };
@@ -10330,22 +10332,19 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
       }
       .grupo-header .cnt { font-weight: normal; color: #666; font-size: 9pt; }
 
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(${cols}, 1fr);
-        gap: 0;
-      }
+      .grid { display: block; }
       .grid.page-break { page-break-before: always; }
 
-      /* Cada etiqueta es una tira de ~10mm = 28pt de alto. Las fuentes
-         están al máximo razonable: ~18-20pt para info clave. */
+      /* Columnas FIJAS en mm. Total ancho usable (Letter - márgenes) ≈ 200mm.
+         Distribución: grado 14 + sexo 7 + nombre 90 + centro 45 + tallas 32 + gaps. */
       .etiqueta {
         height: 10mm;
         border-top: 0.5pt dashed #888;
-        padding: 0 2mm;
-        display: flex;
+        padding: 0 1mm;
+        display: grid;
+        grid-template-columns: 14mm 7mm 90mm 45mm 32mm;
+        column-gap: 2mm;
         align-items: center;
-        gap: 3mm;
         overflow: hidden;
         box-sizing: border-box;
         page-break-inside: avoid;
@@ -10353,53 +10352,44 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
       }
       .etiqueta:last-child { border-bottom: 0.5pt dashed #888; }
 
-      .etiqueta .sexo {
-        font-size: 18pt;
-        color: #000;
-        min-width: 16pt;
-        text-align: center;
-        flex-shrink: 0;
+      /* Cada celda: overflow hidden + nowrap. El font-size lo ajusta
+         autoFitCeldas() en JS para que el texto entre completo. */
+      .etiqueta > span {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: clip;
       }
 
       .etiqueta .grado {
         font-weight: 900;
         background: #000;
         color: white;
-        padding: 1.5pt 5pt;
         font-size: 14pt;
-        min-width: 28pt;
         text-align: center;
         border-radius: 2pt;
-        flex-shrink: 0;
+        padding: 1pt 0;
       }
-
+      .etiqueta .sexo {
+        font-size: 18pt;
+        color: #000;
+        text-align: center;
+      }
       .etiqueta .nombre {
-        flex: 2.2;
         font-size: 16pt;
         font-weight: 700;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
       }
-
       .etiqueta .centro {
-        flex: 1;
         font-size: 12pt;
         font-weight: 600;
         color: #222;
         font-family: 'Arial Narrow', Arial, sans-serif;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
       }
-
       .etiqueta .tallas {
         font-family: 'Courier New', monospace;
         font-size: 18pt;
         font-weight: 900;
-        white-space: nowrap;
-        flex-shrink: 0;
         letter-spacing: 0.5pt;
+        text-align: right;
       }
       .etiqueta .tallas b { color: #000; }
 
@@ -10407,7 +10397,6 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
         font-size: 8pt;
         color: #444;
         font-style: italic;
-        flex-shrink: 0;
       }
 
       @media print { .no-print { display: none; } }
@@ -10430,32 +10419,32 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
         <button onclick="window.close()" style="padding:10px 20px;font-size:14pt">✕ Cerrar</button>
       </div>
       <script>
-        // Auto-fit del nombre: cada elemento se mide individualmente.
-        // Empieza en 16pt, baja en 0.5pt hasta que scrollWidth <= clientWidth.
-        // Mínimo 7pt. Margen de 2px para evitar truncamientos marginales.
-        function autoFitNombres() {
-          var els = document.querySelectorAll('.etiqueta .nombre');
+        // Auto-fit por celda: cada elemento con [data-fit-max] arranca en
+        // su tamaño máximo y baja en 0.5pt hasta que entre en su columna fija.
+        // El mínimo lo da data-fit-min (o 7pt por defecto).
+        function autoFitCeldas() {
+          var els = document.querySelectorAll('[data-fit-max]');
           for (var i = 0; i < els.length; i++) {
             var el = els[i];
-            var size = 16;
+            var max = parseFloat(el.getAttribute('data-fit-max')) || 14;
+            var min = parseFloat(el.getAttribute('data-fit-min')) || 7;
+            var size = max;
             el.style.fontSize = size + 'pt';
-            while (size > 7 && el.scrollWidth > el.clientWidth + 2) {
+            while (size > min && el.scrollWidth > el.clientWidth + 1) {
               size -= 0.5;
               el.style.fontSize = size + 'pt';
             }
           }
         }
-        // Correr el fit al cargar Y antes de imprimir (el browser puede
-        // reflowear al pasar a print y los anchos cambian).
         window.addEventListener('load', function() {
           requestAnimationFrame(function() {
             requestAnimationFrame(function() {
-              autoFitNombres();
+              autoFitCeldas();
               setTimeout(function(){ window.print(); }, 200);
             });
           });
         });
-        window.addEventListener('beforeprint', autoFitNombres);
+        window.addEventListener('beforeprint', autoFitCeldas);
       <\/script>
     </body></html>
   `;
