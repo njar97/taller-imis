@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-19 23:13 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-19 23:20 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -7080,7 +7080,7 @@ function renderListaEscuelas() {
     const colorBar = pct >= 100 ? 'var(--verde)' : (pct > 0 ? 'var(--azul)' : '#CCC');
     const grupo = e.grupo_produccion ? `<span style="background:#EEF;padding:2px 6px;border-radius:4px;font-size:10px;color:#66F;margin-left:4px">${e.grupo_produccion}</span>` : '';
     return `
-      <div class="card" style="padding:10px;margin-bottom:8px;cursor:pointer" onclick="abrirDetalleEscuelaRegistro('${e.escuela_id}')">
+      <div class="card" style="padding:10px;margin-bottom:8px;cursor:pointer" onclick="verAlumnosDeEscuela('${e.escuela_id}')">
         <div style="display:flex;justify-content:space-between;align-items:start">
           <div style="flex:1">
             <div style="font-weight:700;color:var(--azul)">${e.escuela_nombre}${grupo}</div>
@@ -7091,6 +7091,7 @@ function renderListaEscuelas() {
             </div>
           </div>
           ${e.piezas_solicitadas > 0 ? `<div style="font-size:20px;font-weight:700;color:${colorBar}">${pct}%</div>` : ''}
+          <button class="btn btn-ghost btn-sm" style="margin-left:6px" onclick="event.stopPropagation(); abrirDetalleEscuelaRegistro('${e.escuela_id}')" title="Acciones avanzadas (Por talla / Empaque / Pedidos)">⚙️</button>
         </div>
         ${e.piezas_solicitadas > 0 ? `
           <div style="background:#EEE;height:6px;border-radius:3px;margin-top:6px;overflow:hidden">
@@ -7099,6 +7100,19 @@ function renderListaEscuelas() {
       </div>
     `;
   }).join('');
+}
+
+// Clic en una escuela = ir al sub-tab Alumnos con el filtro de escuela aplicado.
+// Reemplaza el modal de detalle (que duplicaba la edición de alumnos).
+// Las funciones avanzadas (Por talla, Empaque, Pedidos) siguen accesibles
+// con el botón ⚙️ que mantiene abrirDetalleEscuelaRegistro.
+function verAlumnosDeEscuela(escuelaId) {
+  if (typeof alumnosGlobalCache !== 'undefined') {
+    alumnosGlobalCache.filtroEscuela = escuelaId;
+    alumnosGlobalCache.filtroEstado = '';
+    alumnosGlobalCache.busqueda = '';
+  }
+  switchSubRegistro('alumnos');
 }
 
 // ─── Detalle de escuela con 4 sub-tabs ──────────────────────────────
@@ -9483,8 +9497,10 @@ async function initAlumnosGlobal() {
   }
 }
 
+// "Sin tallar" significa "le falta al menos una talla" — antes era "sin NINGUNA"
+// y mostraba 0 porque casi todos tienen al menos una talla cargada.
 function alumnoSinTallas(a) {
-  return !a.talla_top_key && !a.talla_bottom_key;
+  return !a.talla_top_key || !a.talla_bottom_key;
 }
 
 function renderAlumnosGlobal() {
@@ -9528,14 +9544,14 @@ function renderAlumnosGlobal() {
   // Stats
   const totMostrando = lista.length;
   const tot = c.alumnos.length;
-  const sinTallas = c.alumnos.filter(alumnoSinTallas).length;
+  const sinTallas = c.alumnos.filter(alumnoSinTallas).length;  // ahora = "le falta al menos una"
   const completos = c.alumnos.filter(a => a.estado_top==='empacado' && a.estado_bottom==='empacado').length;
   
   const header = `
     <div class="card" style="padding:12px;margin-bottom:10px">
       <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin-bottom:10px">
         <div>Total: <strong>${tot.toLocaleString()}</strong></div>
-        <div style="color:#c44">Sin tallas: <strong>${sinTallas}</strong></div>
+        <div style="color:#c44">Falta tallar: <strong>${sinTallas}</strong></div>
         <div style="color:var(--verde)">Completos: <strong>${completos}</strong></div>
         <div style="color:#888">Mostrando: <strong>${totMostrando.toLocaleString()}</strong></div>
       </div>
@@ -9565,7 +9581,7 @@ function renderAlumnosGlobal() {
         
         <select onchange="alumnosGlobalCache.filtroEstado = this.value; renderAlumnosGlobal()" style="padding:6px">
           <option value="">Todo estado</option>
-          <option value="sin_tallas" ${c.filtroEstado==='sin_tallas'?'selected':''}>⚠ Sin tallas</option>
+          <option value="sin_tallas" ${c.filtroEstado==='sin_tallas'?'selected':''}>⚠ Falta tallar (1 o 2)</option>
           <option value="pendiente" ${c.filtroEstado==='pendiente'?'selected':''}>❌❌ Pendiente</option>
           <option value="parcial" ${c.filtroEstado==='parcial'?'selected':''}>✅❌ Parcial</option>
           <option value="completo" ${c.filtroEstado==='completo'?'selected':''}>✅✅ Completo</option>
