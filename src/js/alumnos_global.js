@@ -95,6 +95,7 @@ function renderAlumnosGlobal() {
   const sinTallas = c.alumnos.filter(alumnoSinTallas).length;  // ahora = "le falta al menos una"
   const completos = c.alumnos.filter(a => a.estado_top==='empacado' && a.estado_bottom==='empacado').length;
   
+  const escuelaSelObj = c.filtroEscuela ? c.escuelas[c.filtroEscuela] : null;
   const header = `
     <div class="card" style="padding:12px;margin-bottom:10px">
       <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin-bottom:10px">
@@ -103,7 +104,18 @@ function renderAlumnosGlobal() {
         <div style="color:var(--verde)">Completos: <strong>${completos}</strong></div>
         <div style="color:#888">Mostrando: <strong>${totMostrando.toLocaleString()}</strong></div>
       </div>
-      
+
+      <!-- Chips de filtro rápido -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="btn btn-sm ${!c.filtroEstado && !c.filtroEscuela?'btn-primary':'btn-ghost'}"
+          onclick="limpiarFiltros()">👥 Todos (${tot.toLocaleString()})</button>
+        <button class="btn btn-sm ${c.filtroEstado==='sin_tallas'?'btn-primary':'btn-ghost'}"
+          onclick="aplicarFiltroEstado('sin_tallas')">⚠️ Falta tallar (${sinTallas})</button>
+        <button class="btn btn-sm ${c.filtroEstado==='completo'?'btn-primary':'btn-ghost'}"
+          onclick="aplicarFiltroEstado('completo')">✅ Completos (${completos})</button>
+        ${escuelaSelObj ? `<span class="btn btn-sm btn-primary" style="cursor:default">🏫 ${escuelaSelObj.alias || escuelaSelObj.nombre} <span style="margin-left:6px;cursor:pointer" onclick="aplicarFiltroEscuela('')">✕</span></span>` : ''}
+      </div>
+
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px">
         <input type="text" placeholder="🔍 Buscar nombre..." value="${c.busqueda}"
           oninput="alumnosGlobalCache.busqueda = this.value; renderAlumnosGlobal()"
@@ -206,6 +218,17 @@ function limpiarFiltros() {
   alumnosGlobalCache.filtroNivel = '';
   alumnosGlobalCache.filtroTemporada = '';
   alumnosGlobalCache.filtroEstado = '';
+  renderAlumnosGlobal();
+}
+
+// Helpers para los chips de filtro rápido
+function aplicarFiltroEstado(estado) {
+  // Toggle: si ya estaba ese, quitarlo
+  alumnosGlobalCache.filtroEstado = (alumnosGlobalCache.filtroEstado === estado) ? '' : estado;
+  renderAlumnosGlobal();
+}
+function aplicarFiltroEscuela(escuelaId) {
+  alumnosGlobalCache.filtroEscuela = escuelaId || '';
   renderAlumnosGlobal();
 }
 

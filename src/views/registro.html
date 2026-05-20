@@ -1,30 +1,14 @@
-<!-- ══════════ REGISTRO (v23, reemplaza Pedidos) ══════════ -->
+<!-- ══════════ REGISTRO ══════════ una sola vista de alumnos con filtros -->
 <div id="view-registro" class="view">
   <div id="alert-registro"></div>
 
-  <!-- Sub-tabs Registro -->
-  <div class="card" style="padding:6px;margin-bottom:10px">
-    <div style="display:flex;gap:4px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" id="reg-sub-alumnos"  onclick="switchSubRegistro('alumnos')"  style="flex:1;min-width:90px">👥 Alumnos</button>
-      <button class="btn btn-ghost   btn-sm" id="reg-sub-sintalla" onclick="switchSubRegistro('sintalla')" style="flex:1;min-width:90px">⚠️ Sin tallar</button>
-      <button class="btn btn-ghost   btn-sm" id="reg-sub-escuelas" onclick="switchSubRegistro('escuelas')" style="flex:1;min-width:90px">🏫 Escuelas</button>
-    </div>
-  </div>
+  <!-- Header invisible que mantiene compat con código que lo busca -->
+  <div id="registro-header" style="display:none"></div>
+  <div id="registro-lista" style="display:none"></div>
 
-  <!-- SUB: Alumnos / Sin tallar (mismo render, distinto filtro pre-aplicado) -->
-  <div id="reg-sub-alumnos-view">
-    <div id="alumnos-global-contenido">
-      <div class="text-muted" style="padding:20px;text-align:center">Cargando alumnos...</div>
-    </div>
-  </div>
-
-  <!-- SUB: Escuelas -->
-  <div id="reg-sub-escuelas-view" style="display:none">
-    <div class="card">
-      <div class="card-title">🏫 Escuelas</div>
-      <div id="registro-header"></div>
-    </div>
-    <div id="registro-lista"></div>
+  <!-- Lista global de alumnos con filtros/chips arriba -->
+  <div id="alumnos-global-contenido">
+    <div class="text-muted" style="padding:20px;text-align:center">Cargando alumnos...</div>
   </div>
   
   <!-- Modal: edición rápida de alumno (desde lista global, wizard asistido) -->

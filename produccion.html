@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-19 23:20 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-20 07:51 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1031,33 +1031,17 @@
   </div>
 </div>
 
-<!-- ══════════ REGISTRO (v23, reemplaza Pedidos) ══════════ -->
+<!-- ══════════ REGISTRO ══════════ una sola vista de alumnos con filtros -->
 <div id="view-registro" class="view">
   <div id="alert-registro"></div>
 
-  <!-- Sub-tabs Registro -->
-  <div class="card" style="padding:6px;margin-bottom:10px">
-    <div style="display:flex;gap:4px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" id="reg-sub-alumnos"  onclick="switchSubRegistro('alumnos')"  style="flex:1;min-width:90px">👥 Alumnos</button>
-      <button class="btn btn-ghost   btn-sm" id="reg-sub-sintalla" onclick="switchSubRegistro('sintalla')" style="flex:1;min-width:90px">⚠️ Sin tallar</button>
-      <button class="btn btn-ghost   btn-sm" id="reg-sub-escuelas" onclick="switchSubRegistro('escuelas')" style="flex:1;min-width:90px">🏫 Escuelas</button>
-    </div>
-  </div>
+  <!-- Header invisible que mantiene compat con código que lo busca -->
+  <div id="registro-header" style="display:none"></div>
+  <div id="registro-lista" style="display:none"></div>
 
-  <!-- SUB: Alumnos / Sin tallar (mismo render, distinto filtro pre-aplicado) -->
-  <div id="reg-sub-alumnos-view">
-    <div id="alumnos-global-contenido">
-      <div class="text-muted" style="padding:20px;text-align:center">Cargando alumnos...</div>
-    </div>
-  </div>
-
-  <!-- SUB: Escuelas -->
-  <div id="reg-sub-escuelas-view" style="display:none">
-    <div class="card">
-      <div class="card-title">🏫 Escuelas</div>
-      <div id="registro-header"></div>
-    </div>
-    <div id="registro-lista"></div>
+  <!-- Lista global de alumnos con filtros/chips arriba -->
+  <div id="alumnos-global-contenido">
+    <div class="text-muted" style="padding:20px;text-align:center">Cargando alumnos...</div>
   </div>
   
   <!-- Modal: edición rápida de alumno (desde lista global, wizard asistido) -->
@@ -6901,9 +6885,7 @@ let registroCache = {
 let pedidosCache = registroCache; // alias
 
 async function initRegistro() {
-  // Sub-tabs: Alumnos (default) · Sin tallar · Escuelas
-  // Por defecto arrancamos en Alumnos (es lo que el user usa más para cargar/completar tallas).
-  // Las temporadas/escuelas las cargamos igual porque varias vistas las necesitan.
+  // Una sola vista: lista global de alumnos con chips de filtro arriba.
   try {
     const [temps, grados] = await Promise.all([
       supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.desc&limit=20'),
@@ -6911,50 +6893,17 @@ async function initRegistro() {
     ]);
     registroCache.temporadas = temps;
     registroCache.gradosConocidos = grados;
-
     const activa = temps.find(t => t.estado === 'activa') || temps[0];
     if (activa) registroCache.temporadaActual = activa.id;
-
-    // Estado inicial del sub-tab: respetar lo que ya esté (si el user volvió de otro tab),
-    // sino arrancar en 'alumnos'.
-    const subActual = window.regSubActual || 'alumnos';
-    switchSubRegistro(subActual);
+    if (typeof initAlumnosGlobal === 'function') initAlumnosGlobal();
   } catch(e) {
     const cont = document.getElementById('alumnos-global-contenido');
     if (cont) cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }
 }
 
-// Cambia el sub-tab activo de Registro (Alumnos / Sin tallar / Escuelas)
-function switchSubRegistro(sub) {
-  window.regSubActual = sub;
-  ['alumnos', 'sintalla', 'escuelas'].forEach(s => {
-    const btn = document.getElementById('reg-sub-' + s);
-    if (btn) {
-      btn.classList.toggle('btn-primary', s === sub);
-      btn.classList.toggle('btn-ghost', s !== sub);
-    }
-  });
-  // Hay 2 views (alumnos y escuelas) — "sintalla" reusa el view de alumnos pero con filtro forzado.
-  const aV = document.getElementById('reg-sub-alumnos-view');
-  const eV = document.getElementById('reg-sub-escuelas-view');
-  if (aV && eV) {
-    aV.style.display = (sub === 'escuelas') ? 'none' : '';
-    eV.style.display = (sub === 'escuelas') ? '' : 'none';
-  }
-
-  if (sub === 'escuelas') {
-    renderRegistroHeader();
-    if (registroCache.temporadaActual) cargarEscuelasTemporada();
-    return;
-  }
-  // Alumnos o Sin tallar — ambos rendean alumnos_global con un filtro distinto
-  if (sub === 'sintalla') {
-    alumnosGlobalCache.filtroEstado = 'sin_tallas';
-  } else if (alumnosGlobalCache.filtroEstado === 'sin_tallas') {
-    // si veníamos de "sin tallar" y ahora cliquea Alumnos, limpiar ese filtro
-    alumnosGlobalCache.filtroEstado = '';
-  }
+// switchSubRegistro: stub para compat con código que aún llama. Ya no hay sub-tabs.
+function switchSubRegistro(_sub) {
   if (typeof initAlumnosGlobal === 'function') initAlumnosGlobal();
 }
 
@@ -9547,6 +9496,7 @@ function renderAlumnosGlobal() {
   const sinTallas = c.alumnos.filter(alumnoSinTallas).length;  // ahora = "le falta al menos una"
   const completos = c.alumnos.filter(a => a.estado_top==='empacado' && a.estado_bottom==='empacado').length;
   
+  const escuelaSelObj = c.filtroEscuela ? c.escuelas[c.filtroEscuela] : null;
   const header = `
     <div class="card" style="padding:12px;margin-bottom:10px">
       <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin-bottom:10px">
@@ -9555,7 +9505,18 @@ function renderAlumnosGlobal() {
         <div style="color:var(--verde)">Completos: <strong>${completos}</strong></div>
         <div style="color:#888">Mostrando: <strong>${totMostrando.toLocaleString()}</strong></div>
       </div>
-      
+
+      <!-- Chips de filtro rápido -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="btn btn-sm ${!c.filtroEstado && !c.filtroEscuela?'btn-primary':'btn-ghost'}"
+          onclick="limpiarFiltros()">👥 Todos (${tot.toLocaleString()})</button>
+        <button class="btn btn-sm ${c.filtroEstado==='sin_tallas'?'btn-primary':'btn-ghost'}"
+          onclick="aplicarFiltroEstado('sin_tallas')">⚠️ Falta tallar (${sinTallas})</button>
+        <button class="btn btn-sm ${c.filtroEstado==='completo'?'btn-primary':'btn-ghost'}"
+          onclick="aplicarFiltroEstado('completo')">✅ Completos (${completos})</button>
+        ${escuelaSelObj ? `<span class="btn btn-sm btn-primary" style="cursor:default">🏫 ${escuelaSelObj.alias || escuelaSelObj.nombre} <span style="margin-left:6px;cursor:pointer" onclick="aplicarFiltroEscuela('')">✕</span></span>` : ''}
+      </div>
+
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px">
         <input type="text" placeholder="🔍 Buscar nombre..." value="${c.busqueda}"
           oninput="alumnosGlobalCache.busqueda = this.value; renderAlumnosGlobal()"
@@ -9658,6 +9619,17 @@ function limpiarFiltros() {
   alumnosGlobalCache.filtroNivel = '';
   alumnosGlobalCache.filtroTemporada = '';
   alumnosGlobalCache.filtroEstado = '';
+  renderAlumnosGlobal();
+}
+
+// Helpers para los chips de filtro rápido
+function aplicarFiltroEstado(estado) {
+  // Toggle: si ya estaba ese, quitarlo
+  alumnosGlobalCache.filtroEstado = (alumnosGlobalCache.filtroEstado === estado) ? '' : estado;
+  renderAlumnosGlobal();
+}
+function aplicarFiltroEscuela(escuelaId) {
+  alumnosGlobalCache.filtroEscuela = escuelaId || '';
   renderAlumnosGlobal();
 }
 
