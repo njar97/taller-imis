@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-20 13:46 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-20 13:56 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -10257,29 +10257,55 @@ function _ejecutarGenerarEtiquetas(ordenSeleccion, { soloEmpacados = false, incl
   generarPdfDirecto(html, `etiquetas_${new Date().toISOString().slice(0,10)}.pdf`);
 }
 
-// Inserta el HTML en un contenedor oculto del documento actual,
-// genera el PDF con html2pdf y lo descarga. Sin ventana nueva.
+// Inserta el HTML en un contenedor del documento actual, genera el PDF
+// con html2pdf y lo descarga. Sin ventana nueva.
 async function generarPdfDirecto(html, filename) {
-  // 1) Container temporal off-screen (no display:none — html2canvas necesita layout)
+  // 0) Estimación: cuántas etiquetas tiene? Mobile no banca >500
+  const numEtiq = (html.match(/class="etiqueta"/g) || []).length;
+  const esMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const LIMITE_MOBILE = 400;
+  if (esMobile && numEtiq > LIMITE_MOBILE) {
+    const ok = confirm(
+      `Vas a generar ${numEtiq.toLocaleString()} etiquetas en un celular.\n\n` +
+      `Esto puede tardar mucho o bloquear el navegador.\n\n` +
+      `Recomendación: filtrá por una escuela o usá la PC.\n\n` +
+      `¿Continuar igual?`
+    );
+    if (!ok) return;
+  }
+
+  // 1) Overlay de progreso
+  const overlay = document.createElement('div');
+  overlay.id = 'pdf-progress-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;color:white;font-size:18px;text-align:center;padding:20px';
+  overlay.innerHTML = `
+    <div>
+      <div style="font-size:48px;margin-bottom:10px">📄</div>
+      <div id="pdf-progress-msg">Generando PDF de ${numEtiq.toLocaleString()} etiqueta(s)...</div>
+      <div style="font-size:14px;opacity:0.7;margin-top:8px">No cierres esta página</div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  // 2) Container ON-screen pero invisible. html2canvas necesita el layout
+  //    realmente renderizado, no off-screen con coords negativas.
   const wrap = document.createElement('div');
   wrap.id = 'etiq-pdf-wrap';
-  wrap.style.cssText = 'position:absolute;left:-99999px;top:0;width:8.5in;background:white;';
-  // Extraemos solo el body content del template
+  wrap.style.cssText = 'position:fixed;left:0;top:0;width:8.5in;background:white;visibility:hidden;z-index:-1;pointer-events:none;';
+  // Extraer body y estilos
   const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
   const bodyHtml = m ? m[1] : html;
-  // Extraemos también el <style> para inyectarlo
   const sm = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
   if (sm) {
     const styleEl = document.createElement('style');
-    styleEl.textContent = sm[1].replace(/@page[^}]*\}/g, ''); // @page no aplica fuera de print
+    styleEl.textContent = sm[1].replace(/@page[^}]*\}/g, '');
     wrap.appendChild(styleEl);
   }
   wrap.insertAdjacentHTML('beforeend', bodyHtml);
-  // Quitar la botonera (.no-print) — no debe ir en el PDF
   wrap.querySelectorAll('.no-print').forEach(el => el.remove());
   document.body.appendChild(wrap);
 
-  // 2) Auto-fit cada celda con [data-fit-max]
+  // 3) Auto-fit por celda
   try {
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     const cells = wrap.querySelectorAll('[data-fit-max]');
@@ -10295,29 +10321,36 @@ async function generarPdfDirecto(html, filename) {
     });
   } catch (e) { /* ignore */ }
 
-  // 3) Verificar que html2pdf esté disponible
+  // 4) Verificar html2pdf
   if (typeof html2pdf !== 'function') {
     document.body.removeChild(wrap);
+    document.body.removeChild(overlay);
     alert('No se pudo cargar la librería PDF. Verificá tu conexión a internet y reintentá.');
     return;
   }
 
-  // 4) Generar PDF
+  // 5) Generar PDF
   const opt = {
     margin: [8, 5, 5, 10],
     filename: filename,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-    jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
+    image: { type: 'jpeg', quality: 0.95 },
+    html2canvas: { scale: esMobile ? 1.5 : 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
+    jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait', compress: true },
     pagebreak: { mode: ['css', 'legacy'], before: '.page-break' }
   };
 
+  const msg = document.getElementById('pdf-progress-msg');
+  if (msg) msg.textContent = `Renderizando ${numEtiq.toLocaleString()} etiqueta(s)... (puede tardar un minuto)`;
+
   try {
     await html2pdf().set(opt).from(wrap).save();
+    if (msg) msg.textContent = '✓ Descarga iniciada';
+    await new Promise(r => setTimeout(r, 700));
   } catch (e) {
-    alert('Error generando PDF: ' + (e.message || e));
+    alert('Error generando PDF: ' + (e.message || e) + '\n\nProbá con menos etiquetas (filtrá por escuela).');
   } finally {
     if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
   }
 }
 
