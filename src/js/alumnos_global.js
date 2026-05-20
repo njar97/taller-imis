@@ -865,22 +865,12 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
   const fecha = new Date().toLocaleDateString('es-SV');
   const total = totalAlumnos != null ? totalAlumnos : (Array.isArray(grupos) ? grupos.reduce((s,g)=>s+g.alumnos.length,0) : 0);
 
-  // Font-size por longitud del nombre: que entre completo sin cortar.
-  // Mediciones empíricas: con flex 2.2 caben ~22 chars a 16pt sin overflow.
-  // Bajamos progresivamente cuando supera.
-  function tamFuenteNombre(nombre) {
-    const n = (nombre || '').length;
-    if (n <= 22) return 16;     // tamaño full
-    if (n <= 28) return 14;
-    if (n <= 34) return 12;
-    if (n <= 42) return 11;
-    return 10;                  // mínimo legible para nombres muy largos
-  }
+  // El nombre arranca con tamaño máximo (16pt) y la ventana de impresión
+  // tiene un script que mide cada elemento y achica hasta que entre.
   const renderUnaEtiqueta = (a) => {
     const esc = escuelasMap[a.escuela_id];
     const escAbrev = esc ? (esc.alias || (esc.nombre || '').replace(/^CDE\s+/i, '').slice(0, 22)) : '';
     const nombreCompleto = a.nombre || '';
-    const fsNombre = tamFuenteNombre(nombreCompleto);
     const top = a.talla_top_key || '—';
     const bot = a.talla_bottom_key || '—';
     const obs = incluirObs && a.observaciones ? a.observaciones.slice(0, 18) : '';
@@ -888,7 +878,7 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
     return `
       <div class="etiqueta">
         <span class="grado">${a.grado || '—'}</span>
-        <span class="nombre" style="font-size:${fsNombre}pt">${nombreCompleto}</span>
+        <span class="nombre">${nombreCompleto}</span>
         <span class="centro">${escAbrev}</span>
         <span class="sexo">${sexIcon}</span>
         <span class="tallas"><b>${top}</b>&nbsp;&nbsp;<b>${bot}</b></span>
@@ -1036,8 +1026,31 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
         <button onclick="window.close()" style="padding:10px 20px;font-size:14pt">✕ Cerrar</button>
       </div>
       <script>
+        // Auto-fit del nombre: busca el font-size más grande que entra sin overflow.
+        // Cada nombre se mide individualmente. Empieza en 16pt y baja en pasos
+        // de 0.5pt hasta 8pt mínimo o hasta que scrollWidth <= clientWidth.
+        function autoFitNombres() {
+          var els = document.querySelectorAll('.etiqueta .nombre');
+          for (var i = 0; i < els.length; i++) {
+            var el = els[i];
+            var size = 16;
+            el.style.fontSize = size + 'pt';
+            // Si entra al primer intento (lo más común), seguir
+            // Si overflow, ir bajando hasta que entre o llegue al mínimo
+            while (size > 8 && el.scrollWidth > el.clientWidth + 1) {
+              size -= 0.5;
+              el.style.fontSize = size + 'pt';
+            }
+          }
+        }
         window.addEventListener('load', function() {
-          setTimeout(function(){ window.print(); }, 400);
+          // 2 frames para asegurar layout completo, después fit y print
+          requestAnimationFrame(function() {
+            requestAnimationFrame(function() {
+              autoFitNombres();
+              setTimeout(function(){ window.print(); }, 200);
+            });
+          });
         });
       <\/script>
     </body></html>
