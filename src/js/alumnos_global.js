@@ -1033,14 +1033,15 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
     const obs = incluirObs && a.observaciones ? a.observaciones.slice(0, 18) : '';
     const sexIcon = a.sexo === 'F' ? '♀' : (a.sexo === 'M' ? '♂' : '');
     if (obs) escAbrev = escAbrev + ' · ' + obs;
+    // Orden visual: SEXO | NOMBRE | (corte) | CENTRO | GRADO | TALLA-TOP | TALLA-BOT
     return `
       <div class="etiqueta">
-        <span class="grado" data-fit-max="14" data-fit-min="9">${a.grado || '—'}</span>
         <span class="sexo">${sexIcon}</span>
         <span class="nombre" data-fit-max="16" data-fit-min="7">${nombreCompleto}</span>
         <span class="centro" data-fit-max="12" data-fit-min="7">${escAbrev}</span>
+        <span class="grado" data-fit-max="14" data-fit-min="9">${a.grado || '—'}</span>
         <span class="talla-top" data-fit-max="18" data-fit-min="8">${top}</span>
-        <span class="talla-bot" data-fit-max="18" data-fit-min="7">${bot}</span>
+        <span class="talla-bot" data-fit-max="18" data-fit-min="6">${bot}</span>
       </div>
     `;
   };
@@ -1099,17 +1100,16 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
       .grid { display: block; }
       .grid.page-break { page-break-before: always; }
 
-      /* Columnas: grado, sexo, nombre fijos. centro toma fit-content (max 38mm).
-         talla-bot consume el resto con 1fr — así centros cortos como "ARCE"
-         le ceden espacio a tallas largas (con detalle CINT.XX). */
+      /* Orden: SEXO | NOMBRE | (gap corte) | CENTRO | GRADO | TALLA-TOP | TALLA-BOT
+         Flexbox para que html2canvas lo renderee fielmente (grid daba
+         tallas cortadas en el PDF). */
       .etiqueta {
         height: 10mm;
         border-top: 0.5pt dashed #888;
         padding: 0 1mm;
-        display: grid;
-        grid-template-columns: 14mm 7mm 88mm fit-content(38mm) 16mm minmax(20mm, 1fr);
-        column-gap: 2mm;
+        display: flex;
         align-items: center;
+        gap: 2mm;
         overflow: hidden;
         box-sizing: border-box;
         page-break-inside: avoid;
@@ -1123,9 +1123,35 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
         overflow: hidden;
         white-space: nowrap;
         text-overflow: clip;
+        display: block;
       }
 
+      .etiqueta .sexo {
+        flex: 0 0 7mm;
+        font-size: 18pt;
+        color: #000;
+        text-align: center;
+      }
+      .etiqueta .nombre {
+        flex: 0 0 75mm;
+        font-size: 16pt;
+        font-weight: 700;
+      }
+      /* Línea de corte: el user corta la etiqueta acá para pegarla
+         en 2 filas en la bolsa. */
+      .etiqueta .centro {
+        flex: 0 1 auto;
+        max-width: 40mm;
+        padding-left: 6mm;
+        margin-left: 2mm;
+        border-left: 1.5pt dashed #aaa;
+        font-size: 12pt;
+        font-weight: 600;
+        color: #222;
+        font-family: 'Arial Narrow', Arial, sans-serif;
+      }
       .etiqueta .grado {
+        flex: 0 0 14mm;
         font-weight: 900;
         background: #000;
         color: white;
@@ -1134,33 +1160,22 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
         border-radius: 2pt;
         padding: 1pt 0;
       }
-      .etiqueta .sexo {
-        font-size: 18pt;
-        color: #000;
-        text-align: center;
-      }
-      .etiqueta .nombre {
-        font-size: 16pt;
-        font-weight: 700;
-      }
-      .etiqueta .centro {
-        font-size: 12pt;
-        font-weight: 600;
-        color: #222;
-        font-family: 'Arial Narrow', Arial, sans-serif;
-      }
-      .etiqueta .talla-top, .etiqueta .talla-bot {
+      .etiqueta .talla-top {
+        flex: 0 0 16mm;
         font-family: 'Courier New', monospace;
         font-size: 18pt;
         font-weight: 900;
         letter-spacing: 0.5pt;
         text-align: center;
       }
-      /* Aire extra antes de talla-top: el user corta la etiqueta acá
-         para pegarla en 2 filas en la bolsa. */
-      .etiqueta .talla-top {
-        padding-left: 4mm;
-        border-left: 1px dashed #ccc;
+      .etiqueta .talla-bot {
+        flex: 1 1 30mm;
+        min-width: 25mm;
+        font-family: 'Courier New', monospace;
+        font-size: 18pt;
+        font-weight: 900;
+        letter-spacing: 0.5pt;
+        text-align: center;
       }
 
       .etiqueta .obs {
