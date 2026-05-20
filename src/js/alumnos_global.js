@@ -45,8 +45,10 @@ async function initAlumnosGlobal() {
   }
 }
 
+// "Sin tallar" significa "le falta al menos una talla" — antes era "sin NINGUNA"
+// y mostraba 0 porque casi todos tienen al menos una talla cargada.
 function alumnoSinTallas(a) {
-  return !a.talla_top_key && !a.talla_bottom_key;
+  return !a.talla_top_key || !a.talla_bottom_key;
 }
 
 function renderAlumnosGlobal() {
@@ -90,14 +92,14 @@ function renderAlumnosGlobal() {
   // Stats
   const totMostrando = lista.length;
   const tot = c.alumnos.length;
-  const sinTallas = c.alumnos.filter(alumnoSinTallas).length;
+  const sinTallas = c.alumnos.filter(alumnoSinTallas).length;  // ahora = "le falta al menos una"
   const completos = c.alumnos.filter(a => a.estado_top==='empacado' && a.estado_bottom==='empacado').length;
   
   const header = `
     <div class="card" style="padding:12px;margin-bottom:10px">
       <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin-bottom:10px">
         <div>Total: <strong>${tot.toLocaleString()}</strong></div>
-        <div style="color:#c44">Sin tallas: <strong>${sinTallas}</strong></div>
+        <div style="color:#c44">Falta tallar: <strong>${sinTallas}</strong></div>
         <div style="color:var(--verde)">Completos: <strong>${completos}</strong></div>
         <div style="color:#888">Mostrando: <strong>${totMostrando.toLocaleString()}</strong></div>
       </div>
@@ -127,7 +129,7 @@ function renderAlumnosGlobal() {
         
         <select onchange="alumnosGlobalCache.filtroEstado = this.value; renderAlumnosGlobal()" style="padding:6px">
           <option value="">Todo estado</option>
-          <option value="sin_tallas" ${c.filtroEstado==='sin_tallas'?'selected':''}>⚠ Sin tallas</option>
+          <option value="sin_tallas" ${c.filtroEstado==='sin_tallas'?'selected':''}>⚠ Falta tallar (1 o 2)</option>
           <option value="pendiente" ${c.filtroEstado==='pendiente'?'selected':''}>❌❌ Pendiente</option>
           <option value="parcial" ${c.filtroEstado==='parcial'?'selected':''}>✅❌ Parcial</option>
           <option value="completo" ${c.filtroEstado==='completo'?'selected':''}>✅✅ Completo</option>

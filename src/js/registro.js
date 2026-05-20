@@ -201,7 +201,7 @@ function renderListaEscuelas() {
     const colorBar = pct >= 100 ? 'var(--verde)' : (pct > 0 ? 'var(--azul)' : '#CCC');
     const grupo = e.grupo_produccion ? `<span style="background:#EEF;padding:2px 6px;border-radius:4px;font-size:10px;color:#66F;margin-left:4px">${e.grupo_produccion}</span>` : '';
     return `
-      <div class="card" style="padding:10px;margin-bottom:8px;cursor:pointer" onclick="abrirDetalleEscuelaRegistro('${e.escuela_id}')">
+      <div class="card" style="padding:10px;margin-bottom:8px;cursor:pointer" onclick="verAlumnosDeEscuela('${e.escuela_id}')">
         <div style="display:flex;justify-content:space-between;align-items:start">
           <div style="flex:1">
             <div style="font-weight:700;color:var(--azul)">${e.escuela_nombre}${grupo}</div>
@@ -212,6 +212,7 @@ function renderListaEscuelas() {
             </div>
           </div>
           ${e.piezas_solicitadas > 0 ? `<div style="font-size:20px;font-weight:700;color:${colorBar}">${pct}%</div>` : ''}
+          <button class="btn btn-ghost btn-sm" style="margin-left:6px" onclick="event.stopPropagation(); abrirDetalleEscuelaRegistro('${e.escuela_id}')" title="Acciones avanzadas (Por talla / Empaque / Pedidos)">⚙️</button>
         </div>
         ${e.piezas_solicitadas > 0 ? `
           <div style="background:#EEE;height:6px;border-radius:3px;margin-top:6px;overflow:hidden">
@@ -220,6 +221,19 @@ function renderListaEscuelas() {
       </div>
     `;
   }).join('');
+}
+
+// Clic en una escuela = ir al sub-tab Alumnos con el filtro de escuela aplicado.
+// Reemplaza el modal de detalle (que duplicaba la edición de alumnos).
+// Las funciones avanzadas (Por talla, Empaque, Pedidos) siguen accesibles
+// con el botón ⚙️ que mantiene abrirDetalleEscuelaRegistro.
+function verAlumnosDeEscuela(escuelaId) {
+  if (typeof alumnosGlobalCache !== 'undefined') {
+    alumnosGlobalCache.filtroEscuela = escuelaId;
+    alumnosGlobalCache.filtroEstado = '';
+    alumnosGlobalCache.busqueda = '';
+  }
+  switchSubRegistro('alumnos');
 }
 
 // ─── Detalle de escuela con 4 sub-tabs ──────────────────────────────
