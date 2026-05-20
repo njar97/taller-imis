@@ -608,15 +608,69 @@ async function abrirNuevoAlumno() {
 // todo desde la página y un Enter genera.
 function imprimirEtiquetasConFiltros() { abrirModalEtiquetas(); }
 
+// Campos disponibles para el orden personalizado
+const ET_ORDEN_OPCIONES = [
+  { val: '',         label: '— (sin más)' },
+  { val: 'escuela',  label: '🏫 Escuela' },
+  { val: 'sexo_fm',  label: '♀ → ♂ (Femenino primero)' },
+  { val: 'sexo_mf',  label: '♂ → ♀ (Masculino primero)' },
+  { val: 'grado',    label: '📋 Grado' },
+  { val: 'nombre',   label: '🔤 Nombre alfabético' },
+  { val: 'talla_top', label: '👕 Talla top' },
+  { val: 'talla_bot', label: '👖 Talla bottom' },
+];
+
+function etRenderOrdenSelects(seleccion) {
+  // seleccion = ['escuela', 'sexo_fm', 'grado', 'nombre'] (default)
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById('et-orden-' + i);
+    if (!el) continue;
+    const val = seleccion[i-1] || '';
+    el.innerHTML = ET_ORDEN_OPCIONES.map(o =>
+      `<option value="${o.val}" ${o.val===val?'selected':''}>${o.label}</option>`
+    ).join('');
+  }
+}
+
+function etOrdenDefault() {
+  etRenderOrdenSelects(['escuela', 'sexo_fm', 'grado', 'nombre']);
+}
+
+function etSelEscuelas(modo) {
+  const sel = document.getElementById('et-escuelas-multi');
+  if (!sel) return;
+  for (const opt of sel.options) opt.selected = (modo === 'all');
+}
+
 function abrirModalEtiquetas() {
   const modal = document.getElementById('etiquetas-modal');
   if (!modal) return;
-  // El multiselect de escuelas ya no se usa — se toma de los filtros
-  // de la página. Mostramos un resumen de filtros aplicados.
+  const c = alumnosGlobalCache;
+
+  // Multiselect de escuelas: cargar y pre-seleccionar según filtro de página
+  const sel = document.getElementById('et-escuelas-multi');
+  if (sel) {
+    const escuelasUnicas = {};
+    for (const a of c.alumnos) {
+      if (a.escuela_id && c.escuelas[a.escuela_id]) escuelasUnicas[a.escuela_id] = c.escuelas[a.escuela_id];
+    }
+    const opts = Object.values(escuelasUnicas).sort((a,b) =>
+      (a.alias||a.nombre).localeCompare(b.alias||b.nombre));
+    sel.innerHTML = opts.map(e =>
+      `<option value="${e.id}" ${c.filtroEscuela === e.id ? 'selected' : ''}>${e.alias ? e.alias + ' · ' : ''}${e.nombre}</option>`
+    ).join('');
+    // Si no había filtro de escuela en la página, dejar todas marcadas
+    if (!c.filtroEscuela) for (const opt of sel.options) opt.selected = true;
+  }
+
+  // Orden: cargar con default
+  etOrdenDefault();
+
+  // Resumen de otros filtros aplicados (no escuela, esa se elige acá)
   const resumen = document.getElementById('et-resumen-filtros');
   if (resumen) resumen.innerHTML = generarResumenFiltros();
+
   modal.style.display = 'flex';
-  // Foco en el botón "Generar" para que Enter funcione
   setTimeout(() => {
     const btn = document.getElementById('et-btn-generar');
     if (btn) btn.focus();
@@ -625,34 +679,17 @@ function abrirModalEtiquetas() {
 
 function generarResumenFiltros() {
   const c = alumnosGlobalCache;
-  // Recalcular cuántos alumnos quedan con los filtros actuales (mismo que renderAlumnosGlobal)
-  let lista = c.alumnos.filter(a => !alumnoSinTallas(a) ? true : !!a.talla_top_key || !!a.talla_bottom_key);
-  // En realidad para etiquetas necesitamos los que tengan AL MENOS una talla (las tira no funciona sin nada)
-  lista = c.alumnos.filter(a => a.talla_top_key || a.talla_bottom_key);
-  if (c.filtroEscuela) lista = lista.filter(a => a.escuela_id === c.filtroEscuela);
-  if (c.filtroNivel)   lista = lista.filter(a => a.nivel === c.filtroNivel);
-  if (c.filtroEstado === 'completo')  lista = lista.filter(a => a.estado_top==='empacado' && a.estado_bottom==='empacado');
-  if (c.filtroEstado === 'entregado') lista = lista.filter(a => a.estado_top==='entregado' && a.estado_bottom==='entregado');
-  if (c.filtroEstado === 'pendiente') lista = lista.filter(a => a.estado_top==='pendiente' && a.estado_bottom==='pendiente');
-  if (c.busqueda) {
-    const q = c.busqueda.toLowerCase().trim();
-    lista = lista.filter(a => (a.nombre||'').toLowerCase().includes(q));
-  }
+  // No incluimos escuela porque se elige en el multiselect del modal.
+  // Sí mostramos los otros filtros aplicados desde la página (nivel, estado, búsqueda).
   const partes = [];
-  if (c.filtroEscuela) {
-    const esc = c.escuelas[c.filtroEscuela];
-    partes.push(`🏫 ${esc ? (esc.alias || esc.nombre) : c.filtroEscuela}`);
-  } else {
-    partes.push('🏫 Todas las escuelas');
-  }
   if (c.filtroNivel)  partes.push(`nivel ${c.filtroNivel}`);
   if (c.filtroEstado && c.filtroEstado !== 'sin_tallas') partes.push(`estado ${c.filtroEstado}`);
-  if (c.busqueda)     partes.push(`"${c.busqueda}"`);
-  return `
-    <div style="font-size:12px;color:#555">${partes.join(' · ')}</div>
-    <div style="font-size:18px;font-weight:700;color:var(--azul);margin-top:4px">${lista.length.toLocaleString()} etiqueta(s)</div>
-    <div style="font-size:10px;color:#888;margin-top:2px">Si querés cambiar el filtro, cerrá este diálogo y ajustá los chips/búsqueda en la página.</div>
-  `;
+  if (c.busqueda)     partes.push(`búsqueda "${c.busqueda}"`);
+  if (partes.length === 0) {
+    return `<div style="font-size:12px;color:#555">Sin filtros adicionales de la página.</div>
+            <div style="font-size:10px;color:#888;margin-top:2px">Si necesitás filtrar (ej: solo "falta tallar"), cerrá este diálogo, aplicá el filtro en la página y volvé a abrir.</div>`;
+  }
+  return `<div style="font-size:12px;color:#555"><strong>Filtros de la página:</strong> ${partes.join(' · ')}</div>`;
 }
 
 function cerrarModalEtiquetas() {
@@ -661,22 +698,30 @@ function cerrarModalEtiquetas() {
 }
 
 function generarEtiquetas() {
-  // Tomamos los filtros directamente de la página (alumnosGlobalCache).
-  // El user los configuró ahí — no los duplicamos en el modal.
   const c = alumnosGlobalCache;
   const tempActiva = (registroCache.temporadas || []).find(t => t.estado === 'activa');
   const tempId = tempActiva ? tempActiva.id : '';
   const columnas = parseInt(document.getElementById('et-columnas').value) || 1;
-  const orden = document.getElementById('et-orden').value;
   const soloEmpacados = document.getElementById('et-solo-empacados').checked;
   const incluirObs = document.getElementById('et-incluir-obs').checked;
 
-  // Misma lógica de filtrado que renderAlumnosGlobal, pero quedándonos solo con
-  // los que tengan al menos una talla (la etiqueta sin tallas no sirve).
+  // Escuelas seleccionadas en el multiselect (puede ser una, varias o ninguna)
+  const selMulti = document.getElementById('et-escuelas-multi');
+  const seleccionadas = selMulti ? Array.from(selMulti.selectedOptions).map(o => o.value) : [];
+  const escuelasFiltro = seleccionadas.length > 0 ? new Set(seleccionadas) : null;
+
+  // Orden custom: leer los 4 dropdowns
+  const ordenSeleccion = [
+    document.getElementById('et-orden-1')?.value || '',
+    document.getElementById('et-orden-2')?.value || '',
+    document.getElementById('et-orden-3')?.value || '',
+    document.getElementById('et-orden-4')?.value || '',
+  ].filter(Boolean);
+
   let lista = c.alumnos.filter(a => {
     if (!a.talla_top_key && !a.talla_bottom_key) return false;
     if (tempId && a.temporada_id !== tempId) return false;
-    if (c.filtroEscuela && a.escuela_id !== c.filtroEscuela) return false;
+    if (escuelasFiltro && !escuelasFiltro.has(a.escuela_id)) return false;
     if (c.filtroNivel && a.nivel !== c.filtroNivel) return false;
     if (c.filtroEstado === 'completo'  && !(a.estado_top==='empacado' && a.estado_bottom==='empacado')) return false;
     if (c.filtroEstado === 'entregado' && !(a.estado_top==='entregado' && a.estado_bottom==='entregado')) return false;
@@ -697,44 +742,38 @@ function generarEtiquetas() {
   });
 
   if (lista.length === 0) {
-    alert('No hay alumnos para etiquetar con esos filtros.\nAsegurate de que tengan tallas cargadas.');
+    alert('No hay alumnos para etiquetar con esos filtros.\nAsegurate de que las escuelas seleccionadas tengan alumnos con tallas cargadas.');
     return;
   }
 
-  // Comparadores base
-  const cmpEsc = (a,b) => {
-    const ea = c.escuelas[a.escuela_id]?.alias || c.escuelas[a.escuela_id]?.nombre || '';
-    const eb = c.escuelas[b.escuela_id]?.alias || c.escuelas[b.escuela_id]?.nombre || '';
-    return ea.localeCompare(eb);
+  // Comparadores nombrados — uno por cada opción del select
+  const cmpFn = {
+    escuela: (a,b) => {
+      const ea = c.escuelas[a.escuela_id]?.alias || c.escuelas[a.escuela_id]?.nombre || '';
+      const eb = c.escuelas[b.escuela_id]?.alias || c.escuelas[b.escuela_id]?.nombre || '';
+      return ea.localeCompare(eb);
+    },
+    sexo_fm: (a,b) => {
+      const rk = (s) => s === 'F' ? 0 : (s === 'M' ? 1 : 2);
+      return rk(a.sexo) - rk(b.sexo);
+    },
+    sexo_mf: (a,b) => {
+      const rk = (s) => s === 'M' ? 0 : (s === 'F' ? 1 : 2);
+      return rk(a.sexo) - rk(b.sexo);
+    },
+    grado:     (a,b) => (a.grado||'').localeCompare(b.grado||'', 'es', { numeric: true }),
+    nombre:    (a,b) => (a.nombre||'').localeCompare(b.nombre||'', 'es'),
+    talla_top: (a,b) => (a.talla_top_key||'').localeCompare(b.talla_top_key||'', 'es', { numeric: true }),
+    talla_bot: (a,b) => (a.talla_bottom_key||'').localeCompare(b.talla_bottom_key||'', 'es', { numeric: true }),
   };
-  // Sexo: F va primero (♀ luego ♂)
-  const sexRank = (s) => s === 'F' ? 0 : (s === 'M' ? 1 : 2);
-  const cmpSexo = (a,b) => sexRank(a.sexo) - sexRank(b.sexo);
-  const cmpGrado = (a,b) => (a.grado||'').localeCompare(b.grado||'', 'es', { numeric: true });
-  const cmpNombre = (a,b) => (a.nombre||'').localeCompare(b.nombre||'', 'es');
-  const cmpTalla = (a,b) => (a.talla_top_key||'').localeCompare(b.talla_top_key||'', 'es', { numeric: true });
-
-  // Compone una cadena de comparadores
-  const componer = (...cmps) => (a,b) => {
+  const cmps = ordenSeleccion.map(k => cmpFn[k]).filter(Boolean);
+  lista.sort((a,b) => {
     for (const fn of cmps) { const r = fn(a,b); if (r !== 0) return r; }
     return 0;
-  };
+  });
 
-  // Mapa de presets de orden
-  const presets = {
-    'esc_sexo_grado_nombre':  componer(cmpEsc, cmpSexo, cmpGrado, cmpNombre),
-    'esc_grado_sexo_nombre':  componer(cmpEsc, cmpGrado, cmpSexo, cmpNombre),
-    'esc_grado_nombre':       componer(cmpEsc, cmpGrado, cmpNombre),
-    'esc_grado_talla':        componer(cmpEsc, cmpGrado, cmpTalla, cmpNombre),
-    'esc_talla':              componer(cmpEsc, cmpTalla, cmpNombre),
-    'mix_sexo_grado_nombre':  componer(cmpSexo, cmpGrado, cmpNombre),
-    'mix_grado_nombre':       componer(cmpGrado, cmpNombre),
-    'mix_talla':              componer(cmpTalla, cmpNombre),
-  };
-  lista.sort(presets[orden] || presets.esc_sexo_grado_nombre);
-
-  // Si el orden empieza por escuela, agrupamos para mostrar header + page-break entre grupos
-  const agruparPorEscuela = orden.startsWith('esc_');
+  // Agrupar por escuela SOLO si el primer criterio fue "escuela"
+  const agruparPorEscuela = ordenSeleccion[0] === 'escuela';
   const grupos = [];
   if (agruparPorEscuela) {
     let actual = null;
@@ -821,12 +860,12 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
 
       .grupo-header {
         font-weight: bold;
-        font-size: 10pt;
+        font-size: 11pt;
         padding: 3mm 0 2mm 0;
         border-bottom: 1pt solid #000;
         margin-bottom: 1mm;
       }
-      .grupo-header .cnt { font-weight: normal; color: #666; font-size: 8pt; }
+      .grupo-header .cnt { font-weight: normal; color: #666; font-size: 9pt; }
 
       .grid {
         display: grid;
@@ -835,9 +874,11 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
       }
       .grid.page-break { page-break-before: always; }
 
+      /* Cada etiqueta es una tira de ~10mm. Las fuentes están dimensionadas
+         para ocupar buena parte de esa altura (10mm ≈ 28pt). */
       .etiqueta {
         height: 10mm;
-        border-top: 0.5pt dashed #888;       /* solo top: borde inferior es el top del siguiente */
+        border-top: 0.5pt dashed #888;
         padding: 0 3mm;
         display: flex;
         align-items: center;
@@ -845,13 +886,14 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
         overflow: hidden;
         box-sizing: border-box;
         page-break-inside: avoid;
+        line-height: 1;
       }
       .etiqueta:last-child { border-bottom: 0.5pt dashed #888; }
 
       .etiqueta .sexo {
-        font-size: 11pt;
+        font-size: 14pt;
         color: #000;
-        min-width: 12pt;
+        min-width: 14pt;
         text-align: center;
         flex-shrink: 0;
       }
@@ -860,9 +902,9 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
         font-weight: bold;
         background: #000;
         color: white;
-        padding: 1pt 4pt;
-        font-size: 8pt;
-        min-width: 22pt;
+        padding: 2pt 6pt;
+        font-size: 11pt;
+        min-width: 28pt;
         text-align: center;
         border-radius: 2pt;
         flex-shrink: 0;
@@ -870,8 +912,8 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
 
       .etiqueta .nombre {
         flex: 2;
-        font-size: 9pt;
-        font-weight: 600;
+        font-size: 13pt;
+        font-weight: 700;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -879,7 +921,8 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
 
       .etiqueta .centro {
         flex: 1;
-        font-size: 8pt;
+        font-size: 10pt;
+        font-weight: 600;
         color: #333;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -888,14 +931,15 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
 
       .etiqueta .tallas {
         font-family: 'Courier New', monospace;
-        font-size: 9pt;
+        font-size: 14pt;
+        font-weight: 700;
         white-space: nowrap;
         flex-shrink: 0;
       }
       .etiqueta .tallas b { color: #000; }
 
       .etiqueta .obs {
-        font-size: 7pt;
+        font-size: 8pt;
         color: #444;
         font-style: italic;
         flex-shrink: 0;
