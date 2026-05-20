@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-20 15:06 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-20 15:18 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -10490,15 +10490,15 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
       .grid { display: block; }
       .grid.page-break { page-break-before: always; }
 
-      /* Columnas FIJAS en mm. Total ancho usable (Letter - márgenes) ≈ 200mm.
-         grado 14 + sexo 7 + nombre 88 + centro 38 + talla_top 16 + talla_bot 25
-         = 188 + 5gaps×2 + 2padding ≈ 200mm. */
+      /* Columnas: grado, sexo, nombre fijos. centro toma fit-content (max 38mm).
+         talla-bot consume el resto con 1fr — así centros cortos como "ARCE"
+         le ceden espacio a tallas largas (con detalle CINT.XX). */
       .etiqueta {
         height: 10mm;
         border-top: 0.5pt dashed #888;
         padding: 0 1mm;
         display: grid;
-        grid-template-columns: 14mm 7mm 88mm 38mm 16mm 25mm;
+        grid-template-columns: 14mm 7mm 88mm fit-content(38mm) 16mm minmax(20mm, 1fr);
         column-gap: 2mm;
         align-items: center;
         overflow: hidden;
