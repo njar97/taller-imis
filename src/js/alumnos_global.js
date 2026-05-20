@@ -1024,12 +1024,10 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
         <button onclick="window.close()" style="padding:10px 20px;font-size:14pt">✕ Cerrar</button>
       </div>
       <script>
-        // Disparar el diálogo de impresión/guardar PDF automáticamente al cargar.
-        // El user puede elegir "Guardar como PDF" en el destino para descargar.
         window.addEventListener('load', function() {
           setTimeout(function(){ window.print(); }, 400);
         });
-      </script>
+      <\/script>
     </body></html>
   `;
 }
