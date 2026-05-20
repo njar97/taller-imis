@@ -1,25 +1,30 @@
 <!-- ══════════ REGISTRO (v23, reemplaza Pedidos) ══════════ -->
 <div id="view-registro" class="view">
   <div id="alert-registro"></div>
-  
-  <div class="card">
-    <div class="card-title">📋 Registro</div>
-    <div id="registro-header"></div>
+
+  <!-- Sub-tabs Registro -->
+  <div class="card" style="padding:6px;margin-bottom:10px">
+    <div style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" id="reg-sub-alumnos"  onclick="switchSubRegistro('alumnos')"  style="flex:1;min-width:90px">👥 Alumnos</button>
+      <button class="btn btn-ghost   btn-sm" id="reg-sub-sintalla" onclick="switchSubRegistro('sintalla')" style="flex:1;min-width:90px">⚠️ Sin tallar</button>
+      <button class="btn btn-ghost   btn-sm" id="reg-sub-escuelas" onclick="switchSubRegistro('escuelas')" style="flex:1;min-width:90px">🏫 Escuelas</button>
+    </div>
   </div>
-  
-  <div id="registro-lista"></div>
-  
-  <!-- Vista "Todos los alumnos" - siempre disponible debajo de la lista -->
-  <div class="card" style="margin-top:14px">
-    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
-      <span>👥 Todos los alumnos</span>
-      <button class="btn btn-ghost btn-sm" onclick="toggleAlumnosGlobal()">
-        <span id="alumnos-global-toggle-txt">Mostrar ▼</span>
-      </button>
+
+  <!-- SUB: Alumnos / Sin tallar (mismo render, distinto filtro pre-aplicado) -->
+  <div id="reg-sub-alumnos-view">
+    <div id="alumnos-global-contenido">
+      <div class="text-muted" style="padding:20px;text-align:center">Cargando alumnos...</div>
     </div>
-    <div id="alumnos-global-panel" style="display:none">
-      <div id="alumnos-global-contenido"></div>
+  </div>
+
+  <!-- SUB: Escuelas -->
+  <div id="reg-sub-escuelas-view" style="display:none">
+    <div class="card">
+      <div class="card-title">🏫 Escuelas</div>
+      <div id="registro-header"></div>
     </div>
+    <div id="registro-lista"></div>
   </div>
   
   <!-- Modal: Detalle de escuela con 4 sub-tabs -->

@@ -22,6 +22,9 @@ let registroCache = {
 let pedidosCache = registroCache; // alias
 
 async function initRegistro() {
+  // Sub-tabs: Alumnos (default) · Sin tallar · Escuelas
+  // Por defecto arrancamos en Alumnos (es lo que el user usa más para cargar/completar tallas).
+  // Las temporadas/escuelas las cargamos igual porque varias vistas las necesitan.
   try {
     const [temps, grados] = await Promise.all([
       supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.desc&limit=20'),
@@ -29,22 +32,51 @@ async function initRegistro() {
     ]);
     registroCache.temporadas = temps;
     registroCache.gradosConocidos = grados;
-    
+
     const activa = temps.find(t => t.estado === 'activa') || temps[0];
     if (activa) registroCache.temporadaActual = activa.id;
-    
-    renderRegistroHeader();
-    
-    if (registroCache.temporadaActual) {
-      await cargarEscuelasTemporada();
-    } else {
-      document.getElementById('registro-lista').innerHTML = 
-        '<div class="alert alert-info">No hay temporadas cargadas. Corré la migración v3.11 y la carga inicial.</div>';
-    }
+
+    // Estado inicial del sub-tab: respetar lo que ya esté (si el user volvió de otro tab),
+    // sino arrancar en 'alumnos'.
+    const subActual = window.regSubActual || 'alumnos';
+    switchSubRegistro(subActual);
   } catch(e) {
-    document.getElementById('registro-lista').innerHTML = 
-      `<div class="alert alert-error">Error: ${e.message}</div>`;
+    const cont = document.getElementById('alumnos-global-contenido');
+    if (cont) cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }
+}
+
+// Cambia el sub-tab activo de Registro (Alumnos / Sin tallar / Escuelas)
+function switchSubRegistro(sub) {
+  window.regSubActual = sub;
+  ['alumnos', 'sintalla', 'escuelas'].forEach(s => {
+    const btn = document.getElementById('reg-sub-' + s);
+    if (btn) {
+      btn.classList.toggle('btn-primary', s === sub);
+      btn.classList.toggle('btn-ghost', s !== sub);
+    }
+  });
+  // Hay 2 views (alumnos y escuelas) — "sintalla" reusa el view de alumnos pero con filtro forzado.
+  const aV = document.getElementById('reg-sub-alumnos-view');
+  const eV = document.getElementById('reg-sub-escuelas-view');
+  if (aV && eV) {
+    aV.style.display = (sub === 'escuelas') ? 'none' : '';
+    eV.style.display = (sub === 'escuelas') ? '' : 'none';
+  }
+
+  if (sub === 'escuelas') {
+    renderRegistroHeader();
+    if (registroCache.temporadaActual) cargarEscuelasTemporada();
+    return;
+  }
+  // Alumnos o Sin tallar — ambos rendean alumnos_global con un filtro distinto
+  if (sub === 'sintalla') {
+    alumnosGlobalCache.filtroEstado = 'sin_tallas';
+  } else if (alumnosGlobalCache.filtroEstado === 'sin_tallas') {
+    // si veníamos de "sin tallar" y ahora cliquea Alumnos, limpiar ese filtro
+    alumnosGlobalCache.filtroEstado = '';
+  }
+  if (typeof initAlumnosGlobal === 'function') initAlumnosGlobal();
 }
 
 // alias para compat

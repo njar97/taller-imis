@@ -136,9 +136,10 @@ function renderAlumnosGlobal() {
       </div>
       
       <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-success btn-sm" onclick="abrirNuevoAlumno()">+ Nuevo alumno</button>
         <button class="btn btn-primary btn-sm" onclick="abrirModalEtiquetas()">🏷 Imprimir etiquetas</button>
         <button class="btn btn-ghost btn-sm" onclick="initAlumnosGlobal()">🔄 Refrescar</button>
-        ${(c.busqueda || c.filtroEscuela || c.filtroNivel || c.filtroTemporada || c.filtroEstado) ? 
+        ${(c.busqueda || c.filtroEscuela || c.filtroNivel || c.filtroTemporada || c.filtroEstado) ?
           `<button class="btn btn-ghost btn-sm" onclick="limpiarFiltros()">✗ Limpiar filtros</button>` : ''}
       </div>
     </div>
@@ -233,6 +234,49 @@ async function editarAlumnoGlobal(alumnoId) {
       }, 200);
     }, 100);
   } catch(e) { alert('Error: ' + e.message); }
+}
+
+// Abre flow de nuevo alumno: pide escuela y redirige al sub-tab Tallaje
+// (donde el form ya existe). Si solo hay una escuela activa, va directo.
+async function abrirNuevoAlumno() {
+  const c = alumnosGlobalCache;
+  // Si hay un filtro de escuela activo, usar esa
+  let escuelaId = c.filtroEscuela;
+  if (!escuelaId) {
+    // Pedirle al user que elija una de las escuelas
+    const opts = Object.values(c.escuelas)
+      .filter(e => e.activa !== false)
+      .sort((a,b) => (a.alias||a.nombre).localeCompare(b.alias||b.nombre));
+    if (opts.length === 0) { alert('No hay escuelas activas. Cargá una primero.'); return; }
+    const lista = opts.map((e,i) => `${i+1}. ${e.alias || e.nombre}`).join('\n');
+    const ans = prompt(`Para qué escuela?\n\n${lista}\n\nEscribí el número o el alias:`);
+    if (!ans) return;
+    const num = parseInt(ans, 10);
+    if (!isNaN(num) && num >= 1 && num <= opts.length) {
+      escuelaId = opts[num - 1].id;
+    } else {
+      const match = opts.find(e =>
+        (e.alias || '').toLowerCase() === ans.toLowerCase() ||
+        (e.nombre || '').toLowerCase().includes(ans.toLowerCase())
+      );
+      if (!match) { alert('No encontré esa escuela. Probá con el número.'); return; }
+      escuelaId = match.id;
+    }
+  }
+  // Navegar a Registro > Escuelas > detalle de esa escuela > sub-tab Tallaje
+  if (typeof switchSubRegistro === 'function') switchSubRegistro('escuelas');
+  setTimeout(async () => {
+    if (typeof abrirDetalleEscuelaRegistro === 'function') {
+      await abrirDetalleEscuelaRegistro(escuelaId);
+      // Activar sub-tab tallaje y nuevo alumno
+      setTimeout(() => {
+        if (typeof cambiarVistaDetalle === 'function') {
+          const subT = document.querySelectorAll('#registro-detalle-subtabs .sub-tab')[0];
+          cambiarVistaDetalle('tallaje', subT);
+        }
+      }, 200);
+    }
+  }, 100);
 }
 
 // ═══════════════════════════════════════════════════════════════════
