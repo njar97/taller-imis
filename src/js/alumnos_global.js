@@ -102,10 +102,25 @@ function renderAlumnosGlobal() {
   const c = alumnosGlobalCache;
   let lista = c.alumnos;
 
+  // Filtro modo empaque - pool acaparado: alumno matchea alguna entry del pool
+  // (mismo escuela + prenda + talla, con pieza pendiente).
+  // Tiene prioridad sobre combos/prendas si está definido.
+  if (c.modoEmpaque && Array.isArray(c.empPoolEntries) && c.empPoolEntries.length > 0) {
+    lista = lista.filter(a => {
+      return c.empPoolEntries.some(p => {
+        if (a.escuela_id !== p.escuela_id) return false;
+        const topMatch = a.prenda_top === p.prenda && a.talla_top_key === p.talla
+          && a.estado_top !== 'empacado' && a.estado_top !== 'entregado';
+        const botMatch = a.prenda_bottom === p.prenda && a.talla_bottom_key === p.talla
+          && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado';
+        return topMatch || botMatch;
+      });
+    });
+  }
   // Filtro modo empaque: si hay combos, alumno tiene que matchear nivel+sexo
   // de algún combo Y tener pieza pendiente con la prenda+talla del combo.
   // Si no hay combos (compat con flujo viejo) usamos solo empPrendas.
-  if (c.modoEmpaque && Array.isArray(c.empCombos) && c.empCombos.length > 0) {
+  else if (c.modoEmpaque && Array.isArray(c.empCombos) && c.empCombos.length > 0) {
     lista = lista.filter(a => {
       return c.empCombos.some(combo => {
         if (a.nivel !== combo.nivel) return false;
@@ -380,16 +395,23 @@ function renderEmpaqueBanner(listaVisible) {
     if (a.prenda_bottom && setP.has(a.prenda_bottom) && a.talla_bottom_key
         && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado') piezasAEmpacar++;
   }
-  // Etiquetar combinaciones de manera amigable
+  // Etiquetar combinaciones / pool de manera amigable
   const NIVEL_LBL = { PARV:'Parvularia', BASICA:'Básica', BACH:'Bach', OTRO:'Otro' };
   const SEXO_LBL = { F:'♀', M:'♂' };
   const combos = c.empCombos || [];
-  const lblCombos = combos.length > 0
-    ? combos.map(co => {
-        const piezas = [co.prenda_top, co.prenda_bottom].filter(Boolean).join('+');
-        return `${NIVEL_LBL[co.nivel]||co.nivel} ${SEXO_LBL[co.sexo]||co.sexo} (${piezas})`;
-      }).join(' · ')
-    : ((c.empPrendas||[]).join(', ') || '—');
+  const poolEntries = c.empPoolEntries || [];
+  let lblCombos;
+  if (poolEntries.length > 0) {
+    const piezas = poolEntries.reduce((s,p) => s + 1, 0);
+    lblCombos = `Pool acaparado: ${piezas} entrada(s) — ${[...new Set(poolEntries.map(p=>p.prenda))].join(', ')}`;
+  } else if (combos.length > 0) {
+    lblCombos = combos.map(co => {
+      const piezas = [co.prenda_top, co.prenda_bottom].filter(Boolean).join('+');
+      return `${NIVEL_LBL[co.nivel]||co.nivel} ${SEXO_LBL[co.sexo]||co.sexo} (${piezas})`;
+    }).join(' · ');
+  } else {
+    lblCombos = (c.empPrendas||[]).join(', ') || '—';
+  }
   return `
     <div class="card" style="background:#E0F4E5;border:2px solid var(--verde);padding:10px 12px;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">
       <div>
@@ -423,10 +445,22 @@ function marcarTodosEmpaque(checked) {
   if (!c.empMarcados) c.empMarcados = new Set();
   const setP = new Set(c.empPrendas || []);
   const combos = c.empCombos || [];
+  const poolEntries = c.empPoolEntries || [];
   const ids = c.alumnos
     .filter(a => {
       if (c.modoEmpaque) {
-        if (combos.length > 0) {
+        if (poolEntries.length > 0) {
+          const ok = poolEntries.some(p => {
+            if (a.escuela_id !== p.escuela_id) return false;
+            const topMatch = a.prenda_top === p.prenda && a.talla_top_key === p.talla
+              && a.estado_top !== 'empacado' && a.estado_top !== 'entregado';
+            const botMatch = a.prenda_bottom === p.prenda && a.talla_bottom_key === p.talla
+              && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado';
+            return topMatch || botMatch;
+          });
+          if (!ok) return false;
+        }
+        else if (combos.length > 0) {
           const ok = combos.some(co => {
             if (a.nivel !== co.nivel || a.sexo !== co.sexo) return false;
             const topMatch = co.prenda_top && a.prenda_top === co.prenda_top && a.talla_top_key
@@ -465,6 +499,7 @@ function salirModoEmpaque() {
   c.modoEmpaque = false;
   c.empPrendas = [];
   c.empCombos = [];
+  c.empPoolEntries = [];
   c.empMarcados = null;
   renderAlumnosGlobal();
 }

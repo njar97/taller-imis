@@ -101,6 +101,29 @@
     </div>
   </div>
 
+  <!-- Modal: EMPACAR ACAPARADOS — consume pool con flujo manual o auto -->
+  <div id="bodega-empacar-acaparados-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:600px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" style="margin:0">📥 Empacar acaparados</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">Asignar las piezas acaparadas a alumnos. Manual = elegís uno por uno; Auto = se asigna a los primeros que coincidan.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarEmpacarAcaparadosModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="emp-aca-resumen" style="margin-bottom:10px">
+          <div class="text-muted" style="font-size:12px">Cargando pool...</div>
+        </div>
+      </div>
+      <div class="modal-footer" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="cerrarEmpacarAcaparadosModal()">Cancelar</button>
+        <button class="btn btn-warning" id="emp-aca-btn-auto" onclick="empacarAcaparadosAuto()" title="Asigna automáticamente a los primeros alumnos que coincidan">⚡ Auto marcar todos</button>
+        <button class="btn btn-success" id="emp-aca-btn-manual" onclick="empacarAcaparadosManual()">→ Marcar manualmente</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: SELECTOR de empaque (prendas + escuela) → manda al tab Registro -->
   <div id="bodega-empacar-selector-modal" class="modal" style="display:none">
     <div class="modal-content" style="max-width:500px">
