@@ -11,20 +11,23 @@
     <div class="text-muted" style="padding:20px;text-align:center">Cargando alumnos...</div>
   </div>
   
-  <!-- Modal: edición rápida de escuela (alias, nombre, código CDE, director) -->
+  <!-- Modal: editor completo de escuela (datos + contrato + tela recibida) -->
   <div id="escuela-edit-modal" class="modal" style="display:none">
-    <div class="modal-content" style="max-width:520px">
+    <div class="modal-content" style="max-width:620px">
       <div class="modal-header">
         <div>
-          <div class="card-title" style="margin:0">🏫 Editar escuela</div>
-          <div style="font-size:12px;color:#666;margin-top:2px">El <strong>alias</strong> es el nombre corto que aparece en las etiquetas y nombres de archivo.</div>
+          <div class="card-title" id="ese-titulo" style="margin:0">🏫 Editar escuela</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">Datos, contrato del año y tela recibida en un solo lugar.</div>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="cerrarEscuelaEdit()">✕</button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="ese-id">
+
+        <!-- ─── Sección 1: ESCUELA ─── -->
+        <div style="background:#F5F7FA;padding:6px 10px;font-weight:600;margin-bottom:8px;border-radius:4px">📋 Datos de la escuela</div>
         <div class="field">
-          <label>Alias (corto, sin espacios/símbolos)</label>
+          <label>Alias (corto, sin espacios) *</label>
           <input type="text" id="ese-alias" placeholder="Ej: ALBERTOGUERRA, ARCE, JEFFERSON" style="text-transform:uppercase">
           <div style="font-size:11px;color:#888;margin-top:2px">Mayúsculas. Se muestra en etiquetas y nombres de PDF.</div>
         </div>
@@ -52,10 +55,66 @@
             <input type="text" id="ese-municipio">
           </div>
         </div>
+
+        <!-- ─── Sección 2: CONTRATO ─── -->
+        <div style="background:#F5F7FA;padding:6px 10px;font-weight:600;margin:14px 0 8px 0;border-radius:4px">💰 Contrato <span id="ese-anio-label" style="color:#666;font-weight:normal;font-size:12px"></span></div>
+        <div class="row2">
+          <div class="field">
+            <label>Código contrato</label>
+            <input type="text" id="ese-cod-contrato" placeholder="Ej: ME-03/2025">
+          </div>
+          <div class="field">
+            <label>Proveedor</label>
+            <input type="text" id="ese-persona" placeholder="América, Imelda, Javier...">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Piezas Lote 1</label>
+            <input type="number" id="ese-pz-l1" min="0" step="1" placeholder="0">
+          </div>
+          <div class="field">
+            <label>Monto Lote 1 (USD)</label>
+            <input type="number" id="ese-mt-l1" min="0" step="0.01" placeholder="0.00">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Piezas Lote 2</label>
+            <input type="number" id="ese-pz-l2" min="0" step="1" placeholder="0">
+          </div>
+          <div class="field">
+            <label>Monto Lote 2 (USD)</label>
+            <input type="number" id="ese-mt-l2" min="0" step="0.01" placeholder="0.00">
+          </div>
+        </div>
+
+        <!-- ─── Sección 3: TELA RECIBIDA ─── -->
+        <div style="background:#F5F7FA;padding:6px 10px;font-weight:600;margin:14px 0 8px 0;border-radius:4px">📐 Tela recibida (yardas) <span style="color:#666;font-weight:normal;font-size:12px">— se compara con la utilizada en Estadística → Yardaje</span></div>
+        <div class="row2">
+          <div class="field">
+            <label>🟦 Celeste</label>
+            <input type="number" id="ese-tela-celeste" min="0" step="0.5" placeholder="0">
+          </div>
+          <div class="field">
+            <label>⬜ Blanca</label>
+            <input type="number" id="ese-tela-blanca" min="0" step="0.5" placeholder="0">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>🟦 Azul</label>
+            <input type="number" id="ese-tela-azul" min="0" step="0.5" placeholder="0">
+          </div>
+          <div class="field">
+            <label>🟫 Beige</label>
+            <input type="number" id="ese-tela-beige" min="0" step="0.5" placeholder="0">
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="cerrarEscuelaEdit()">Cancelar</button>
-        <button class="btn btn-success" onclick="guardarEscuelaEdit()">✓ Guardar</button>
+        <button class="btn btn-success" onclick="guardarEscuelaEdit()">✓ Guardar todo</button>
       </div>
     </div>
   </div>

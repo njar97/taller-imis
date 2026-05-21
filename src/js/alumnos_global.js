@@ -156,6 +156,7 @@ function renderAlumnosGlobal() {
             ${escuelasDisponibles.map(e => `<option value="${e.id}">${e.alias ? e.alias + ' · ' : ''}${e.nombre}</option>`).join('')}
           </select>
         ` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="nuevaEscuela()" title="Crear escuela nueva (datos + contrato + tela)">🏫 + Nueva escuela</button>
       </div>
 
       <!-- Fila 3: buscar + acciones -->
@@ -272,49 +273,144 @@ function aplicarFiltroEscuela(escuelaId) {
   alumnosGlobalCache.filtroEscuelas = escuelaId ? [escuelaId] : [];
   renderAlumnosGlobal();
 }
-// Editar escuela: abre modal con sus datos cargados
+// Abre modal de escuela. escuelaId=null para crear nueva.
 async function editarEscuela(escuelaId) {
-  try {
-    const res = await supaFetch('escuela', 'GET', null, `?id=eq.${escuelaId}&limit=1`);
-    if (!res || res.length === 0) { alert('Escuela no encontrada'); return; }
-    const e = res[0];
-    document.getElementById('ese-id').value        = e.id;
-    document.getElementById('ese-alias').value     = e.alias || '';
-    document.getElementById('ese-nombre').value    = e.nombre || '';
-    document.getElementById('ese-cde').value       = e.codigo_cde || '';
-    document.getElementById('ese-director').value  = e.director || '';
-    document.getElementById('ese-distrito').value  = e.distrito || '';
-    document.getElementById('ese-municipio').value = e.municipio || '';
+  const tempActiva = (registroCache.temporadas || []).find(t => t.estado === 'activa');
+  const anio = tempActiva ? tempActiva.anio : new Date().getFullYear();
+  const titulo = document.getElementById('ese-titulo');
+  const anioLabel = document.getElementById('ese-anio-label');
+  if (anioLabel) anioLabel.textContent = '(año ' + anio + ')';
+
+  // Resetear todos los campos
+  ['ese-alias','ese-nombre','ese-cde','ese-director','ese-distrito','ese-municipio',
+   'ese-cod-contrato','ese-persona','ese-pz-l1','ese-mt-l1','ese-pz-l2','ese-mt-l2',
+   'ese-tela-celeste','ese-tela-blanca','ese-tela-azul','ese-tela-beige']
+   .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+
+  if (!escuelaId) {
+    if (titulo) titulo.textContent = '🏫 Nueva escuela';
+    document.getElementById('ese-id').value = '';
     document.getElementById('escuela-edit-modal').style.display = 'flex';
-    setTimeout(() => {
-      const el = document.getElementById('ese-alias');
-      if (el) { el.focus(); el.select(); }
-    }, 100);
+    setTimeout(() => { const el = document.getElementById('ese-alias'); if (el) el.focus(); }, 100);
+    return;
+  }
+
+  if (titulo) titulo.textContent = '🏫 Editar escuela';
+  document.getElementById('ese-id').value = escuelaId;
+
+  try {
+    // Cargar datos de escuela + contrato del año activo en paralelo
+    const [escRes, conRes] = await Promise.all([
+      supaFetch('escuela', 'GET', null, `?id=eq.${escuelaId}&limit=1`),
+      supaFetch('contrato_escuela', 'GET', null, `?escuela_id=eq.${escuelaId}&anio=eq.${anio}&limit=1`).catch(() => []),
+    ]);
+    if (!escRes || escRes.length === 0) { alert('Escuela no encontrada'); return; }
+    const e = escRes[0];
+    const c = (conRes && conRes[0]) || {};
+
+    document.getElementById('ese-alias').value         = e.alias || '';
+    document.getElementById('ese-nombre').value        = e.nombre || '';
+    document.getElementById('ese-cde').value           = e.codigo_cde || '';
+    document.getElementById('ese-director').value      = e.director || '';
+    document.getElementById('ese-distrito').value      = e.distrito || '';
+    document.getElementById('ese-municipio').value     = e.municipio || '';
+
+    document.getElementById('ese-cod-contrato').value  = c.cod_contrato || '';
+    document.getElementById('ese-persona').value       = c.persona || '';
+    document.getElementById('ese-pz-l1').value         = c.piezas_lote1 || '';
+    document.getElementById('ese-mt-l1').value         = c.monto_lote1 || '';
+    document.getElementById('ese-pz-l2').value         = c.piezas_lote2 || '';
+    document.getElementById('ese-mt-l2').value         = c.monto_lote2 || '';
+
+    document.getElementById('ese-tela-celeste').value  = c.tela_celeste_yd || '';
+    document.getElementById('ese-tela-blanca').value   = c.tela_blanca_yd || '';
+    document.getElementById('ese-tela-azul').value     = c.tela_azul_yd || '';
+    document.getElementById('ese-tela-beige').value    = c.tela_beige_yd || '';
+
+    document.getElementById('escuela-edit-modal').style.display = 'flex';
+    setTimeout(() => { const el = document.getElementById('ese-alias'); if (el) { el.focus(); el.select(); } }, 100);
   } catch (err) { alert('Error: ' + err.message); }
 }
+
 function cerrarEscuelaEdit() {
   document.getElementById('escuela-edit-modal').style.display = 'none';
 }
+
 async function guardarEscuelaEdit() {
   const id = document.getElementById('ese-id').value;
-  const payload = {
-    alias:       document.getElementById('ese-alias').value.trim().toUpperCase() || null,
+  const alias = document.getElementById('ese-alias').value.trim().toUpperCase();
+  if (!alias) { alert('El alias es obligatorio.'); return; }
+
+  const tempActiva = (registroCache.temporadas || []).find(t => t.estado === 'activa');
+  const anio = tempActiva ? tempActiva.anio : new Date().getFullYear();
+
+  const escPayload = {
+    alias: alias,
     nombre:      document.getElementById('ese-nombre').value.trim() || null,
     codigo_cde:  document.getElementById('ese-cde').value.trim() || null,
     director:    document.getElementById('ese-director').value.trim() || null,
     distrito:    document.getElementById('ese-distrito').value.trim() || null,
     municipio:   document.getElementById('ese-municipio').value.trim() || null,
   };
+
+  const numOrZero = (id) => parseFloat(document.getElementById(id).value) || 0;
+  const conPayload = {
+    anio: anio,
+    cod_contrato:    document.getElementById('ese-cod-contrato').value.trim() || null,
+    persona:         document.getElementById('ese-persona').value.trim() || null,
+    piezas_lote1:    numOrZero('ese-pz-l1'),
+    monto_lote1:     numOrZero('ese-mt-l1'),
+    piezas_lote2:    numOrZero('ese-pz-l2'),
+    monto_lote2:     numOrZero('ese-mt-l2'),
+    tela_celeste_yd: numOrZero('ese-tela-celeste'),
+    tela_blanca_yd:  numOrZero('ese-tela-blanca'),
+    tela_azul_yd:    numOrZero('ese-tela-azul'),
+    tela_beige_yd:   numOrZero('ese-tela-beige'),
+  };
+
   try {
-    await supaUpdate('escuela', id, payload);
+    let escuelaId = id;
+    if (!escuelaId) {
+      // Nueva: insertar escuela
+      const r = await supaFetch('escuela', 'POST', { ...escPayload, activa: true });
+      escuelaId = Array.isArray(r) ? r[0]?.id : r?.id;
+      if (!escuelaId) throw new Error('No se pudo crear la escuela');
+    } else {
+      await supaUpdate('escuela', escuelaId, escPayload);
+    }
+
+    // Upsert contrato_escuela (anio + escuela_id es la unique)
+    conPayload.escuela_id = escuelaId;
+    // PostgREST upsert con Prefer: resolution=merge-duplicates
+    const url = `${SUPA_URL}/rest/v1/contrato_escuela?on_conflict=escuela_id,anio`;
+    const tok = (typeof authToken === 'function' ? authToken() : null) || SUPA_KEY;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${tok}`,
+        'Prefer': 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify(conPayload),
+    });
+    if (!res.ok) throw new Error('Error guardando contrato: ' + await res.text());
+
     // Refrescar cache local
-    if (alumnosGlobalCache.escuelas[id]) {
-      Object.assign(alumnosGlobalCache.escuelas[id], payload);
+    if (alumnosGlobalCache.escuelas[escuelaId]) {
+      Object.assign(alumnosGlobalCache.escuelas[escuelaId], escPayload);
+    } else if (id === '') {
+      // Nueva escuela: agregar al cache
+      alumnosGlobalCache.escuelas[escuelaId] = { id: escuelaId, ...escPayload, activa: true };
     }
     cerrarEscuelaEdit();
     renderAlumnosGlobal();
+    alert('✓ Guardado correctamente');
   } catch (err) { alert('Error al guardar: ' + err.message); }
 }
+
+// Atajo: abrir modal en modo "nueva escuela"
+function nuevaEscuela() { editarEscuela(null); }
 
 // Nuevos: multi-escuela
 function agregarFiltroEscuela(escuelaId) {
