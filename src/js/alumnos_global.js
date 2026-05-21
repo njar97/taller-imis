@@ -855,7 +855,32 @@ function _ejecutarGenerarEtiquetas(ordenSeleccion, { soloEmpacados = false, incl
   const html = renderHojaEtiquetas(grupos, columnas, incluirObs, c.escuelas, tempCode, lista.length);
   cerrarModalEtiquetas();
   // Generación directa de PDF sin ventana nueva (mobile-friendly)
-  generarPdfDirecto(html, `etiquetas_${new Date().toISOString().slice(0,10)}.pdf`);
+  generarPdfDirecto(html, construirNombreArchivo(c, tempActiva));
+}
+
+// Construye un nombre de archivo descriptivo según los filtros aplicados.
+// Ejemplos:
+//   etiquetas_ALBERTOGUERRA_2026-05-20.pdf
+//   etiquetas_ARCE_LAURELES_2026-05-20.pdf
+//   etiquetas_5escuelas_2026-05-20.pdf
+//   etiquetas_todas_falta-tallar_2026-05-20.pdf
+function construirNombreArchivo(cache, tempActiva) {
+  const sanitizar = (s) => (s || '').toString().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24);
+  const escSel = cache.filtroEscuelas || [];
+  let escTag;
+  if (escSel.length === 0) escTag = 'todas';
+  else if (escSel.length === 1) escTag = sanitizar(cache.escuelas[escSel[0]]?.alias || cache.escuelas[escSel[0]]?.nombre || 'esc');
+  else if (escSel.length <= 3) escTag = escSel.map(id => sanitizar(cache.escuelas[id]?.alias || 'esc')).join('-');
+  else escTag = escSel.length + 'escuelas';
+
+  const partes = ['etiquetas', escTag];
+  if (cache.filtroEstado && cache.filtroEstado !== 'sin_tallas') partes.push(sanitizar(cache.filtroEstado));
+  if (cache.filtroEstado === 'sin_tallas') partes.push('falta-tallar');
+  if (cache.filtroNivel) partes.push(sanitizar(cache.filtroNivel));
+  if (tempActiva && tempActiva.anio) partes.push(String(tempActiva.anio));
+  partes.push(new Date().toISOString().slice(0, 10));
+  return partes.join('_') + '.pdf';
 }
 
 // Lazy-loader de html2pdf — NO se carga en head.html para no bloquear
