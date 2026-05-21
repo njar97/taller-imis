@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-20 23:20 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-21 08:35 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1587,6 +1587,96 @@
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="cerrarEntradaManual()">Cancelar</button>
         <button class="btn btn-success" onclick="guardarEntradaManual()">✓ Registrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: ACAPARAR (cantidad por escuela+prenda+talla, sin alumnos) -->
+  <div id="bodega-acaparar-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:520px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" style="margin:0">📥 Acaparar para escuela</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">Bloquea una cantidad de piezas para una escuela. Descuenta stock, sin asignar alumnos todavía.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarAcapararModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Escuela *</label>
+          <select id="aca-escuela">
+            <option value="">— Elegí escuela —</option>
+          </select>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Prenda *</label>
+            <select id="aca-prenda" onchange="onAcapararPrendaCambio()">
+              <option value="">— Elegí prenda —</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Talla *</label>
+            <select id="aca-talla" onchange="onAcapararTallaCambio()">
+              <option value="">— Elegí talla —</option>
+            </select>
+          </div>
+        </div>
+        <div id="aca-stock-info" style="padding:8px 12px;background:#F5F7FA;border-radius:6px;margin-bottom:10px;font-size:13px;display:none">
+          Seleccioná prenda y talla
+        </div>
+        <div class="field">
+          <label>Cantidad a acaparar *</label>
+          <input type="number" id="aca-cantidad" min="1" placeholder="Ej: 10">
+        </div>
+        <div class="field">
+          <label>Observaciones</label>
+          <textarea id="aca-obs" rows="2" placeholder="Opcional"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarAcapararModal()">Cancelar</button>
+        <button class="btn btn-success" id="aca-btn-guardar" onclick="guardarAcaparar()">📥 Acaparar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: ENTREGAR A ESCUELA (marca general de un lote) -->
+  <div id="bodega-entrega-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:520px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" style="margin:0">🚚 Marcar entrega a escuela</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">Marca todos los alumnos EMPACADOS de la escuela como ENTREGADOS, con fecha de entrega.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarEntregaModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Escuela *</label>
+          <select id="ent-escuela" onchange="onEntregaEscuelaCambio()">
+            <option value="">— Elegí escuela —</option>
+          </select>
+        </div>
+        <div id="ent-resumen" style="padding:8px 12px;background:#F5F7FA;border-radius:6px;margin-bottom:10px;font-size:13px;display:none"></div>
+        <div class="row2">
+          <div class="field">
+            <label>Fecha de entrega *</label>
+            <input type="date" id="ent-fecha">
+          </div>
+          <div class="field">
+            <label>Recibió</label>
+            <input type="text" id="ent-receptor" placeholder="Nombre del receptor (opcional)">
+          </div>
+        </div>
+        <div class="field">
+          <label>Observaciones</label>
+          <textarea id="ent-obs" rows="2" placeholder="Opcional"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarEntregaModal()">Cancelar</button>
+        <button class="btn btn-success" id="ent-btn-guardar" onclick="guardarEntrega()">🚚 Marcar entregado</button>
       </div>
     </div>
   </div>
@@ -8914,8 +9004,10 @@ function renderStock() {
         Mostrar vacíos
       </label>
       <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()">📥 + Entrada</button>
-      <button class="btn btn-primary btn-sm" onclick="abrirAsignarModal()">🎯 Asignar / Empacar / Entregar</button>
-      <button class="btn btn-ghost btn-sm" onclick="abrirSalidaModal()" title="Salida genérica (sin alumnos)">🚚 Salida rápida</button>
+      <button class="btn btn-warning btn-sm" onclick="abrirAcapararModal()" title="Bloquear cantidad para una escuela (sin alumnos)">📥 Acaparar</button>
+      <button class="btn btn-primary btn-sm" onclick="abrirAsignarModal()">📦 Empacar a alumnos</button>
+      <button class="btn btn-success btn-sm" onclick="abrirEntregaModal()" title="Marcar todos los empacados de una escuela como entregados">🚚 Marcar entrega</button>
+      <button class="btn btn-ghost btn-sm" onclick="abrirSalidaModal()" title="Salida genérica (sin alumnos)">↗ Salida rápida</button>
       <button class="btn btn-ghost btn-sm" onclick="cargarBodegaStock()">🔄 Refrescar</button>
     </div>
   `;
@@ -9141,6 +9233,242 @@ async function guardarEntradaManual() {
     await cargarBodegaStock();
   } catch(e) {
     alert('Error: ' + e.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MODAL: ACAPARAR (pool por escuela+prenda+talla, sin alumnos)
+// ═══════════════════════════════════════════════════════════════════
+// Descuenta stock_actual de bodega + crea registro en escuela_acaparado
+// con cantidad_acaparada. Después al empacar individualmente, el pool
+// se va consumiendo (cantidad_consumida++).
+// ════════════════════════════════════════════════════════════════════
+let acapararCache = { escuelas: null, stock: null, prendaActual: null };
+
+async function abrirAcapararModal() {
+  const modal = document.getElementById('bodega-acaparar-modal');
+  if (!modal) return;
+  // Reset
+  ['aca-escuela','aca-prenda','aca-cantidad','aca-obs'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('aca-talla').innerHTML = '<option value="">— Elegí prenda primero —</option>';
+  document.getElementById('aca-stock-info').style.display = 'none';
+  modal.style.display = 'flex';
+  try {
+    if (!acapararCache.escuelas) {
+      acapararCache.escuelas = await supaFetchAll('escuela',
+        '?activa=eq.true&select=id,alias,nombre,codigo_cde&order=alias');
+    }
+    acapararCache.stock = await supaFetchAll('vw_bodega_stock',
+      '?stock_actual=gt.0&select=cod_prenda,nombre_prenda,talla_key,stock_actual');
+    const acaDisp = await supaFetchAll('vw_acaparado_disponible',
+      '?select=escuela_id,nombre_prenda,talla_key,disponible');
+    acapararCache.acaparadoAjeno = acaDisp;  // todo el acaparado (de cualquier escuela)
+
+    const selE = document.getElementById('aca-escuela');
+    selE.innerHTML = '<option value="">— Elegí escuela —</option>' +
+      acapararCache.escuelas.map(e => `<option value="${e.id}">${e.alias || e.nombre}${e.codigo_cde ? ' · '+e.codigo_cde : ''}</option>`).join('');
+
+    const prendas = [...new Set(acapararCache.stock.map(s => s.nombre_prenda || s.cod_prenda))].sort();
+    const selP = document.getElementById('aca-prenda');
+    selP.innerHTML = '<option value="">— Elegí prenda —</option>' +
+      prendas.map(p => `<option value="${p}">${p}</option>`).join('');
+  } catch (e) { alert('Error: ' + e.message); }
+}
+function cerrarAcapararModal() { document.getElementById('bodega-acaparar-modal').style.display = 'none'; }
+
+function onAcapararPrendaCambio() {
+  const prenda = document.getElementById('aca-prenda').value;
+  const selT = document.getElementById('aca-talla');
+  if (!prenda) { selT.innerHTML = '<option value="">— Elegí prenda primero —</option>'; return; }
+  const tallas = (acapararCache.stock || [])
+    .filter(s => (s.nombre_prenda || s.cod_prenda) === prenda)
+    .sort((a,b) => (a.talla_key||'').localeCompare(b.talla_key||'', 'es', { numeric: true }));
+  selT.innerHTML = '<option value="">— Elegí talla —</option>' +
+    tallas.map(s => `<option value="${s.talla_key}">${s.talla_key} (stock ${s.stock_actual})</option>`).join('');
+  onAcapararTallaCambio();
+}
+function onAcapararTallaCambio() {
+  const prenda = document.getElementById('aca-prenda').value;
+  const talla = document.getElementById('aca-talla').value;
+  const info = document.getElementById('aca-stock-info');
+  if (!prenda || !talla) { info.style.display = 'none'; return; }
+  const row = (acapararCache.stock || []).find(s =>
+    (s.nombre_prenda || s.cod_prenda) === prenda && s.talla_key === talla);
+  const stock = row ? (row.stock_actual || 0) : 0;
+  // Acaparado total de TODAS las escuelas para este prenda+talla
+  const acapTotal = (acapararCache.acaparadoAjeno || [])
+    .filter(a => a.nombre_prenda === prenda && a.talla_key === talla)
+    .reduce((s, a) => s + (Number(a.disponible) || 0), 0);
+  const libre = Math.max(0, stock - acapTotal);
+  info.style.display = '';
+  info.innerHTML = `
+    <strong>${prenda} ${talla}</strong>:
+    Stock <strong>${stock}</strong>
+    · Acaparado por otras escuelas <strong>${acapTotal}</strong>
+    · <span style="color:var(--verde);font-weight:700">Libre para acaparar: ${libre}</span>
+  `;
+  document.getElementById('aca-cantidad').max = libre;
+}
+
+async function guardarAcaparar() {
+  const escId = document.getElementById('aca-escuela').value;
+  const prenda = document.getElementById('aca-prenda').value;
+  const talla = document.getElementById('aca-talla').value;
+  const cant = parseInt(document.getElementById('aca-cantidad').value, 10);
+  const obs = document.getElementById('aca-obs').value.trim() || null;
+  if (!escId) return alert('Elegí escuela');
+  if (!prenda) return alert('Elegí prenda');
+  if (!talla) return alert('Elegí talla');
+  if (!cant || cant <= 0) return alert('Cantidad inválida');
+
+  // Validar disponibilidad
+  const row = (acapararCache.stock || []).find(s =>
+    (s.nombre_prenda || s.cod_prenda) === prenda && s.talla_key === talla);
+  const stock = row ? (row.stock_actual || 0) : 0;
+  const acapTotal = (acapararCache.acaparadoAjeno || [])
+    .filter(a => a.nombre_prenda === prenda && a.talla_key === talla)
+    .reduce((s, a) => s + (Number(a.disponible) || 0), 0);
+  const libre = Math.max(0, stock - acapTotal);
+  if (cant > libre) return alert(`Solo hay ${libre} libres para acaparar (${prenda} ${talla}).`);
+
+  const cod = _codPrenda(prenda);
+  const btn = document.getElementById('aca-btn-guardar');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Guardando...'; }
+
+  try {
+    // 1) Crear movimiento de bodega que descuenta stock (sin alumno_id, escuela_id set)
+    const movs = await supaFetch('bodega_movimiento', 'POST', {
+      tipo: 'SALIDA_EMPAQUE',
+      cod_prenda: cod, nombre_prenda: prenda, talla_key: talla,
+      cantidad: cant, escuela_id: escId,
+      fecha: new Date().toISOString().slice(0,10),
+      observaciones: 'Acaparado para escuela' + (obs ? ' · '+obs : ''),
+    });
+    const movId = Array.isArray(movs) ? movs[0]?.id : movs?.id;
+
+    // 2) Crear registro en escuela_acaparado
+    await supaFetch('escuela_acaparado', 'POST', {
+      escuela_id: escId,
+      cod_prenda: cod, nombre_prenda: prenda, talla_key: talla,
+      cantidad_acaparada: cant,
+      cantidad_consumida: 0,
+      movimiento_bodega_id: movId,
+      observaciones: obs,
+    });
+
+    cerrarAcapararModal();
+    if (bodegaCache.vistaActual === 'stock') await cargarBodegaStock();
+    else if (bodegaCache.vistaActual === 'movimientos') await cargarMovimientos();
+    else if (bodegaCache.vistaActual === 'vs_demanda') await cargarBodegaVsDemanda();
+    acapararCache.stock = null;
+    alert(`✓ Acaparado ${cant} ${prenda} ${talla} para esta escuela.`);
+  } catch (e) {
+    alert('Error: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📥 Acaparar'; }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MODAL: ENTREGA MASIVA POR ESCUELA
+// ═══════════════════════════════════════════════════════════════════
+let entregaCache = { escuelas: null };
+
+async function abrirEntregaModal() {
+  const modal = document.getElementById('bodega-entrega-modal');
+  if (!modal) return;
+  document.getElementById('ent-escuela').value = '';
+  document.getElementById('ent-fecha').value = new Date().toISOString().slice(0,10);
+  document.getElementById('ent-receptor').value = '';
+  document.getElementById('ent-obs').value = '';
+  document.getElementById('ent-resumen').style.display = 'none';
+  modal.style.display = 'flex';
+  try {
+    if (!entregaCache.escuelas) {
+      entregaCache.escuelas = await supaFetchAll('escuela',
+        '?activa=eq.true&select=id,alias,nombre&order=alias');
+    }
+    const sel = document.getElementById('ent-escuela');
+    sel.innerHTML = '<option value="">— Elegí escuela —</option>' +
+      entregaCache.escuelas.map(e => `<option value="${e.id}">${e.alias || e.nombre}</option>`).join('');
+  } catch(e) { alert('Error: '+e.message); }
+}
+function cerrarEntregaModal() { document.getElementById('bodega-entrega-modal').style.display = 'none'; }
+
+async function onEntregaEscuelaCambio() {
+  const escId = document.getElementById('ent-escuela').value;
+  const info = document.getElementById('ent-resumen');
+  if (!escId) { info.style.display = 'none'; return; }
+  try {
+    const empacados = await supaFetch('alumno', 'GET', null,
+      `?escuela_id=eq.${escId}&or=(estado_top.eq.empacado,estado_bottom.eq.empacado)&select=id,estado_top,estado_bottom&limit=10000`);
+    let n = 0;
+    for (const a of empacados) {
+      if (a.estado_top === 'empacado') n++;
+      if (a.estado_bottom === 'empacado') n++;
+    }
+    info.style.display = '';
+    info.innerHTML = n === 0
+      ? '<span style="color:#c44">⚠ No hay piezas empacadas pendientes de entrega para esta escuela.</span>'
+      : `📦 <strong>${empacados.length} alumno(s)</strong> con <strong>${n} pieza(s)</strong> empacadas. Al confirmar se marcan como entregadas con la fecha indicada.`;
+  } catch (e) { info.innerHTML = 'Error: ' + e.message; info.style.display=''; }
+}
+
+async function guardarEntrega() {
+  const escId = document.getElementById('ent-escuela').value;
+  const fecha = document.getElementById('ent-fecha').value;
+  const receptor = document.getElementById('ent-receptor').value.trim() || null;
+  const obs = document.getElementById('ent-obs').value.trim() || null;
+  if (!escId) return alert('Elegí escuela');
+  if (!fecha) return alert('Elegí fecha');
+
+  const btn = document.getElementById('ent-btn-guardar');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Aplicando...'; }
+  try {
+    // Contar empacados antes
+    const empacados = await supaFetch('alumno', 'GET', null,
+      `?escuela_id=eq.${escId}&or=(estado_top.eq.empacado,estado_bottom.eq.empacado)&select=id,estado_top,estado_bottom&limit=10000`);
+    let n = 0;
+    for (const a of empacados) {
+      if (a.estado_top === 'empacado') n++;
+      if (a.estado_bottom === 'empacado') n++;
+    }
+    if (n === 0) {
+      alert('No hay piezas empacadas pendientes para entregar.');
+      return;
+    }
+
+    // UPDATE bulk vía SQL (más rápido que uno por uno)
+    const sql = `
+      UPDATE public.alumno SET estado_top='entregado', actualizado_en=now()
+      WHERE escuela_id='${escId}' AND estado_top='empacado';
+      UPDATE public.alumno SET estado_bottom='entregado', actualizado_en=now()
+      WHERE escuela_id='${escId}' AND estado_bottom='empacado';
+    `;
+    const tok = (typeof authToken === 'function' ? authToken() : null) || SUPA_KEY;
+    const res = await fetch(`${SUPA_URL}/rest/v1/rpc/exec_sql`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}` },
+      body: JSON.stringify({ sql }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+
+    // Crear registro de entrega
+    await supaFetch('entrega_escuela', 'POST', {
+      escuela_id: escId, fecha, cantidad_piezas: n,
+      receptor, observaciones: obs,
+    });
+
+    cerrarEntregaModal();
+    if (bodegaCache.vistaActual === 'stock') await cargarBodegaStock();
+    else if (bodegaCache.vistaActual === 'movimientos') await cargarMovimientos();
+    alert(`✓ ${n} pieza(s) marcadas como entregadas a la escuela el ${fecha}.`);
+  } catch (e) {
+    alert('Error: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🚚 Marcar entregado'; }
   }
 }
 
@@ -9447,39 +9775,60 @@ async function aplicarAsignar() {
 
   const alumnos = asignarCache.filtrados.filter(a => ids.includes(a.id));
 
+  // Pre-cargar pool acaparado por escuelas afectadas (sólo si vamos a empacar)
+  // pool = mapa "escuela|prenda|talla" → { id, disponible }
+  // Cuando se empaca un alumno y hay pool disponible, en vez de descontar stock
+  // se incrementa cantidad_consumida del pool.
+  const pool = {};
+  if (accion === 'empacado') {
+    try {
+      const escIds = [...new Set(alumnos.map(a => a.escuela_id).filter(Boolean))];
+      if (escIds.length) {
+        const rows = await supaFetchAll('escuela_acaparado',
+          `?escuela_id=in.(${escIds.join(',')})&select=id,escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida`);
+        for (const r of rows) {
+          const k = r.escuela_id + '|' + r.nombre_prenda + '|' + r.talla_key;
+          const disp = (Number(r.cantidad_acaparada) || 0) - (Number(r.cantidad_consumida) || 0);
+          if (disp <= 0) continue;
+          // Si hay varios registros para la misma combinación, agruparlos
+          if (!pool[k]) pool[k] = { rows: [], disponible: 0 };
+          pool[k].rows.push({ id: r.id, libres: disp });
+          pool[k].disponible += disp;
+        }
+      }
+    } catch (e) { console.warn('No se pudo cargar pool acaparado:', e); }
+  }
+
   // VALIDACIÓN DE STOCK: para Empacar/Entregar, simular consumo y bloquear
-  // si alguna combinación prenda+talla excede el stock disponible (libre + acaparado).
+  // si alguna combinación prenda+talla excede el stock disponible (pool + libre).
   // Acaparar no requiere validación porque no toca stock físico.
   if (accion !== 'reservado') {
-    const consumo = {};  // "prenda|talla" → cantidad nueva a empacar/entregar (que NO viene de empacado/acaparado previo)
-    const consumoMio = {}; // por escuela
+    const consumoStock = {};  // "prenda|talla" → piezas que DEBEN salir del stock (no pool)
+    // Simular: cada pieza intenta primero consumir pool de su escuela
+    const poolSim = {};
+    for (const k of Object.keys(pool)) poolSim[k] = pool[k].disponible;
     for (const a of alumnos) {
-      const evaluarPieza = (prenda, talla, estado, elig) => {
+      const tryConsume = (prenda, talla, estado, elig) => {
         if (!elig || !talla) return;
-        // Estos casos NO consumen stock nuevo:
-        // - Si ya estaba empacado (entregar lo ya empacado) → no consume
-        // - Si estaba reservado (acaparado) → consume del acaparado, no del libre
         if (estado === 'empacado') return;
-        if (estado === 'reservado') {
-          const k = prenda + '|' + talla + '|' + a.escuela_id;
-          consumoMio[k] = (consumoMio[k] || 0) + 1;
-          return;
+        if (accion === 'empacado') {
+          const kPool = a.escuela_id + '|' + prenda + '|' + talla;
+          if ((poolSim[kPool] || 0) > 0) { poolSim[kPool]--; return; }
         }
-        // pendiente → empacar/entregar requiere stock libre
-        const k = prenda + '|' + talla;
-        consumo[k] = (consumo[k] || 0) + 1;
+        const kStock = prenda + '|' + talla;
+        consumoStock[kStock] = (consumoStock[kStock] || 0) + 1;
       };
-      if (a._topElig) evaluarPieza(a.prenda_top, a.talla_top_key, a.estado_top);
-      if (a._botElig) evaluarPieza(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom);
+      if (a._topElig) tryConsume(a.prenda_top, a.talla_top_key, a.estado_top, true);
+      if (a._botElig) tryConsume(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom, true);
     }
     const errores = [];
-    for (const [k, n] of Object.entries(consumo)) {
+    for (const [k, n] of Object.entries(consumoStock)) {
       const [prenda, talla] = k.split('|');
       const row = asignarCache.stock.find(s =>
         ((s.nombre_prenda || s.cod_prenda) === prenda) && s.talla_key === talla);
       const disp = row ? (Number(row.stock_actual) || 0) : 0;
       if (n > disp) {
-        errores.push(`${prenda} ${talla}: querés ${n} pero solo hay ${disp} en bodega`);
+        errores.push(`${prenda} ${talla}: querés ${n} de bodega libre pero solo hay ${disp}`);
       }
     }
     if (errores.length > 0) {
@@ -9488,8 +9837,8 @@ async function aplicarAsignar() {
         errores.join('\n') +
         '\n\nOpciones:\n' +
         '  • Registrá entrada en bodega primero\n' +
-        '  • Desmarcá los alumnos en rojo (🔴) y aplicá solo los que tienen stock\n' +
-        '  • Si tu stock no es preciso, usá "📥 Acaparar" en vez de empacar'
+        '  • Acaparar primero para reservar piezas para esta escuela\n' +
+        '  • Desmarcá los alumnos sin stock y aplicá los demás'
       );
       return;
     }
@@ -9499,8 +9848,27 @@ async function aplicarAsignar() {
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Aplicando...'; }
 
   try {
-    let totalTopUpdated = 0, totalBotUpdated = 0;
+    let totalTopUpdated = 0, totalBotUpdated = 0, pieasDesdePool = 0;
     const movs = [];
+    // Track de consumos del pool a aplicar al final: rowId → delta de cantidad_consumida
+    const poolDelta = {};
+
+    // Intenta consumir 1 unidad del pool para escuela+prenda+talla. Retorna true si pudo.
+    const consumirDelPool = (escId, prenda, talla) => {
+      const k = escId + '|' + prenda + '|' + talla;
+      const entry = pool[k];
+      if (!entry || entry.disponible <= 0) return false;
+      // Buscar el primer row con libres > 0
+      for (const r of entry.rows) {
+        if (r.libres > 0) {
+          r.libres--;
+          entry.disponible--;
+          poolDelta[r.id] = (poolDelta[r.id] || 0) + 1;
+          return true;
+        }
+      }
+      return false;
+    };
 
     // Procesar cada alumno: actualizar estados y juntar movimientos
     for (const a of alumnos) {
@@ -9508,22 +9876,11 @@ async function aplicarAsignar() {
       if (a._topElig) {
         update.estado_top = accion;
         if (accion === 'empacado') {
-          movs.push({
-            tipo: 'SALIDA_EMPAQUE',
-            cod_prenda: _codPrenda(a.prenda_top),
-            nombre_prenda: a.prenda_top,
-            talla_key: a.talla_top_key,
-            cantidad: 1,
-            alumno_id: a.id,
-            escuela_id: a.escuela_id,
-            fecha: new Date().toISOString().slice(0,10),
-            observaciones: `Empacado para ${a.nombre}`,
-          });
-        } else if (accion === 'entregado' && a.estado_top !== 'entregado') {
-          if (accion === 'entregado' && (a.estado_top === 'reservado' || !a.estado_top || a.estado_top === 'pendiente')) {
-            // Si saltea empacado, también descuenta bodega
+          if (consumirDelPool(a.escuela_id, a.prenda_top, a.talla_top_key)) {
+            pieasDesdePool++;
+          } else {
             movs.push({
-              tipo: 'SALIDA_ENTREGA',
+              tipo: 'SALIDA_EMPAQUE',
               cod_prenda: _codPrenda(a.prenda_top),
               nombre_prenda: a.prenda_top,
               talla_key: a.talla_top_key,
@@ -9531,27 +9888,43 @@ async function aplicarAsignar() {
               alumno_id: a.id,
               escuela_id: a.escuela_id,
               fecha: new Date().toISOString().slice(0,10),
-              observaciones: `Entregado directo a ${a.nombre}`,
+              observaciones: `Empacado para ${a.nombre}`,
             });
           }
-          // Si venía de empacado, no genera movimiento extra (ya se descontó al empacar)
+        } else if (accion === 'entregado' && a.estado_top !== 'entregado'
+                   && (a.estado_top === 'reservado' || !a.estado_top || a.estado_top === 'pendiente')) {
+          movs.push({
+            tipo: 'SALIDA_ENTREGA',
+            cod_prenda: _codPrenda(a.prenda_top),
+            nombre_prenda: a.prenda_top,
+            talla_key: a.talla_top_key,
+            cantidad: 1,
+            alumno_id: a.id,
+            escuela_id: a.escuela_id,
+            fecha: new Date().toISOString().slice(0,10),
+            observaciones: `Entregado directo a ${a.nombre}`,
+          });
         }
         totalTopUpdated++;
       }
       if (a._botElig) {
         update.estado_bottom = accion;
         if (accion === 'empacado') {
-          movs.push({
-            tipo: 'SALIDA_EMPAQUE',
-            cod_prenda: _codPrenda(a.prenda_bottom),
-            nombre_prenda: a.prenda_bottom,
-            talla_key: a.talla_bottom_key,
-            cantidad: 1,
-            alumno_id: a.id,
-            escuela_id: a.escuela_id,
-            fecha: new Date().toISOString().slice(0,10),
-            observaciones: `Empacado para ${a.nombre}`,
-          });
+          if (consumirDelPool(a.escuela_id, a.prenda_bottom, a.talla_bottom_key)) {
+            pieasDesdePool++;
+          } else {
+            movs.push({
+              tipo: 'SALIDA_EMPAQUE',
+              cod_prenda: _codPrenda(a.prenda_bottom),
+              nombre_prenda: a.prenda_bottom,
+              talla_key: a.talla_bottom_key,
+              cantidad: 1,
+              alumno_id: a.id,
+              escuela_id: a.escuela_id,
+              fecha: new Date().toISOString().slice(0,10),
+              observaciones: `Empacado para ${a.nombre}`,
+            });
+          }
         } else if (accion === 'entregado' && a.estado_bottom !== 'entregado'
                    && (a.estado_bottom === 'reservado' || !a.estado_bottom || a.estado_bottom === 'pendiente')) {
           movs.push({
@@ -9571,16 +9944,30 @@ async function aplicarAsignar() {
       await supaUpdate('alumno', a.id, update);
     }
 
-    // Insertar todos los movimientos de una en bulk
+    // Insertar movimientos en bulk (sólo los que no vinieron del pool)
     if (movs.length > 0) {
       await supaFetch('bodega_movimiento', 'POST', movs);
+    }
+    // Actualizar cantidad_consumida del pool (no hay endpoint atómico, lo hacemos por SQL)
+    if (Object.keys(poolDelta).length > 0) {
+      const stmts = Object.entries(poolDelta).map(([id, d]) =>
+        `UPDATE public.escuela_acaparado SET cantidad_consumida = cantidad_consumida + ${d} WHERE id='${id}';`);
+      const sql = stmts.join('\n');
+      const tok = (typeof authToken === 'function' ? authToken() : null) || SUPA_KEY;
+      const res = await fetch(`${SUPA_URL}/rest/v1/rpc/exec_sql`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':`Bearer ${tok}` },
+        body: JSON.stringify({ sql }),
+      });
+      if (!res.ok) throw new Error('Error actualizando pool: ' + await res.text());
     }
 
     cerrarAsignarModal();
     if (bodegaCache.vistaActual === 'stock') await cargarBodegaStock();
     else if (bodegaCache.vistaActual === 'movimientos') await cargarMovimientos();
     else if (bodegaCache.vistaActual === 'vs_demanda') await cargarBodegaVsDemanda();
-    alert(`✓ ${alumnos.length} alumno(s) actualizados (${totalTopUpdated} tops · ${totalBotUpdated} bottoms). ${movs.length} movimiento(s) de bodega.`);
+    const detPool = pieasDesdePool > 0 ? ` · ${pieasDesdePool} pieza(s) del pool acaparado` : '';
+    alert(`✓ ${alumnos.length} alumno(s) actualizados (${totalTopUpdated} tops · ${totalBotUpdated} bottoms). ${movs.length} movimiento(s) de bodega${detPool}.`);
   } catch (e) {
     alert('Error: ' + e.message);
   } finally {
