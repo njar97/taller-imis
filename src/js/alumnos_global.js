@@ -95,43 +95,34 @@ const ORDEN_CMP = {
   talla_bot: (a,b) => (a.talla_bottom_key||'').localeCompare(b.talla_bottom_key||'', 'es', { numeric: true }),
 };
 
-function renderAlumnosGlobal() {
-  const cont = document.getElementById('alumnos-global-contenido');
-  if (!cont) return;
+// Filtro compartido entre la tabla del tab Registro y el PDF de etiquetas.
+// opts.requiereAlgunaTalla = true → excluye alumnos sin top y sin bottom
+//   (útil para etiquetas, que no tendrían qué imprimir).
+// opts.soloEmpacados = true → además filtra a los que tienen al menos una
+//   pieza empacada (para "Solo empacados" del modal de etiquetas).
+function aplicarFiltrosAlumnos(c, opts = {}) {
+  const { requiereAlgunaTalla = false, soloEmpacados = false } = opts;
 
-  const c = alumnosGlobalCache;
+  // Modo empaque - pool > combos > prendas (en orden de precedencia)
   let lista = c.alumnos;
-
-  // Filtro modo empaque - pool acaparado: alumno matchea alguna entry del pool
-  // (mismo escuela + prenda + talla, con pieza pendiente).
-  // Tiene prioridad sobre combos/prendas si está definido.
   if (c.modoEmpaque && Array.isArray(c.empPoolEntries) && c.empPoolEntries.length > 0) {
-    lista = lista.filter(a => {
-      return c.empPoolEntries.some(p => {
-        if (a.escuela_id !== p.escuela_id) return false;
-        const topMatch = a.prenda_top === p.prenda && a.talla_top_key === p.talla
-          && a.estado_top !== 'empacado' && a.estado_top !== 'entregado';
-        const botMatch = a.prenda_bottom === p.prenda && a.talla_bottom_key === p.talla
-          && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado';
-        return topMatch || botMatch;
-      });
-    });
-  }
-  // Filtro modo empaque: si hay combos, alumno tiene que matchear nivel+sexo
-  // de algún combo Y tener pieza pendiente con la prenda+talla del combo.
-  // Si no hay combos (compat con flujo viejo) usamos solo empPrendas.
-  else if (c.modoEmpaque && Array.isArray(c.empCombos) && c.empCombos.length > 0) {
-    lista = lista.filter(a => {
-      return c.empCombos.some(combo => {
-        if (a.nivel !== combo.nivel) return false;
-        if (a.sexo !== combo.sexo) return false;
-        const topMatch = combo.prenda_top && a.prenda_top === combo.prenda_top && a.talla_top_key
-          && a.estado_top !== 'empacado' && a.estado_top !== 'entregado';
-        const botMatch = combo.prenda_bottom && a.prenda_bottom === combo.prenda_bottom && a.talla_bottom_key
-          && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado';
-        return topMatch || botMatch;
-      });
-    });
+    lista = lista.filter(a => c.empPoolEntries.some(p => {
+      if (a.escuela_id !== p.escuela_id) return false;
+      const topMatch = a.prenda_top === p.prenda && a.talla_top_key === p.talla
+        && a.estado_top !== 'empacado' && a.estado_top !== 'entregado';
+      const botMatch = a.prenda_bottom === p.prenda && a.talla_bottom_key === p.talla
+        && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado';
+      return topMatch || botMatch;
+    }));
+  } else if (c.modoEmpaque && Array.isArray(c.empCombos) && c.empCombos.length > 0) {
+    lista = lista.filter(a => c.empCombos.some(combo => {
+      if (a.nivel !== combo.nivel || a.sexo !== combo.sexo) return false;
+      const topMatch = combo.prenda_top && a.prenda_top === combo.prenda_top && a.talla_top_key
+        && a.estado_top !== 'empacado' && a.estado_top !== 'entregado';
+      const botMatch = combo.prenda_bottom && a.prenda_bottom === combo.prenda_bottom && a.talla_bottom_key
+        && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado';
+      return topMatch || botMatch;
+    }));
   } else if (c.modoEmpaque && Array.isArray(c.empPrendas) && c.empPrendas.length > 0) {
     const setP = new Set(c.empPrendas);
     lista = lista.filter(a => {
@@ -143,7 +134,6 @@ function renderAlumnosGlobal() {
     });
   }
 
-  // Filtros
   if (c.busqueda) {
     const q = c.busqueda.toLowerCase().trim();
     lista = lista.filter(a => (a.nombre||'').toLowerCase().includes(q));
@@ -161,13 +151,28 @@ function renderAlumnosGlobal() {
       if (c.filtroEstado === 'sin_tallas') return alumnoSinTallas(a);
       const t = a.estado_top, b = a.estado_bottom;
       if (c.filtroEstado === 'pendiente') return t==='pendiente' && b==='pendiente' && !alumnoSinTallas(a);
-      if (c.filtroEstado === 'parcial') 
+      if (c.filtroEstado === 'parcial')
         return (t==='empacado' && b!=='empacado') || (b==='empacado' && t!=='empacado');
-      if (c.filtroEstado === 'completo') return t==='empacado' && b==='empacado';
+      if (c.filtroEstado === 'completo')  return t==='empacado' && b==='empacado';
       if (c.filtroEstado === 'entregado') return t==='entregado' && b==='entregado';
       return true;
     });
   }
+  if (requiereAlgunaTalla) {
+    lista = lista.filter(a => a.talla_top_key || a.talla_bottom_key);
+  }
+  if (soloEmpacados) {
+    lista = lista.filter(a => a.estado_top === 'empacado' || a.estado_bottom === 'empacado');
+  }
+  return lista;
+}
+
+function renderAlumnosGlobal() {
+  const cont = document.getElementById('alumnos-global-contenido');
+  if (!cont) return;
+
+  const c = alumnosGlobalCache;
+  let lista = aplicarFiltrosAlumnos(c);
 
   // Aplicar el orden seleccionado en el header (mismo que usa el PDF de etiquetas)
   // para que la tabla de Registro se vea ordenada igual que va a salir el PDF.
@@ -1246,11 +1251,22 @@ function generarResumenFiltros() {
   } else {
     partes.push(`🏫 ${escSel.length} escuelas`);
   }
-  if (c.filtroNivel)  partes.push(`nivel ${c.filtroNivel}`);
-  if (c.filtroEstado && c.filtroEstado !== 'sin_tallas') partes.push(`estado ${c.filtroEstado}`);
-  if (c.busqueda)     partes.push(`búsqueda "${c.busqueda}"`);
+  if (c.filtroNivel)     partes.push(`nivel ${c.filtroNivel}`);
+  if (c.filtroEstado)    partes.push(`estado ${c.filtroEstado}`);
+  if (c.filtroTemporada) {
+    const t = (registroCache.temporadas || []).find(x => x.id === c.filtroTemporada);
+    partes.push(`temporada ${t ? (t.codigo || t.anio) : '(custom)'}`);
+  }
+  if (c.busqueda) partes.push(`búsqueda "${c.busqueda}"`);
+  if (c.modoEmpaque) partes.push('📦 modo empaque');
+  // Conteo previo
+  let n = '—';
+  try {
+    n = aplicarFiltrosAlumnos(c, { requiereAlgunaTalla: true }).length;
+  } catch(_) {}
   return `
     <div style="font-size:12px;color:#555"><strong>Filtros activos:</strong> ${partes.join(' · ')}</div>
+    <div style="font-size:12px;color:#555;margin-top:2px"><strong>Coincidencias con tallas:</strong> ${n}</div>
     <div style="font-size:10px;color:#888;margin-top:2px">Para cambiarlos, cerrá este diálogo y ajustá en la página.</div>
   `;
 }
@@ -1277,46 +1293,30 @@ function generarEtiquetas() {
   _ejecutarGenerarEtiquetas(ordenSeleccion.filter(Boolean), { soloEmpacados, incluirObs });
 }
 
-// Núcleo de generación de etiquetas. Usa los filtros vigentes en la página.
-// Multi-escuela: si filtroEscuelas tiene items, filtra por esos; si está vacío, todas.
+// Núcleo de generación de etiquetas. Usa los filtros vigentes en la página
+// vía aplicarFiltrosAlumnos para ser 1:1 con lo que se ve en la tabla.
+// Si el usuario no fijó filtroTemporada, fallback a la temporada activa
+// (preserva el comportamiento default cuando no hay filtro explícito).
 function _ejecutarGenerarEtiquetas(ordenSeleccion, { soloEmpacados = false, incluirObs = false } = {}) {
   const c = alumnosGlobalCache;
   const tempActiva = (registroCache.temporadas || []).find(t => t.estado === 'activa');
-  const tempId = tempActiva ? tempActiva.id : '';
   const columnas = 1; // hardcoded — tira tipo Excel
   ordenSeleccion = (ordenSeleccion || []).filter(Boolean);
   if (ordenSeleccion.length === 0) ordenSeleccion = [...ET_ORDEN_DEFAULT];
 
-  // Multi-escuela desde la página
-  const escuelasSel = (c.filtroEscuelas && c.filtroEscuelas.length > 0)
-    ? new Set(c.filtroEscuelas)
-    : (c.filtroEscuela ? new Set([c.filtroEscuela]) : null);
-
-  let lista = c.alumnos.filter(a => {
-    if (!a.talla_top_key && !a.talla_bottom_key) return false;
-    if (tempId && a.temporada_id !== tempId) return false;
-    if (escuelasSel && !escuelasSel.has(a.escuela_id)) return false;
-    if (c.filtroNivel && a.nivel !== c.filtroNivel) return false;
-    if (c.filtroEstado === 'completo'  && !(a.estado_top==='empacado' && a.estado_bottom==='empacado')) return false;
-    if (c.filtroEstado === 'entregado' && !(a.estado_top==='entregado' && a.estado_bottom==='entregado')) return false;
-    if (c.filtroEstado === 'pendiente' && !(a.estado_top==='pendiente' && a.estado_bottom==='pendiente')) return false;
-    if (c.filtroEstado === 'parcial') {
-      const parcial = (a.estado_top==='empacado' && a.estado_bottom!=='empacado') || (a.estado_bottom==='empacado' && a.estado_top!=='empacado');
-      if (!parcial) return false;
-    }
-    if (c.busqueda) {
-      const q = c.busqueda.toLowerCase().trim();
-      if (!(a.nombre||'').toLowerCase().includes(q)) return false;
-    }
-    if (soloEmpacados) {
-      const algEmp = a.estado_top === 'empacado' || a.estado_bottom === 'empacado';
-      if (!algEmp) return false;
-    }
-    return true;
-  });
+  // Si no hay filtroTemporada explícito, aplicar temporada activa como default
+  // para no imprimir alumnos de temporadas viejas inactivas por accidente.
+  const filtroTempBackup = c.filtroTemporada;
+  if (!filtroTempBackup && tempActiva) c.filtroTemporada = tempActiva.id;
+  let lista;
+  try {
+    lista = aplicarFiltrosAlumnos(c, { requiereAlgunaTalla: true, soloEmpacados });
+  } finally {
+    c.filtroTemporada = filtroTempBackup;  // no contaminar el cache
+  }
 
   if (lista.length === 0) {
-    alert('No hay alumnos para etiquetar con esos filtros.\nAsegurate de que las escuelas seleccionadas tengan alumnos con tallas cargadas.');
+    alert('No hay alumnos para etiquetar con esos filtros.\nRevisá los filtros activos (escuela, nivel, estado, búsqueda) y asegurate de que tengan tallas cargadas.');
     return;
   }
 
