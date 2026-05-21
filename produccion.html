@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-20 16:31 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-20 18:17 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -10350,33 +10350,52 @@ async function generarPdfDirecto(html, filename) {
   wrap.querySelectorAll('.no-print').forEach(el => el.remove());
   document.body.appendChild(wrap);
 
-  // 3) Forzar reflow + auto-fit por celda (DOBLE PASADA)
-  // El grid con minmax(...,1fr) puede redistribuir tracks DESPUÉS del primer
-  // autoFit, dejando contenido cortado. La segunda pasada agarra esos casos.
+  // 3) Forzar reflow + auto-fit por celda con MEDICIÓN POR CANVAS
+  // scrollWidth puede dar valores raros en flex items, especialmente con
+  // child elements. Canvas.measureText es 100% confiable.
   try {
     void wrap.offsetHeight;
     await new Promise(r => setTimeout(r, 200));
 
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const ptToPx = 1.333;  // 1pt = 1.333px @96dpi
+
     const fitOne = (el) => {
       const max = parseFloat(el.getAttribute('data-fit-max')) || 14;
       const min = parseFloat(el.getAttribute('data-fit-min')) || 7;
+      const cs = window.getComputedStyle(el);
+      const fontFamily = cs.fontFamily;
+      const fontWeight = cs.fontWeight;
+      const letterSpacing = parseFloat(cs.letterSpacing) || 0; // px
+
+      // Espacio disponible: ancho del elemento menos paddings
+      const padL = parseFloat(cs.paddingLeft) || 0;
+      const padR = parseFloat(cs.paddingRight) || 0;
+      const availPx = el.clientWidth - padL - padR;
+      if (availPx <= 0) return;
+
+      const text = el.textContent || '';
+      // Probar tamaños de max a min hasta encontrar uno que entre
       let size = max;
-      el.style.fontSize = size + 'pt';
-      while (size > min && el.scrollWidth > el.clientWidth) {
+      while (size > min) {
+        ctx.font = `${fontWeight} ${size}pt ${fontFamily}`;
+        const w = ctx.measureText(text).width + letterSpacing * (text.length - 1);
+        if (w <= availPx) break;
         size -= 0.5;
-        el.style.fontSize = size + 'pt';
       }
+      el.style.fontSize = size + 'pt';
     };
 
     const cells = wrap.querySelectorAll('[data-fit-max]');
     cells.forEach(fitOne);
-    // Forzar nuevo reflow y volver a medir
     void wrap.offsetHeight;
-    await new Promise(r => setTimeout(r, 150));
+    await new Promise(r => setTimeout(r, 100));
+    // Segunda pasada por si flex redistribuyó tracks después del primer fit
     cells.forEach(fitOne);
     void wrap.offsetHeight;
     await new Promise(r => setTimeout(r, 100));
-  } catch (e) { /* ignore */ }
+  } catch (e) { console.warn('autoFit error', e); }
 
   // 4) Verificar html2pdf
   if (typeof html2pdf !== 'function') {
@@ -10433,15 +10452,14 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
     const obs = incluirObs && a.observaciones ? a.observaciones.slice(0, 18) : '';
     const sexIcon = a.sexo === 'F' ? '♀' : (a.sexo === 'M' ? '♂' : '');
     if (obs) escAbrev = escAbrev + ' · ' + obs;
-    // Orden visual: SEXO | NOMBRE | (corte) | CENTRO | GRADO | TALLA-TOP | TALLA-BOT
+    // Orden visual: SEXO | NOMBRE | (corte) | CENTRO | GRADO | TALLAS (top + bot juntas)
     return `
       <div class="etiqueta">
         <span class="sexo">${sexIcon}</span>
         <span class="nombre" data-fit-max="16" data-fit-min="7">${nombreCompleto}</span>
         <span class="centro" data-fit-max="12" data-fit-min="7">${escAbrev}</span>
         <span class="grado" data-fit-max="14" data-fit-min="9">${a.grado || '—'}</span>
-        <span class="talla-top" data-fit-max="18" data-fit-min="8">${top}</span>
-        <span class="talla-bot" data-fit-max="18" data-fit-min="6">${bot}</span>
+        <span class="tallas" data-fit-max="18" data-fit-min="6">${top}<span class="sep"></span>${bot}</span>
       </div>
     `;
   };
@@ -10560,23 +10578,16 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
         border-radius: 2pt;
         padding: 1pt 0;
       }
-      .etiqueta .talla-top {
-        flex: 0 0 16mm;
+      .etiqueta .tallas {
+        flex: 1 1 auto;
+        min-width: 28mm;
         font-family: 'Courier New', monospace;
         font-size: 18pt;
         font-weight: 900;
         letter-spacing: 0.5pt;
-        text-align: center;
+        text-align: left;
       }
-      .etiqueta .talla-bot {
-        flex: 1 1 30mm;
-        min-width: 25mm;
-        font-family: 'Courier New', monospace;
-        font-size: 18pt;
-        font-weight: 900;
-        letter-spacing: 0.5pt;
-        text-align: center;
-      }
+      .etiqueta .tallas .sep { display:inline-block; width: 3mm; }
 
       .etiqueta .obs {
         font-size: 8pt;
