@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-20 23:16 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-20 23:20 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -9354,18 +9354,70 @@ function asignarRefrescar() {
     return;
   }
 
+  // Para empacar/entregar: simular el consumo de stock fila por fila
+  // para que cada alumno muestre si hay stock suficiente (🟢) o no (🔴).
+  // El acaparado del propio alumno (estado='reservado') cuenta como reserva ya hecha.
+  const consumoStock = {};  // key "prenda|talla" → cuántas ya se "consumieron" arriba
+  const stockDe = (prenda, talla) => {
+    const row = asignarCache.stock.find(s =>
+      ((s.nombre_prenda || s.cod_prenda) === prenda) && s.talla_key === talla);
+    return row ? (Number(row.stock_actual) || 0) : 0;
+  };
+
   cont.innerHTML = filtros.map(a => {
     const esc = escName(a.escuela_id);
-    const top = a.talla_top_key ? `<code>${a.talla_top_key}</code> <small>(${estadoLabel(a.estado_top)})</small>${a._topElig ? '' : ' <small style="color:#aaa">no aplica</small>'}` : '<small style="color:#aaa">sin top</small>';
-    const bot = a.talla_bottom_key ? `<code>${a.talla_bottom_key}</code> <small>(${estadoLabel(a.estado_bottom)})</small>${a._botElig ? '' : ' <small style="color:#aaa">no aplica</small>'}` : '<small style="color:#aaa">sin bot</small>';
+
+    // Determinar disponibilidad para cada pieza
+    const evalPieza = (prenda, talla, estadoActual, elig) => {
+      if (!elig) return { ok: true, icon: '', note: 'no aplica' };
+      // Si la acción es Acaparar: no requiere stock físico (no descuenta bodega)
+      if (accion === 'reservado') return { ok: true, icon: '🟢', note: '' };
+      // Si ya está empacado o entregado y solo cambia a entregado, no consume stock nuevo
+      if ((accion === 'entregado') && estadoActual === 'empacado') return { ok: true, icon: '🟢', note: 'ya empacado' };
+      // Si ya estaba reservado, el acaparado lo cubre — no consume stock libre
+      if (estadoActual === 'reservado') return { ok: true, icon: '🔒', note: 'acaparado' };
+      // Si es pendiente y la acción es empacar/entregar: necesita stock físico
+      const key = prenda + '|' + talla;
+      const consumido = consumoStock[key] || 0;
+      const disponible = stockDe(prenda, talla) - consumido;
+      if (disponible >= 1) {
+        consumoStock[key] = consumido + 1;  // simular consumo
+        return { ok: true, icon: '🟢', note: '' };
+      }
+      return { ok: false, icon: '🔴', note: 'sin stock' };
+    };
+
+    const evTop = a.talla_top_key ? evalPieza(a.prenda_top, a.talla_top_key, a.estado_top, a._topElig) : null;
+    const evBot = a.talla_bottom_key ? evalPieza(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom, a._botElig) : null;
+
+    const renderPieza = (ev, talla, estado, sinTexto) => {
+      if (!talla) return `<small style="color:#aaa">${sinTexto}</small>`;
+      return `${ev.icon} <code>${talla}</code> <small style="color:${ev.ok?'#666':'#c44'}">(${estadoLabel(estado)}${ev.note?' · '+ev.note:''})</small>`;
+    };
+
+    // Si NINGUNA de las dos piezas está OK para esta acción, dejamos el checkbox deshabilitado
+    const algunaOk = (evTop && evTop.ok && a._topElig) || (evBot && evBot.ok && a._botElig);
+    const isReady = algunaOk;
+    if (!isReady) asignarCache.marcados.delete(a.id);
+
     return `
-      <label style="display:flex;gap:6px;padding:4px 6px;border-bottom:1px solid #F0F0F0;align-items:center;cursor:pointer;font-size:12px">
-        <input type="checkbox" checked onchange="asignarToggle('${a.id}', this.checked)">
+      <label style="display:flex;gap:6px;padding:4px 6px;border-bottom:1px solid #F0F0F0;align-items:center;cursor:pointer;font-size:12px;${isReady?'':'opacity:0.6'}">
+        <input type="checkbox" ${isReady?'checked':'disabled'} onchange="asignarToggle('${a.id}', this.checked)">
         <span style="flex:1"><strong>${a.nombre}</strong> · ${esc} · ${a.grado || '?'}</span>
-        <span>${top} / ${bot}</span>
+        <span>${renderPieza(evTop, a.talla_top_key, a.estado_top, 'sin top')} / ${renderPieza(evBot, a.talla_bottom_key, a.estado_bottom, 'sin bot')}</span>
       </label>
     `;
   }).join('');
+
+  // Si después del consumo simulado hay alumnos sin stock, mostrar aviso
+  const sinStock = filtros.filter(a => {
+    const okTop = !a._topElig || !a.talla_top_key || a.estado_top === 'reservado' || a.estado_top === 'empacado';
+    const okBot = !a._botElig || !a.talla_bottom_key || a.estado_bottom === 'reservado' || a.estado_bottom === 'empacado';
+    return !okTop || !okBot;
+  });
+  if (accion === 'empacado' && sinStock.length > 0) {
+    // Solo informativo, los rojos ya están marcados visualmente
+  }
 }
 
 function asignarToggle(alumnoId, marcado) {
@@ -9394,6 +9446,55 @@ async function aplicarAsignar() {
   if (ids.length === 0) return alert('Marcá al menos un alumno');
 
   const alumnos = asignarCache.filtrados.filter(a => ids.includes(a.id));
+
+  // VALIDACIÓN DE STOCK: para Empacar/Entregar, simular consumo y bloquear
+  // si alguna combinación prenda+talla excede el stock disponible (libre + acaparado).
+  // Acaparar no requiere validación porque no toca stock físico.
+  if (accion !== 'reservado') {
+    const consumo = {};  // "prenda|talla" → cantidad nueva a empacar/entregar (que NO viene de empacado/acaparado previo)
+    const consumoMio = {}; // por escuela
+    for (const a of alumnos) {
+      const evaluarPieza = (prenda, talla, estado, elig) => {
+        if (!elig || !talla) return;
+        // Estos casos NO consumen stock nuevo:
+        // - Si ya estaba empacado (entregar lo ya empacado) → no consume
+        // - Si estaba reservado (acaparado) → consume del acaparado, no del libre
+        if (estado === 'empacado') return;
+        if (estado === 'reservado') {
+          const k = prenda + '|' + talla + '|' + a.escuela_id;
+          consumoMio[k] = (consumoMio[k] || 0) + 1;
+          return;
+        }
+        // pendiente → empacar/entregar requiere stock libre
+        const k = prenda + '|' + talla;
+        consumo[k] = (consumo[k] || 0) + 1;
+      };
+      if (a._topElig) evaluarPieza(a.prenda_top, a.talla_top_key, a.estado_top);
+      if (a._botElig) evaluarPieza(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom);
+    }
+    const errores = [];
+    for (const [k, n] of Object.entries(consumo)) {
+      const [prenda, talla] = k.split('|');
+      const row = asignarCache.stock.find(s =>
+        ((s.nombre_prenda || s.cod_prenda) === prenda) && s.talla_key === talla);
+      const disp = row ? (Number(row.stock_actual) || 0) : 0;
+      if (n > disp) {
+        errores.push(`${prenda} ${talla}: querés ${n} pero solo hay ${disp} en bodega`);
+      }
+    }
+    if (errores.length > 0) {
+      alert(
+        '❌ No hay stock suficiente en bodega para algunas piezas.\n\n' +
+        errores.join('\n') +
+        '\n\nOpciones:\n' +
+        '  • Registrá entrada en bodega primero\n' +
+        '  • Desmarcá los alumnos en rojo (🔴) y aplicá solo los que tienen stock\n' +
+        '  • Si tu stock no es preciso, usá "📥 Acaparar" en vez de empacar'
+      );
+      return;
+    }
+  }
+
   const btn = document.getElementById('asi-btn-aplicar');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Aplicando...'; }
 
