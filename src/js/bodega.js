@@ -466,14 +466,47 @@ function asignarRefrescar() {
   asignarCache.filtrados = filtros;
   asignarCache.marcados = new Set(filtros.map(a => a.id)); // marcar todos por default
 
-  // Resumen
-  resumen.innerHTML = `
+  // Resumen base
+  let resumenHtml = `
     <strong>${filtros.length}</strong> alumno(s) elegibles ·
     Acción: <strong>${accion.toUpperCase()}</strong> ·
     Escuelas: <strong>${escSel.map(escName).join(', ')}</strong>
     ${prenda ? `· Prenda: <strong>${prenda}</strong>` : ''}
     ${talla ? `· Talla: <strong>${talla}</strong>` : ''}
   `;
+
+  // Si la acción es Empacar, calcular cuántos hay ya acaparados (reservados)
+  // por las escuelas seleccionadas + prenda + talla. Mostrar advertencia.
+  if (accion === 'empacado') {
+    const acaparados = _calcularAcaparado(escSel, prenda, talla);
+    if (acaparados.total > 0) {
+      const desglose = Object.entries(acaparados.porEscuela)
+        .map(([eid, n]) => `${escName(eid)}: <strong>${n}</strong>`).join(' · ');
+      resumenHtml += `
+        <div style="margin-top:6px;padding:6px 8px;background:#FFF8E6;border-left:3px solid #f80;border-radius:3px;font-size:11px">
+          🔒 <strong>Hay ${acaparados.total} piezas ya acaparadas</strong> para esta selección
+          (${desglose}).<br>
+          Al empacar esos alumnos, las piezas SÍ salen físicamente de bodega (descuenta stock real).
+          La diferencia con empacar "del aire" es que el acaparado ya bloqueó esas piezas para esta escuela.
+        </div>
+      `;
+    }
+  } else if (accion === 'entregado') {
+    // Avisar si hay alumnos en estado reservado/pendiente (entregar directo = más rápido pero sin pasar por empacar)
+    const directos = filtros.filter(a =>
+      (a._topElig && (a.estado_top === 'reservado' || a.estado_top === 'pendiente' || !a.estado_top)) ||
+      (a._botElig && (a.estado_bottom === 'reservado' || a.estado_bottom === 'pendiente' || !a.estado_bottom))
+    );
+    if (directos.length > 0) {
+      resumenHtml += `
+        <div style="margin-top:6px;padding:6px 8px;background:#E8F4FD;border-left:3px solid #0066cc;border-radius:3px;font-size:11px">
+          ℹ️ ${directos.length} alumno(s) saltearán "empacar" → entrega directa (descuenta bodega + registra entrega).
+        </div>
+      `;
+    }
+  }
+
+  resumen.innerHTML = resumenHtml;
 
   if (filtros.length === 0) {
     cont.innerHTML = '<div class="alert alert-info" style="margin:10px">Sin alumnos elegibles. Probá cambiar filtros o acción.</div>';
@@ -617,6 +650,26 @@ function _codPrenda(prenda) {
   const map = { 'CAMISA':'C','BLUSA':'B','CAMISA_CELESTE':'CC','PANTALON':'P','PANTALON_BEIGE':'PB',
     'FALDA':'F','FALDA_BEIGE':'FB','FALDA_C.E':'FCE','SHORT':'S' };
   return map[(prenda||'').toUpperCase()] || (prenda||'').slice(0,3).toUpperCase();
+}
+
+// Cuenta cuántos alumnos hay en estado RESERVADO (acaparado) para las
+// escuelas seleccionadas + prenda/talla. Devuelve { total, porEscuela: {id:N} }
+function _calcularAcaparado(escSel, prenda, talla) {
+  const escSet = new Set(escSel);
+  const porEscuela = {};
+  let total = 0;
+  for (const a of asignarCache.alumnos) {
+    if (!escSet.has(a.escuela_id)) continue;
+    const matchTop = a.estado_top === 'reservado' &&
+      (!prenda || a.prenda_top === prenda) &&
+      (!talla || a.talla_top_key === talla);
+    const matchBot = a.estado_bottom === 'reservado' &&
+      (!prenda || a.prenda_bottom === prenda) &&
+      (!talla || a.talla_bottom_key === talla);
+    if (matchTop) { porEscuela[a.escuela_id] = (porEscuela[a.escuela_id]||0) + 1; total++; }
+    if (matchBot) { porEscuela[a.escuela_id] = (porEscuela[a.escuela_id]||0) + 1; total++; }
+  }
+  return { total, porEscuela };
 }
 
 // ─── Modal: SALIDA A ESCUELA ─────────────────────────────────────
