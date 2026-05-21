@@ -151,8 +151,9 @@
             </div>
           </div>
           <div class="field">
-            <label>Grado</label>
-            <input type="text" id="ae-grado" list="grados-datalist" placeholder="Ej: 3A, P5B" oninput="aeRecalcular()">
+            <label>Grado <span style="font-size:10px;color:#888;font-weight:normal">(elegí de la lista o escribí nuevo)</span></label>
+            <input type="text" id="ae-grado" list="ae-grados-datalist" placeholder="Ej: 3A, P5B" oninput="aeRecalcular()">
+            <datalist id="ae-grados-datalist"></datalist>
             <div id="ae-nivel-info" style="font-size:11px;color:#666;margin-top:4px">Nivel: <strong>—</strong></div>
           </div>
         </div>

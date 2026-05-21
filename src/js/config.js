@@ -94,6 +94,11 @@ function editarGrado(grado) {
 }
 function cerrarGradoEdit() {
   document.getElementById('grado-edit-modal').style.display = 'none';
+  // Si había callback pendiente del flujo de alumno, llamarlo con null
+  if (typeof window._gradoPendienteCallback === 'function') {
+    try { window._gradoPendienteCallback(null); } catch (_) {}
+    window._gradoPendienteCallback = null;
+  }
 }
 async function guardarGradoEdit() {
   const orig = document.getElementById('grad-orig').value;
@@ -129,7 +134,14 @@ async function guardarGradoEdit() {
       });
     }
     cerrarGradoEdit();
-    await cargarGradosCatalogo();
+    // Si vino del flujo de alumno (callback pendiente), notificar
+    if (typeof window._gradoPendienteCallback === 'function') {
+      try { window._gradoPendienteCallback({ grado: codigo, nivel: payload.nivel, ciclo: payload.ciclo, activo: payload.activo }); }
+      catch (_) { /* ignore */ }
+    } else {
+      // Caso normal: estamos en Config gestionando el catálogo
+      await cargarGradosCatalogo();
+    }
   } catch (e) { alert('Error al guardar: ' + e.message); }
 }
 

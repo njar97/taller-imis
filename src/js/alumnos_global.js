@@ -691,6 +691,9 @@ async function editarAlumnoRapido(alumnoId) {
     const a = res[0];
     const esc = alumnosGlobalCache.escuelas[a.escuela_id];
 
+    // Poblar datalist de grados con el catálogo (autocomplete)
+    _populateGradosDatalist();
+
     // Reset y poblar state
     aeState = {
       alumnoId: a.id,
@@ -791,51 +794,66 @@ async function guardarAlumnoEdit(continuar) {
 async function _cargarCatalogoGradosCache() {
   if (window._gradoCatalogoCache && window._gradoCatalogoCache.length > 0) return window._gradoCatalogoCache;
   try {
-    window._gradoCatalogoCache = await supaFetchAll('grado_catalogo', '?select=grado,nivel,ciclo');
+    window._gradoCatalogoCache = await supaFetchAll('grado_catalogo', '?select=grado,nivel,ciclo&order=nivel,ciclo,grado');
   } catch (_) {
     window._gradoCatalogoCache = [];
   }
   return window._gradoCatalogoCache;
 }
 
-// Verifica si el grado está en el catálogo; si no, pregunta al user
-// nivel y ciclo de forma simple y lo agrega. Devuelve { nivel, ciclo }
-// si se agregó (o ya existía), null si el user canceló.
+// Llena el datalist del modal de alumno con los grados del catálogo.
+async function _populateGradosDatalist() {
+  const dl = document.getElementById('ae-grados-datalist');
+  if (!dl) return;
+  try {
+    const cat = await _cargarCatalogoGradosCache();
+    dl.innerHTML = cat
+      .filter(g => g.activo !== false)
+      .map(g => `<option value="${g.grado}">${g.nivel} · ciclo ${g.ciclo}</option>`)
+      .join('');
+  } catch (_) { /* ignore */ }
+}
+
+// Verifica si el grado está en el catálogo. Si no, abre el modal de
+// Config (grado-edit-modal) pre-llenado para que el user defina nivel
+// y ciclo. Cuando el user guarda allí, esta promesa resuelve con los
+// datos del grado nuevo. Si cancela, resuelve null.
 async function verificarYAgregarGradoAlCatalogo(grado, alumnoId) {
   const catalog = await _cargarCatalogoGradosCache();
   const existe = catalog.find(g => g.grado === grado);
   if (existe) return { nivel: existe.nivel, ciclo: existe.ciclo };
 
-  const nivelInput = prompt(
-    `El grado "${grado}" no está en el catálogo.\n\n` +
-    `Para que aparezca correctamente en reportes, definí su nivel:\n\n` +
-    `  P = PARV (parvularia)\n` +
-    `  B = BASICA (1° a 9°)\n` +
-    `  H = BACH (bachillerato)\n` +
-    `  O = OTRO\n\n` +
-    `Escribí P, B, H o O (vacío = saltar):`
-  );
-  if (!nivelInput) return null;
-  const nivelMap = { P: 'PARV', B: 'BASICA', H: 'BACH', O: 'OTRO' };
-  const nivel = nivelMap[nivelInput.trim().toUpperCase()] || 'OTRO';
-
-  let ciclo = 0;
-  if (nivel === 'BASICA') {
-    const c = prompt('¿Qué ciclo de BASICA?\n  1 = 1°-3°\n  2 = 4°-6°\n  3 = 7°-9°\n\nEscribí 1, 2 o 3:');
-    ciclo = parseInt(c, 10);
-    if (![1,2,3].includes(ciclo)) ciclo = 1;
-  } else if (nivel === 'BACH') ciclo = 4;
-  else if (nivel === 'PARV') ciclo = 0;
-
-  try {
-    await supaFetch('grado_catalogo', 'POST', { grado, nivel, ciclo, activo: true });
-    // Actualizar cache compartida
-    window._gradoCatalogoCache.push({ grado, nivel, ciclo });
-    return { nivel, ciclo };
-  } catch (e) {
-    alert('Error agregando grado al catálogo: ' + e.message);
+  // Verificar que el modal de Config esté disponible
+  if (typeof editarGrado !== 'function' || !document.getElementById('grado-edit-modal')) {
+    console.warn('Modal de Config no disponible para agregar grado');
     return null;
   }
+
+  return new Promise((resolve) => {
+    // Callback que ejecuta guardarGradoEdit en Config al guardar
+    window._gradoPendienteCallback = (gradoData) => {
+      window._gradoPendienteCallback = null;
+      // Actualizar cache local con el nuevo grado
+      if (gradoData) {
+        const cache = window._gradoCatalogoCache || [];
+        const idx = cache.findIndex(g => g.grado === gradoData.grado);
+        if (idx >= 0) cache[idx] = gradoData; else cache.push(gradoData);
+        window._gradoCatalogoCache = cache;
+        // Refrescar el datalist del modal de alumno por si vuelve a abrirse
+        _populateGradosDatalist();
+      }
+      resolve(gradoData);
+    };
+    // Abrir el modal de Config en modo "nuevo" con el código pre-llenado
+    editarGrado(null);
+    setTimeout(() => {
+      document.getElementById('grad-codigo').value = grado;
+      document.getElementById('grado-edit-titulo').textContent = `🆕 Grado nuevo: "${grado}"`;
+      // Mantener editable por si quiere corregir typo, pero focar en nivel
+      const nivelSel = document.getElementById('grad-nivel');
+      if (nivelSel) nivelSel.focus();
+    }, 100);
+  });
 }
 
 // Editar alumno desde vista global (path completo a Escuela > Tallaje)
