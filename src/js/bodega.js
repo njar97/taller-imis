@@ -315,53 +315,102 @@ async function guardarEntradaManual() {
 // Modal previo: elegir prendas + (opcional) escuela.
 // Luego salta al tab Registro con esos filtros y modo empaque activo.
 // ═══════════════════════════════════════════════════════════════════
-let empSelCache = { prendasMarcadas: new Set(), escuelas: null, prendas: null, pool: null };
+let empSelCache = {
+  escuelas: null, pool: null, alumnos: null,
+  combosMarcados: new Set(),   // claves "nivel|sexo|prenda_top|prenda_bottom"
+};
+
+const _NIVEL_LBL = { PARV: 'Parvularia', BASICA: 'Básica', BACH: 'Bachillerato', OTRO: 'Otro' };
+const _SEXO_LBL  = { F: '♀ Niñas', M: '♂ Niños' };
 
 async function abrirEmpacarSelector() {
   const modal = document.getElementById('bodega-empacar-selector-modal');
   if (!modal) return;
-  empSelCache.prendasMarcadas = new Set();
+  empSelCache.combosMarcados = new Set();
   document.getElementById('emp-sel-pool-info').style.display = 'none';
   modal.style.display = 'flex';
   try {
-    const [escuelas, stock, pool] = await Promise.all([
+    const [escuelas, alumnos, pool] = await Promise.all([
       empSelCache.escuelas
         ? Promise.resolve(empSelCache.escuelas)
         : supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre&order=alias'),
-      supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda'),
+      supaFetchAll('alumno', '?activo=eq.true&select=escuela_id,nivel,sexo,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000'),
       supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
     ]);
     empSelCache.escuelas = escuelas;
+    empSelCache.alumnos = alumnos;
     empSelCache.pool = pool;
-    const prendas = [...new Set(stock.map(s => s.nombre_prenda || s.cod_prenda).filter(Boolean))].sort();
-    empSelCache.prendas = prendas;
-
-    const cont = document.getElementById('emp-sel-prendas');
-    cont.innerHTML = prendas.length === 0
-      ? '<div class="text-muted" style="font-size:12px">No hay prendas con stock.</div>'
-      : prendas.map(p => `
-          <label class="btn btn-sm btn-ghost" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-weight:500">
-            <input type="checkbox" value="${p}" onchange="toggleEmpSelPrenda(this)" style="margin:0">
-            ${p}
-          </label>
-        `).join('');
 
     const selE = document.getElementById('emp-sel-escuela');
     selE.innerHTML = '<option value="">— Todas las escuelas —</option>' +
       escuelas.map(e => `<option value="${e.id}">${e.alias || e.nombre}</option>`).join('');
+
+    renderEmpSelCombos();
   } catch(e) { alert('Error: '+e.message); }
 }
 function cerrarEmpacarSelector() { document.getElementById('bodega-empacar-selector-modal').style.display = 'none'; }
 
-function toggleEmpSelPrenda(input) {
-  if (input.checked) empSelCache.prendasMarcadas.add(input.value);
-  else empSelCache.prendasMarcadas.delete(input.value);
-  // resaltar visualmente la label
-  const lbl = input.closest('label');
-  if (lbl) {
-    lbl.classList.toggle('btn-primary', input.checked);
-    lbl.classList.toggle('btn-ghost', !input.checked);
+// Calcula y renderiza las combinaciones disponibles según la escuela elegida.
+// Una combinación = nivel × sexo × prenda_top × prenda_bottom (con conteo de
+// pendientes para esa combo).
+function renderEmpSelCombos() {
+  const escId = document.getElementById('emp-sel-escuela').value;
+  const cont = document.getElementById('emp-sel-combos');
+  const alumnos = empSelCache.alumnos || [];
+  const filtrados = escId ? alumnos.filter(a => a.escuela_id === escId) : alumnos;
+
+  const grupos = {};
+  for (const a of filtrados) {
+    if (!a.nivel || !a.sexo) continue;
+    if (!a.prenda_top && !a.prenda_bottom) continue;
+    const k = `${a.nivel}|${a.sexo}|${a.prenda_top || ''}|${a.prenda_bottom || ''}`;
+    if (!grupos[k]) grupos[k] = {
+      key: k, nivel: a.nivel, sexo: a.sexo,
+      prenda_top: a.prenda_top || null, prenda_bottom: a.prenda_bottom || null,
+      total: 0, pendientes: 0,
+    };
+    grupos[k].total++;
+    const pendTop = a.talla_top_key && a.prenda_top
+      && a.estado_top !== 'empacado' && a.estado_top !== 'entregado';
+    const pendBot = a.talla_bottom_key && a.prenda_bottom
+      && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado';
+    if (pendTop || pendBot) grupos[k].pendientes++;
   }
+
+  const lista = Object.values(grupos)
+    .filter(g => g.pendientes > 0)
+    .sort((a,b) => b.pendientes - a.pendientes || a.nivel.localeCompare(b.nivel) || a.sexo.localeCompare(b.sexo));
+
+  if (lista.length === 0) {
+    cont.innerHTML = '<div class="text-muted" style="font-size:12px;padding:8px">No hay combinaciones con piezas pendientes' + (escId ? ' para esta escuela' : '') + '.</div>';
+    return;
+  }
+
+  cont.innerHTML = lista.map(g => {
+    const nivLbl = _NIVEL_LBL[g.nivel] || g.nivel;
+    const sxLbl = _SEXO_LBL[g.sexo] || g.sexo;
+    const piezas = [g.prenda_top, g.prenda_bottom].filter(Boolean).join(' + ');
+    const marcado = empSelCache.combosMarcados.has(g.key);
+    return `
+      <label class="btn btn-sm ${marcado?'btn-primary':'btn-ghost'}" style="cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:flex-start;text-align:left;padding:8px 10px">
+        <input type="checkbox" value="${g.key}" ${marcado?'checked':''} onchange="toggleEmpSelCombo(this)" style="margin:0">
+        <div style="flex:1">
+          <div style="font-weight:600">${nivLbl} ${sxLbl}</div>
+          <div style="font-size:11px;opacity:0.85">${piezas}</div>
+        </div>
+        <div style="font-size:11px;background:rgba(0,0,0,0.08);padding:2px 6px;border-radius:4px">
+          ${g.pendientes} pend
+        </div>
+      </label>
+    `;
+  }).join('');
+}
+
+function toggleEmpSelCombo(input) {
+  const k = input.value;
+  if (input.checked) empSelCache.combosMarcados.add(k);
+  else empSelCache.combosMarcados.delete(k);
+  renderEmpSelCombos();
   refrescarPoolEmpSelector();
 }
 
@@ -369,11 +418,17 @@ function toggleEmpSelPrenda(input) {
 function refrescarPoolEmpSelector() {
   const info = document.getElementById('emp-sel-pool-info');
   const escId = document.getElementById('emp-sel-escuela').value;
-  const prendas = [...empSelCache.prendasMarcadas];
+  // Derivar prendas de los combos marcados
+  const prendasSet = new Set();
+  for (const k of empSelCache.combosMarcados || []) {
+    const [, , pt, pb] = k.split('|');
+    if (pt) prendasSet.add(pt);
+    if (pb) prendasSet.add(pb);
+  }
+  const prendas = [...prendasSet];
   const pool = empSelCache.pool || [];
 
   if (!escId || prendas.length === 0) {
-    // Sin escuela O sin prendas seleccionadas: ocultar
     info.style.display = 'none';
     return;
   }
@@ -411,23 +466,28 @@ function refrescarPoolEmpSelector() {
 }
 
 function confirmarEmpacarSelector() {
-  const prendas = [...empSelCache.prendasMarcadas];
-  if (prendas.length === 0) return alert('Elegí al menos una prenda a empacar');
+  const claves = [...empSelCache.combosMarcados];
+  if (claves.length === 0) return alert('Elegí al menos una combinación');
+  // Reconstruir combos desde las claves
+  const combos = claves.map(k => {
+    const [nivel, sexo, prenda_top, prenda_bottom] = k.split('|');
+    return { nivel, sexo, prenda_top: prenda_top || null, prenda_bottom: prenda_bottom || null };
+  });
+  const prendas = [...new Set(combos.flatMap(c => [c.prenda_top, c.prenda_bottom]).filter(Boolean))];
   const escId = document.getElementById('emp-sel-escuela').value || '';
   cerrarEmpacarSelector();
   // Pasar estado al cache de alumnos_global y saltar al tab Registro
   if (typeof alumnosGlobalCache !== 'undefined') {
     alumnosGlobalCache.modoEmpaque = true;
+    alumnosGlobalCache.empCombos = combos;
     alumnosGlobalCache.empPrendas = prendas;
     alumnosGlobalCache.empMarcados = new Set();
-    // limpiar filtros previos para arrancar fresco
     alumnosGlobalCache.busqueda = '';
     alumnosGlobalCache.filtroEscuela = '';
     alumnosGlobalCache.filtroEscuelas = escId ? [escId] : [];
     alumnosGlobalCache.filtroEstado = '';
   }
   if (typeof switchTab === 'function') switchTab('registro');
-  // initAlumnosGlobal puede tardar; si ya estaba cargado solo re-render
   setTimeout(() => {
     if (typeof alumnosGlobalCache !== 'undefined' && alumnosGlobalCache.cargado) {
       renderAlumnosGlobal();
@@ -705,9 +765,9 @@ function onAcapararTallaCambio() {
       <thead>
         <tr style="background:#f5f7fa">
           <th style="text-align:left;padding:4px 6px">Escuela</th>
-          <th style="text-align:right;padding:4px 6px">Necesita</th>
-          <th style="text-align:right;padding:4px 6px">Acaparado</th>
-          <th style="text-align:right;padding:4px 6px">Falta</th>
+          <th style="text-align:right;padding:4px 6px" title="Cantidad de alumnos pendientes con esa prenda+talla">Pendientes</th>
+          <th style="text-align:right;padding:4px 6px" title="Ya acaparado en el pool para esa escuela">Acaparado</th>
+          <th style="text-align:right;padding:4px 6px" title="Cuánto te falta acaparar = Pendientes − Acaparado">Necesita</th>
         </tr>
       </thead>
       <tbody>
@@ -717,7 +777,7 @@ function onAcapararTallaCambio() {
               onmouseover="this.style.background='#fff8d6'"
               onmouseout="this.style.background=''">
             <td style="padding:4px 6px">${escapeHtmlAca(f.alias)}</td>
-            <td style="padding:4px 6px;text-align:right">${f.necesita}</td>
+            <td style="padding:4px 6px;text-align:right;color:#666">${f.necesita}</td>
             <td style="padding:4px 6px;text-align:right;color:#666">${f.acaparado}</td>
             <td style="padding:4px 6px;text-align:right;font-weight:700;color:${f.falta>0?'var(--rojo)':'var(--verde)'}">${f.falta}</td>
           </tr>

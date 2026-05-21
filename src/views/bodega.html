@@ -113,17 +113,17 @@
       </div>
       <div class="modal-body">
         <div class="field">
-          <label style="font-weight:600">Prendas a empacar *</label>
-          <div id="emp-sel-prendas" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
-            <div class="text-muted" style="font-size:12px">Cargando prendas...</div>
-          </div>
-          <div style="font-size:11px;color:#666;margin-top:4px">Tocá las prendas que tenés en stock para empacar (multi-selección)</div>
-        </div>
-        <div class="field">
           <label>Escuela (opcional)</label>
-          <select id="emp-sel-escuela" onchange="refrescarPoolEmpSelector()">
+          <select id="emp-sel-escuela" onchange="renderEmpSelCombos(); refrescarPoolEmpSelector()">
             <option value="">— Todas las escuelas —</option>
           </select>
+        </div>
+        <div class="field">
+          <label style="font-weight:600">Combinación a empacar *</label>
+          <div id="emp-sel-combos" style="display:flex;flex-direction:column;gap:4px;margin-top:4px;max-height:35vh;overflow-y:auto">
+            <div class="text-muted" style="font-size:12px">Cargando combinaciones...</div>
+          </div>
+          <div style="font-size:11px;color:#666;margin-top:4px">Tocá una o varias combinaciones. Cada una agrupa un nivel + sexo con sus prendas (top/bottom).</div>
         </div>
         <div id="emp-sel-pool-info" style="display:none;padding:8px 12px;background:#FFF9E6;border:1px solid #FFD24D;border-radius:6px;font-size:12px;margin-bottom:8px"></div>
       </div>
