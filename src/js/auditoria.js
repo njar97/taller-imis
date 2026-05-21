@@ -84,7 +84,10 @@ function renderAuditoria() {
         <td>${op}</td>
         <td>${pk}</td>
         <td style="font-size:11px;color:#555">${cols}</td>
-        <td><button class="btn-mini btn-mini-primary" onclick="verDetalleAudit(${f.id})">ver</button></td>
+        <td style="white-space:nowrap">
+          <button class="btn-mini btn-mini-primary" onclick="verDetalleAudit(${f.id})">ver</button>
+          <button class="btn-mini" onclick="revertirAudit(${f.id})" title="Deshacer este cambio">↶</button>
+        </td>
       </tr>
     `;
   }).join('');
@@ -141,9 +144,13 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
+let _auditActualId = null;
+function revertirAuditActual() { if (_auditActualId) revertirAudit(_auditActualId); }
+
 function verDetalleAudit(id) {
   const f = auditCache.porId[id];
   if (!f) return;
+  _auditActualId = id;
   document.getElementById('audit-detalle-titulo').textContent =
     `${f.table_name} · ${f.op}`;
   document.getElementById('audit-detalle-subt').textContent =
@@ -197,6 +204,38 @@ function jsonBox(obj, changedCols, mode) {
 
 function cerrarDetalleAudit() {
   document.getElementById('audit-detalle-modal').style.display = 'none';
+}
+
+// Revertir una entrada del audit. Llama a la función SQL revert_audit_entry
+// que hace el DELETE/INSERT/UPDATE según el tipo de operación original.
+async function revertirAudit(id) {
+  const f = auditCache.porId[id];
+  if (!f) { alert('Registro no encontrado'); return; }
+  const desc = f.op === 'INSERT' ? `borrar la fila creada (${f.table_name} pk=${shortPk(f.row_pk)})`
+            : f.op === 'DELETE' ? `re-crear la fila borrada (${f.table_name} pk=${shortPk(f.row_pk)})`
+            : `restaurar los valores anteriores en ${f.table_name} (cols: ${(f.changed_cols||[]).join(', ') || '—'})`;
+  if (!confirm(`¿Deshacer este cambio?\n\nVa a ${desc}.\n\nQueda registrado en el audit log como un cambio nuevo.`)) return;
+
+  try {
+    if (!supaSession || !supaSession.access_token) throw new Error('Sin sesión válida');
+    const url = `${SUPA_URL}/rest/v1/rpc/revert_audit_entry`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${supaSession.access_token}`,
+      },
+      body: JSON.stringify({ p_audit_id: id }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const result = await res.json();
+    cerrarDetalleAudit();
+    alert('✓ Cambio revertido: ' + JSON.stringify(result));
+    await cargarAuditoria();
+  } catch (e) {
+    alert('Error al revertir: ' + e.message);
+  }
 }
 
 // Mostrar el tab "Audit" en el nav solo si el user logueado es admin.
