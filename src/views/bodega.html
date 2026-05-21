@@ -101,6 +101,38 @@
     </div>
   </div>
 
+  <!-- Modal: SELECTOR de empaque (prendas + escuela) → manda al tab Registro -->
+  <div id="bodega-empacar-selector-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:500px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" style="margin:0">📦 Empacar a alumnos</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">Elegí qué prendas vas a empacar hoy. Te llevo al tab Registro filtrado.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarEmpacarSelector()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label style="font-weight:600">Prendas a empacar *</label>
+          <div id="emp-sel-prendas" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+            <div class="text-muted" style="font-size:12px">Cargando prendas...</div>
+          </div>
+          <div style="font-size:11px;color:#666;margin-top:4px">Tocá las prendas que tenés en stock para empacar (multi-selección)</div>
+        </div>
+        <div class="field">
+          <label>Escuela (opcional)</label>
+          <select id="emp-sel-escuela">
+            <option value="">— Todas las escuelas —</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarEmpacarSelector()">Cancelar</button>
+        <button class="btn btn-success" id="emp-sel-btn" onclick="confirmarEmpacarSelector()">→ Ir a Registro</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: ENTREGAR A ESCUELA (marca general de un lote) -->
   <div id="bodega-entrega-modal" class="modal" style="display:none">
     <div class="modal-content" style="max-width:520px">
