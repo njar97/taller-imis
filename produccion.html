@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-21 15:00 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-21 15:16 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1604,7 +1604,7 @@
       <div class="modal-body">
         <div class="field">
           <label>Escuela *</label>
-          <select id="aca-escuela">
+          <select id="aca-escuela" onchange="onAcapararTallaCambio()">
             <option value="">— Elegí escuela —</option>
           </select>
         </div>
@@ -1665,10 +1665,11 @@
         </div>
         <div class="field">
           <label>Escuela (opcional)</label>
-          <select id="emp-sel-escuela">
+          <select id="emp-sel-escuela" onchange="refrescarPoolEmpSelector()">
             <option value="">— Todas las escuelas —</option>
           </select>
         </div>
+        <div id="emp-sel-pool-info" style="display:none;padding:8px 12px;background:#FFF9E6;border:1px solid #FFD24D;border-radius:6px;font-size:12px;margin-bottom:8px"></div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="cerrarEmpacarSelector()">Cancelar</button>
@@ -9278,21 +9279,24 @@ async function guardarEntradaManual() {
 // Modal previo: elegir prendas + (opcional) escuela.
 // Luego salta al tab Registro con esos filtros y modo empaque activo.
 // ═══════════════════════════════════════════════════════════════════
-let empSelCache = { prendasMarcadas: new Set(), escuelas: null, prendas: null };
+let empSelCache = { prendasMarcadas: new Set(), escuelas: null, prendas: null, pool: null };
 
 async function abrirEmpacarSelector() {
   const modal = document.getElementById('bodega-empacar-selector-modal');
   if (!modal) return;
   empSelCache.prendasMarcadas = new Set();
+  document.getElementById('emp-sel-pool-info').style.display = 'none';
   modal.style.display = 'flex';
   try {
-    const [escuelas, stock] = await Promise.all([
+    const [escuelas, stock, pool] = await Promise.all([
       empSelCache.escuelas
         ? Promise.resolve(empSelCache.escuelas)
         : supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre&order=alias'),
       supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda'),
+      supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
     ]);
     empSelCache.escuelas = escuelas;
+    empSelCache.pool = pool;
     const prendas = [...new Set(stock.map(s => s.nombre_prenda || s.cod_prenda).filter(Boolean))].sort();
     empSelCache.prendas = prendas;
 
@@ -9322,6 +9326,52 @@ function toggleEmpSelPrenda(input) {
     lbl.classList.toggle('btn-primary', input.checked);
     lbl.classList.toggle('btn-ghost', !input.checked);
   }
+  refrescarPoolEmpSelector();
+}
+
+// Muestra/actualiza el resumen "qué tenés acaparado para esta escuela × estas prendas"
+function refrescarPoolEmpSelector() {
+  const info = document.getElementById('emp-sel-pool-info');
+  const escId = document.getElementById('emp-sel-escuela').value;
+  const prendas = [...empSelCache.prendasMarcadas];
+  const pool = empSelCache.pool || [];
+
+  if (!escId || prendas.length === 0) {
+    // Sin escuela O sin prendas seleccionadas: ocultar
+    info.style.display = 'none';
+    return;
+  }
+  // Filtrar pool para esta escuela y prendas elegidas
+  const setP = new Set(prendas);
+  const rows = pool
+    .filter(r => r.escuela_id === escId && setP.has(r.nombre_prenda))
+    .map(r => ({
+      prenda: r.nombre_prenda,
+      talla: r.talla_key,
+      disp: (Number(r.cantidad_acaparada)||0) - (Number(r.cantidad_consumida)||0),
+    }))
+    .filter(r => r.disp > 0)
+    .sort((a,b) => a.prenda.localeCompare(b.prenda) || a.talla.localeCompare(b.talla, 'es', { numeric: true }));
+
+  if (rows.length === 0) {
+    info.style.display = '';
+    info.innerHTML = `
+      <strong>ℹ Sin pool acaparado</strong> para esta escuela en las prendas elegidas.
+      Al empacar se va a descontar directamente del stock libre de bodega.
+    `;
+    return;
+  }
+  const total = rows.reduce((s, r) => s + r.disp, 0);
+  info.style.display = '';
+  info.innerHTML = `
+    <strong>📥 Pool acaparado disponible</strong> (${total} pieza${total===1?'':'s'} — se consume primero al empacar):
+    <div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px">
+      ${rows.map(r => `<span style="background:white;border:1px solid #FFD24D;padding:2px 6px;border-radius:4px;font-size:11px"><strong>${r.prenda}</strong> ${r.talla}: ${r.disp}</span>`).join('')}
+    </div>
+    <div style="font-size:11px;color:#666;margin-top:4px">
+      Si necesitás más de lo que hay acaparado, la diferencia sale del stock libre. Si no querés usar el pool, primero podés "Salida rápida" del stock.
+    </div>
+  `;
 }
 
 function confirmarEmpacarSelector() {
@@ -9594,7 +9644,8 @@ function onAcapararTallaCambio() {
   const escById = {};
   for (const e of (acapararCache.escuelas || [])) escById[e.id] = e;
 
-  const filas = Object.keys(necesitaPorEsc)
+  const escSelId = document.getElementById('aca-escuela').value || '';
+  let filas = Object.keys(necesitaPorEsc)
     .map(eid => {
       const esc = escById[eid] || { alias: '(?)', nombre: '' };
       const necesita = necesitaPorEsc[eid] || 0;
@@ -9604,6 +9655,9 @@ function onAcapararTallaCambio() {
     })
     .filter(f => f.necesita > 0)
     .sort((a,b) => b.falta - a.falta || b.necesita - a.necesita);
+
+  // Si hay una escuela seleccionada, solo mostrar esa fila (queda más limpio)
+  if (escSelId) filas = filas.filter(f => f.eid === escSelId);
 
   if (filas.length === 0) {
     demandaBox.style.display = 'none';
