@@ -145,6 +145,96 @@ async function guardarGradoEdit() {
   } catch (e) { alert('Error al guardar: ' + e.message); }
 }
 
+// ─── Backup / Exportar a Excel ─────────────────────────────────────
+// Lazy-load de SheetJS (xlsx) — solo se descarga cuando el user toca
+// el botón. Reusa la misma estrategia que html2pdf.
+function cargarSheetJS() {
+  if (typeof XLSX !== 'undefined') return Promise.resolve();
+  if (window._sheetjsPromise) return window._sheetjsPromise;
+  window._sheetjsPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('No se pudo cargar SheetJS (verificá conexión).'));
+    document.head.appendChild(s);
+  });
+  return window._sheetjsPromise;
+}
+
+// Tablas a incluir en el backup, con la query (puede traer joins).
+const BACKUP_TABLAS = [
+  { nombre: 'alumno',             query: '?select=*&order=nombre&limit=10000' },
+  { nombre: 'escuela',            query: '?select=*&order=alias' },
+  { nombre: 'contrato_escuela',   query: '?select=*&order=anio.desc,escuela_id' },
+  { nombre: 'temporada',          query: '?select=*&order=anio.desc' },
+  { nombre: 'grado_catalogo',     query: '?select=*&order=nivel,ciclo,grado' },
+  { nombre: 'prenda',             query: '?select=*&order=codigo' },
+  { nombre: 'talla',              query: '?select=*&limit=5000' },
+  { nombre: 'bodega_movimiento',  query: '?select=*&order=fecha.desc&limit=10000' },
+  { nombre: 'pedido',             query: '?select=*&limit=10000' },
+  { nombre: 'produccion_bulto',   query: '?select=*&order=creado_en.desc&limit=2000' },
+  { nombre: 'trazo',              query: '?select=*&order=fecha.desc&limit=2000' },
+  { nombre: 'grupo_produccion',   query: '?select=*' },
+  { nombre: 'operaria',           query: '?select=*&order=nombre' },
+];
+
+async function descargarBackupExcel() {
+  const btn = document.getElementById('btn-backup-excel');
+  const status = document.getElementById('backup-status');
+  const setStatus = (s) => { if (status) status.textContent = s; };
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generando…'; }
+  try {
+    setStatus('Cargando librería Excel…');
+    await cargarSheetJS();
+
+    setStatus('Descargando datos de Supabase…');
+    // Fetch todas las tablas en paralelo
+    const resultados = await Promise.all(BACKUP_TABLAS.map(async (t) => {
+      try {
+        const data = await supaFetchAll(t.nombre, t.query);
+        return { nombre: t.nombre, data, ok: true };
+      } catch (e) {
+        return { nombre: t.nombre, data: [{ error: e.message }], ok: false };
+      }
+    }));
+
+    setStatus('Armando archivo Excel…');
+    const wb = XLSX.utils.book_new();
+    let totalRows = 0;
+    for (const r of resultados) {
+      const rows = Array.isArray(r.data) ? r.data : [];
+      totalRows += rows.length;
+      // Para hojas vacías, agregar fila de placeholder con headers conocidos
+      const ws = rows.length > 0
+        ? XLSX.utils.json_to_sheet(rows)
+        : XLSX.utils.aoa_to_sheet([['(sin datos)']]);
+      // Nombre de hoja max 31 chars
+      const sheetName = (r.ok ? '' : '⚠️ ') + r.nombre.slice(0, 30);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    }
+
+    // Hoja de metadata
+    const meta = [
+      ['Backup taller-imis'],
+      ['Generado', new Date().toISOString()],
+      ['Total filas', totalRows],
+      [],
+      ['Tabla', 'Filas', 'Estado'],
+      ...resultados.map(r => [r.nombre, Array.isArray(r.data) ? r.data.length : 0, r.ok ? 'OK' : 'ERROR']),
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(meta), '_meta');
+
+    const fecha = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `taller-imis-backup-${fecha}.xlsx`);
+    setStatus(`✓ Descargado · ${totalRows.toLocaleString()} filas en ${resultados.length} hojas.`);
+  } catch (e) {
+    setStatus('❌ ' + e.message);
+    alert('Error: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📥 Descargar respaldo (Excel)'; }
+  }
+}
+
 async function aplicarCatalogoAExistentes() {
   if (!confirm('Esto va a actualizar el nivel/ciclo de TODOS los alumnos según el catálogo actual. Es seguro (no borra ni cambia tallas). ¿Continuar?')) return;
   try {
