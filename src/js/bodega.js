@@ -40,8 +40,14 @@ async function cargarBodegaStock() {
   const cont = document.getElementById('bodega-contenido');
   cont.innerHTML = '<div class="text-muted">Cargando stock...</div>';
   try {
-    const stock = await supaFetch('vw_bodega_stock', 'GET', null, '?order=nombre_prenda,talla_key&limit=1000');
+    const [stock, pool] = await Promise.all([
+      supaFetch('vw_bodega_stock', 'GET', null, '?order=nombre_prenda,talla_key&limit=1000'),
+      supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+    ]);
     bodegaCache.stock = stock;
+    bodegaCache.pool = pool;
+    bodegaCache.poolTotal = (pool || []).reduce(
+      (s, p) => s + Math.max(0, (Number(p.cantidad_acaparada)||0) - (Number(p.cantidad_consumida)||0)), 0);
     renderStock();
   } catch(e) {
     cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
@@ -79,6 +85,9 @@ function renderStock() {
       <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()">📥 + Entrada</button>
       <button class="btn btn-warning btn-sm" onclick="abrirAcapararModal()" title="Bloquear cantidad para una escuela (sin alumnos)">📥 Acaparar</button>
       <button class="btn btn-primary btn-sm" onclick="abrirEmpacarSelector()">📦 Empacar a alumnos</button>
+      ${(bodegaCache.poolTotal || 0) > 0
+        ? `<button class="btn btn-warning btn-sm" onclick="abrirEmpacarAcaparadosModal()" title="Asignar piezas del pool acaparado a alumnos">📥 Empacar acaparados (${bodegaCache.poolTotal})</button>`
+        : ''}
       <button class="btn btn-success btn-sm" onclick="abrirEntregaModal()" title="Marcar todos los empacados de una escuela como entregados">🚚 Marcar entrega</button>
       <button class="btn btn-ghost btn-sm" onclick="abrirSalidaModal()" title="Salida genérica (sin alumnos)">↗ Salida rápida</button>
       <button class="btn btn-ghost btn-sm" onclick="cargarBodegaStock()">🔄 Refrescar</button>
@@ -306,6 +315,190 @@ async function guardarEntradaManual() {
     await cargarBodegaStock();
   } catch(e) {
     alert('Error: ' + e.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// EMPACAR ACAPARADOS — consumir pool con flujo manual o auto
+// ═══════════════════════════════════════════════════════════════════
+let empAcaCache = { entries: null, escuelas: null };
+
+async function abrirEmpacarAcaparadosModal() {
+  const modal = document.getElementById('bodega-empacar-acaparados-modal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  document.getElementById('emp-aca-resumen').innerHTML = '<div class="text-muted" style="font-size:12px">Cargando pool...</div>';
+
+  try {
+    const [pool, escuelas] = await Promise.all([
+      supaFetchAll('escuela_acaparado', '?select=id,escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+      empAcaCache.escuelas
+        ? Promise.resolve(empAcaCache.escuelas)
+        : supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre&order=alias'),
+    ]);
+    empAcaCache.escuelas = escuelas;
+    const escMap = {};
+    for (const e of escuelas) escMap[e.id] = e.alias || e.nombre;
+
+    // Solo entries con disponible > 0
+    const entries = pool.map(p => ({
+      escuela_id: p.escuela_id,
+      escuela: escMap[p.escuela_id] || '(?)',
+      prenda: p.nombre_prenda,
+      talla: p.talla_key,
+      disp: Math.max(0, (Number(p.cantidad_acaparada)||0) - (Number(p.cantidad_consumida)||0)),
+    })).filter(e => e.disp > 0);
+    empAcaCache.entries = entries;
+
+    if (entries.length === 0) {
+      document.getElementById('emp-aca-resumen').innerHTML =
+        '<div class="alert alert-info">No hay piezas acaparadas pendientes de asignar.</div>';
+      document.getElementById('emp-aca-btn-auto').disabled = true;
+      document.getElementById('emp-aca-btn-manual').disabled = true;
+      return;
+    }
+    document.getElementById('emp-aca-btn-auto').disabled = false;
+    document.getElementById('emp-aca-btn-manual').disabled = false;
+
+    // Agrupar por escuela para presentación
+    const porEsc = {};
+    for (const e of entries) {
+      if (!porEsc[e.escuela_id]) porEsc[e.escuela_id] = { nombre: e.escuela, filas: [], total: 0 };
+      porEsc[e.escuela_id].filas.push(e);
+      porEsc[e.escuela_id].total += e.disp;
+    }
+    const total = entries.reduce((s, e) => s + e.disp, 0);
+    const grupos = Object.values(porEsc).sort((a,b) => b.total - a.total);
+
+    document.getElementById('emp-aca-resumen').innerHTML = `
+      <div style="font-size:13px;margin-bottom:8px"><strong>${total} pieza${total===1?'':'s'}</strong> en pool · ${grupos.length} escuela(s)</div>
+      ${grupos.map(g => `
+        <div style="border:1px solid #E0E4EA;border-radius:6px;margin-bottom:6px;overflow:hidden">
+          <div style="background:#FFF9E6;padding:6px 10px;font-size:13px;font-weight:700;display:flex;justify-content:space-between">
+            <span>🏫 ${escapeHtmlAca(g.nombre)}</span>
+            <span style="color:#666">${g.total} pieza${g.total===1?'':'s'}</span>
+          </div>
+          <div style="padding:4px 10px;display:flex;flex-wrap:wrap;gap:4px">
+            ${g.filas.map(f => `
+              <span style="background:white;border:1px solid #FFD24D;padding:2px 8px;border-radius:4px;font-size:11px">
+                <strong>${escapeHtmlAca(f.prenda)}</strong> ${escapeHtmlAca(f.talla)}: ${f.disp}
+              </span>
+            `).join('')}
+          </div>
+        </div>
+      `).join('')}
+    `;
+  } catch(e) {
+    document.getElementById('emp-aca-resumen').innerHTML =
+      `<div class="alert alert-error">Error: ${e.message}</div>`;
+  }
+}
+
+function cerrarEmpacarAcaparadosModal() {
+  document.getElementById('bodega-empacar-acaparados-modal').style.display = 'none';
+}
+
+// → Salta al tab Registro filtrado a los alumnos que matchean entries del pool.
+async function empacarAcaparadosManual() {
+  const entries = empAcaCache.entries || [];
+  if (entries.length === 0) return alert('No hay pool para empacar');
+  cerrarEmpacarAcaparadosModal();
+
+  // Set de prendas en pool para resaltado en la tabla
+  const prendas = [...new Set(entries.map(e => e.prenda))];
+  // Filtro por escuelas con pool
+  const escIds = [...new Set(entries.map(e => e.escuela_id))];
+
+  if (typeof alumnosGlobalCache !== 'undefined') {
+    alumnosGlobalCache.modoEmpaque = true;
+    alumnosGlobalCache.empCombos = [];
+    alumnosGlobalCache.empPrendas = prendas;
+    alumnosGlobalCache.empPoolEntries = entries.map(e => ({
+      escuela_id: e.escuela_id, prenda: e.prenda, talla: e.talla,
+    }));
+    alumnosGlobalCache.empMarcados = new Set();
+    alumnosGlobalCache.busqueda = '';
+    alumnosGlobalCache.filtroEscuela = '';
+    alumnosGlobalCache.filtroEscuelas = escIds.length === 1 ? [escIds[0]] : escIds;
+    alumnosGlobalCache.filtroEstado = '';
+  }
+  if (typeof switchTab === 'function') switchTab('registro');
+  setTimeout(() => {
+    if (typeof alumnosGlobalCache !== 'undefined' && alumnosGlobalCache.cargado) {
+      renderAlumnosGlobal();
+    } else if (typeof initAlumnosGlobal === 'function') {
+      initAlumnosGlobal();
+    }
+  }, 50);
+}
+
+// Asignación automática: por cada entry del pool, agarra los primeros N
+// alumnos que coincidan (escuela + prenda + talla, no empacado/entregado)
+// y los empaca con la lógica habitual (consume pool primero).
+async function empacarAcaparadosAuto() {
+  const entries = empAcaCache.entries || [];
+  if (entries.length === 0) return alert('No hay pool para empacar');
+
+  // Confirmación clara
+  const total = entries.reduce((s, e) => s + e.disp, 0);
+  if (!confirm(`¿Asignar automáticamente ${total} pieza(s) del pool a alumnos?\n\nSe van a tomar los primeros alumnos pendientes que coincidan con cada entrada del pool, y se marcan como empacados.\n\nNo se puede deshacer en bloque (sí desde el audit log si hace falta).`)) return;
+
+  const btn = document.getElementById('emp-aca-btn-auto');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Asignando...'; }
+
+  try {
+    // 1) Cargar alumnos lite de las escuelas involucradas
+    const escIds = [...new Set(entries.map(e => e.escuela_id))];
+    const alumnos = await supaFetchAll('alumno',
+      `?activo=eq.true&escuela_id=in.(${escIds.join(',')})&select=id,nombre,escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000`);
+
+    // 2) Por cada entry, seleccionar alumnos a empacar
+    // Cada alumno puede contar para top y para bottom — los tratamos como
+    // "candidatos" por pieza, marcando el alumno una sola vez.
+    const seleccionados = new Map();  // alumno_id → alumno (objeto)
+    // Para evitar over-asignar, mantenemos contadores por entry
+    const sortedEntries = entries.slice().sort((a,b) => b.disp - a.disp);
+    for (const e of sortedEntries) {
+      let restante = e.disp;
+      for (const a of alumnos) {
+        if (restante <= 0) break;
+        if (a.escuela_id !== e.escuela_id) continue;
+        const topMatch = a.prenda_top === e.prenda && a.talla_top_key === e.talla
+          && a.estado_top !== 'empacado' && a.estado_top !== 'entregado';
+        const botMatch = a.prenda_bottom === e.prenda && a.talla_bottom_key === e.talla
+          && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado';
+        if (!topMatch && !botMatch) continue;
+        // Asegurar que un alumno no se cuente dos veces para la misma entry
+        // (caso extremo prenda_top == prenda_bottom). Si ya está seleccionado para esta entry, skipear.
+        // Lo simplificamos: usamos un set por entry-pieza.
+        // Pero la lógica de empacar de empacarAlumnosDesdeRegistro ya maneja pool por pieza,
+        // así que basta con incluir al alumno y la función decide qué piezas empacar.
+        seleccionados.set(a.id, a);
+        // Decrementar 1 por pieza que matchea (si matchea ambas piezas, decremento solo 1 que es lo más común)
+        restante--;
+      }
+    }
+
+    if (seleccionados.size === 0) {
+      alert('⚠ No se encontraron alumnos pendientes que coincidan con el pool. Verificá que tengas alumnos en estas escuelas con esas tallas.');
+      return;
+    }
+
+    // 3) Empacar usando la lógica habitual (pool-first)
+    const prendasSet = new Set(entries.map(e => e.prenda));
+    const r = await empacarAlumnosDesdeRegistro([...seleccionados.values()], prendasSet);
+    if (r.errores && r.errores.length > 0) {
+      alert('❌ Hubo problemas:\n\n' + r.errores.join('\n'));
+      return;
+    }
+
+    cerrarEmpacarAcaparadosModal();
+    await cargarBodegaStock();
+    alert(`✓ Auto-marcado: ${r.actualizados} alumno(s).\n${r.piezasPool} pieza(s) del pool · ${r.piezasStock} del stock libre.`);
+  } catch(e) {
+    alert('Error: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ Auto marcar todos'; }
   }
 }
 
