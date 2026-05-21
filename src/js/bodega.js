@@ -402,11 +402,10 @@ function cerrarEmpacarAcaparadosModal() {
 async function empacarAcaparadosManual() {
   const entries = empAcaCache.entries || [];
   if (entries.length === 0) return alert('No hay pool para empacar');
+  const completarParejas = !!document.getElementById('emp-aca-completar-parejas')?.checked;
   cerrarEmpacarAcaparadosModal();
 
-  // Set de prendas en pool para resaltado en la tabla
   const prendas = [...new Set(entries.map(e => e.prenda))];
-  // Filtro por escuelas con pool
   const escIds = [...new Set(entries.map(e => e.escuela_id))];
 
   if (typeof alumnosGlobalCache !== 'undefined') {
@@ -417,6 +416,7 @@ async function empacarAcaparadosManual() {
       escuela_id: e.escuela_id, prenda: e.prenda, talla: e.talla,
     }));
     alumnosGlobalCache.empMarcados = new Set();
+    alumnosGlobalCache.empCompletarParejas = completarParejas;
     alumnosGlobalCache.busqueda = '';
     alumnosGlobalCache.filtroEscuela = '';
     alumnosGlobalCache.filtroEscuelas = escIds.length === 1 ? [escIds[0]] : escIds;
@@ -486,7 +486,8 @@ async function empacarAcaparadosAuto() {
 
     // 3) Empacar usando la lógica habitual (pool-first)
     const prendasSet = new Set(entries.map(e => e.prenda));
-    const r = await empacarAlumnosDesdeRegistro([...seleccionados.values()], prendasSet);
+    const completarParejas = !!document.getElementById('emp-aca-completar-parejas')?.checked;
+    const r = await empacarAlumnosDesdeRegistro([...seleccionados.values()], prendasSet, { completarParejas });
     if (r.errores && r.errores.length > 0) {
       alert('❌ Hubo problemas:\n\n' + r.errores.join('\n'));
       return;
@@ -494,7 +495,8 @@ async function empacarAcaparadosAuto() {
 
     cerrarEmpacarAcaparadosModal();
     await cargarBodegaStock();
-    alert(`✓ Auto-marcado: ${r.actualizados} alumno(s).\n${r.piezasPool} pieza(s) del pool · ${r.piezasStock} del stock libre.`);
+    const pareja = r.piezasPareja ? `\n${r.piezasPareja} pieza(s) extras por "completar pareja".` : '';
+    alert(`✓ Auto-marcado: ${r.actualizados} alumno(s).\n${r.piezasPool} pieza(s) del pool · ${r.piezasStock} del stock libre.${pareja}`);
   } catch(e) {
     alert('Error: ' + e.message);
   } finally {
@@ -671,13 +673,15 @@ function confirmarEmpacarSelector() {
   });
   const prendas = [...new Set(combos.flatMap(c => [c.prenda_top, c.prenda_bottom]).filter(Boolean))];
   const escId = document.getElementById('emp-sel-escuela').value || '';
+  const completarParejas = !!document.getElementById('emp-sel-completar-parejas')?.checked;
   cerrarEmpacarSelector();
-  // Pasar estado al cache de alumnos_global y saltar al tab Registro
   if (typeof alumnosGlobalCache !== 'undefined') {
     alumnosGlobalCache.modoEmpaque = true;
     alumnosGlobalCache.empCombos = combos;
     alumnosGlobalCache.empPrendas = prendas;
+    alumnosGlobalCache.empPoolEntries = [];
     alumnosGlobalCache.empMarcados = new Set();
+    alumnosGlobalCache.empCompletarParejas = completarParejas;
     alumnosGlobalCache.busqueda = '';
     alumnosGlobalCache.filtroEscuela = '';
     alumnosGlobalCache.filtroEscuelas = escId ? [escId] : [];
@@ -701,7 +705,8 @@ function confirmarEmpacarSelector() {
 //   2) Si no, crea SALIDA_EMPAQUE (descuenta stock)
 // Actualiza estado_top/estado_bottom = 'empacado'.
 // Retorna { actualizados, piezasPool, piezasStock, errores: [] }.
-async function empacarAlumnosDesdeRegistro(alumnos, prendasSet) {
+async function empacarAlumnosDesdeRegistro(alumnos, prendasSet, opts = {}) {
+  const { completarParejas = false } = opts;
   if (!alumnos || alumnos.length === 0) throw new Error('Sin alumnos para empacar');
   if (!prendasSet || prendasSet.size === 0) throw new Error('Sin prendas seleccionadas');
 
@@ -728,39 +733,82 @@ async function empacarAlumnosDesdeRegistro(alumnos, prendasSet) {
     stockMap[(s.nombre_prenda || s.cod_prenda) + '|' + s.talla_key] = Number(s.stock_actual) || 0;
   }
 
-  // 3) Validación: ¿alcanza pool+stock libre para todas las piezas?
+  // 3) Pre-computar plan por alumno: qué pieza top/bottom va a empacarse.
+  //    Si completarParejas: si una pieza del alumno se va a empacar y la
+  //    otra pieza está pendiente + tiene stock disponible (pool o libre),
+  //    también se empaca aunque su prenda no esté en prendasSet.
+  const piezaPendiente = (prenda, talla, estado) =>
+    !!prenda && !!talla && estado !== 'empacado' && estado !== 'entregado';
+
+  const planByAlumno = new Map();
+  for (const a of alumnos) {
+    const topElig = piezaPendiente(a.prenda_top, a.talla_top_key, a.estado_top)
+      && prendasSet.has(a.prenda_top);
+    const botElig = piezaPendiente(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom)
+      && prendasSet.has(a.prenda_bottom);
+    if (!topElig && !botElig) continue;
+    let top = topElig, bottom = botElig;
+    if (completarParejas) {
+      if (top && !bottom && piezaPendiente(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom)) {
+        bottom = true;
+      }
+      if (bottom && !top && piezaPendiente(a.prenda_top, a.talla_top_key, a.estado_top)) {
+        top = true;
+      }
+    }
+    planByAlumno.set(a.id, { top, bottom });
+  }
+
+  // Validación pool+stock simulada
   const consumoStock = {};
   const poolSim = {};
   for (const k of Object.keys(pool)) poolSim[k] = pool[k].disponible;
   for (const a of alumnos) {
-    const tryConsume = (prenda, talla, estado) => {
-      if (!prenda || !talla) return;
-      if (!prendasSet.has(prenda)) return;
-      if (estado === 'empacado' || estado === 'entregado') return;
+    const plan = planByAlumno.get(a.id);
+    if (!plan) continue;
+    const tryConsume = (prenda, talla) => {
       const kPool = a.escuela_id + '|' + prenda + '|' + talla;
       if ((poolSim[kPool] || 0) > 0) { poolSim[kPool]--; return; }
       const kStock = prenda + '|' + talla;
       consumoStock[kStock] = (consumoStock[kStock] || 0) + 1;
     };
-    tryConsume(a.prenda_top, a.talla_top_key, a.estado_top);
-    tryConsume(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom);
+    if (plan.top)    tryConsume(a.prenda_top, a.talla_top_key);
+    if (plan.bottom) tryConsume(a.prenda_bottom, a.talla_bottom_key);
   }
+  // Para "completar parejas", si la pieza extra no tiene pool ni stock, no
+  // forzamos error: simplemente la dejamos pendiente. Filtramos los planes
+  // que no caben en stock libre quitando esas piezas opcionales primero.
   const errores = [];
   for (const [k, n] of Object.entries(consumoStock)) {
     const disp = stockMap[k] || 0;
     if (n > disp) {
       const [p, t] = k.split('|');
-      errores.push(`${p} ${t}: querés ${n} de stock libre pero hay ${disp}`);
+      // Si la prenda está en prendasSet → es obligatoria → error
+      if (prendasSet.has(p)) {
+        errores.push(`${p} ${t}: querés ${n} de stock libre pero hay ${disp}`);
+      }
+      // Si NO está en prendasSet → es pareja opcional → marcar para skipear
+      else {
+        // Marcamos para que el apply omita estas piezas extras cuando no caben
+        for (const a of alumnos) {
+          const plan = planByAlumno.get(a.id);
+          if (!plan) continue;
+          if (plan.top && !prendasSet.has(a.prenda_top)
+              && a.prenda_top === p && a.talla_top_key === t) plan.top = false;
+          if (plan.bottom && !prendasSet.has(a.prenda_bottom)
+              && a.prenda_bottom === p && a.talla_bottom_key === t) plan.bottom = false;
+        }
+      }
     }
   }
   if (errores.length > 0) {
     return { actualizados: 0, piezasPool: 0, piezasStock: 0, errores };
   }
 
-  // 4) Aplicar: por alumno, decidir pool vs stock
+  // 4) Aplicar
   const movs = [];
   const poolDelta = {};
-  let piezasPool = 0, piezasStock = 0, actualizados = 0;
+  let piezasPool = 0, piezasStock = 0, actualizados = 0, piezasPareja = 0;
 
   const consumirDelPool = (escId, prenda, talla) => {
     const k = escId + '|' + prenda + '|' + talla;
@@ -778,12 +826,12 @@ async function empacarAlumnosDesdeRegistro(alumnos, prendasSet) {
   };
 
   for (const a of alumnos) {
+    const plan = planByAlumno.get(a.id);
+    if (!plan) continue;
     const update = { actualizado_en: new Date().toISOString() };
     let toca = false;
-    const procesar = (prenda, talla, estado, esTop) => {
+    const procesar = (prenda, talla, esTop, esPareja) => {
       if (!prenda || !talla) return;
-      if (!prendasSet.has(prenda)) return;
-      if (estado === 'empacado' || estado === 'entregado') return;
       if (esTop) update.estado_top = 'empacado';
       else update.estado_bottom = 'empacado';
       toca = true;
@@ -799,13 +847,16 @@ async function empacarAlumnosDesdeRegistro(alumnos, prendasSet) {
           alumno_id: a.id,
           escuela_id: a.escuela_id,
           fecha: new Date().toISOString().slice(0,10),
-          observaciones: `Empacado para ${a.nombre}`,
+          observaciones: `Empacado para ${a.nombre}${esPareja ? ' (pareja)' : ''}`,
         });
         piezasStock++;
       }
+      if (esPareja) piezasPareja++;
     };
-    procesar(a.prenda_top, a.talla_top_key, a.estado_top, true);
-    procesar(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom, false);
+    if (plan.top) procesar(a.prenda_top, a.talla_top_key, true,
+      !prendasSet.has(a.prenda_top));
+    if (plan.bottom) procesar(a.prenda_bottom, a.talla_bottom_key, false,
+      !prendasSet.has(a.prenda_bottom));
     if (toca) {
       await supaUpdate('alumno', a.id, update);
       actualizados++;
@@ -819,7 +870,72 @@ async function empacarAlumnosDesdeRegistro(alumnos, prendasSet) {
     await _consumePoolBatch(poolDelta);
   }
 
-  return { actualizados, piezasPool, piezasStock, errores: [] };
+  return { actualizados, piezasPool, piezasStock, piezasPareja, errores: [] };
+}
+
+// ─── DESEMPACAR pieza individual ──────────────────────────────────────
+// Revierte el empaque de una pieza de un alumno (top o bottom).
+// Heurística:
+//   - Busca un SALIDA_EMPAQUE con alumno_id+prenda+talla → si existe, vino
+//     de stock. Compensa con ENTRADA_MANUAL (vuelve 1 al stock).
+//   - Si no existe → vino del pool. Decrementa cantidad_consumida en una
+//     fila de escuela_acaparado matching (la primera con consumida > 0).
+// Pone estado_(top|bottom) = 'pendiente' y actualizado_en = now.
+async function desempacarPieza(alumnoId, pieza /* 'top' | 'bottom' */) {
+  if (pieza !== 'top' && pieza !== 'bottom') throw new Error('Pieza inválida');
+  // 1) Cargar alumno
+  const rows = await supaFetch('alumno', 'GET', null, `?id=eq.${alumnoId}&limit=1`);
+  if (!rows || rows.length === 0) throw new Error('Alumno no encontrado');
+  const a = rows[0];
+  const prenda = pieza === 'top' ? a.prenda_top : a.prenda_bottom;
+  const talla  = pieza === 'top' ? a.talla_top_key : a.talla_bottom_key;
+  const estado = pieza === 'top' ? a.estado_top : a.estado_bottom;
+  if (estado !== 'empacado' && estado !== 'entregado') {
+    throw new Error('La pieza no está empacada ni entregada');
+  }
+  if (!prenda || !talla) throw new Error('Faltan datos de prenda/talla');
+  const cod = _codPrenda(prenda);
+
+  // 2) ¿Salió por SALIDA_EMPAQUE con este alumno?
+  const movs = await supaFetch('bodega_movimiento', 'GET', null,
+    `?alumno_id=eq.${alumnoId}&cod_prenda=eq.${cod}&talla_key=eq.${encodeURIComponent(talla)}&tipo=eq.SALIDA_EMPAQUE&order=creado_en.desc&limit=1`);
+  const vinoDeStock = movs && movs.length > 0;
+
+  if (vinoDeStock) {
+    // Compensar con ENTRADA_MANUAL (suma 1 al stock)
+    await supaFetch('bodega_movimiento', 'POST', {
+      tipo: 'ENTRADA_MANUAL', cod_prenda: cod, nombre_prenda: prenda,
+      talla_key: talla, cantidad: 1,
+      alumno_id: alumnoId, escuela_id: a.escuela_id,
+      fecha: new Date().toISOString().slice(0,10),
+      observaciones: `Desempacado de ${a.nombre}`,
+    });
+  } else {
+    // Vino del pool → buscar una fila con consumida > 0 y bajar 1
+    const poolRows = await supaFetch('escuela_acaparado', 'GET', null,
+      `?escuela_id=eq.${a.escuela_id}&nombre_prenda=eq.${encodeURIComponent(prenda)}&talla_key=eq.${encodeURIComponent(talla)}&cantidad_consumida=gt.0&order=cantidad_consumida.desc&limit=1`);
+    if (poolRows && poolRows.length > 0) {
+      await _consumePoolBatch({ [poolRows[0].id]: -1 });
+    } else {
+      // Caso raro: no se encuentra origen. Compensar con ENTRADA_MANUAL
+      // para no perder la unidad físicamente.
+      await supaFetch('bodega_movimiento', 'POST', {
+        tipo: 'ENTRADA_MANUAL', cod_prenda: cod, nombre_prenda: prenda,
+        talla_key: talla, cantidad: 1,
+        alumno_id: alumnoId, escuela_id: a.escuela_id,
+        fecha: new Date().toISOString().slice(0,10),
+        observaciones: `Desempacado de ${a.nombre} (sin origen claro)`,
+      });
+    }
+  }
+
+  // 3) Estado de la pieza → pendiente
+  const update = { actualizado_en: new Date().toISOString() };
+  if (pieza === 'top') update.estado_top = 'pendiente';
+  else update.estado_bottom = 'pendiente';
+  await supaUpdate('alumno', alumnoId, update);
+
+  return { ok: true, vinoDeStock };
 }
 
 // Helper: incrementa cantidad_consumida del pool en batch via RPC dedicada

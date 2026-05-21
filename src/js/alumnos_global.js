@@ -505,6 +505,7 @@ function salirModoEmpaque() {
   c.empPrendas = [];
   c.empCombos = [];
   c.empPoolEntries = [];
+  c.empCompletarParejas = false;
   c.empMarcados = null;
   renderAlumnosGlobal();
 }
@@ -518,17 +519,19 @@ async function aplicarEmpaqueMarcados() {
   const alumnos = c.alumnos.filter(a => c.empMarcados.has(a.id));
   if (alumnos.length === 0) return alert('Alumnos marcados no encontrados');
 
-  if (!confirm(`¿Empacar ${alumnos.length} alumno(s) con prendas: ${[...setP].join(', ')}?\n\nLas piezas se descuentan del pool acaparado de la escuela primero, y del stock libre si el pool no alcanza.`)) return;
+  const completarParejas = !!c.empCompletarParejas;
+  const parejaTxt = completarParejas ? '\nAdemás, si hay stock, también se empaca la pareja pendiente.' : '';
+  if (!confirm(`¿Empacar ${alumnos.length} alumno(s) con prendas: ${[...setP].join(', ')}?\n\nLas piezas se descuentan del pool acaparado de la escuela primero, y del stock libre si el pool no alcanza.${parejaTxt}`)) return;
 
   try {
-    const r = await empacarAlumnosDesdeRegistro(alumnos, setP);
+    const r = await empacarAlumnosDesdeRegistro(alumnos, setP, { completarParejas });
     if (r.errores && r.errores.length > 0) {
       alert('❌ No hay stock suficiente:\n\n' + r.errores.join('\n') +
             '\n\nOpciones: registrar entrada en bodega, acaparar primero, o desmarcar alumnos sin stock.');
       return;
     }
-    alert(`✓ ${r.actualizados} alumno(s) empacado(s).\n${r.piezasPool} pieza(s) del pool acaparado.\n${r.piezasStock} pieza(s) del stock libre.`);
-    // Refrescar datos
+    const pareja = r.piezasPareja ? `\n${r.piezasPareja} pieza(s) extras (pareja).` : '';
+    alert(`✓ ${r.actualizados} alumno(s) empacado(s).\n${r.piezasPool} pieza(s) del pool acaparado.\n${r.piezasStock} pieza(s) del stock libre.${pareja}`);
     c.empMarcados = new Set();
     await initAlumnosGlobal();
   } catch(e) {
@@ -950,6 +953,7 @@ async function editarAlumnoRapido(alumnoId) {
     document.getElementById('ae-subt').textContent = esc ? (esc.alias || esc.nombre) : '';
 
     aeRender();
+    _renderEstadoEmpaqueAlumno(a);
     document.getElementById('alumno-edit-modal').style.display = 'flex';
     setTimeout(() => {
       const focusId = !a.sexo ? 'ae-grado'
@@ -968,6 +972,62 @@ async function editarAlumnoRapido(alumnoId) {
 
 function cerrarAlumnoEdit() {
   document.getElementById('alumno-edit-modal').style.display = 'none';
+}
+
+// Muestra el estado de empaque del alumno en el modal de edición.
+// Si una pieza está empacada o entregada, ofrece un botón para desempacarla.
+function _renderEstadoEmpaqueAlumno(a) {
+  const box = document.getElementById('ae-estado-empaque');
+  const lista = document.getElementById('ae-estado-piezas');
+  if (!box || !lista) return;
+  const piezas = [];
+  if (a.prenda_top && a.talla_top_key) {
+    piezas.push({ k: 'top', label: '👕 Top', prenda: a.prenda_top, talla: a.talla_top_key, estado: a.estado_top || 'pendiente' });
+  }
+  if (a.prenda_bottom && a.talla_bottom_key) {
+    piezas.push({ k: 'bottom', label: '👖 Bottom', prenda: a.prenda_bottom, talla: a.talla_bottom_key, estado: a.estado_bottom || 'pendiente' });
+  }
+  // Solo mostrar la sección si al menos una pieza está empacada o entregada
+  const tieneAlgo = piezas.some(p => p.estado === 'empacado' || p.estado === 'entregado');
+  if (!tieneAlgo) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  lista.innerHTML = piezas.map(p => {
+    const colorMap = { empacado: 'var(--verde)', entregado: 'var(--azul)', pendiente: '#888', reservado: '#a86' };
+    const iconMap = { empacado: '✅', entregado: '🚚', pendiente: '⬜', reservado: '⏳' };
+    const puedeDesempacar = p.estado === 'empacado' || p.estado === 'entregado';
+    return `
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;background:white;border:1px solid #E0E4EA;border-radius:6px;font-size:12px">
+        <span style="flex:0 0 70px">${p.label}</span>
+        <span style="flex:1;color:#666">${p.prenda} ${p.talla}</span>
+        <span style="color:${colorMap[p.estado]||'#666'};font-weight:600">${iconMap[p.estado]||'?'} ${p.estado}</span>
+        ${puedeDesempacar
+          ? `<button type="button" class="btn-mini" style="background:#fde7e7;color:#a33"
+                     onclick="desempacarPiezaAlumno('${a.id}','${p.k}')">↶ Desempacar</button>`
+          : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+async function desempacarPiezaAlumno(alumnoId, pieza) {
+  if (!confirm(`¿Desempacar la pieza ${pieza === 'top' ? '👕 top' : '👖 bottom'} de este alumno?\n\nVa a:\n• Marcar el estado como "pendiente"\n• Devolver la unidad al stock o al pool acaparado (según de dónde haya salido)`)) return;
+  try {
+    if (typeof desempacarPieza !== 'function') throw new Error('Función desempacarPieza no disponible');
+    const r = await desempacarPieza(alumnoId, pieza);
+    // Actualizar cache local
+    const idx = alumnosGlobalCache.alumnos.findIndex(x => x.id === alumnoId);
+    if (idx >= 0) {
+      const upd = pieza === 'top' ? { estado_top: 'pendiente' } : { estado_bottom: 'pendiente' };
+      Object.assign(alumnosGlobalCache.alumnos[idx], upd);
+    }
+    // Refrescar la sección en el modal
+    const refreshed = await supaFetch('alumno', 'GET', null, `?id=eq.${alumnoId}&limit=1`);
+    if (refreshed && refreshed[0]) _renderEstadoEmpaqueAlumno(refreshed[0]);
+    renderAlumnosGlobal();
+    alert(`✓ Pieza desempacada (${r.vinoDeStock ? 'devuelta al stock' : 'liberada del pool'}).`);
+  } catch(e) {
+    alert('Error al desempacar: ' + e.message);
+  }
 }
 
 async function guardarAlumnoEdit(continuar) {

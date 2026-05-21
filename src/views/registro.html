@@ -209,6 +209,12 @@
           <label>Observaciones</label>
           <textarea id="ae-obs" rows="2"></textarea>
         </div>
+
+        <!-- Estado de empaque (solo si el alumno tiene piezas empacadas/entregadas) -->
+        <div id="ae-estado-empaque" style="display:none;border-top:1px solid #EEE;padding-top:8px;margin-top:8px">
+          <div style="font-weight:600;font-size:12px;color:#555;margin-bottom:6px">📦 Estado de empaque</div>
+          <div id="ae-estado-piezas" style="display:flex;flex-direction:column;gap:4px"></div>
+        </div>
       </div>
       <div class="modal-footer" style="gap:6px;flex-wrap:wrap">
         <button class="btn btn-ghost" onclick="cerrarAlumnoEdit()">Cancelar</button>
