@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-21 08:35 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-21 14:46 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1624,6 +1624,10 @@
         </div>
         <div id="aca-stock-info" style="padding:8px 12px;background:#F5F7FA;border-radius:6px;margin-bottom:10px;font-size:13px;display:none">
           Seleccioná prenda y talla
+        </div>
+        <div id="aca-demanda-info" style="margin-bottom:10px;display:none">
+          <div style="font-size:11px;text-transform:uppercase;color:#555;font-weight:600;margin-bottom:4px">📊 Demanda por escuela (tocá para autocompletar)</div>
+          <div id="aca-demanda-lista" style="max-height:30vh;overflow-y:auto;border:1px solid #EEE;border-radius:4px;padding:4px;background:white;font-size:12px"></div>
         </div>
         <div class="field">
           <label>Cantidad a acaparar *</label>
@@ -9243,7 +9247,7 @@ async function guardarEntradaManual() {
 // con cantidad_acaparada. Después al empacar individualmente, el pool
 // se va consumiendo (cantidad_consumida++).
 // ════════════════════════════════════════════════════════════════════
-let acapararCache = { escuelas: null, stock: null, prendaActual: null };
+let acapararCache = { escuelas: null, stock: null, alumnos: null, acaparadoAjeno: null };
 
 async function abrirAcapararModal() {
   const modal = document.getElementById('bodega-acaparar-modal');
@@ -9254,23 +9258,27 @@ async function abrirAcapararModal() {
   });
   document.getElementById('aca-talla').innerHTML = '<option value="">— Elegí prenda primero —</option>';
   document.getElementById('aca-stock-info').style.display = 'none';
+  document.getElementById('aca-demanda-info').style.display = 'none';
   modal.style.display = 'flex';
   try {
-    if (!acapararCache.escuelas) {
-      acapararCache.escuelas = await supaFetchAll('escuela',
-        '?activa=eq.true&select=id,alias,nombre,codigo_cde&order=alias');
-    }
-    acapararCache.stock = await supaFetchAll('vw_bodega_stock',
-      '?stock_actual=gt.0&select=cod_prenda,nombre_prenda,talla_key,stock_actual');
-    const acaDisp = await supaFetchAll('vw_acaparado_disponible',
-      '?select=escuela_id,nombre_prenda,talla_key,disponible');
-    acapararCache.acaparadoAjeno = acaDisp;  // todo el acaparado (de cualquier escuela)
+    const [escuelas, stock, alumnos, acaDisp] = await Promise.all([
+      acapararCache.escuelas
+        ? Promise.resolve(acapararCache.escuelas)
+        : supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre,codigo_cde&order=alias'),
+      supaFetchAll('vw_bodega_stock', '?stock_actual=gt.0&select=cod_prenda,nombre_prenda,talla_key,stock_actual'),
+      supaFetchAll('alumno', '?activo=eq.true&select=id,escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000'),
+      supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+    ]);
+    acapararCache.escuelas = escuelas;
+    acapararCache.stock = stock;
+    acapararCache.alumnos = alumnos;
+    acapararCache.acaparadoAjeno = acaDisp;
 
     const selE = document.getElementById('aca-escuela');
     selE.innerHTML = '<option value="">— Elegí escuela —</option>' +
-      acapararCache.escuelas.map(e => `<option value="${e.id}">${e.alias || e.nombre}${e.codigo_cde ? ' · '+e.codigo_cde : ''}</option>`).join('');
+      escuelas.map(e => `<option value="${e.id}">${e.alias || e.nombre}${e.codigo_cde ? ' · '+e.codigo_cde : ''}</option>`).join('');
 
-    const prendas = [...new Set(acapararCache.stock.map(s => s.nombre_prenda || s.cod_prenda))].sort();
+    const prendas = [...new Set(stock.map(s => s.nombre_prenda || s.cod_prenda))].sort();
     const selP = document.getElementById('aca-prenda');
     selP.innerHTML = '<option value="">— Elegí prenda —</option>' +
       prendas.map(p => `<option value="${p}">${p}</option>`).join('');
@@ -9293,23 +9301,108 @@ function onAcapararTallaCambio() {
   const prenda = document.getElementById('aca-prenda').value;
   const talla = document.getElementById('aca-talla').value;
   const info = document.getElementById('aca-stock-info');
-  if (!prenda || !talla) { info.style.display = 'none'; return; }
+  const demandaBox = document.getElementById('aca-demanda-info');
+  const demandaLista = document.getElementById('aca-demanda-lista');
+  if (!prenda || !talla) { info.style.display = 'none'; demandaBox.style.display = 'none'; return; }
+
+  // Stock libre global
   const row = (acapararCache.stock || []).find(s =>
     (s.nombre_prenda || s.cod_prenda) === prenda && s.talla_key === talla);
   const stock = row ? (row.stock_actual || 0) : 0;
-  // Acaparado total de TODAS las escuelas para este prenda+talla
-  const acapTotal = (acapararCache.acaparadoAjeno || [])
-    .filter(a => a.nombre_prenda === prenda && a.talla_key === talla)
-    .reduce((s, a) => s + (Number(a.disponible) || 0), 0);
+  // Acaparado disponible (sin consumir) total por todas las escuelas
+  const acapPorEsc = {};
+  for (const a of (acapararCache.acaparadoAjeno || [])) {
+    if (a.nombre_prenda !== prenda || a.talla_key !== talla) continue;
+    const disp = (Number(a.cantidad_acaparada) || 0) - (Number(a.cantidad_consumida) || 0);
+    if (disp <= 0) continue;
+    acapPorEsc[a.escuela_id] = (acapPorEsc[a.escuela_id] || 0) + disp;
+  }
+  const acapTotal = Object.values(acapPorEsc).reduce((s, n) => s + n, 0);
   const libre = Math.max(0, stock - acapTotal);
   info.style.display = '';
   info.innerHTML = `
     <strong>${prenda} ${talla}</strong>:
     Stock <strong>${stock}</strong>
-    · Acaparado por otras escuelas <strong>${acapTotal}</strong>
+    · Acaparado total <strong>${acapTotal}</strong>
     · <span style="color:var(--verde);font-weight:700">Libre para acaparar: ${libre}</span>
   `;
   document.getElementById('aca-cantidad').max = libre;
+
+  // Demanda pendiente por escuela
+  const necesitaPorEsc = {};
+  for (const a of (acapararCache.alumnos || [])) {
+    if (!a.escuela_id) continue;
+    if (a.prenda_top === prenda && a.talla_top_key === talla
+        && a.estado_top !== 'empacado' && a.estado_top !== 'entregado') {
+      necesitaPorEsc[a.escuela_id] = (necesitaPorEsc[a.escuela_id] || 0) + 1;
+    }
+    if (a.prenda_bottom === prenda && a.talla_bottom_key === talla
+        && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado') {
+      necesitaPorEsc[a.escuela_id] = (necesitaPorEsc[a.escuela_id] || 0) + 1;
+    }
+  }
+
+  const escById = {};
+  for (const e of (acapararCache.escuelas || [])) escById[e.id] = e;
+
+  const filas = Object.keys(necesitaPorEsc)
+    .map(eid => {
+      const esc = escById[eid] || { alias: '(?)', nombre: '' };
+      const necesita = necesitaPorEsc[eid] || 0;
+      const acaparado = acapPorEsc[eid] || 0;
+      const falta = Math.max(0, necesita - acaparado);
+      return { eid, alias: esc.alias || esc.nombre || '(?)', necesita, acaparado, falta };
+    })
+    .filter(f => f.necesita > 0)
+    .sort((a,b) => b.falta - a.falta || b.necesita - a.necesita);
+
+  if (filas.length === 0) {
+    demandaBox.style.display = 'none';
+    return;
+  }
+  demandaBox.style.display = '';
+  demandaLista.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="background:#f5f7fa">
+          <th style="text-align:left;padding:4px 6px">Escuela</th>
+          <th style="text-align:right;padding:4px 6px">Necesita</th>
+          <th style="text-align:right;padding:4px 6px">Acaparado</th>
+          <th style="text-align:right;padding:4px 6px">Falta</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filas.map(f => `
+          <tr style="cursor:pointer;border-top:1px solid #eee"
+              onclick="seleccionarEscuelaAcaparar('${f.eid}', ${f.falta})"
+              onmouseover="this.style.background='#fff8d6'"
+              onmouseout="this.style.background=''">
+            <td style="padding:4px 6px">${escapeHtmlAca(f.alias)}</td>
+            <td style="padding:4px 6px;text-align:right">${f.necesita}</td>
+            <td style="padding:4px 6px;text-align:right;color:#666">${f.acaparado}</td>
+            <td style="padding:4px 6px;text-align:right;font-weight:700;color:${f.falta>0?'var(--rojo)':'var(--verde)'}">${f.falta}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function escapeHtmlAca(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function seleccionarEscuelaAcaparar(eid, falta) {
+  const selE = document.getElementById('aca-escuela');
+  if (selE) selE.value = eid;
+  const inputC = document.getElementById('aca-cantidad');
+  if (inputC && falta > 0) {
+    const max = Number(inputC.max) || Infinity;
+    inputC.value = Math.min(falta, max);
+    inputC.focus();
+  }
 }
 
 async function guardarAcaparar() {
