@@ -759,6 +759,18 @@ async function guardarAlumnoEdit(continuar) {
     await supaUpdate('alumno', id, payload);
     const idx = alumnosGlobalCache.alumnos.findIndex(a => a.id === id);
     if (idx >= 0) Object.assign(alumnosGlobalCache.alumnos[idx], payload);
+
+    // Si el grado no está en el catálogo, ofrecer agregarlo ahora
+    if (grado) {
+      const ok = await verificarYAgregarGradoAlCatalogo(grado, id);
+      if (ok && ok.nivel != null) {
+        // Catálogo actualizado: aplicar nivel/ciclo al alumno
+        const updPayload = { nivel: ok.nivel, ciclo: ok.ciclo, actualizado_en: new Date().toISOString() };
+        await supaUpdate('alumno', id, updPayload);
+        if (idx >= 0) Object.assign(alumnosGlobalCache.alumnos[idx], updPayload);
+      }
+    }
+
     if (continuar) {
       const siguiente = alumnosGlobalCache.alumnos.find(a => a.id !== id && (!a.talla_top_key || !a.talla_bottom_key));
       if (siguiente) {
@@ -772,6 +784,57 @@ async function guardarAlumnoEdit(continuar) {
     renderAlumnosGlobal();
   } catch(e) {
     alert('Error al guardar: ' + e.message);
+  }
+}
+
+// Cache compartido del catálogo de grados (lazy)
+async function _cargarCatalogoGradosCache() {
+  if (window._gradoCatalogoCache && window._gradoCatalogoCache.length > 0) return window._gradoCatalogoCache;
+  try {
+    window._gradoCatalogoCache = await supaFetchAll('grado_catalogo', '?select=grado,nivel,ciclo');
+  } catch (_) {
+    window._gradoCatalogoCache = [];
+  }
+  return window._gradoCatalogoCache;
+}
+
+// Verifica si el grado está en el catálogo; si no, pregunta al user
+// nivel y ciclo de forma simple y lo agrega. Devuelve { nivel, ciclo }
+// si se agregó (o ya existía), null si el user canceló.
+async function verificarYAgregarGradoAlCatalogo(grado, alumnoId) {
+  const catalog = await _cargarCatalogoGradosCache();
+  const existe = catalog.find(g => g.grado === grado);
+  if (existe) return { nivel: existe.nivel, ciclo: existe.ciclo };
+
+  const nivelInput = prompt(
+    `El grado "${grado}" no está en el catálogo.\n\n` +
+    `Para que aparezca correctamente en reportes, definí su nivel:\n\n` +
+    `  P = PARV (parvularia)\n` +
+    `  B = BASICA (1° a 9°)\n` +
+    `  H = BACH (bachillerato)\n` +
+    `  O = OTRO\n\n` +
+    `Escribí P, B, H o O (vacío = saltar):`
+  );
+  if (!nivelInput) return null;
+  const nivelMap = { P: 'PARV', B: 'BASICA', H: 'BACH', O: 'OTRO' };
+  const nivel = nivelMap[nivelInput.trim().toUpperCase()] || 'OTRO';
+
+  let ciclo = 0;
+  if (nivel === 'BASICA') {
+    const c = prompt('¿Qué ciclo de BASICA?\n  1 = 1°-3°\n  2 = 4°-6°\n  3 = 7°-9°\n\nEscribí 1, 2 o 3:');
+    ciclo = parseInt(c, 10);
+    if (![1,2,3].includes(ciclo)) ciclo = 1;
+  } else if (nivel === 'BACH') ciclo = 4;
+  else if (nivel === 'PARV') ciclo = 0;
+
+  try {
+    await supaFetch('grado_catalogo', 'POST', { grado, nivel, ciclo, activo: true });
+    // Actualizar cache compartida
+    window._gradoCatalogoCache.push({ grado, nivel, ciclo });
+    return { nivel, ciclo };
+  } catch (e) {
+    alert('Error agregando grado al catálogo: ' + e.message);
+    return null;
   }
 }
 
