@@ -34,8 +34,10 @@ const YARDAJE_COLORES = {
 
 let yardajeCache = {
   temporadaId: null,
+  temporadaAnio: null,
   escuelas: null,
   alumnos: null,
+  contratos: null,  // [{escuela_id, tela_celeste_yd, tela_blanca_yd, tela_azul_yd, tela_beige_yd}]
   escuelaSel: '',
 };
 
@@ -52,6 +54,7 @@ async function initYardaje() {
         '?select=id,anio,nombre&order=anio.desc&limit=1'))[0];
       if (!t) throw new Error('No hay temporada cargada');
       yardajeCache.temporadaId = t.id;
+      yardajeCache.temporadaAnio = t.anio;
     }
     if (!yardajeCache.escuelas) {
       yardajeCache.escuelas = await supaFetchAll('escuela',
@@ -62,6 +65,10 @@ async function initYardaje() {
         `?temporada_id=eq.${yardajeCache.temporadaId}&activo=eq.true` +
         '&select=escuela_id,nivel,ciclo,sexo,prenda_top,prenda_bottom');
     }
+    if (!yardajeCache.contratos) {
+      yardajeCache.contratos = await supaFetchAll('contrato_escuela',
+        `?anio=eq.${yardajeCache.temporadaAnio}&select=escuela_id,tela_celeste_yd,tela_blanca_yd,tela_azul_yd,tela_beige_yd`);
+    }
     renderYardaje();
   } catch (e) {
     root.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
@@ -71,6 +78,15 @@ async function initYardaje() {
 function onYardajeEscuelaSel(val) {
   yardajeCache.escuelaSel = val || '';
   renderYardaje();
+}
+
+// Permite que initYardaje refresque todo (incluyendo contratos)
+// Usado por el botón "🔄 Refrescar".
+function refrescarYardaje() {
+  yardajeCache.escuelas = null;
+  yardajeCache.alumnos = null;
+  yardajeCache.contratos = null;
+  initYardaje();
 }
 
 function renderYardaje() {
@@ -109,7 +125,31 @@ function renderYardaje() {
 
   const escSel = escuelas.find(e => e.id === yardajeCache.escuelaSel);
   const fmtYd = (n) => n > 0 ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' yd' : '—';
+  const fmtDiff = (n) => {
+    if (Math.abs(n) < 0.01) return '—';
+    const sign = n > 0 ? '+' : '';
+    return sign + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' yd';
+  };
   const totalGeneral = Object.values(yardasPorColor).reduce((s, v) => s + v, 0);
+
+  // ─── Tela recibida según contrato — filtrada por escuela si aplica ──
+  const contratos = (yardajeCache.contratos || []).filter(c =>
+    !yardajeCache.escuelaSel || c.escuela_id === yardajeCache.escuelaSel);
+  const telaRecibida = { celeste: 0, blanca: 0, azul: 0, beige: 0 };
+  for (const c of contratos) {
+    telaRecibida.celeste += Number(c.tela_celeste_yd) || 0;
+    telaRecibida.blanca  += Number(c.tela_blanca_yd)  || 0;
+    telaRecibida.azul    += Number(c.tela_azul_yd)    || 0;
+    telaRecibida.beige   += Number(c.tela_beige_yd)   || 0;
+  }
+  const totalRecibida = Object.values(telaRecibida).reduce((s, v) => s + v, 0);
+  const balance = {
+    celeste: telaRecibida.celeste - yardasPorColor.celeste,
+    blanca:  telaRecibida.blanca  - yardasPorColor.blanca,
+    azul:    telaRecibida.azul    - yardasPorColor.azul,
+    beige:   telaRecibida.beige   - yardasPorColor.beige,
+  };
+  const totalBalance = totalRecibida - totalGeneral;
 
   root.innerHTML = `
     <!-- Selector escuela -->
@@ -122,7 +162,7 @@ function renderYardaje() {
             ${escuelas.map(e => `<option value="${e.id}" ${yardajeCache.escuelaSel === e.id ? 'selected' : ''}>${e.alias || e.nombre}${e.codigo_cde ? ' · '+e.codigo_cde : ''}</option>`).join('')}
           </select>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="initYardaje()">🔄 Refrescar</button>
+        <button class="btn btn-ghost btn-sm" onclick="refrescarYardaje()">🔄 Refrescar</button>
       </div>
     </div>
 
@@ -138,10 +178,58 @@ function renderYardaje() {
 
     <!-- Total y aviso -->
     <div class="alert alert-info" style="font-size:11px;margin-bottom:10px">
-      <strong>Total: ${fmtYd(totalGeneral)}</strong> ${escSel ? 'para '+(escSel.alias || escSel.nombre) : 'para todas las escuelas'}.
+      <strong>Utilizado total: ${fmtYd(totalGeneral)}</strong> ${escSel ? 'para '+(escSel.alias || escSel.nombre) : 'para todas las escuelas'}.
       Factores del RESUMEN del Excel (yardas por alumno tallado).
-      Solo considera alumnos con prenda cargada — si subís el % de tallaje, suben las yardas.
+      Solo considera alumnos con prenda cargada — si subís el % de tallaje, sube el consumo.
     </div>
+
+    <!-- Balance: Recibida vs Utilizada vs Diferencia -->
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
+      <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">⚖️ Balance: tela recibida vs utilizada</div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:520px">
+          <thead>
+            <tr style="background:#FAFAFA">
+              <th style="padding:8px;text-align:left">Color</th>
+              <th style="padding:8px;text-align:right">Recibida</th>
+              <th style="padding:8px;text-align:right">Utilizada (cálculo)</th>
+              <th style="padding:8px;text-align:right">Diferencia</th>
+              <th style="padding:8px;text-align:left">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${Object.entries(YARDAJE_COLORES).map(([k, c]) => {
+              const diff = balance[k];
+              const acc = diff > 0.5 ? '↩ devolver' : (diff < -0.5 ? '➕ solicitar' : '✓');
+              const accColor = diff > 0.5 ? 'var(--verde)' : (diff < -0.5 ? 'var(--naranja)' : '#888');
+              return `
+                <tr style="border-top:1px solid #EEE">
+                  <td style="padding:6px 8px;border-left:4px solid ${c.border};font-weight:600">${c.label}</td>
+                  <td style="padding:6px 8px;text-align:right">${fmtYd(telaRecibida[k])}</td>
+                  <td style="padding:6px 8px;text-align:right;color:var(--azul)">${fmtYd(yardasPorColor[k])}</td>
+                  <td style="padding:6px 8px;text-align:right;font-weight:700;color:${accColor}">${fmtDiff(diff)}</td>
+                  <td style="padding:6px 8px;color:${accColor}">${acc}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+          <tfoot>
+            <tr style="border-top:2px solid #CCC;background:#FAFAFA;font-weight:700">
+              <td style="padding:8px">TOTAL</td>
+              <td style="padding:8px;text-align:right">${fmtYd(totalRecibida)}</td>
+              <td style="padding:8px;text-align:right;color:var(--azul)">${fmtYd(totalGeneral)}</td>
+              <td style="padding:8px;text-align:right;color:${totalBalance>0?'var(--verde)':(totalBalance<0?'var(--naranja)':'#888')}">${fmtDiff(totalBalance)}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div style="padding:8px 12px;font-size:11px;color:#666;background:#FAFAFA">
+        💡 <strong>↩ devolver</strong>: sobra en bodega · <strong>➕ solicitar</strong>: falta pedir.
+        Si no hay datos de tela recibida (todo en 0), cargalos en 📋 Registro → ✏️ escuela → sección "Tela recibida".
+      </div>
+    </div>
+
 
     <!-- Tabla detalle por nivel × color -->
     <div class="card" style="padding:0;overflow:hidden">
