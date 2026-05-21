@@ -31,6 +31,131 @@ function abrirCatalogoGrupos() {
   if (typeof switchSubProd === 'function') setTimeout(() => switchSubProd('grupos'), 50);
 }
 
+// ─── Catálogo de grados ────────────────────────────────────────────
+let gradosCatalogoCache = [];
+function abrirCatalogoGrados() {
+  document.getElementById('cfg-grados-card').style.display = '';
+  cargarGradosCatalogo();
+}
+async function cargarGradosCatalogo() {
+  const cont = document.getElementById('cfg-grados-lista');
+  if (!cont) return;
+  cont.innerHTML = '<div class="loading">Cargando...</div>';
+  try {
+    gradosCatalogoCache = await supaFetchAll('grado_catalogo',
+      '?select=grado,nivel,ciclo,orden,activo&order=nivel,ciclo,orden,grado');
+    renderGradosCatalogo();
+  } catch (e) { cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`; }
+}
+function renderGradosCatalogo() {
+  const cont = document.getElementById('cfg-grados-lista');
+  if (!cont) return;
+  const filas = gradosCatalogoCache.map(g => `
+    <tr style="border-top:1px solid #EEE;${g.activo?'':'opacity:0.5;background:#F5F5F5'}">
+      <td style="padding:4px 8px;font-weight:600;font-family:monospace">${g.grado}</td>
+      <td style="padding:4px 8px"><span class="badge" style="background:${g.nivel==='PARV'?'#E8F4FD':g.nivel==='BASICA'?'#E8F8E8':g.nivel==='BACH'?'#FDF4E8':'#EEE'};padding:2px 6px;border-radius:4px;font-size:11px">${g.nivel}</span></td>
+      <td style="padding:4px 8px;text-align:center;font-weight:600">${g.ciclo}</td>
+      <td style="padding:4px 8px;text-align:right">
+        <button class="btn-mini" onclick="editarGrado('${g.grado.replace(/'/g,"\\'")}')">✏</button>
+      </td>
+    </tr>
+  `).join('');
+  cont.innerHTML = `
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:380px">
+      <thead><tr style="background:#FAFAFA">
+        <th style="padding:6px 8px;text-align:left">Grado</th>
+        <th style="padding:6px 8px;text-align:left">Nivel</th>
+        <th style="padding:6px 8px;text-align:center">Ciclo</th>
+        <th></th>
+      </tr></thead>
+      <tbody>${filas}</tbody>
+    </table></div>
+    <div style="font-size:11px;color:#888;margin-top:6px">${gradosCatalogoCache.length} grados en el catálogo.</div>
+  `;
+}
+function nuevoGrado() { editarGrado(null); }
+function editarGrado(grado) {
+  document.getElementById('grado-edit-titulo').textContent = grado ? `Editar grado ${grado}` : 'Nuevo grado';
+  document.getElementById('grad-orig').value = grado || '';
+  if (grado) {
+    const g = gradosCatalogoCache.find(x => x.grado === grado);
+    if (!g) return alert('Grado no encontrado');
+    document.getElementById('grad-codigo').value = g.grado;
+    document.getElementById('grad-nivel').value = g.nivel;
+    document.getElementById('grad-ciclo').value = String(g.ciclo);
+    document.getElementById('grad-activo').checked = !!g.activo;
+  } else {
+    document.getElementById('grad-codigo').value = '';
+    document.getElementById('grad-nivel').value = 'BASICA';
+    document.getElementById('grad-ciclo').value = '1';
+    document.getElementById('grad-activo').checked = true;
+  }
+  document.getElementById('grado-edit-modal').style.display = 'flex';
+}
+function cerrarGradoEdit() {
+  document.getElementById('grado-edit-modal').style.display = 'none';
+}
+async function guardarGradoEdit() {
+  const orig = document.getElementById('grad-orig').value;
+  const codigo = document.getElementById('grad-codigo').value.trim();
+  if (!codigo) return alert('El código del grado es obligatorio');
+  const payload = {
+    grado: codigo,
+    nivel: document.getElementById('grad-nivel').value,
+    ciclo: parseInt(document.getElementById('grad-ciclo').value, 10) || 0,
+    activo: document.getElementById('grad-activo').checked,
+    actualizado_en: new Date().toISOString(),
+  };
+  try {
+    if (!orig) {
+      // Nuevo
+      await supaFetch('grado_catalogo', 'POST', payload);
+    } else if (orig === codigo) {
+      // Update
+      const tok = (typeof authToken === 'function' ? authToken() : null) || SUPA_KEY;
+      const res = await fetch(`${SUPA_URL}/rest/v1/grado_catalogo?grado=eq.${encodeURIComponent(orig)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}` },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(await res.text());
+    } else {
+      // Renombrar (delete + insert para no romper FK si hubiera)
+      await supaFetch('grado_catalogo', 'POST', payload);
+      const tok = (typeof authToken === 'function' ? authToken() : null) || SUPA_KEY;
+      await fetch(`${SUPA_URL}/rest/v1/grado_catalogo?grado=eq.${encodeURIComponent(orig)}`, {
+        method: 'DELETE',
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}` },
+      });
+    }
+    cerrarGradoEdit();
+    await cargarGradosCatalogo();
+  } catch (e) { alert('Error al guardar: ' + e.message); }
+}
+
+async function aplicarCatalogoAExistentes() {
+  if (!confirm('Esto va a actualizar el nivel/ciclo de TODOS los alumnos según el catálogo actual. Es seguro (no borra ni cambia tallas). ¿Continuar?')) return;
+  try {
+    const sql = `
+      UPDATE public.alumno a
+      SET nivel = g.nivel, ciclo = g.ciclo, actualizado_en = now()
+      FROM public.grado_catalogo g
+      WHERE a.grado = g.grado
+        AND (a.nivel IS DISTINCT FROM g.nivel OR a.ciclo IS DISTINCT FROM g.ciclo);
+      SELECT (SELECT count(*) FROM public.alumno a JOIN public.grado_catalogo g ON g.grado = a.grado
+         WHERE a.nivel = g.nivel AND a.ciclo = g.ciclo) AS alineados;
+    `;
+    const tok = (typeof authToken === 'function' ? authToken() : null) || SUPA_KEY;
+    const res = await fetch(`${SUPA_URL}/rest/v1/rpc/exec_sql`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}` },
+      body: JSON.stringify({ sql }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    alert('✓ Catálogo aplicado a todos los alumnos.');
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
 // ── Gestión de usuarios ────────────────────────────────────────────
 async function callUsersAdmin(body) {
   if (!supaSession || !supaSession.access_token) {
