@@ -115,6 +115,15 @@
         <div id="emp-aca-resumen" style="margin-bottom:10px">
           <div class="text-muted" style="font-size:12px">Cargando pool...</div>
         </div>
+        <div class="field" style="border-top:1px dashed #ddd;padding-top:8px;margin-top:8px">
+          <label style="display:flex;gap:6px;align-items:center;cursor:pointer;font-weight:500">
+            <input type="checkbox" id="emp-aca-completar-parejas" style="margin:0">
+            <span>✓ Completar pareja si hay stock</span>
+          </label>
+          <div style="font-size:11px;color:#666;margin-top:2px;padding-left:22px">
+            Si el alumno tiene la otra prenda pendiente y hay stock libre en bodega, también la empaca.
+          </div>
+        </div>
       </div>
       <div class="modal-footer" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
         <button class="btn btn-ghost" onclick="cerrarEmpacarAcaparadosModal()">Cancelar</button>
@@ -149,6 +158,15 @@
           <div style="font-size:11px;color:#666;margin-top:4px">Tocá una o varias combinaciones. Cada una agrupa un nivel + sexo con sus prendas (top/bottom).</div>
         </div>
         <div id="emp-sel-pool-info" style="display:none;padding:8px 12px;background:#FFF9E6;border:1px solid #FFD24D;border-radius:6px;font-size:12px;margin-bottom:8px"></div>
+        <div class="field" style="border-top:1px dashed #ddd;padding-top:8px;margin-top:8px">
+          <label style="display:flex;gap:6px;align-items:center;cursor:pointer;font-weight:500">
+            <input type="checkbox" id="emp-sel-completar-parejas" style="margin:0">
+            <span>✓ Completar pareja si hay stock</span>
+          </label>
+          <div style="font-size:11px;color:#666;margin-top:2px;padding-left:22px">
+            Si un alumno tiene su top a empacar y le falta el bottom (o viceversa), también lo empaca si hay stock.
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="cerrarEmpacarSelector()">Cancelar</button>
