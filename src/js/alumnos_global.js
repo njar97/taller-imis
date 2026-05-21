@@ -83,6 +83,8 @@ const ORDEN_CMP = {
     const rk = (s) => s === 'M' ? 0 : (s === 'F' ? 1 : 2);
     return rk(a.sexo) - rk(b.sexo);
   },
+  // Ciclo: 0=PARV, 1/2/3=BASICA, 4=BACH. Null al final.
+  ciclo:     (a,b) => (a.ciclo == null ? 99 : a.ciclo) - (b.ciclo == null ? 99 : b.ciclo),
   grado:     (a,b) => (a.grado||'').localeCompare(b.grado||'', 'es', { numeric: true }),
   nombre:    (a,b) => (a.nombre||'').localeCompare(b.nombre||'', 'es'),
   talla_top: (a,b) => (a.talla_top_key||'').localeCompare(b.talla_top_key||'', 'es', { numeric: true }),
@@ -881,6 +883,7 @@ const ET_ORDEN_OPCIONES = [
   { val: 'escuela',  label: '🏫 Escuela' },
   { val: 'sexo_fm',  label: '♀ → ♂ (Femenino primero)' },
   { val: 'sexo_mf',  label: '♂ → ♀ (Masculino primero)' },
+  { val: 'ciclo',    label: '🎓 Ciclo (PARV → 1C → 2C → 3C → BACH)' },
   { val: 'grado',    label: '📋 Grado' },
   { val: 'nombre',   label: '🔤 Nombre alfabético' },
   { val: 'talla_top', label: '👕 Talla top' },
@@ -1026,6 +1029,7 @@ function _ejecutarGenerarEtiquetas(ordenSeleccion, { soloEmpacados = false, incl
       const rk = (s) => s === 'M' ? 0 : (s === 'F' ? 1 : 2);
       return rk(a.sexo) - rk(b.sexo);
     },
+    ciclo:     (a,b) => (a.ciclo == null ? 99 : a.ciclo) - (b.ciclo == null ? 99 : b.ciclo),
     grado:     (a,b) => (a.grado||'').localeCompare(b.grado||'', 'es', { numeric: true }),
     nombre:    (a,b) => (a.nombre||'').localeCompare(b.nombre||'', 'es'),
     talla_top: (a,b) => (a.talla_top_key||'').localeCompare(b.talla_top_key||'', 'es', { numeric: true }),
