@@ -60,7 +60,7 @@
       <div class="modal-body">
         <div class="field">
           <label>Escuela *</label>
-          <select id="aca-escuela">
+          <select id="aca-escuela" onchange="onAcapararTallaCambio()">
             <option value="">— Elegí escuela —</option>
           </select>
         </div>
@@ -121,10 +121,11 @@
         </div>
         <div class="field">
           <label>Escuela (opcional)</label>
-          <select id="emp-sel-escuela">
+          <select id="emp-sel-escuela" onchange="refrescarPoolEmpSelector()">
             <option value="">— Todas las escuelas —</option>
           </select>
         </div>
+        <div id="emp-sel-pool-info" style="display:none;padding:8px 12px;background:#FFF9E6;border:1px solid #FFD24D;border-radius:6px;font-size:12px;margin-bottom:8px"></div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="cerrarEmpacarSelector()">Cancelar</button>
