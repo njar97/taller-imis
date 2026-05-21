@@ -14,6 +14,10 @@ let alumnosGlobalCache = {
   filtroEstado: '',            // 'pendiente'|'parcial'|'completo'|'entregado'|'sin_tallas'
   masFiltrosAbierto: false,
   cargado: false,
+  // Modo empaque (se activa desde Bodega → Empacar a alumnos)
+  modoEmpaque: false,
+  empPrendas: [],              // ['CAMISA','PANTALON'] — solo se ven alumnos con alguna de estas pendientes
+  empMarcados: null,           // Set<alumno_id>
 };
 
 // Preferencia de orden para etiquetas — persistida en localStorage
@@ -94,10 +98,23 @@ const ORDEN_CMP = {
 function renderAlumnosGlobal() {
   const cont = document.getElementById('alumnos-global-contenido');
   if (!cont) return;
-  
+
   const c = alumnosGlobalCache;
   let lista = c.alumnos;
-  
+
+  // Filtro modo empaque: solo alumnos con al menos una pieza pendiente cuya prenda
+  // está en la lista de prendas a empacar (empPrendas) y con talla cargada.
+  if (c.modoEmpaque && Array.isArray(c.empPrendas) && c.empPrendas.length > 0) {
+    const setP = new Set(c.empPrendas);
+    lista = lista.filter(a => {
+      const topMatch = a.prenda_top && setP.has(a.prenda_top) && a.talla_top_key
+        && a.estado_top !== 'empacado' && a.estado_top !== 'entregado';
+      const botMatch = a.prenda_bottom && setP.has(a.prenda_bottom) && a.talla_bottom_key
+        && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado';
+      return topMatch || botMatch;
+    });
+  }
+
   // Filtros
   if (c.busqueda) {
     const q = c.busqueda.toLowerCase().trim();
@@ -253,29 +270,53 @@ function renderAlumnosGlobal() {
     </div>
   `;
   
+  // Banner modo empaque (entre header y tabla)
+  const empaqueBanner = c.modoEmpaque ? renderEmpaqueBanner(lista) : '';
+
   if (lista.length === 0) {
-    cont.innerHTML = header + '<div class="alert alert-info">Sin resultados.</div>';
+    cont.innerHTML = header + empaqueBanner + '<div class="alert alert-info">Sin resultados.</div>';
     return;
   }
-  
+
   // Tabla
   const visible = lista.slice(0, 500); // cap
   const hayMas = lista.length > 500;
-  
+
   const iconEstado = (e) => e === 'empacado' ? '✅' : (e === 'entregado' ? '🚚' : (e === 'reservado' ? '⏳' : '⬜'));
-  
+
+  // En modo empaque: asegurar Set de marcados y marcar los que coinciden con prendas filtradas
+  if (c.modoEmpaque && !(c.empMarcados instanceof Set)) c.empMarcados = new Set();
+  const setP = c.modoEmpaque ? new Set(c.empPrendas || []) : null;
+
   const filas = visible.map(a => {
     const esc = c.escuelas[a.escuela_id];
     const sinTallas = alumnoSinTallas(a);
     const bg = sinTallas ? '#FFF4F0' : 'white';
+
+    // En modo empaque destacamos las piezas que SE VAN A EMPACAR (verde) vs las que no entran
+    const topResalt = (c.modoEmpaque && setP && setP.has(a.prenda_top) && a.talla_top_key
+      && a.estado_top !== 'empacado' && a.estado_top !== 'entregado');
+    const botResalt = (c.modoEmpaque && setP && setP.has(a.prenda_bottom) && a.talla_bottom_key
+      && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado');
+    const topStyle = topResalt ? 'background:#E0F4E5;color:var(--verde);font-weight:700' : `color:${a.talla_top_key?'var(--azul)':'#c44'}`;
+    const botStyle = botResalt ? 'background:#E0F4E5;color:var(--verde);font-weight:700' : `color:${a.talla_bottom_key?'var(--azul)':'#c44'}`;
+
+    const checkCell = c.modoEmpaque
+      ? `<td style="padding:4px 8px;text-align:center" onclick="event.stopPropagation()">
+           <input type="checkbox" ${c.empMarcados.has(a.id)?'checked':''}
+                  onchange="toggleMarcarEmpaque('${a.id}', this.checked)" style="cursor:pointer">
+         </td>`
+      : '';
+
     return `
       <tr style="border-top:1px solid #EEE;background:${bg};cursor:pointer" onclick="editarAlumnoRapido('${a.id}')" title="Clic para editar">
+        ${checkCell}
         <td style="padding:4px 8px;font-weight:600">${a.nombre}</td>
         <td style="padding:4px 8px;font-size:11px;color:#666">${esc ? esc.nombre : '-'}</td>
         <td style="padding:4px 8px;font-size:11px">${a.grado || '-'}</td>
         <td style="padding:4px 8px;text-align:center">${a.sexo==='F'?'♀':(a.sexo==='M'?'♂':'-')}</td>
-        <td style="padding:4px 8px;text-align:center;font-family:monospace;color:${a.talla_top_key?'var(--azul)':'#c44'}">${a.talla_top_key || '⚠'}</td>
-        <td style="padding:4px 8px;text-align:center;font-family:monospace;color:${a.talla_bottom_key?'var(--azul)':'#c44'}">${a.talla_bottom_key || '⚠'}</td>
+        <td style="padding:4px 8px;text-align:center;font-family:monospace;${topStyle}">${a.talla_top_key || '⚠'}</td>
+        <td style="padding:4px 8px;text-align:center;font-family:monospace;${botStyle}">${a.talla_bottom_key || '⚠'}</td>
         <td style="padding:4px 8px;text-align:center">${iconEstado(a.estado_top)}${iconEstado(a.estado_bottom)}</td>
         <td style="padding:4px 8px;text-align:center" onclick="event.stopPropagation()">
           <button class="btn-mini" onclick="editarAlumnoRapido('${a.id}')" title="Editar">✏</button>
@@ -283,12 +324,19 @@ function renderAlumnosGlobal() {
       </tr>
     `;
   }).join('');
-  
-  cont.innerHTML = header + `
+
+  const checkHeader = c.modoEmpaque
+    ? `<th style="padding:6px 8px;text-align:center;width:30px">
+         <input type="checkbox" onchange="marcarTodosEmpaque(this.checked)" title="Marcar/desmarcar todos los visibles">
+       </th>`
+    : '';
+
+  cont.innerHTML = header + empaqueBanner + `
     <div class="card" style="padding:0;overflow:auto;max-height:70vh">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead style="position:sticky;top:0;background:#F5F7FA;z-index:1">
           <tr>
+            ${checkHeader}
             <th style="padding:6px 8px;text-align:left">Nombre</th>
             <th style="padding:6px 8px;text-align:left">Escuela</th>
             <th style="padding:6px 8px;text-align:left">Grado</th>
@@ -304,6 +352,114 @@ function renderAlumnosGlobal() {
       ${hayMas ? `<div style="padding:10px;text-align:center;color:#888;font-size:12px">... ${lista.length-500} alumnos más. Usá filtros para reducir.</div>` : ''}
     </div>
   `;
+}
+
+function renderEmpaqueBanner(listaVisible) {
+  const c = alumnosGlobalCache;
+  if (!c.empMarcados) c.empMarcados = new Set();
+  const marcados = c.empMarcados.size;
+  // Contar piezas que efectivamente se van a empacar (las del filtro de prendas)
+  const setP = new Set(c.empPrendas || []);
+  let piezasAEmpacar = 0;
+  for (const a of listaVisible) {
+    if (!c.empMarcados.has(a.id)) continue;
+    if (a.prenda_top && setP.has(a.prenda_top) && a.talla_top_key
+        && a.estado_top !== 'empacado' && a.estado_top !== 'entregado') piezasAEmpacar++;
+    if (a.prenda_bottom && setP.has(a.prenda_bottom) && a.talla_bottom_key
+        && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado') piezasAEmpacar++;
+  }
+  return `
+    <div class="card" style="background:#E0F4E5;border:2px solid var(--verde);padding:10px 12px;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-weight:700;color:var(--verde);font-size:14px">📦 Modo empaque</div>
+        <div style="font-size:12px;margin-top:2px">
+          Prendas: <strong>${(c.empPrendas||[]).join(', ') || '—'}</strong>
+          · ${listaVisible.length} alumno(s) coinciden
+          · <strong>${marcados}</strong> marcados (${piezasAEmpacar} pieza${piezasAEmpacar===1?'':'s'})
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-success btn-sm" onclick="aplicarEmpaqueMarcados()" ${marcados===0?'disabled':''}>
+          ✓ Empacar marcados (${marcados})
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="salirModoEmpaque()">Salir</button>
+      </div>
+    </div>
+  `;
+}
+
+function toggleMarcarEmpaque(id, checked) {
+  const c = alumnosGlobalCache;
+  if (!c.empMarcados) c.empMarcados = new Set();
+  if (checked) c.empMarcados.add(id);
+  else c.empMarcados.delete(id);
+  renderAlumnosGlobal();
+}
+
+function marcarTodosEmpaque(checked) {
+  const c = alumnosGlobalCache;
+  if (!c.empMarcados) c.empMarcados = new Set();
+  // Tomamos la lista visible actual (recalculamos el filtro)
+  const setP = new Set(c.empPrendas || []);
+  const ids = c.alumnos
+    .filter(a => {
+      // Aplicar mismo filtro que renderAlumnosGlobal
+      if (c.modoEmpaque) {
+        const topMatch = a.prenda_top && setP.has(a.prenda_top) && a.talla_top_key
+          && a.estado_top !== 'empacado' && a.estado_top !== 'entregado';
+        const botMatch = a.prenda_bottom && setP.has(a.prenda_bottom) && a.talla_bottom_key
+          && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado';
+        if (!topMatch && !botMatch) return false;
+      }
+      if (c.filtroEscuelas && c.filtroEscuelas.length > 0) {
+        if (!c.filtroEscuelas.includes(a.escuela_id)) return false;
+      }
+      if (c.busqueda) {
+        const q = c.busqueda.toLowerCase().trim();
+        if (!(a.nombre||'').toLowerCase().includes(q)) return false;
+      }
+      return true;
+    })
+    .slice(0, 500)
+    .map(a => a.id);
+  if (checked) ids.forEach(id => c.empMarcados.add(id));
+  else ids.forEach(id => c.empMarcados.delete(id));
+  renderAlumnosGlobal();
+}
+
+function salirModoEmpaque() {
+  const c = alumnosGlobalCache;
+  c.modoEmpaque = false;
+  c.empPrendas = [];
+  c.empMarcados = null;
+  renderAlumnosGlobal();
+}
+
+async function aplicarEmpaqueMarcados() {
+  const c = alumnosGlobalCache;
+  if (!c.empMarcados || c.empMarcados.size === 0) return alert('Marcá al menos un alumno');
+  const setP = new Set(c.empPrendas || []);
+  if (setP.size === 0) return alert('No hay prendas seleccionadas');
+
+  const alumnos = c.alumnos.filter(a => c.empMarcados.has(a.id));
+  if (alumnos.length === 0) return alert('Alumnos marcados no encontrados');
+
+  if (!confirm(`¿Empacar ${alumnos.length} alumno(s) con prendas: ${[...setP].join(', ')}?\n\nLas piezas se descuentan del pool acaparado de la escuela primero, y del stock libre si el pool no alcanza.`)) return;
+
+  try {
+    const r = await empacarAlumnosDesdeRegistro(alumnos, setP);
+    if (r.errores && r.errores.length > 0) {
+      alert('❌ No hay stock suficiente:\n\n' + r.errores.join('\n') +
+            '\n\nOpciones: registrar entrada en bodega, acaparar primero, o desmarcar alumnos sin stock.');
+      return;
+    }
+    alert(`✓ ${r.actualizados} alumno(s) empacado(s).\n${r.piezasPool} pieza(s) del pool acaparado.\n${r.piezasStock} pieza(s) del stock libre.`);
+    // Refrescar datos
+    c.empMarcados = new Set();
+    await initAlumnosGlobal();
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
 }
 
 function limpiarFiltros() {

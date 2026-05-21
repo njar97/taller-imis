@@ -78,7 +78,7 @@ function renderStock() {
       </label>
       <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()">📥 + Entrada</button>
       <button class="btn btn-warning btn-sm" onclick="abrirAcapararModal()" title="Bloquear cantidad para una escuela (sin alumnos)">📥 Acaparar</button>
-      <button class="btn btn-primary btn-sm" onclick="abrirAsignarModal()">📦 Empacar a alumnos</button>
+      <button class="btn btn-primary btn-sm" onclick="abrirEmpacarSelector()">📦 Empacar a alumnos</button>
       <button class="btn btn-success btn-sm" onclick="abrirEntregaModal()" title="Marcar todos los empacados de una escuela como entregados">🚚 Marcar entrega</button>
       <button class="btn btn-ghost btn-sm" onclick="abrirSalidaModal()" title="Salida genérica (sin alumnos)">↗ Salida rápida</button>
       <button class="btn btn-ghost btn-sm" onclick="cargarBodegaStock()">🔄 Refrescar</button>
@@ -307,6 +307,223 @@ async function guardarEntradaManual() {
   } catch(e) {
     alert('Error: ' + e.message);
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SELECTOR DE EMPAQUE → tab Registro
+// ═══════════════════════════════════════════════════════════════════
+// Modal previo: elegir prendas + (opcional) escuela.
+// Luego salta al tab Registro con esos filtros y modo empaque activo.
+// ═══════════════════════════════════════════════════════════════════
+let empSelCache = { prendasMarcadas: new Set(), escuelas: null, prendas: null };
+
+async function abrirEmpacarSelector() {
+  const modal = document.getElementById('bodega-empacar-selector-modal');
+  if (!modal) return;
+  empSelCache.prendasMarcadas = new Set();
+  modal.style.display = 'flex';
+  try {
+    const [escuelas, stock] = await Promise.all([
+      empSelCache.escuelas
+        ? Promise.resolve(empSelCache.escuelas)
+        : supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre&order=alias'),
+      supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda'),
+    ]);
+    empSelCache.escuelas = escuelas;
+    const prendas = [...new Set(stock.map(s => s.nombre_prenda || s.cod_prenda).filter(Boolean))].sort();
+    empSelCache.prendas = prendas;
+
+    const cont = document.getElementById('emp-sel-prendas');
+    cont.innerHTML = prendas.length === 0
+      ? '<div class="text-muted" style="font-size:12px">No hay prendas con stock.</div>'
+      : prendas.map(p => `
+          <label class="btn btn-sm btn-ghost" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-weight:500">
+            <input type="checkbox" value="${p}" onchange="toggleEmpSelPrenda(this)" style="margin:0">
+            ${p}
+          </label>
+        `).join('');
+
+    const selE = document.getElementById('emp-sel-escuela');
+    selE.innerHTML = '<option value="">— Todas las escuelas —</option>' +
+      escuelas.map(e => `<option value="${e.id}">${e.alias || e.nombre}</option>`).join('');
+  } catch(e) { alert('Error: '+e.message); }
+}
+function cerrarEmpacarSelector() { document.getElementById('bodega-empacar-selector-modal').style.display = 'none'; }
+
+function toggleEmpSelPrenda(input) {
+  if (input.checked) empSelCache.prendasMarcadas.add(input.value);
+  else empSelCache.prendasMarcadas.delete(input.value);
+  // resaltar visualmente la label
+  const lbl = input.closest('label');
+  if (lbl) {
+    lbl.classList.toggle('btn-primary', input.checked);
+    lbl.classList.toggle('btn-ghost', !input.checked);
+  }
+}
+
+function confirmarEmpacarSelector() {
+  const prendas = [...empSelCache.prendasMarcadas];
+  if (prendas.length === 0) return alert('Elegí al menos una prenda a empacar');
+  const escId = document.getElementById('emp-sel-escuela').value || '';
+  cerrarEmpacarSelector();
+  // Pasar estado al cache de alumnos_global y saltar al tab Registro
+  if (typeof alumnosGlobalCache !== 'undefined') {
+    alumnosGlobalCache.modoEmpaque = true;
+    alumnosGlobalCache.empPrendas = prendas;
+    alumnosGlobalCache.empMarcados = new Set();
+    // limpiar filtros previos para arrancar fresco
+    alumnosGlobalCache.busqueda = '';
+    alumnosGlobalCache.filtroEscuela = '';
+    alumnosGlobalCache.filtroEscuelas = escId ? [escId] : [];
+    alumnosGlobalCache.filtroEstado = '';
+  }
+  if (typeof switchTab === 'function') switchTab('registro');
+  // initAlumnosGlobal puede tardar; si ya estaba cargado solo re-render
+  setTimeout(() => {
+    if (typeof alumnosGlobalCache !== 'undefined' && alumnosGlobalCache.cargado) {
+      renderAlumnosGlobal();
+    } else if (typeof initAlumnosGlobal === 'function') {
+      initAlumnosGlobal();
+    }
+  }, 50);
+}
+
+// ─── Empaque pool-aware reusable desde tabla Registro ──────────────
+// Recibe alumnos (objetos completos con prenda_top/talla_top_key/etc),
+// y un Set de nombres de prenda permitidos a empacar.
+// Por cada pieza elegible (prenda en el set, talla presente, estado no empacado/entregado):
+//   1) Consume del pool escuela_acaparado si hay disponibilidad
+//   2) Si no, crea SALIDA_EMPAQUE (descuenta stock)
+// Actualiza estado_top/estado_bottom = 'empacado'.
+// Retorna { actualizados, piezasPool, piezasStock, errores: [] }.
+async function empacarAlumnosDesdeRegistro(alumnos, prendasSet) {
+  if (!alumnos || alumnos.length === 0) throw new Error('Sin alumnos para empacar');
+  if (!prendasSet || prendasSet.size === 0) throw new Error('Sin prendas seleccionadas');
+
+  // 1) Cargar pool por escuelas afectadas
+  const pool = {};
+  const escIds = [...new Set(alumnos.map(a => a.escuela_id).filter(Boolean))];
+  if (escIds.length) {
+    const rows = await supaFetchAll('escuela_acaparado',
+      `?escuela_id=in.(${escIds.join(',')})&select=id,escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida`);
+    for (const r of rows) {
+      const disp = (Number(r.cantidad_acaparada) || 0) - (Number(r.cantidad_consumida) || 0);
+      if (disp <= 0) continue;
+      const k = r.escuela_id + '|' + r.nombre_prenda + '|' + r.talla_key;
+      if (!pool[k]) pool[k] = { rows: [], disponible: 0 };
+      pool[k].rows.push({ id: r.id, libres: disp });
+      pool[k].disponible += disp;
+    }
+  }
+
+  // 2) Cargar stock actual
+  const stockRows = await supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual');
+  const stockMap = {};
+  for (const s of stockRows) {
+    stockMap[(s.nombre_prenda || s.cod_prenda) + '|' + s.talla_key] = Number(s.stock_actual) || 0;
+  }
+
+  // 3) Validación: ¿alcanza pool+stock libre para todas las piezas?
+  const consumoStock = {};
+  const poolSim = {};
+  for (const k of Object.keys(pool)) poolSim[k] = pool[k].disponible;
+  for (const a of alumnos) {
+    const tryConsume = (prenda, talla, estado) => {
+      if (!prenda || !talla) return;
+      if (!prendasSet.has(prenda)) return;
+      if (estado === 'empacado' || estado === 'entregado') return;
+      const kPool = a.escuela_id + '|' + prenda + '|' + talla;
+      if ((poolSim[kPool] || 0) > 0) { poolSim[kPool]--; return; }
+      const kStock = prenda + '|' + talla;
+      consumoStock[kStock] = (consumoStock[kStock] || 0) + 1;
+    };
+    tryConsume(a.prenda_top, a.talla_top_key, a.estado_top);
+    tryConsume(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom);
+  }
+  const errores = [];
+  for (const [k, n] of Object.entries(consumoStock)) {
+    const disp = stockMap[k] || 0;
+    if (n > disp) {
+      const [p, t] = k.split('|');
+      errores.push(`${p} ${t}: querés ${n} de stock libre pero hay ${disp}`);
+    }
+  }
+  if (errores.length > 0) {
+    return { actualizados: 0, piezasPool: 0, piezasStock: 0, errores };
+  }
+
+  // 4) Aplicar: por alumno, decidir pool vs stock
+  const movs = [];
+  const poolDelta = {};
+  let piezasPool = 0, piezasStock = 0, actualizados = 0;
+
+  const consumirDelPool = (escId, prenda, talla) => {
+    const k = escId + '|' + prenda + '|' + talla;
+    const entry = pool[k];
+    if (!entry || entry.disponible <= 0) return false;
+    for (const r of entry.rows) {
+      if (r.libres > 0) {
+        r.libres--;
+        entry.disponible--;
+        poolDelta[r.id] = (poolDelta[r.id] || 0) + 1;
+        return true;
+      }
+    }
+    return false;
+  };
+
+  for (const a of alumnos) {
+    const update = { actualizado_en: new Date().toISOString() };
+    let toca = false;
+    const procesar = (prenda, talla, estado, esTop) => {
+      if (!prenda || !talla) return;
+      if (!prendasSet.has(prenda)) return;
+      if (estado === 'empacado' || estado === 'entregado') return;
+      if (esTop) update.estado_top = 'empacado';
+      else update.estado_bottom = 'empacado';
+      toca = true;
+      if (consumirDelPool(a.escuela_id, prenda, talla)) {
+        piezasPool++;
+      } else {
+        movs.push({
+          tipo: 'SALIDA_EMPAQUE',
+          cod_prenda: _codPrenda(prenda),
+          nombre_prenda: prenda,
+          talla_key: talla,
+          cantidad: 1,
+          alumno_id: a.id,
+          escuela_id: a.escuela_id,
+          fecha: new Date().toISOString().slice(0,10),
+          observaciones: `Empacado para ${a.nombre}`,
+        });
+        piezasStock++;
+      }
+    };
+    procesar(a.prenda_top, a.talla_top_key, a.estado_top, true);
+    procesar(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom, false);
+    if (toca) {
+      await supaUpdate('alumno', a.id, update);
+      actualizados++;
+    }
+  }
+
+  if (movs.length > 0) {
+    await supaFetch('bodega_movimiento', 'POST', movs);
+  }
+  if (Object.keys(poolDelta).length > 0) {
+    const stmts = Object.entries(poolDelta).map(([id, d]) =>
+      `UPDATE public.escuela_acaparado SET cantidad_consumida = cantidad_consumida + ${d} WHERE id='${id}';`);
+    const sql = stmts.join('\n');
+    const tok = (typeof authToken === 'function' ? authToken() : null) || SUPA_KEY;
+    const res = await fetch(`${SUPA_URL}/rest/v1/rpc/exec_sql`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':`Bearer ${tok}` },
+      body: JSON.stringify({ sql }),
+    });
+    if (!res.ok) throw new Error('Error actualizando pool: ' + await res.text());
+  }
+
+  return { actualizados, piezasPool, piezasStock, errores: [] };
 }
 
 // ═══════════════════════════════════════════════════════════════════
