@@ -76,7 +76,8 @@ function renderStock() {
                onchange="bodegaCache.filtroTallaVacia = this.checked; renderStock()">
         Mostrar vacíos
       </label>
-      <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()">+ Entrada manual</button>
+      <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()">📥 + Entrada</button>
+      <button class="btn btn-primary btn-sm" onclick="abrirSalidaModal()">🚚 Salida a escuela</button>
       <button class="btn btn-ghost btn-sm" onclick="cargarBodegaStock()">🔄 Refrescar</button>
     </div>
   `;
@@ -202,8 +203,9 @@ function renderMovimientos(movs) {
   const cont = document.getElementById('bodega-contenido');
   if (!movs || movs.length === 0) {
     cont.innerHTML = `
-      <div style="margin-bottom:10px">
-        <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()">+ Entrada manual</button>
+      <div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()">📥 + Entrada</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirSalidaModal()">🚚 Salida a escuela</button>
       </div>
       <div class="alert alert-info">Sin movimientos registrados.</div>`;
     return;
@@ -227,8 +229,9 @@ function renderMovimientos(movs) {
   };
   
   cont.innerHTML = `
-    <div style="margin-bottom:10px">
-      <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()">+ Entrada manual</button>
+    <div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()">📥 + Entrada</button>
+      <button class="btn btn-primary btn-sm" onclick="abrirSalidaModal()">🚚 Salida a escuela</button>
     </div>
     <div class="card" style="padding:0;overflow:hidden">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -299,6 +302,147 @@ async function guardarEntradaManual() {
     await cargarBodegaStock();
   } catch(e) {
     alert('Error: ' + e.message);
+  }
+}
+
+// ─── Modal: SALIDA A ESCUELA ─────────────────────────────────────
+// Específico para entregas. Permite elegir escuela, prenda y talla
+// del catálogo (con stock visible), valida cantidad <= stock.
+let salidaCache = { escuelas: null, stock: null };
+
+async function abrirSalidaModal() {
+  const modal = document.getElementById('bodega-salida-modal');
+  if (!modal) return;
+  // Reset
+  document.getElementById('sal-escuela').value = '';
+  document.getElementById('sal-prenda').value = '';
+  document.getElementById('sal-talla').innerHTML = '<option value="">— Elegí prenda primero —</option>';
+  document.getElementById('sal-cantidad').value = '';
+  document.getElementById('sal-obs').value = '';
+  document.getElementById('sal-stock-info').style.display = 'none';
+
+  modal.style.display = 'flex';
+
+  try {
+    // Cargar escuelas y stock en paralelo (si no están cacheados)
+    if (!salidaCache.escuelas) {
+      salidaCache.escuelas = await supaFetchAll('escuela',
+        '?activa=eq.true&select=id,alias,nombre,codigo_cde&order=alias');
+    }
+    if (!salidaCache.stock || true) {
+      // Siempre recargar stock para mostrar el valor más fresco
+      salidaCache.stock = await supaFetchAll('vw_bodega_stock',
+        '?stock_actual=gt.0&select=cod_prenda,nombre_prenda,talla_key,stock_actual,reservado_empaque');
+    }
+
+    // Popular select de escuelas
+    const selE = document.getElementById('sal-escuela');
+    selE.innerHTML = '<option value="">— Elegí escuela —</option>' +
+      salidaCache.escuelas.map(e => `<option value="${e.id}">${e.alias || e.nombre}${e.codigo_cde ? ' · '+e.codigo_cde : ''}</option>`).join('');
+
+    // Popular select de prendas (las que tienen stock > 0)
+    const prendasUnicas = [...new Set(salidaCache.stock.map(s => s.nombre_prenda || s.cod_prenda))].sort();
+    const selP = document.getElementById('sal-prenda');
+    selP.innerHTML = '<option value="">— Elegí prenda —</option>' +
+      prendasUnicas.map(p => `<option value="${p}">${p}</option>`).join('');
+  } catch (e) {
+    alert('Error cargando datos: ' + e.message);
+  }
+}
+
+function cerrarSalidaModal() {
+  document.getElementById('bodega-salida-modal').style.display = 'none';
+}
+
+// Cuando cambia la prenda, repoblar tallas con stock disponible
+function onSalidaPrendaCambio() {
+  const prenda = document.getElementById('sal-prenda').value;
+  const selT = document.getElementById('sal-talla');
+  if (!prenda) {
+    selT.innerHTML = '<option value="">— Elegí prenda primero —</option>';
+    document.getElementById('sal-stock-info').style.display = 'none';
+    return;
+  }
+  const tallas = (salidaCache.stock || [])
+    .filter(s => (s.nombre_prenda || s.cod_prenda) === prenda)
+    .sort((a,b) => (a.talla_key||'').localeCompare(b.talla_key||'', 'es', { numeric: true }));
+  selT.innerHTML = '<option value="">— Elegí talla —</option>' +
+    tallas.map(s => `<option value="${s.talla_key}">${s.talla_key} (stock: ${s.stock_actual})</option>`).join('');
+  document.getElementById('sal-stock-info').style.display = 'none';
+}
+
+// Cuando cambia la talla (o la prenda), mostrar stock disponible
+function onSalidaPrendaTalla() {
+  const prenda = document.getElementById('sal-prenda').value;
+  const talla = document.getElementById('sal-talla').value;
+  const info = document.getElementById('sal-stock-info');
+  if (!prenda || !talla) { info.style.display = 'none'; return; }
+  const row = (salidaCache.stock || []).find(s =>
+    (s.nombre_prenda || s.cod_prenda) === prenda && s.talla_key === talla);
+  if (!row) { info.style.display = 'none'; return; }
+  const disponible = (row.stock_actual || 0) - (row.reservado_empaque || 0);
+  info.style.display = '';
+  info.innerHTML = `
+    <strong>${prenda} ${talla}</strong>:
+    Stock actual <strong>${row.stock_actual}</strong>
+    · Reservado <strong>${row.reservado_empaque || 0}</strong>
+    · <span style="color:var(--verde);font-weight:700">Disponible ${disponible}</span>
+  `;
+  document.getElementById('sal-cantidad').max = disponible;
+}
+
+async function guardarSalida() {
+  const escuelaId = document.getElementById('sal-escuela').value;
+  const prenda = document.getElementById('sal-prenda').value;
+  const talla = document.getElementById('sal-talla').value;
+  const cantidad = parseInt(document.getElementById('sal-cantidad').value, 10);
+  const obs = document.getElementById('sal-obs').value.trim() || null;
+
+  if (!escuelaId) return alert('Elegí una escuela');
+  if (!prenda) return alert('Elegí una prenda');
+  if (!talla) return alert('Elegí una talla');
+  if (!cantidad || cantidad <= 0) return alert('Cantidad inválida');
+
+  // Validar stock disponible
+  const row = (salidaCache.stock || []).find(s =>
+    (s.nombre_prenda || s.cod_prenda) === prenda && s.talla_key === talla);
+  const disponible = row ? (row.stock_actual || 0) - (row.reservado_empaque || 0) : 0;
+  if (cantidad > disponible) {
+    return alert(`No hay suficiente stock disponible. Solo hay ${disponible} de ${prenda} ${talla}.`);
+  }
+
+  // Derivar cod_prenda
+  const codMap = {
+    'CAMISA':'C','BLUSA':'B','CAMISA_CELESTE':'CC','PANTALON':'P','PANTALON_BEIGE':'PB',
+    'FALDA':'F','FALDA_BEIGE':'FB','FALDA_C.E':'FCE','SHORT':'S'
+  };
+  const codPrenda = codMap[prenda.toUpperCase()] || prenda.slice(0,3).toUpperCase();
+
+  const btn = document.getElementById('sal-btn-guardar');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Guardando...'; }
+  try {
+    await supaFetch('bodega_movimiento', 'POST', {
+      tipo: 'SALIDA_ENTREGA',
+      cod_prenda: codPrenda,
+      nombre_prenda: prenda,
+      talla_key: talla,
+      cantidad: cantidad,
+      escuela_id: escuelaId,
+      fecha: new Date().toISOString().slice(0, 10),
+      observaciones: obs,
+    });
+    cerrarSalidaModal();
+    // Refrescar la vista actual
+    if (bodegaCache.vistaActual === 'stock') await cargarBodegaStock();
+    else if (bodegaCache.vistaActual === 'movimientos') await cargarMovimientos();
+    else if (bodegaCache.vistaActual === 'vs_demanda') await cargarBodegaVsDemanda();
+    // Invalidar cache de stock para próxima salida
+    salidaCache.stock = null;
+    alert(`✓ Salida registrada: ${cantidad} ${prenda} ${talla}`);
+  } catch (e) {
+    alert('Error: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🚚 Registrar salida'; }
   }
 }
 
