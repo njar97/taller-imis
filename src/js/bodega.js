@@ -321,6 +321,7 @@ let asignarCache = {
   accion: null,           // 'reservado' | 'empacado' | 'entregado'
   escuelas: [],
   alumnos: [],
+  stock: [],              // [{nombre_prenda, talla_key, stock_actual, ...}]
   prendas: [],
   tallas: [],
   filtrados: [],          // los que matchean los filtros actuales
@@ -328,9 +329,9 @@ let asignarCache = {
 };
 
 const ASIGNAR_INFO = {
-  reservado: 'No toca el stock físico. Solo "aparta" piezas para estos alumnos. Útil para acaparar rápido.',
-  empacado:  'Descuenta del stock real (SALIDA_EMPAQUE). Significa que las piezas están en la bolsa físicamente.',
-  entregado: 'Registra SALIDA_ENTREGA. La bolsa sale del taller a la escuela.',
+  reservado: 'Acaparar: no toca stock físico. Útil cuando el control de bodega NO es preciso y querés bloquear piezas para esta escuela. Si tu stock está bien controlado, saltá esto y empacá directo.',
+  empacado:  'Empacar: las piezas salen físicamente de bodega a la bolsa del alumno. Descuenta stock real.',
+  entregado: 'Entregar: la bolsa sale del taller hacia la escuela.',
 };
 
 async function abrirAsignarModal() {
@@ -346,13 +347,15 @@ async function abrirAsignarModal() {
   modal.style.display = 'flex';
 
   try {
-    // Cargar escuelas activas + alumnos para popular selects
-    const [escuelas, alumnos] = await Promise.all([
+    // Cargar escuelas activas + alumnos + stock actual
+    const [escuelas, alumnos, stock] = await Promise.all([
       supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre&order=alias'),
       supaFetchAll('alumno', '?activo=eq.true&select=id,nombre,grado,escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000'),
+      supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual,stock_disponible,reservado_empaque'),
     ]);
     asignarCache.escuelas = escuelas;
     asignarCache.alumnos = alumnos;
+    asignarCache.stock = stock;
 
     // Popular select de escuelas
     const sel = document.getElementById('asi-escuelas');
@@ -475,19 +478,20 @@ function asignarRefrescar() {
     ${talla ? `· Talla: <strong>${talla}</strong>` : ''}
   `;
 
-  // Si la acción es Empacar, calcular cuántos hay ya acaparados (reservados)
-  // por las escuelas seleccionadas + prenda + talla. Mostrar advertencia.
+  // Si la acción es Empacar, mostrar desglose: stock libre + acaparado por escuela
+  // = disponibilidad efectiva. La prioridad es consumir el acaparado primero.
   if (accion === 'empacado') {
-    const acaparados = _calcularAcaparado(escSel, prenda, talla);
-    if (acaparados.total > 0) {
-      const desglose = Object.entries(acaparados.porEscuela)
-        .map(([eid, n]) => `${escName(eid)}: <strong>${n}</strong>`).join(' · ');
+    const disp = _calcularDisponibilidad(escSel, prenda, talla);
+    if (disp.total > 0 || disp.acaparado > 0 || disp.stockLibre > 0) {
+      const detEsc = Object.entries(disp.acaparadoPorEsc)
+        .filter(([_, n]) => n > 0)
+        .map(([eid, n]) => `${escName(eid)} <strong>${n}</strong>`).join(' · ');
       resumenHtml += `
-        <div style="margin-top:6px;padding:6px 8px;background:#FFF8E6;border-left:3px solid #f80;border-radius:3px;font-size:11px">
-          🔒 <strong>Hay ${acaparados.total} piezas ya acaparadas</strong> para esta selección
-          (${desglose}).<br>
-          Al empacar esos alumnos, las piezas SÍ salen físicamente de bodega (descuenta stock real).
-          La diferencia con empacar "del aire" es que el acaparado ya bloqueó esas piezas para esta escuela.
+        <div style="margin-top:6px;padding:8px 10px;background:#FFF8E6;border-left:3px solid #f80;border-radius:3px;font-size:11px;line-height:1.5">
+          📊 <strong>Disponibilidad${prenda||talla?' ('+(prenda||'')+' '+(talla||'')+')':''}</strong>:<br>
+          🔒 Acaparado: <strong>${disp.acaparado}</strong>${detEsc?` (${detEsc})`:''} — se consume primero<br>
+          📦 Stock libre en bodega: <strong>${disp.stockLibre}</strong>${disp.stockLibre>0?' — disponible para cualquier escuela':''}<br>
+          ➕ <strong>Total empacable para estas escuelas: ${disp.total}</strong>
         </div>
       `;
     }
@@ -652,24 +656,65 @@ function _codPrenda(prenda) {
   return map[(prenda||'').toUpperCase()] || (prenda||'').slice(0,3).toUpperCase();
 }
 
-// Cuenta cuántos alumnos hay en estado RESERVADO (acaparado) para las
-// escuelas seleccionadas + prenda/talla. Devuelve { total, porEscuela: {id:N} }
-function _calcularAcaparado(escSel, prenda, talla) {
+// Calcula disponibilidad efectiva = acaparado para las escuelas + stock libre.
+// stock libre = stock_actual - reservas en otras escuelas (acaparado ajeno).
+// El acaparado para estas escuelas se consume primero al empacar.
+// Filtra por prenda/talla si están dadas; si no, suma todas las combinaciones
+// que aparezcan en alumnos elegibles.
+function _calcularDisponibilidad(escSel, prenda, talla) {
   const escSet = new Set(escSel);
-  const porEscuela = {};
-  let total = 0;
+  const acaparadoPorEsc = {};
+  let acaparadoMio = 0;
+  let acaparadoAjeno = 0;
+
+  // Recolectar combinaciones (prenda, talla) relevantes
+  const combos = new Set();
   for (const a of asignarCache.alumnos) {
-    if (!escSet.has(a.escuela_id)) continue;
-    const matchTop = a.estado_top === 'reservado' &&
-      (!prenda || a.prenda_top === prenda) &&
-      (!talla || a.talla_top_key === talla);
-    const matchBot = a.estado_bottom === 'reservado' &&
-      (!prenda || a.prenda_bottom === prenda) &&
-      (!talla || a.talla_bottom_key === talla);
-    if (matchTop) { porEscuela[a.escuela_id] = (porEscuela[a.escuela_id]||0) + 1; total++; }
-    if (matchBot) { porEscuela[a.escuela_id] = (porEscuela[a.escuela_id]||0) + 1; total++; }
+    if (a.prenda_top && a.talla_top_key && (!prenda || a.prenda_top === prenda) && (!talla || a.talla_top_key === talla)) {
+      combos.add(a.prenda_top + '|' + a.talla_top_key);
+    }
+    if (a.prenda_bottom && a.talla_bottom_key && (!prenda || a.prenda_bottom === prenda) && (!talla || a.talla_bottom_key === talla)) {
+      combos.add(a.prenda_bottom + '|' + a.talla_bottom_key);
+    }
   }
-  return { total, porEscuela };
+
+  // Contar acaparados por escuela (las mías vs ajenas)
+  for (const a of asignarCache.alumnos) {
+    const top = a.estado_top === 'reservado' && a.prenda_top && a.talla_top_key
+      && combos.has(a.prenda_top + '|' + a.talla_top_key);
+    const bot = a.estado_bottom === 'reservado' && a.prenda_bottom && a.talla_bottom_key
+      && combos.has(a.prenda_bottom + '|' + a.talla_bottom_key);
+    if (top) {
+      if (escSet.has(a.escuela_id)) {
+        acaparadoPorEsc[a.escuela_id] = (acaparadoPorEsc[a.escuela_id] || 0) + 1;
+        acaparadoMio++;
+      } else acaparadoAjeno++;
+    }
+    if (bot) {
+      if (escSet.has(a.escuela_id)) {
+        acaparadoPorEsc[a.escuela_id] = (acaparadoPorEsc[a.escuela_id] || 0) + 1;
+        acaparadoMio++;
+      } else acaparadoAjeno++;
+    }
+  }
+
+  // Stock total en bodega para estas combinaciones, descontar acaparado ajeno = stock libre
+  let stockTotal = 0;
+  for (const c of combos) {
+    const [p, t] = c.split('|');
+    const row = asignarCache.stock.find(s =>
+      ((s.nombre_prenda || s.cod_prenda) === p) && s.talla_key === t);
+    if (row) stockTotal += Number(row.stock_actual) || 0;
+  }
+  const stockLibre = Math.max(0, stockTotal - acaparadoAjeno);
+  const total = acaparadoMio + stockLibre;
+
+  return {
+    acaparado: acaparadoMio,
+    acaparadoPorEsc,
+    stockLibre,
+    total,
+  };
 }
 
 // ─── Modal: SALIDA A ESCUELA ─────────────────────────────────────
