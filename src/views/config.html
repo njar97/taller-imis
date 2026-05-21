@@ -58,6 +58,10 @@
     <div class="card-title">📚 Catálogos y otros accesos</div>
     <div class="text-muted mb8" style="font-size:12px">Funciones de catálogo y herramientas que antes vivían en otros tabs.</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px">
+      <button class="btn btn-ghost" onclick="abrirCatalogoGrados()" style="padding:10px;text-align:left">
+        <div style="font-weight:600">🎓 Grados → Nivel/Ciclo</div>
+        <div style="font-size:11px;color:#666;margin-top:2px">Catálogo editable de grados</div>
+      </button>
       <button class="btn btn-ghost" onclick="abrirCatalogoOperarias()" style="padding:10px;text-align:left">
         <div style="font-weight:600">👷 Operarias</div>
         <div style="font-size:11px;color:#666;margin-top:2px">Listado y alta de operarias</div>
@@ -70,6 +74,74 @@
         <div style="font-weight:600">🔍 Audit log</div>
         <div style="font-size:11px;color:#666;margin-top:2px">Historial de cambios (admin)</div>
       </button>
+    </div>
+  </div>
+
+  <!-- Catálogo de grados (oculto, se abre por botón) -->
+  <div id="cfg-grados-card" class="card" style="display:none">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>🎓 Catálogo de grados</span>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-success btn-sm" onclick="nuevoGrado()">+ Nuevo</button>
+        <button class="btn btn-ghost btn-sm" onclick="cargarGradosCatalogo()">🔄</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('cfg-grados-card').style.display='none'">✕</button>
+      </div>
+    </div>
+    <div class="text-muted mb8" style="font-size:12px">
+      Editá nivel/ciclo de cada grado. Al guardar, el cambio aplica al cargar/editar alumnos.
+      Para corregir alumnos ya cargados con un nivel/ciclo viejo, usar el botón "Aplicar a alumnos existentes" arriba.
+    </div>
+    <div style="margin-bottom:10px">
+      <button class="btn btn-primary btn-sm" onclick="aplicarCatalogoAExistentes()" title="Corre un UPDATE en alumno para alinear nivel/ciclo con el catálogo actual">⚡ Aplicar catálogo a alumnos existentes</button>
+    </div>
+    <div id="cfg-grados-lista"><div class="loading">Cargando...</div></div>
+  </div>
+
+  <!-- Modal: editar grado -->
+  <div id="grado-edit-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:420px">
+      <div class="modal-header">
+        <div class="card-title" id="grado-edit-titulo" style="margin:0">Editar grado</div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarGradoEdit()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="grad-orig">
+        <div class="field">
+          <label>Grado (código) *</label>
+          <input type="text" id="grad-codigo" placeholder="Ej: 3A, P5B, 9C, 1°General">
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Nivel *</label>
+            <select id="grad-nivel">
+              <option value="PARV">PARV</option>
+              <option value="BASICA">BASICA</option>
+              <option value="BACH">BACH</option>
+              <option value="OTRO">OTRO</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Ciclo *</label>
+            <select id="grad-ciclo">
+              <option value="0">0 — PARV</option>
+              <option value="1">1 — Básica 1°-3°</option>
+              <option value="2">2 — Básica 4°-6°</option>
+              <option value="3">3 — Básica 7°-9°</option>
+              <option value="4">4 — Bachillerato</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label style="display:flex;gap:6px;align-items:center">
+            <input type="checkbox" id="grad-activo" checked>
+            Activo
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarGradoEdit()">Cancelar</button>
+        <button class="btn btn-success" onclick="guardarGradoEdit()">✓ Guardar</button>
+      </div>
     </div>
   </div>
 
