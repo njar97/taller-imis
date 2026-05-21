@@ -47,6 +47,96 @@
     </div>
   </div>
 
+  <!-- Modal: ACAPARAR (cantidad por escuela+prenda+talla, sin alumnos) -->
+  <div id="bodega-acaparar-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:520px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" style="margin:0">📥 Acaparar para escuela</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">Bloquea una cantidad de piezas para una escuela. Descuenta stock, sin asignar alumnos todavía.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarAcapararModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Escuela *</label>
+          <select id="aca-escuela">
+            <option value="">— Elegí escuela —</option>
+          </select>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Prenda *</label>
+            <select id="aca-prenda" onchange="onAcapararPrendaCambio()">
+              <option value="">— Elegí prenda —</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Talla *</label>
+            <select id="aca-talla" onchange="onAcapararTallaCambio()">
+              <option value="">— Elegí talla —</option>
+            </select>
+          </div>
+        </div>
+        <div id="aca-stock-info" style="padding:8px 12px;background:#F5F7FA;border-radius:6px;margin-bottom:10px;font-size:13px;display:none">
+          Seleccioná prenda y talla
+        </div>
+        <div class="field">
+          <label>Cantidad a acaparar *</label>
+          <input type="number" id="aca-cantidad" min="1" placeholder="Ej: 10">
+        </div>
+        <div class="field">
+          <label>Observaciones</label>
+          <textarea id="aca-obs" rows="2" placeholder="Opcional"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarAcapararModal()">Cancelar</button>
+        <button class="btn btn-success" id="aca-btn-guardar" onclick="guardarAcaparar()">📥 Acaparar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: ENTREGAR A ESCUELA (marca general de un lote) -->
+  <div id="bodega-entrega-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:520px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" style="margin:0">🚚 Marcar entrega a escuela</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">Marca todos los alumnos EMPACADOS de la escuela como ENTREGADOS, con fecha de entrega.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarEntregaModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Escuela *</label>
+          <select id="ent-escuela" onchange="onEntregaEscuelaCambio()">
+            <option value="">— Elegí escuela —</option>
+          </select>
+        </div>
+        <div id="ent-resumen" style="padding:8px 12px;background:#F5F7FA;border-radius:6px;margin-bottom:10px;font-size:13px;display:none"></div>
+        <div class="row2">
+          <div class="field">
+            <label>Fecha de entrega *</label>
+            <input type="date" id="ent-fecha">
+          </div>
+          <div class="field">
+            <label>Recibió</label>
+            <input type="text" id="ent-receptor" placeholder="Nombre del receptor (opcional)">
+          </div>
+        </div>
+        <div class="field">
+          <label>Observaciones</label>
+          <textarea id="ent-obs" rows="2" placeholder="Opcional"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarEntregaModal()">Cancelar</button>
+        <button class="btn btn-success" id="ent-btn-guardar" onclick="guardarEntrega()">🚚 Marcar entregado</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: ASIGNAR A ALUMNOS — 3 acciones (acaparar/empacar/entregar) -->
   <div id="bodega-asignar-modal" class="modal" style="display:none">
     <div class="modal-content" style="max-width:680px">
