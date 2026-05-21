@@ -391,25 +391,28 @@ function renderEmpSelCombos() {
     const sxLbl = _SEXO_LBL[g.sexo] || g.sexo;
     const piezas = [g.prenda_top, g.prenda_bottom].filter(Boolean).join(' + ');
     const marcado = empSelCache.combosMarcados.has(g.key);
+    const border = marcado ? 'var(--azul,#1565C0)' : '#E0E4EA';
+    const bg = marcado ? '#E8F0FA' : 'white';
     return `
-      <label class="btn btn-sm ${marcado?'btn-primary':'btn-ghost'}" style="cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:flex-start;text-align:left;padding:8px 10px">
-        <input type="checkbox" value="${g.key}" ${marcado?'checked':''} onchange="toggleEmpSelCombo(this)" style="margin:0">
-        <div style="flex:1">
-          <div style="font-weight:600">${nivLbl} ${sxLbl}</div>
-          <div style="font-size:11px;opacity:0.85">${piezas}</div>
+      <div onclick="toggleEmpSelComboKey('${g.key}')"
+           style="display:flex;align-items:center;gap:12px;padding:10px 12px;border:2px solid ${border};background:${bg};border-radius:8px;cursor:pointer;user-select:none;text-align:left;transition:background .12s,border-color .12s">
+        <input type="checkbox" ${marcado?'checked':''} tabindex="-1"
+               style="pointer-events:none;width:18px;height:18px;flex:0 0 auto;margin:0">
+        <div style="flex:1 1 0;min-width:0">
+          <div style="font-weight:700;font-size:13px;line-height:1.2">${nivLbl} · ${sxLbl}</div>
+          <div style="font-size:11px;color:#666;margin-top:3px;white-space:normal;word-break:break-word">${piezas}</div>
         </div>
-        <div style="font-size:11px;background:rgba(0,0,0,0.08);padding:2px 6px;border-radius:4px">
+        <div style="font-size:11px;background:${marcado?'rgba(21,101,192,0.15)':'rgba(0,0,0,0.08)'};color:${marcado?'var(--azul,#1565C0)':'#444'};padding:3px 8px;border-radius:6px;flex:0 0 auto;font-weight:700;white-space:nowrap">
           ${g.pendientes} pend
         </div>
-      </label>
+      </div>
     `;
   }).join('');
 }
 
-function toggleEmpSelCombo(input) {
-  const k = input.value;
-  if (input.checked) empSelCache.combosMarcados.add(k);
-  else empSelCache.combosMarcados.delete(k);
+function toggleEmpSelComboKey(k) {
+  if (empSelCache.combosMarcados.has(k)) empSelCache.combosMarcados.delete(k);
+  else empSelCache.combosMarcados.add(k);
   renderEmpSelCombos();
   refrescarPoolEmpSelector();
 }
