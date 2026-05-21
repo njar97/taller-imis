@@ -47,6 +47,70 @@
     </div>
   </div>
 
+  <!-- Modal: ASIGNAR A ALUMNOS — 3 acciones (acaparar/empacar/entregar) -->
+  <div id="bodega-asignar-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:680px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" style="margin:0">🎯 Asignar piezas a alumnos</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">Acaparar/empacar/entregar en bloque a una o varias escuelas.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarAsignarModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Acción -->
+        <div class="field">
+          <label>Acción</label>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <button type="button" class="btn btn-sm" id="asi-act-reservar"  onclick="asignarSetAccion('reservado')"  style="flex:1;min-width:130px">📥 Acaparar</button>
+            <button type="button" class="btn btn-sm" id="asi-act-empacar"   onclick="asignarSetAccion('empacado')"   style="flex:1;min-width:130px">📦 Empacar</button>
+            <button type="button" class="btn btn-sm" id="asi-act-entregar"  onclick="asignarSetAccion('entregado')"  style="flex:1;min-width:130px">🚚 Entregar</button>
+          </div>
+          <div id="asi-act-info" style="font-size:11px;color:#666;margin-top:4px"></div>
+        </div>
+
+        <!-- Escuela(s) — multiselect para agrupar escuelas chicas -->
+        <div class="field">
+          <label>Escuela(s) <span style="font-size:10px;color:#888">Ctrl/⌘ para varias</span></label>
+          <select id="asi-escuelas" multiple size="4" style="width:100%;padding:6px"></select>
+        </div>
+
+        <!-- Filtro prenda + talla (opcional) -->
+        <div class="row2">
+          <div class="field">
+            <label>Prenda</label>
+            <select id="asi-prenda" onchange="asignarFiltrosCambio()">
+              <option value="">— Todas —</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Talla</label>
+            <select id="asi-talla" onchange="asignarFiltrosCambio()">
+              <option value="">— Todas —</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Resumen y lista de alumnos -->
+        <div id="asi-resumen" style="padding:8px 12px;background:#F5F7FA;border-radius:6px;margin-bottom:10px;font-size:12px"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <label style="font-size:11px;font-weight:600;color:#666">ALUMNOS QUE COINCIDEN</label>
+          <div style="display:flex;gap:4px">
+            <button type="button" class="btn-mini" onclick="asignarMarcarTodos(true)">✓ todos</button>
+            <button type="button" class="btn-mini" onclick="asignarMarcarTodos(false)">✕ ninguno</button>
+          </div>
+        </div>
+        <div id="asi-lista" style="max-height:50vh;overflow-y:auto;border:1px solid #EEE;border-radius:4px;padding:4px">
+          <div class="text-muted" style="padding:20px;text-align:center">Elegí escuela y acción</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarAsignarModal()">Cancelar</button>
+        <button class="btn btn-success" id="asi-btn-aplicar" onclick="aplicarAsignar()">Aplicar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: SALIDA A ESCUELA — específico, con selects y stock visible -->
   <div id="bodega-salida-modal" class="modal" style="display:none">
     <div class="modal-content" style="max-width:540px">
