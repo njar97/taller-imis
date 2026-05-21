@@ -816,19 +816,34 @@ async function empacarAlumnosDesdeRegistro(alumnos, prendasSet) {
     await supaFetch('bodega_movimiento', 'POST', movs);
   }
   if (Object.keys(poolDelta).length > 0) {
-    const stmts = Object.entries(poolDelta).map(([id, d]) =>
-      `UPDATE public.escuela_acaparado SET cantidad_consumida = cantidad_consumida + ${d} WHERE id='${id}';`);
-    const sql = stmts.join('\n');
-    const tok = (typeof authToken === 'function' ? authToken() : null) || SUPA_KEY;
-    const res = await fetch(`${SUPA_URL}/rest/v1/rpc/exec_sql`, {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':`Bearer ${tok}` },
-      body: JSON.stringify({ sql }),
-    });
-    if (!res.ok) throw new Error('Error actualizando pool: ' + await res.text());
+    await _consumePoolBatch(poolDelta);
   }
 
   return { actualizados, piezasPool, piezasStock, errores: [] };
+}
+
+// Helper: incrementa cantidad_consumida del pool en batch via RPC dedicada
+// (SECURITY DEFINER, callable por operador). Reemplaza el uso de exec_sql.
+async function _consumePoolBatch(poolDelta) {
+  const consumos = Object.entries(poolDelta).map(([id, delta]) => ({ id, delta }));
+  const tok = (supaSession && supaSession.access_token) || SUPA_KEY;
+  const res = await fetch(`${SUPA_URL}/rest/v1/rpc/consume_pool_batch`, {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':`Bearer ${tok}` },
+    body: JSON.stringify({ p_consumos: consumos }),
+  });
+  if (!res.ok) throw new Error('Error actualizando pool: ' + await res.text());
+}
+
+// Helper: PATCH bulk sobre alumno con filtros (PostgREST). Devuelve 204.
+async function _bulkPatchAlumno(filterParams, data) {
+  const tok = (typeof authToken === 'function' ? authToken() : null) || SUPA_KEY;
+  const res = await fetch(`${SUPA_URL}/rest/v1/alumno${filterParams}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':`Bearer ${tok}` },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Error en bulk patch: ' + await res.text());
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1128,20 +1143,13 @@ async function guardarEntrega() {
       return;
     }
 
-    // UPDATE bulk vía SQL (más rápido que uno por uno)
-    const sql = `
-      UPDATE public.alumno SET estado_top='entregado', actualizado_en=now()
-      WHERE escuela_id='${escId}' AND estado_top='empacado';
-      UPDATE public.alumno SET estado_bottom='entregado', actualizado_en=now()
-      WHERE escuela_id='${escId}' AND estado_bottom='empacado';
-    `;
-    const tok = (typeof authToken === 'function' ? authToken() : null) || SUPA_KEY;
-    const res = await fetch(`${SUPA_URL}/rest/v1/rpc/exec_sql`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}` },
-      body: JSON.stringify({ sql }),
-    });
-    if (!res.ok) throw new Error(await res.text());
+    // UPDATE bulk vía PATCH PostgREST (filtra por columna y aplica el cambio)
+    // — más portable y respeta RLS y audit triggers, sin pasar por exec_sql.
+    const nowIso = new Date().toISOString();
+    await _bulkPatchAlumno(`?escuela_id=eq.${escId}&estado_top=eq.empacado`,
+      { estado_top: 'entregado', actualizado_en: nowIso });
+    await _bulkPatchAlumno(`?escuela_id=eq.${escId}&estado_bottom=eq.empacado`,
+      { estado_bottom: 'entregado', actualizado_en: nowIso });
 
     // Crear registro de entrega
     await supaFetch('entrega_escuela', 'POST', {
@@ -1636,18 +1644,8 @@ async function aplicarAsignar() {
     if (movs.length > 0) {
       await supaFetch('bodega_movimiento', 'POST', movs);
     }
-    // Actualizar cantidad_consumida del pool (no hay endpoint atómico, lo hacemos por SQL)
     if (Object.keys(poolDelta).length > 0) {
-      const stmts = Object.entries(poolDelta).map(([id, d]) =>
-        `UPDATE public.escuela_acaparado SET cantidad_consumida = cantidad_consumida + ${d} WHERE id='${id}';`);
-      const sql = stmts.join('\n');
-      const tok = (typeof authToken === 'function' ? authToken() : null) || SUPA_KEY;
-      const res = await fetch(`${SUPA_URL}/rest/v1/rpc/exec_sql`, {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':`Bearer ${tok}` },
-        body: JSON.stringify({ sql }),
-      });
-      if (!res.ok) throw new Error('Error actualizando pool: ' + await res.text());
+      await _consumePoolBatch(poolDelta);
     }
 
     cerrarAsignarModal();
