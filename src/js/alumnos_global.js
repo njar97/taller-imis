@@ -146,7 +146,9 @@ function renderAlumnosGlobal() {
         ${escuelasSel.map(eid => {
           const e = c.escuelas[eid];
           if (!e) return '';
-          return `<span class="btn btn-sm btn-primary" style="cursor:default">🏫 ${e.alias || e.nombre} <span style="margin-left:6px;cursor:pointer" onclick="quitarFiltroEscuela('${eid}')">✕</span></span>`;
+          const label = e.alias || e.nombre;
+          const sinAlias = !e.alias;
+          return `<span class="btn btn-sm btn-primary" style="cursor:default">🏫 ${label}${sinAlias ? ' ⚠️' : ''} <span style="margin-left:4px;cursor:pointer;opacity:0.85" onclick="editarEscuela('${eid}')" title="Editar escuela (alias, datos)">✏️</span> <span style="margin-left:2px;cursor:pointer" onclick="quitarFiltroEscuela('${eid}')" title="Quitar filtro">✕</span></span>`;
         }).join('')}
         ${escuelasDisponibles.length > 0 ? `
           <select onchange="if(this.value){agregarFiltroEscuela(this.value); this.value='';}" style="padding:4px 6px;font-size:12px;border:1px solid var(--borde);border-radius:4px">
@@ -270,6 +272,50 @@ function aplicarFiltroEscuela(escuelaId) {
   alumnosGlobalCache.filtroEscuelas = escuelaId ? [escuelaId] : [];
   renderAlumnosGlobal();
 }
+// Editar escuela: abre modal con sus datos cargados
+async function editarEscuela(escuelaId) {
+  try {
+    const res = await supaFetch('escuela', 'GET', null, `?id=eq.${escuelaId}&limit=1`);
+    if (!res || res.length === 0) { alert('Escuela no encontrada'); return; }
+    const e = res[0];
+    document.getElementById('ese-id').value        = e.id;
+    document.getElementById('ese-alias').value     = e.alias || '';
+    document.getElementById('ese-nombre').value    = e.nombre || '';
+    document.getElementById('ese-cde').value       = e.codigo_cde || '';
+    document.getElementById('ese-director').value  = e.director || '';
+    document.getElementById('ese-distrito').value  = e.distrito || '';
+    document.getElementById('ese-municipio').value = e.municipio || '';
+    document.getElementById('escuela-edit-modal').style.display = 'flex';
+    setTimeout(() => {
+      const el = document.getElementById('ese-alias');
+      if (el) { el.focus(); el.select(); }
+    }, 100);
+  } catch (err) { alert('Error: ' + err.message); }
+}
+function cerrarEscuelaEdit() {
+  document.getElementById('escuela-edit-modal').style.display = 'none';
+}
+async function guardarEscuelaEdit() {
+  const id = document.getElementById('ese-id').value;
+  const payload = {
+    alias:       document.getElementById('ese-alias').value.trim().toUpperCase() || null,
+    nombre:      document.getElementById('ese-nombre').value.trim() || null,
+    codigo_cde:  document.getElementById('ese-cde').value.trim() || null,
+    director:    document.getElementById('ese-director').value.trim() || null,
+    distrito:    document.getElementById('ese-distrito').value.trim() || null,
+    municipio:   document.getElementById('ese-municipio').value.trim() || null,
+  };
+  try {
+    await supaUpdate('escuela', id, payload);
+    // Refrescar cache local
+    if (alumnosGlobalCache.escuelas[id]) {
+      Object.assign(alumnosGlobalCache.escuelas[id], payload);
+    }
+    cerrarEscuelaEdit();
+    renderAlumnosGlobal();
+  } catch (err) { alert('Error al guardar: ' + err.message); }
+}
+
 // Nuevos: multi-escuela
 function agregarFiltroEscuela(escuelaId) {
   if (!escuelaId) return;
