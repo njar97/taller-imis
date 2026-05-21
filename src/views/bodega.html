@@ -58,13 +58,13 @@
         <button class="btn btn-ghost btn-sm" onclick="cerrarAsignarModal()">✕</button>
       </div>
       <div class="modal-body">
-        <!-- Acción -->
+        <!-- Acción (orden: lo más común primero) -->
         <div class="field">
           <label>Acción</label>
           <div style="display:flex;gap:4px;flex-wrap:wrap">
-            <button type="button" class="btn btn-sm" id="asi-act-reservar"  onclick="asignarSetAccion('reservado')"  style="flex:1;min-width:130px">📥 Acaparar</button>
             <button type="button" class="btn btn-sm" id="asi-act-empacar"   onclick="asignarSetAccion('empacado')"   style="flex:1;min-width:130px">📦 Empacar</button>
             <button type="button" class="btn btn-sm" id="asi-act-entregar"  onclick="asignarSetAccion('entregado')"  style="flex:1;min-width:130px">🚚 Entregar</button>
+            <button type="button" class="btn btn-sm" id="asi-act-reservar"  onclick="asignarSetAccion('reservado')"  style="flex:0 0 auto;padding:4px 10px" title="Solo si tu stock de bodega NO es preciso y querés apartar sin tocar piezas">📥 Acaparar</button>
           </div>
           <div id="asi-act-info" style="font-size:11px;color:#666;margin-top:4px"></div>
         </div>
