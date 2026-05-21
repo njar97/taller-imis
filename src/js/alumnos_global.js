@@ -66,6 +66,29 @@ function alumnoSinTallas(a) {
   return !a.talla_top_key || !a.talla_bottom_key;
 }
 
+// Comparadores de orden — usados tanto en la tabla de Registro como en
+// el PDF de etiquetas (mismo orden visible en ambos lados).
+const ORDEN_CMP = {
+  escuela: (a,b) => {
+    const c = alumnosGlobalCache;
+    const ea = c.escuelas[a.escuela_id]?.alias || c.escuelas[a.escuela_id]?.nombre || '';
+    const eb = c.escuelas[b.escuela_id]?.alias || c.escuelas[b.escuela_id]?.nombre || '';
+    return ea.localeCompare(eb);
+  },
+  sexo_fm: (a,b) => {
+    const rk = (s) => s === 'F' ? 0 : (s === 'M' ? 1 : 2);
+    return rk(a.sexo) - rk(b.sexo);
+  },
+  sexo_mf: (a,b) => {
+    const rk = (s) => s === 'M' ? 0 : (s === 'F' ? 1 : 2);
+    return rk(a.sexo) - rk(b.sexo);
+  },
+  grado:     (a,b) => (a.grado||'').localeCompare(b.grado||'', 'es', { numeric: true }),
+  nombre:    (a,b) => (a.nombre||'').localeCompare(b.nombre||'', 'es'),
+  talla_top: (a,b) => (a.talla_top_key||'').localeCompare(b.talla_top_key||'', 'es', { numeric: true }),
+  talla_bot: (a,b) => (a.talla_bottom_key||'').localeCompare(b.talla_bottom_key||'', 'es', { numeric: true }),
+};
+
 function renderAlumnosGlobal() {
   const cont = document.getElementById('alumnos-global-contenido');
   if (!cont) return;
@@ -98,7 +121,18 @@ function renderAlumnosGlobal() {
       return true;
     });
   }
-  
+
+  // Aplicar el orden seleccionado en el header (mismo que usa el PDF de etiquetas)
+  // para que la tabla de Registro se vea ordenada igual que va a salir el PDF.
+  const ordenList = (c.ordenList || etOrdenGuardado()).filter(Boolean);
+  if (ordenList.length > 0) {
+    const cmps = ordenList.map(k => ORDEN_CMP[k]).filter(Boolean);
+    lista = lista.slice().sort((a, b) => {
+      for (const fn of cmps) { const r = fn(a, b); if (r !== 0) return r; }
+      return 0;
+    });
+  }
+
   // Opciones
   const escuelasUnicas = {};
   for (const a of c.alumnos) {
@@ -165,22 +199,23 @@ function renderAlumnosGlobal() {
           oninput="alumnosGlobalCache.busqueda = this.value; renderAlumnosGlobal()"
           style="flex:1;min-width:140px;padding:6px 10px;border:1px solid var(--borde);border-radius:4px">
         <button class="btn btn-success btn-sm" onclick="abrirNuevoAlumno()">+ Nuevo alumno</button>
-        <button class="btn btn-primary btn-sm" onclick="generarEtiquetasDirecto()" title="Genera PDF según los filtros aplicados">🏷 Imprimir etiquetas</button>
-        <button class="btn btn-ghost btn-sm" onclick="abrirOpcionesEtiquetas()" title="Cambiar orden de las etiquetas">⚙️</button>
+        <button class="btn btn-primary btn-sm" onclick="generarEtiquetasDirecto()" title="Genera PDF con los filtros y orden actuales">🏷 Imprimir etiquetas</button>
         <button class="btn btn-ghost btn-sm" onclick="initAlumnosGlobal()" title="Refrescar">🔄</button>
       </div>
 
       <!-- Fila 4: toggle más filtros + limpiar -->
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         <button class="btn btn-ghost btn-sm" onclick="alumnosGlobalCache.masFiltrosAbierto = !alumnosGlobalCache.masFiltrosAbierto; renderAlumnosGlobal()">
-          ⚙️ Más filtros ${masFiltrosAbierto?'▲':'▼'}
+          ⚙️ Más filtros / Orden ${masFiltrosAbierto?'▲':'▼'}
         </button>
         ${algunFiltro ? `<button class="btn btn-ghost btn-sm" onclick="limpiarFiltros()">✗ Limpiar</button>` : ''}
       </div>
 
       <!-- Más filtros (colapsable) -->
       ${masFiltrosAbierto ? `
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid #EEE">
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid #EEE">
+          <div style="font-size:11px;font-weight:600;color:#666;margin-bottom:4px">FILTROS AVANZADOS</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;margin-bottom:10px">
           <select onchange="alumnosGlobalCache.filtroNivel = this.value; renderAlumnosGlobal()" style="padding:6px">
             <option value="">Todo nivel</option>
             <option value="PARV"   ${c.filtroNivel==='PARV'?'selected':''}>PARV</option>
@@ -195,6 +230,23 @@ function renderAlumnosGlobal() {
             <option value="entregado" ${c.filtroEstado==='entregado'?'selected':''}>🚚 Entregado</option>
           </select>
         </div>
+
+        <div style="font-size:11px;font-weight:600;color:#666;margin:8px 0 4px 0;display:flex;justify-content:space-between;align-items:center">
+          <span>ORDEN DE LA LISTA (Y DEL PDF DE ETIQUETAS)</span>
+          <button class="btn btn-ghost btn-sm" onclick="ordenDefault()" style="font-size:10px;padding:2px 8px">↺ Default</button>
+        </div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 8px;align-items:center;font-size:12px;max-width:380px">
+          ${[1,2,3,4].map(n => {
+            const val = (alumnosGlobalCache.ordenList || etOrdenGuardado())[n-1] || '';
+            return `
+              <span style="font-weight:600;color:#666">${n}°</span>
+              <select onchange="cambiarOrden(${n-1}, this.value)" style="padding:4px 6px;width:100%">
+                ${ET_ORDEN_OPCIONES.map(o => `<option value="${o.val}" ${o.val===val?'selected':''}>${o.label}</option>`).join('')}
+              </select>
+            `;
+          }).join('')}
+        </div>
+        <div style="font-size:11px;color:#888;margin-top:4px">Si el 1° es "Escuela", se agrupan en hojas separadas al imprimir.</div>
       ` : ''}
     </div>
   `;
@@ -798,15 +850,29 @@ async function abrirNuevoAlumno() {
 // ETIQUETAS IMPRIMIBLES
 // ═══════════════════════════════════════════════════════════════════
 
-// Genera el PDF de etiquetas DIRECTO con los filtros aplicados en la página
-// y el orden guardado en localStorage. Sin popup.
+// Genera el PDF de etiquetas DIRECTO con los filtros + orden de Registro.
 function generarEtiquetasDirecto() {
-  _ejecutarGenerarEtiquetas(etOrdenGuardado(), { soloEmpacados: false, incluirObs: false });
+  const orden = alumnosGlobalCache.ordenList || etOrdenGuardado();
+  _ejecutarGenerarEtiquetas(orden, { soloEmpacados: false, incluirObs: false });
 }
 
-// Abre el modal SOLO con orden + opciones (sin filtros — esos van en la página)
-function abrirOpcionesEtiquetas() { abrirModalEtiquetas(); }
-// Alias por compat
+// Cambia un nivel del orden — afecta tanto la lista de Registro como el PDF.
+function cambiarOrden(idx, val) {
+  const arr = alumnosGlobalCache.ordenList || etOrdenGuardado();
+  arr[idx] = val;
+  alumnosGlobalCache.ordenList = arr;
+  etOrdenSet(arr);  // persistir
+  renderAlumnosGlobal();
+}
+
+function ordenDefault() {
+  alumnosGlobalCache.ordenList = [...ET_ORDEN_DEFAULT];
+  etOrdenSet([...ET_ORDEN_DEFAULT]);
+  renderAlumnosGlobal();
+}
+
+// Aliases por compat con código viejo
+function abrirOpcionesEtiquetas() { generarEtiquetasDirecto(); }
 function imprimirEtiquetasConFiltros() { generarEtiquetasDirecto(); }
 
 // Campos disponibles para el orden personalizado
