@@ -11,6 +11,55 @@
     <div class="text-muted" style="padding:20px;text-align:center">Cargando alumnos...</div>
   </div>
   
+  <!-- Modal: edición rápida de escuela (alias, nombre, código CDE, director) -->
+  <div id="escuela-edit-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:520px">
+      <div class="modal-header">
+        <div>
+          <div class="card-title" style="margin:0">🏫 Editar escuela</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">El <strong>alias</strong> es el nombre corto que aparece en las etiquetas y nombres de archivo.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarEscuelaEdit()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="ese-id">
+        <div class="field">
+          <label>Alias (corto, sin espacios/símbolos)</label>
+          <input type="text" id="ese-alias" placeholder="Ej: ALBERTOGUERRA, ARCE, JEFFERSON" style="text-transform:uppercase">
+          <div style="font-size:11px;color:#888;margin-top:2px">Mayúsculas. Se muestra en etiquetas y nombres de PDF.</div>
+        </div>
+        <div class="field">
+          <label>Nombre completo</label>
+          <input type="text" id="ese-nombre" placeholder="Ej: CDE CE ALBERTO GUERRA TRIGUEROS">
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Código CDE</label>
+            <input type="text" id="ese-cde" placeholder="Ej: 10573">
+          </div>
+          <div class="field">
+            <label>Director</label>
+            <input type="text" id="ese-director">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Distrito</label>
+            <input type="text" id="ese-distrito">
+          </div>
+          <div class="field">
+            <label>Municipio</label>
+            <input type="text" id="ese-municipio">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarEscuelaEdit()">Cancelar</button>
+        <button class="btn btn-success" onclick="guardarEscuelaEdit()">✓ Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: edición rápida de alumno (desde lista global, wizard asistido) -->
   <div id="alumno-edit-modal" class="modal" style="display:none">
     <div class="modal-content" style="max-width:580px">
