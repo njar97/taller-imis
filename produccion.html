@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-22 08:04 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-22 08:40 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -3036,6 +3036,7 @@ function _renderAvancePorEscuela(r) {
           <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('empacar','${e.id}')" style="font-size:11px;padding:4px 8px">📦 Empacar</button>
           <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('entrega','${e.id}')" style="font-size:11px;padding:4px 8px">🚚 Entrega</button>
           <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('lista','${e.id}')" style="font-size:11px;padding:4px 8px" title="Descargar PDF de la lista de empaque">🖨 Lista</button>
+          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('resumen','${e.id}')" style="font-size:11px;padding:4px 8px" title="Descargar resumen ejecutivo PDF (2 hojas)">📑 Resumen</button>
         </div>
       </div>
     `;
@@ -3101,6 +3102,14 @@ function _avanceEscIrA(accion, escId) {
   if (accion === 'lista') {
     if (typeof descargarListaEmpaquePDF === 'function') {
       descargarListaEmpaquePDF(escId);
+    } else {
+      alert('Función no disponible. Recargá la página.');
+    }
+    return;
+  }
+  if (accion === 'resumen') {
+    if (typeof descargarResumenEjecutivoPDF === 'function') {
+      descargarResumenEjecutivoPDF(escId);
     } else {
       alert('Función no disponible. Recargá la página.');
     }
@@ -12564,6 +12573,323 @@ async function descargarListaEmpaquePDF(escuelaId) {
   } catch(e) {
     alert('Error: ' + e.message);
   }
+}
+
+// ─── RESUMEN EJECUTIVO POR ESCUELA (PDF de 2 hojas) ───────────────────
+// Hoja 1: encabezado, resumen contrato (con balance), desglose nivel×grado×sexo, fechas.
+// Hoja 2: yardaje por color (utilizado vs recibido) + recomendaciones.
+async function descargarResumenEjecutivoPDF(escuelaId) {
+  try {
+    // 1) Escuela + temporada activa
+    const escRows = await supaFetch('escuela', 'GET', null,
+      `?id=eq.${escuelaId}&select=id,nombre,codigo_cde,alias,director,telefono&limit=1`);
+    if (!escRows || !escRows[0]) { alert('Escuela no encontrada'); return; }
+    const esc = escRows[0];
+    const temps = await supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.desc&limit=10');
+    const temp = (temps || []).find(t => t.estado === 'activa') || (temps || [])[0];
+    if (!temp) { alert('No hay temporada cargada'); return; }
+
+    // 2) Datos en paralelo
+    const [alumnos, pedidos, contratos, entregas] = await Promise.all([
+      supaFetchAll('alumno',
+        `?escuela_id=eq.${escuelaId}&temporada_id=eq.${temp.id}&activo=eq.true&select=nivel,ciclo,grado,sexo,prenda_top,talla_top_key,prenda_bottom,talla_bottom_key,estado_top,estado_bottom,creado_en,actualizado_en`),
+      supaFetchAll('pedido',
+        `?escuela_id=eq.${escuelaId}&select=nivel,cod_prenda,nombre_prenda,cantidad_solicitada,cantidad_entregada`),
+      supaFetchAll('contrato_escuela',
+        `?escuela_id=eq.${escuelaId}&anio=eq.${temp.anio}&select=tela_celeste_yd,tela_blanca_yd,tela_azul_yd,tela_beige_yd&limit=1`),
+      supaFetchAll('entrega_escuela',
+        `?escuela_id=eq.${escuelaId}&select=fecha,cantidad_piezas,receptor&order=fecha.asc`),
+    ]);
+
+    // 3) Resumen contrato
+    const totalSolicitado = pedidos.reduce((s,p) => s + (Number(p.cantidad_solicitada)||0), 0);
+    const totalEntregado  = pedidos.reduce((s,p) => s + (Number(p.cantidad_entregada)||0), 0);
+    const balance = totalEntregado - totalSolicitado;
+
+    // Desglose por prenda
+    const prendaMap = {};
+    for (const p of pedidos) {
+      const k = p.nombre_prenda || p.cod_prenda || '?';
+      if (!prendaMap[k]) prendaMap[k] = { prenda: k, sol: 0, ent: 0 };
+      prendaMap[k].sol += Number(p.cantidad_solicitada)||0;
+      prendaMap[k].ent += Number(p.cantidad_entregada)||0;
+    }
+    const prendaArr = Object.values(prendaMap).sort((a,b) => b.sol - a.sol);
+
+    // 4) Desglose nivel × grado × sexo
+    const desglose = {};
+    for (const a of alumnos) {
+      const k = `${a.nivel||'?'}|${a.grado||'?'}`;
+      if (!desglose[k]) desglose[k] = { nivel: a.nivel||'?', grado: a.grado||'?', M:0, F:0, total:0 };
+      if (a.sexo === 'M') desglose[k].M++; else if (a.sexo === 'F') desglose[k].F++;
+      desglose[k].total++;
+    }
+    const desgloseArr = Object.values(desglose).sort((a,b) =>
+      (a.nivel||'').localeCompare(b.nivel||'') ||
+      (a.grado||'').localeCompare(b.grado||'', 'es', { numeric: true }));
+    const totM = desgloseArr.reduce((s,r) => s + r.M, 0);
+    const totF = desgloseArr.reduce((s,r) => s + r.F, 0);
+
+    // 5) Fechas clave
+    const conTallas = alumnos.filter(a => a.talla_top_key || a.talla_bottom_key);
+    const fmtDate = (d) => d ? new Date(d).toLocaleDateString('es-SV', { day:'2-digit', month:'short', year:'numeric' }) : '—';
+    const fechaTallaje = conTallas.length > 0
+      ? fmtDate(new Date(Math.min(...conTallas.map(a => new Date(a.actualizado_en || a.creado_en).getTime()))))
+      : null;
+    const entregasArr = (entregas || []).filter(e => e.fecha);
+
+    // 6) Yardaje (reusa factores definidos en yardaje.js)
+    const yardajeData = _computarYardajeEscuelaParaResumen(alumnos);
+    const telaRec = (contratos && contratos[0]) || {};
+    const balanceTela = {
+      celeste: (Number(telaRec.tela_celeste_yd)||0) - yardajeData.celeste,
+      blanca:  (Number(telaRec.tela_blanca_yd)||0)  - yardajeData.blanca,
+      azul:    (Number(telaRec.tela_azul_yd)||0)    - yardajeData.azul,
+      beige:   (Number(telaRec.tela_beige_yd)||0)   - yardajeData.beige,
+    };
+
+    // 7) Generar HTML 2 páginas
+    const html = _htmlResumenEjecutivo({
+      esc, temp, totalSolicitado, totalEntregado, balance, prendaArr,
+      desgloseArr, alumnos, totM, totF, fechaTallaje, entregasArr,
+      yardajeData, telaRec, balanceTela,
+    });
+
+    const safe = (esc.nombre || 'esc').replace(/[^\w]+/g, '_').slice(0, 40);
+    await generarPdfDirecto(html, `resumen-ejecutivo-${safe}.pdf`);
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+function _computarYardajeEscuelaParaResumen(alumnos) {
+  // Reusa los factores de yardaje.js (YARDAJE_FACTORES + YARDAJE_NIVELES)
+  // que están en globalScope tras cargar el bundle.
+  const acc = { celeste: 0, blanca: 0, azul: 0, beige: 0 };
+  if (typeof YARDAJE_FACTORES === 'undefined' || typeof YARDAJE_NIVELES === 'undefined') {
+    return acc;
+  }
+  for (const n of YARDAJE_NIVELES) {
+    const enNivel = alumnos.filter(n.match);
+    const m = enNivel.filter(a => a.sexo === 'M');
+    const f = enNivel.filter(a => a.sexo === 'F');
+    const mTop = m.filter(a => a.prenda_top).length;
+    const fTop = f.filter(a => a.prenda_top).length;
+    const mBot = m.filter(a => a.prenda_bottom).length;
+    const fBot = f.filter(a => a.prenda_bottom).length;
+    const fact = YARDAJE_FACTORES[n.key] || {};
+    for (const [color, factor] of Object.entries(fact)) {
+      const esTop = color === 'celeste' || color === 'blanca';
+      const cantM = esTop ? mTop : mBot;
+      const cantF = esTop ? fTop : fBot;
+      acc[color] += cantM * factor.M + cantF * factor.F;
+    }
+  }
+  return acc;
+}
+
+function _htmlResumenEjecutivo(d) {
+  const hoy = new Date().toLocaleDateString('es-SV', { day:'2-digit', month:'short', year:'numeric' });
+  const fmtYd = (n) => n > 0 ? n.toFixed(2) + ' yd' : '—';
+  const fmtDiff = (n) => {
+    if (Math.abs(n) < 0.5) return '—';
+    return (n>0?'+':'') + n.toFixed(2) + ' yd';
+  };
+  const balanceLabel = d.balance < 0
+    ? `<span style="color:#c44">Falta entregar ${(-d.balance).toLocaleString()}</span>`
+    : d.balance > 0
+      ? `<span style="color:#a82">Se entregó ${d.balance.toLocaleString()} de más</span>`
+      : '<span style="color:#2a6">Entrega completa</span>';
+
+  // Página 1
+  const pagina1 = `
+    <div class="page">
+      <div class="header">
+        <h1>Resumen Ejecutivo</h1>
+        <div class="hsub">
+          <div><strong>${d.esc.nombre || ''}</strong>${d.esc.alias?' · '+d.esc.alias:''}</div>
+          <div>CDE ${d.esc.codigo_cde || '—'}${d.esc.director?' · Director: '+d.esc.director:''}${d.esc.telefono?' · '+d.esc.telefono:''}</div>
+          <div style="margin-top:4px">Temporada: <strong>${d.temp.codigo || d.temp.nombre || d.temp.anio || '—'}</strong> · Informe: ${hoy}</div>
+        </div>
+      </div>
+
+      <h2>Resumen de contrato</h2>
+      <table class="kpi-table">
+        <tr>
+          <td><div class="kpi-lbl">Solicitadas</div><div class="kpi-val">${d.totalSolicitado.toLocaleString()}</div></td>
+          <td><div class="kpi-lbl">Entregadas</div><div class="kpi-val" style="color:#2a6">${d.totalEntregado.toLocaleString()}</div></td>
+          <td><div class="kpi-lbl">Balance</div><div class="kpi-val">${balanceLabel}</div></td>
+        </tr>
+      </table>
+      ${d.prendaArr.length > 0 ? `
+        <table class="t small">
+          <thead><tr><th>Prenda</th><th class="r">Solicitadas</th><th class="r">Entregadas</th><th class="r">Diferencia</th></tr></thead>
+          <tbody>
+            ${d.prendaArr.map(p => {
+              const diff = p.ent - p.sol;
+              return `<tr>
+                <td><strong>${_esc(p.prenda)}</strong></td>
+                <td class="r">${p.sol}</td>
+                <td class="r">${p.ent}</td>
+                <td class="r" style="color:${diff<0?'#c44':(diff>0?'#a82':'#888')};font-weight:600">${diff===0?'—':(diff>0?'+':'')+diff}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      ` : ''}
+
+      <h2>Desglose por nivel / grado / sexo</h2>
+      ${d.desgloseArr.length === 0 ? '<div class="muted">Sin alumnos cargados.</div>' : `
+        <table class="t small">
+          <thead><tr><th>Nivel</th><th>Grado</th><th class="r">♂ M</th><th class="r">♀ F</th><th class="r">Total</th></tr></thead>
+          <tbody>
+            ${d.desgloseArr.map(r => `
+              <tr>
+                <td>${_esc(r.nivel)}</td>
+                <td>${_esc(r.grado)}</td>
+                <td class="r">${r.M}</td>
+                <td class="r">${r.F}</td>
+                <td class="r"><strong>${r.total}</strong></td>
+              </tr>
+            `).join('')}
+          </tbody>
+          <tfoot>
+            <tr style="font-weight:700;background:#f5f7fa">
+              <td colspan="2">TOTAL</td>
+              <td class="r">${d.totM}</td>
+              <td class="r">${d.totF}</td>
+              <td class="r">${d.alumnos.length}</td>
+            </tr>
+          </tfoot>
+        </table>
+      `}
+
+      <h2>Fechas clave</h2>
+      <table class="t small">
+        <tr><td>📏 Primera toma de tallas</td><td><strong>${d.fechaTallaje || 'Sin tallar aún'}</strong></td></tr>
+        ${d.entregasArr.length === 0
+          ? `<tr><td>🚚 Entregas</td><td><em>Sin entregas registradas</em></td></tr>`
+          : d.entregasArr.map((e,i) => `
+              <tr>
+                <td>🚚 Entrega ${i+1}</td>
+                <td><strong>${new Date(e.fecha).toLocaleDateString('es-SV', { day:'2-digit', month:'short', year:'numeric' })}</strong> · ${e.cantidad_piezas||0} pieza(s)${e.receptor?' · '+_esc(e.receptor):''}</td>
+              </tr>
+          `).join('')}
+      </table>
+    </div>
+  `;
+
+  // Página 2 — Yardaje
+  const tieneRecibida = (Number(d.telaRec.tela_celeste_yd)||0) + (Number(d.telaRec.tela_blanca_yd)||0)
+                      + (Number(d.telaRec.tela_azul_yd)||0)    + (Number(d.telaRec.tela_beige_yd)||0) > 0;
+  const filasTela = [
+    { color:'Celeste', rec: Number(d.telaRec.tela_celeste_yd)||0, util: d.yardajeData.celeste, dif: d.balanceTela.celeste, hex:'#8EC5E8' },
+    { color:'Blanca',  rec: Number(d.telaRec.tela_blanca_yd)||0,  util: d.yardajeData.blanca,  dif: d.balanceTela.blanca,  hex:'#FFF' },
+    { color:'Azul',    rec: Number(d.telaRec.tela_azul_yd)||0,    util: d.yardajeData.azul,    dif: d.balanceTela.azul,    hex:'#1F4E79' },
+    { color:'Beige',   rec: Number(d.telaRec.tela_beige_yd)||0,   util: d.yardajeData.beige,   dif: d.balanceTela.beige,   hex:'#D4C59E' },
+  ];
+  const totRec = filasTela.reduce((s,r) => s + r.rec, 0);
+  const totUtil = filasTela.reduce((s,r) => s + r.util, 0);
+  const totDif = totRec - totUtil;
+  const accion = (dif) => dif > 0.5 ? ['↩ devolver','#2a6'] : dif < -0.5 ? ['➕ solicitar más','#c44'] : ['✓ ok','#666'];
+
+  const pagina2 = `
+    <div class="page page-break">
+      <div class="header">
+        <h1>Resumen Ejecutivo · Hoja 2</h1>
+        <div class="hsub">
+          <div><strong>${d.esc.nombre || ''}</strong> · CDE ${d.esc.codigo_cde || '—'}</div>
+          <div>Tela y yardaje</div>
+        </div>
+      </div>
+
+      <h2>Tela utilizada vs recibida</h2>
+      ${!tieneRecibida ? `
+        <div class="alert">No hay tela registrada como recibida en el contrato. Cargá los valores en el formulario de escuela (Registro → ✏ Editar escuela) para que el balance se muestre.</div>
+      ` : ''}
+
+      <table class="t">
+        <thead>
+          <tr>
+            <th>Color de tela</th>
+            <th class="r">Recibida</th>
+            <th class="r">Utilizada (cálculo)</th>
+            <th class="r">Diferencia</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filasTela.map(r => {
+            const [acc, col] = accion(r.dif);
+            return `
+              <tr>
+                <td>
+                  <span style="display:inline-block;width:12px;height:12px;background:${r.hex};border:1px solid #666;margin-right:6px"></span>
+                  <strong>${r.color}</strong>
+                </td>
+                <td class="r">${fmtYd(r.rec)}</td>
+                <td class="r" style="color:#26a">${fmtYd(r.util)}</td>
+                <td class="r" style="font-weight:700;color:${col}">${fmtDiff(r.dif)}</td>
+                <td style="color:${col};font-weight:600">${acc}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+        <tfoot>
+          <tr style="font-weight:700;background:#f5f7fa;border-top:2px solid #ccc">
+            <td>TOTAL</td>
+            <td class="r">${fmtYd(totRec)}</td>
+            <td class="r">${fmtYd(totUtil)}</td>
+            <td class="r" style="color:${totDif<0?'#c44':(totDif>0?'#2a6':'#666')}">${fmtDiff(totDif)}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <div class="muted small" style="margin-top:10px">
+        Cálculo basado en los factores yarda/alumno por nivel y sexo del Excel RESUMEN.
+        Solo se considera al alumno cuando tiene prenda cargada. Si el % de tallaje sube, el consumo sube.
+      </div>
+
+      <div class="footer">
+        <div class="firma">Verificó</div>
+        <div class="firma">Director / encargado</div>
+      </div>
+    </div>
+  `;
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Resumen Ejecutivo - ${_esc(d.esc.nombre||'')}</title>
+    <style>
+      @page { size: A4; margin: 14mm; }
+      body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; margin: 0; }
+      h1 { font-size: 17pt; margin: 0; }
+      h2 { font-size: 12pt; margin: 14px 0 6px; padding-bottom: 4px; border-bottom: 2px solid #000; }
+      .header { padding-bottom: 8px; margin-bottom: 14px; border-bottom: 1px solid #aaa; }
+      .hsub { font-size: 10pt; color: #444; margin-top: 4px; }
+      .page-break { page-break-before: always; }
+      .kpi-table { width: 100%; margin-bottom: 8px; }
+      .kpi-table td { width: 33%; text-align: center; padding: 8px; border: 1px solid #ddd; vertical-align: top; }
+      .kpi-lbl { font-size: 9pt; color: #666; text-transform: uppercase; }
+      .kpi-val { font-size: 18pt; font-weight: 700; margin-top: 4px; }
+      table.t { width: 100%; border-collapse: collapse; margin-top: 4px; }
+      table.t th, table.t td { border: 1px solid #ccc; padding: 4px 6px; font-size: 10pt; }
+      table.t th { background: #eef1f5; text-align: left; }
+      table.t.small th, table.t.small td { font-size: 9pt; padding: 3px 5px; }
+      table.t .r { text-align: right; }
+      .muted { color: #666; }
+      .small { font-size: 9pt; }
+      .alert { background: #FFF4E6; border: 1px solid #F2C97D; padding: 8px; border-radius: 4px; font-size: 10pt; margin-bottom: 8px; }
+      .footer { margin-top: 30px; }
+      .firma { border-top: 1px solid #000; padding-top: 4px; width: 45%; display: inline-block; text-align: center; margin-right: 5%; }
+    </style></head><body>
+    ${pagina1}
+    ${pagina2}
+    </body></html>`;
+}
+
+function _esc(s) {
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function abrirVentanaImpresion(html) {
