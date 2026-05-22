@@ -540,7 +540,21 @@ async function abrirEmpacarSelector() {
     selE.innerHTML = '<option value="">— Todas las escuelas —</option>' +
       escuelas.map(e => `<option value="${e.id}">${e.alias || e.nombre}</option>`).join('');
 
+    // Si vino un hint desde el badge de Producción, preseleccionar combos
+    // cuya prenda (top o bottom) matchee con el hint.prenda.
+    if (window._empSelHint) {
+      const hint = window._empSelHint;
+      window._empSelHint = null;
+      for (const a of alumnos) {
+        if (!a.nivel || !a.sexo || (!a.prenda_top && !a.prenda_bottom)) continue;
+        if (a.prenda_top !== hint.prenda && a.prenda_bottom !== hint.prenda) continue;
+        const k = `${a.nivel}|${a.sexo}|${a.prenda_top || ''}|${a.prenda_bottom || ''}`;
+        empSelCache.combosMarcados.add(k);
+      }
+    }
+
     renderEmpSelCombos();
+    refrescarPoolEmpSelector();
   } catch(e) { alert('Error: '+e.message); }
 }
 function cerrarEmpacarSelector() { document.getElementById('bodega-empacar-selector-modal').style.display = 'none'; }
