@@ -11,7 +11,7 @@ function initEstadistica() {
 
 function switchSubEst(sub) {
   estSubActual = sub;
-  const subs = ['escuela', 'tallas', 'historico', 'inventario', 'costos', 'yardaje', 'contratos'];
+  const subs = ['escuela', 'tallas', 'heatmap', 'historico', 'inventario', 'costos', 'yardaje', 'contratos'];
   subs.forEach(s => {
     const btn = document.getElementById('est-sub-' + s);
     if (btn) {
@@ -26,6 +26,8 @@ function switchSubEst(sub) {
     initResumenEscuela();
   } else if (sub === 'tallas' && typeof initTallasResumen === 'function') {
     initTallasResumen();
+  } else if (sub === 'heatmap' && typeof initHeatmapCritico === 'function') {
+    initHeatmapCritico();
   } else if (sub === 'historico' && typeof initHistorico === 'function') {
     initHistorico();
   } else if (sub === 'inventario' && typeof initInventario === 'function') {
