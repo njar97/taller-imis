@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-22 09:37 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-22 09:48 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -2243,6 +2243,21 @@
         <button class="btn btn-ghost" onclick="cerrarGradoEdit()">Cancelar</button>
         <button class="btn btn-success" onclick="guardarGradoEdit()">✓ Guardar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Backups automáticos (solo admin) -->
+  <div id="cfg-backups-card" class="card" style="display:none">
+    <div class="card-title">💾 Backups automáticos</div>
+    <div class="text-muted mb8" style="font-size:12px">
+      Cada semana (domingo 3am UTC) se hace un backup automático con las tablas clave. Se guarda comprimido en el bucket privado <code>backups</code>. Solo admins pueden listar y descargar.
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn btn-primary btn-sm" onclick="ejecutarBackupAhora()">▶ Ejecutar backup ahora</button>
+      <button class="btn btn-ghost btn-sm" onclick="cargarListaBackups()">🔄 Refrescar lista</button>
+    </div>
+    <div id="cfg-backups-lista">
+      <div class="text-muted" style="font-size:12px">Tocá refrescar para cargar.</div>
     </div>
   </div>
 
@@ -17471,9 +17486,128 @@ function initConfig() {
   if (cardInv) cardInv.style.display = isAdmin ? '' : 'none';
   const cardUsr = document.getElementById('cfg-usuarios-card');
   if (cardUsr) cardUsr.style.display = isAdmin ? '' : 'none';
+  const cardBack = document.getElementById('cfg-backups-card');
+  if (cardBack) cardBack.style.display = isAdmin ? '' : 'none';
   const btnAudit = document.getElementById('cfg-acceso-audit');
   if (btnAudit) btnAudit.style.display = isAdmin ? '' : 'none';
-  if (isAdmin) cargarUsuarios();
+  if (isAdmin) {
+    cargarUsuarios();
+    cargarListaBackups();
+  }
+}
+
+// ─── Backups automáticos ──────────────────────────────────────────────
+async function ejecutarBackupAhora() {
+  if (!confirm('¿Ejecutar backup ahora?\n\nVa a tomar un snapshot de todas las tablas y subirlo al bucket.')) return;
+  try {
+    const res = await fetch(`${SUPA_URL}/rest/v1/rpc/trigger_backup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type':'application/json',
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${supaSession?.access_token || SUPA_KEY}`,
+      },
+      body: '{}',
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const r = await res.json();
+    alert('✓ Backup iniciado. Se va a ver en la lista en unos segundos.\n\nrequest_id: ' + (r?.request_id || '?'));
+    // Esperar 5s y refrescar lista
+    setTimeout(cargarListaBackups, 5000);
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+async function cargarListaBackups() {
+  const cont = document.getElementById('cfg-backups-lista');
+  if (!cont) return;
+  cont.innerHTML = '<div class="text-muted" style="font-size:12px">Cargando...</div>';
+  try {
+    const tok = supaSession?.access_token || SUPA_KEY;
+    // Listar via storage API (POST /list)
+    const res = await fetch(`${SUPA_URL}/storage/v1/object/list/backups`, {
+      method: 'POST',
+      headers: {
+        'Content-Type':'application/json',
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${tok}`,
+      },
+      body: JSON.stringify({ limit: 20, sortBy: { column: 'created_at', order: 'desc' } }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const files = await res.json();
+    if (!Array.isArray(files) || files.length === 0) {
+      cont.innerHTML = '<div class="alert alert-info">Sin backups todavía. Tocá "Ejecutar backup ahora" para hacer el primero.</div>';
+      return;
+    }
+    cont.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#FAFAFA">
+          <th style="padding:6px 8px;text-align:left">Archivo</th>
+          <th style="padding:6px 8px;text-align:right">Tamaño</th>
+          <th style="padding:6px 8px;text-align:left">Fecha</th>
+          <th style="padding:6px 8px"></th>
+        </tr></thead>
+        <tbody>
+          ${files.map(f => {
+            const size = f.metadata?.size || 0;
+            const sizeLbl = size > 1024*1024
+              ? (size/1024/1024).toFixed(2) + ' MB'
+              : (size/1024).toFixed(1) + ' KB';
+            const fechaLbl = f.created_at
+              ? new Date(f.created_at).toLocaleString('es-SV', { dateStyle:'medium', timeStyle:'short' })
+              : '—';
+            return `
+              <tr style="border-top:1px solid #EEE">
+                <td style="padding:6px 8px;font-family:monospace;font-size:11px">${f.name}</td>
+                <td style="padding:6px 8px;text-align:right;color:#666">${sizeLbl}</td>
+                <td style="padding:6px 8px">${fechaLbl}</td>
+                <td style="padding:6px 8px;text-align:right">
+                  <button class="btn-mini btn-mini-primary" onclick="descargarBackup('${f.name.replace(/'/g,"\\'")}')">↓ Descargar</button>
+                  <button class="btn-mini" onclick="borrarBackup('${f.name.replace(/'/g,"\\'")}')">🗑</button>
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch(e) {
+    cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+  }
+}
+
+async function descargarBackup(name) {
+  try {
+    const tok = supaSession?.access_token || SUPA_KEY;
+    const res = await fetch(`${SUPA_URL}/storage/v1/object/backups/${encodeURIComponent(name)}`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}` },
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+async function borrarBackup(name) {
+  if (!confirm(`¿Borrar "${name}"?\n\nNo se puede deshacer.`)) return;
+  try {
+    const tok = supaSession?.access_token || SUPA_KEY;
+    const res = await fetch(`${SUPA_URL}/storage/v1/object/backups/${encodeURIComponent(name)}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}` },
+    });
+    if (!res.ok) throw new Error(await res.text());
+    cargarListaBackups();
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
 }
 
 // Accesos rápidos a sub-tabs que vivían en Producción.

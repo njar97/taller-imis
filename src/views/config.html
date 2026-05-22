@@ -153,6 +153,21 @@
     </div>
   </div>
 
+  <!-- Backups automáticos (solo admin) -->
+  <div id="cfg-backups-card" class="card" style="display:none">
+    <div class="card-title">💾 Backups automáticos</div>
+    <div class="text-muted mb8" style="font-size:12px">
+      Cada semana (domingo 3am UTC) se hace un backup automático con las tablas clave. Se guarda comprimido en el bucket privado <code>backups</code>. Solo admins pueden listar y descargar.
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn btn-primary btn-sm" onclick="ejecutarBackupAhora()">▶ Ejecutar backup ahora</button>
+      <button class="btn btn-ghost btn-sm" onclick="cargarListaBackups()">🔄 Refrescar lista</button>
+    </div>
+    <div id="cfg-backups-lista">
+      <div class="text-muted" style="font-size:12px">Tocá refrescar para cargar.</div>
+    </div>
+  </div>
+
   <!-- Invitar usuario (solo admin) -->
   <div id="cfg-invitar-card" class="card" style="display:none">
     <div class="card-title">👥 Invitar usuario</div>
