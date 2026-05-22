@@ -192,11 +192,22 @@ function renderTallasResumen() {
     balance: s.balance + r.balance,
   }), { demanda: 0, corte: 0, prod: 0, stockLibre: 0, pool: 0, balance: 0 });
 
-  // Escuelas a mostrar como columnas (si filtro escuelas activo)
-  const escEnCols = f.escuelasEnColumnas && f.escuelas && f.escuelas.length > 0;
-  const escuelasCols = escEnCols
-    ? f.escuelas.map(eid => c.escuelas[eid]).filter(Boolean)
-    : [];
+  // Escuelas a mostrar como columnas:
+  // - Si hay filtro de escuelas activo, usar esas.
+  // - Sino, autodetectar todas las que tengan demanda > 0 en las filas visibles.
+  const escEnCols = !!f.escuelasEnColumnas;
+  let escuelasCols = [];
+  if (escEnCols) {
+    if (f.escuelas && f.escuelas.length > 0) {
+      escuelasCols = f.escuelas.map(eid => c.escuelas[eid]).filter(Boolean);
+    } else {
+      const auto = new Set();
+      for (const r of rows) for (const eid of r.porEsc.keys()) auto.add(eid);
+      escuelasCols = [...auto]
+        .map(eid => c.escuelas[eid]).filter(Boolean)
+        .sort((a,b) => (a.alias || a.nombre).localeCompare(b.alias || b.nombre, 'es'));
+    }
+  }
 
   // ─── UI ───────────────────────────────────────────────────────────
   const escuelasSel = new Set(f.escuelas || []);
@@ -248,11 +259,10 @@ function renderTallasResumen() {
         <div class="field" style="margin:0">
           <label style="display:flex;gap:6px;align-items:center;font-weight:normal">
             <input type="checkbox" ${f.escuelasEnColumnas?'checked':''}
-                   onchange="onTallasFiltro('escuelasEnColumnas', this.checked)"
-                   ${(f.escuelas||[]).length===0?'disabled':''}>
+                   onchange="onTallasFiltro('escuelasEnColumnas', this.checked)">
             Escuelas como columnas
           </label>
-          ${(f.escuelas||[]).length===0?'<div style="font-size:10px;color:#888;margin-top:2px">Elegí escuelas abajo primero</div>':''}
+          <div style="font-size:10px;color:#888;margin-top:2px">${(f.escuelas||[]).length>0?'Solo las elegidas abajo':'Todas las que tengan demanda'}</div>
         </div>
         <div style="text-align:right">
           <button class="btn btn-ghost btn-sm" onclick="initTallasResumen()">🔄 Refrescar</button>
