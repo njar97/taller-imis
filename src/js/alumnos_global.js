@@ -500,6 +500,23 @@ function renderEmpaqueBanner(listaVisible) {
   // alumnos únicos involucrados
   const alumnosUnicos = new Set([...c.empMarcadosTop, ...c.empMarcadosBot]).size;
   const marcados = alumnosUnicos;
+  // Bulk por grado+sexo (visible solo cuando hay alumnos en la lista)
+  const gradoSexoMap = new Map();  // "grado|sexo" → count
+  for (const a of listaVisible) {
+    if (!a.grado || !a.sexo) continue;
+    const k = a.grado + '|' + a.sexo;
+    gradoSexoMap.set(k, (gradoSexoMap.get(k) || 0) + 1);
+  }
+  const grupos = [...gradoSexoMap.entries()]
+    .sort((a,b) => a[0].localeCompare(b[0], 'es', { numeric:true }))
+    .map(([k, n]) => {
+      const [g, s] = k.split('|');
+      const ico = s === 'F' ? '♀' : (s === 'M' ? '♂' : '');
+      return `<button class="btn btn-ghost btn-sm" onclick="marcarBulkGradoSexo('${g.replace(/'/g,"\\'")}','${s}')"
+                title="Marcar las piezas elegibles de ${ico} ${g} (top y bot, hasta donde alcance el stock)"
+                style="font-size:11px;padding:3px 8px">📦 ${g} ${ico} (${n})</button>`;
+    }).join('');
+
   // Etiquetar combinaciones / pool de manera amigable
   const NIVEL_LBL = { PARV:'Parvularia', BASICA:'Básica', BACH:'Bach', OTRO:'Otro' };
   const SEXO_LBL = { F:'♀', M:'♂' };
@@ -533,8 +550,106 @@ function renderEmpaqueBanner(listaVisible) {
         </button>
         <button class="btn btn-ghost btn-sm" onclick="salirModoEmpaque()">Salir</button>
       </div>
+      ${grupos.length > 0 ? `
+        <div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(0,0,0,0.15)">
+          <div style="font-size:10px;color:#555;text-transform:uppercase;font-weight:600;margin-bottom:4px">⚡ Marcar bulk por grado · sexo</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">${grupos}</div>
+        </div>
+      ` : ''}
     </div>
   `;
+}
+
+// Marca en bulk todas las piezas elegibles de los alumnos de un grado+sexo
+// específico (de la lista visible). Top primero hasta que se acabe el stock,
+// luego bottom. Si una pieza ya estaba marcada, queda; las nuevas se suman
+// solo si hay suministro disponible.
+function marcarBulkGradoSexo(grado, sexo) {
+  const c = alumnosGlobalCache;
+  if (!c.modoEmpaque) return;
+  if (!c.empMarcadosTop) c.empMarcadosTop = new Set();
+  if (!c.empMarcadosBot) c.empMarcadosBot = new Set();
+  const setP = new Set(c.empPrendas || []);
+  const combos = c.empCombos || [];
+  const poolEntries = c.empPoolEntries || [];
+
+  const piezaElig = (a, pieza) => {
+    const prenda = pieza === 'top' ? a.prenda_top : a.prenda_bottom;
+    const talla  = pieza === 'top' ? a.talla_top_key : a.talla_bottom_key;
+    const estado = pieza === 'top' ? a.estado_top : a.estado_bottom;
+    if (!prenda || !talla) return false;
+    if (estado === 'empacado' || estado === 'entregado') return false;
+    if (poolEntries.length > 0) {
+      return poolEntries.some(p => a.escuela_id === p.escuela_id
+        && prenda === p.prenda && talla === p.talla);
+    }
+    if (combos.length > 0) {
+      return combos.some(co => a.nivel === co.nivel && a.sexo === co.sexo
+        && (pieza === 'top' ? co.prenda_top === prenda : co.prenda_bottom === prenda));
+    }
+    return setP.has(prenda);
+  };
+
+  // Aplicar mismos filtros que la tabla
+  const filtroEscOk = (a) => {
+    if (c.filtroEscuelas && c.filtroEscuelas.length > 0) {
+      return c.filtroEscuelas.includes(a.escuela_id);
+    }
+    return true;
+  };
+  const busqOk = (a) => {
+    if (!c.busqueda) return true;
+    const q = c.busqueda.toLowerCase().trim();
+    return (a.nombre||'').toLowerCase().includes(q);
+  };
+
+  const candidatos = c.alumnos
+    .filter(a => a.grado === grado && a.sexo === sexo && filtroEscOk(a) && busqOk(a))
+    .slice(0, 500);
+
+  if (candidatos.length === 0) return;
+
+  // Restante para no over-empacar
+  const restante = _supplyRestante();
+  let markedTop = 0, markedBot = 0, skippedTop = 0, skippedBot = 0;
+  for (const a of candidatos) {
+    if (piezaElig(a, 'top') && !c.empMarcadosTop.has(a.id)) {
+      if (!restante || _piezaConSuministro(a, 'top', restante)) {
+        c.empMarcadosTop.add(a.id);
+        markedTop++;
+        // Descontar 1 del restante
+        if (restante) _restarSuministro(a, 'top', restante);
+      } else {
+        skippedTop++;
+      }
+    }
+    if (piezaElig(a, 'bottom') && !c.empMarcadosBot.has(a.id)) {
+      if (!restante || _piezaConSuministro(a, 'bottom', restante)) {
+        c.empMarcadosBot.add(a.id);
+        markedBot++;
+        if (restante) _restarSuministro(a, 'bottom', restante);
+      } else {
+        skippedBot++;
+      }
+    }
+  }
+  renderAlumnosGlobal();
+  if (skippedTop > 0 || skippedBot > 0) {
+    // Sólo log; el usuario verá los disabled en pantalla.
+    console.warn(`Bulk ${grado} ${sexo}: ${markedTop}+${markedBot} marcados; saltados sin stock: ${skippedTop} top, ${skippedBot} bot`);
+  }
+}
+
+function _restarSuministro(a, pieza, restante) {
+  const prenda = pieza === 'top' ? a.prenda_top : a.prenda_bottom;
+  const talla  = pieza === 'top' ? a.talla_top_key : a.talla_bottom_key;
+  if (!prenda || !talla) return;
+  const kPool = a.escuela_id + '|' + prenda + '|' + talla;
+  const kStock = prenda + '|' + talla;
+  const pp = restante.poolRest.get(kPool) || 0;
+  if (pp > 0) { restante.poolRest.set(kPool, pp - 1); return; }
+  const ss = restante.stockRest.get(kStock) || 0;
+  if (ss > 0) restante.stockRest.set(kStock, ss - 1);
 }
 
 // Toggle granular por pieza: 'top' o 'bottom'
