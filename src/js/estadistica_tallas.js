@@ -18,7 +18,7 @@ let tallasResumenCache = {
     talla: '',        // string single
     escuelas: [],     // multi
     ocultarCubiertas: false,  // si true, no muestra filas con balance >= 0
-    escuelasEnColumnas: false,  // toggle pivot por escuela
+    escuelasEnColumnas: true,   // default ON — pivot por escuela apenas se abre el tab
     incluirCorte: true,
     incluirProd: true,
     incluirBodega: true,
