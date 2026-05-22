@@ -4,6 +4,12 @@
   <div class="nav-top">
     <div style="width:32px;height:32px;background:rgba(255,255,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">T</div>
     <h1>Taller IMIS — Producción v31</h1>
+    <div id="buscador-wrap" class="buscador-wrap">
+      <input type="text" id="buscador-input" placeholder="🔍 Buscar alumno o escuela..."
+             oninput="buscadorOnInput(event)" onfocus="buscadorOnInput(event)"
+             autocomplete="off">
+      <div id="buscador-results" class="buscador-results" style="display:none"></div>
+    </div>
     <div id="user-chip" class="user-chip" style="display:none">
       <span id="user-chip-email"></span>
       <span class="logout-link" onclick="doLogout()">salir</span>
