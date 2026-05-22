@@ -441,7 +441,7 @@ async function terminarBulto(produccionBultoId, cantidadOriginal) {
     }
     // Hook: registrar entrada a bodega (si la función existe)
     if (typeof registrarEntradaBodegaPorBulto === 'function' && b) {
-      registrarEntradaBodegaPorBulto({
+      await registrarEntradaBodegaPorBulto({
         id: b.produccion_bulto_id,
         codigo_bulto: b.codigo_bulto,
         cod_prenda: b.cod_prenda,
@@ -451,6 +451,155 @@ async function terminarBulto(produccionBultoId, cantidadOriginal) {
       });
     }
     renderProduccion();
+    // Recargar demanda para que los badges reflejen la nueva entrada
+    cargarDemandaProd().catch(() => {});
+    // Sugerir acaparar
+    if (b) {
+      const nombre = (typeof prendaCanon === 'function')
+        ? prendaCanon(b.cod_prenda) : (b.nombre_prenda || b.cod_prenda);
+      sugerirAutoAcaparar(nombre, b.talla_key_salida, cantidadFinal);
+    }
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+// ─── Sugerencia auto-acaparar al terminar bulto ───────────────────────
+// Cuando un bulto se marca terminado y entra a bodega, ofrecemos acaparar
+// las piezas para las escuelas que más las necesitan. Botón por escuela
+// con la cantidad sugerida (min(falta de esa escuela, libre)).
+async function sugerirAutoAcaparar(nombrePrenda, tallaKey, cantidadEntrada) {
+  if (!nombrePrenda || !tallaKey) return;
+  const modal = document.getElementById('auto-acaparar-modal');
+  if (!modal) return;
+  document.getElementById('auto-aca-subt').textContent =
+    `${cantidadEntrada} ${nombrePrenda} ${tallaKey} entraron a bodega`;
+  document.getElementById('auto-aca-lista').innerHTML =
+    '<div class="text-muted" style="font-size:12px">Calculando demanda por escuela...</div>';
+  modal.style.display = 'flex';
+
+  try {
+    const [alumnos, pool, stock, escuelas] = await Promise.all([
+      supaFetchAll('alumno', `?activo=eq.true&or=(and(prenda_top.eq.${nombrePrenda},talla_top_key.eq.${encodeURIComponent(tallaKey)}),and(prenda_bottom.eq.${nombrePrenda},talla_bottom_key.eq.${encodeURIComponent(tallaKey)}))&select=escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000`),
+      supaFetchAll('escuela_acaparado', `?nombre_prenda=eq.${encodeURIComponent(nombrePrenda)}&talla_key=eq.${encodeURIComponent(tallaKey)}&select=escuela_id,cantidad_acaparada,cantidad_consumida`),
+      supaFetchAll('vw_bodega_stock', `?nombre_prenda=eq.${encodeURIComponent(nombrePrenda)}&talla_key=eq.${encodeURIComponent(tallaKey)}&select=stock_actual`),
+      supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre,codigo_cde&order=alias'),
+    ]);
+    const escMap = {}; for (const e of escuelas) escMap[e.id] = e;
+
+    // Pendientes por escuela (cuenta piezas no empacadas/entregadas que matcheen prenda+talla)
+    const pend = {};
+    for (const a of alumnos) {
+      const c = pend[a.escuela_id] = pend[a.escuela_id] || 0;
+      let add = c;
+      if (a.prenda_top === nombrePrenda && a.talla_top_key === tallaKey
+          && a.estado_top !== 'empacado' && a.estado_top !== 'entregado') add++;
+      if (a.prenda_bottom === nombrePrenda && a.talla_bottom_key === tallaKey
+          && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado') add++;
+      pend[a.escuela_id] = add;
+    }
+    // Pool por escuela
+    const poolPorEsc = {};
+    for (const p of pool) {
+      const d = Math.max(0, (Number(p.cantidad_acaparada)||0) - (Number(p.cantidad_consumida)||0));
+      poolPorEsc[p.escuela_id] = (poolPorEsc[p.escuela_id] || 0) + d;
+    }
+    const acapTotal = Object.values(poolPorEsc).reduce((s,n) => s + n, 0);
+    const stockTotal = (stock[0] && Number(stock[0].stock_actual)) || 0;
+    const libre = Math.max(0, stockTotal - acapTotal);
+
+    const filas = Object.keys(pend)
+      .map(eid => {
+        const e = escMap[eid]; if (!e) return null;
+        const necesita = pend[eid];
+        const acaparado = poolPorEsc[eid] || 0;
+        const falta = Math.max(0, necesita - acaparado);
+        return { eid, alias: e.alias || e.nombre, necesita, acaparado, falta };
+      })
+      .filter(Boolean)
+      .filter(f => f.falta > 0)
+      .sort((a,b) => b.falta - a.falta);
+
+    if (filas.length === 0) {
+      document.getElementById('auto-aca-lista').innerHTML = `
+        <div class="alert alert-info" style="font-size:12px">
+          ✅ Sin demanda pendiente para ${nombrePrenda} ${tallaKey} en este momento.
+          Las piezas quedan en stock libre (${libre} disponibles).
+        </div>`;
+      return;
+    }
+
+    document.getElementById('auto-aca-lista').innerHTML = `
+      <div style="font-size:12px;margin-bottom:8px">
+        <strong>Libre para acaparar:</strong> ${libre} pieza${libre===1?'':'s'}
+        (stock total ${stockTotal} − acaparado por otras escuelas ${acapTotal})
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow-y:auto">
+        ${filas.map(f => {
+          const sugerido = Math.min(f.falta, libre);
+          const disabled = sugerido <= 0;
+          return `
+            <div style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #E0E4EA;border-radius:6px">
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:700;font-size:13px">🏫 ${escapeHtmlProd(f.alias)}</div>
+                <div style="font-size:11px;color:#666">Necesita ${f.necesita} · Ya acaparado ${f.acaparado} · Falta ${f.falta}</div>
+              </div>
+              <input type="number" min="0" max="${Math.min(f.falta, libre)}" value="${sugerido}"
+                     id="auto-aca-cant-${f.eid}" style="width:60px;padding:4px;text-align:right" ${disabled?'disabled':''}>
+              <button class="btn btn-success btn-sm" onclick="confirmarAutoAcaparar('${f.eid}','${nombrePrenda.replace(/'/g,"\\'")}','${tallaKey.replace(/'/g,"\\'")}')" ${disabled?'disabled':''}>
+                📥 Acaparar
+              </button>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  } catch(e) {
+    document.getElementById('auto-aca-lista').innerHTML =
+      `<div class="alert alert-error">Error: ${e.message}</div>`;
+  }
+}
+
+function cerrarAutoAcaparar() {
+  const m = document.getElementById('auto-acaparar-modal');
+  if (m) m.style.display = 'none';
+}
+
+function escapeHtmlProd(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+async function confirmarAutoAcaparar(escId, nombrePrenda, tallaKey) {
+  const input = document.getElementById('auto-aca-cant-' + escId);
+  const cant = parseInt(input?.value || 0, 10);
+  if (!cant || cant <= 0) return alert('Cantidad inválida');
+  try {
+    const cod = (typeof _codPrenda === 'function') ? _codPrenda(nombrePrenda) : nombrePrenda.slice(0,3).toUpperCase();
+    // 1) SALIDA_EMPAQUE (descuenta stock) — para escuela, sin alumno
+    const movs = await supaFetch('bodega_movimiento', 'POST', {
+      tipo: 'SALIDA_EMPAQUE',
+      cod_prenda: cod, nombre_prenda: nombrePrenda, talla_key: tallaKey,
+      cantidad: cant, escuela_id: escId,
+      fecha: new Date().toISOString().slice(0,10),
+      observaciones: 'Acaparado para escuela (auto desde producción)',
+    });
+    const movId = Array.isArray(movs) ? movs[0]?.id : movs?.id;
+    // 2) Insertar en escuela_acaparado
+    await supaFetch('escuela_acaparado', 'POST', {
+      escuela_id: escId,
+      cod_prenda: cod, nombre_prenda: nombrePrenda, talla_key: tallaKey,
+      cantidad_acaparada: cant, cantidad_consumida: 0,
+      movimiento_bodega_id: movId,
+      observaciones: 'Auto-sugerido al terminar bulto',
+    });
+    // Marcar la fila como hecha
+    const btn = document.querySelector(`#auto-aca-cant-${escId}`)?.nextElementSibling;
+    if (btn) { btn.disabled = true; btn.textContent = '✓ Acaparado'; }
+    if (input) input.disabled = true;
+    // Refrescar dashboard de producción y badges
+    cargarDemandaProd().catch(() => {});
   } catch(e) {
     alert('Error: ' + e.message);
   }
