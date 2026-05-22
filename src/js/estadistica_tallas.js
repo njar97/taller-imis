@@ -46,7 +46,7 @@ async function initTallasResumen() {
       supaFetchAll('alumno',
         `?temporada_id=eq.${tallasResumenCache.temporadaId}&activo=eq.true&select=escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000`),
       supaFetchAll('vw_produccion_estado',
-        '?estado_manual=neq.terminado&select=cod_prenda,talla_key_salida,cantidad_original'),
+        '?estado_manual=neq.terminado&select=cod_prenda,talla_key_salida,cantidad_original,estado_manual,total_etapas,etapas_hechas'),
       supaFetchAll('vw_bodega_stock',
         '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
       supaFetchAll('escuela_acaparado',
@@ -115,12 +115,19 @@ function renderTallasResumen() {
   }
 
   // ─── Suministro por (prenda, talla) ───────────────────────────────
+  // Split: "en corte" = bultos pendientes sin etapas iniciadas
+  //        "en producción" = bultos en proceso (etapas iniciadas, no terminadas)
+  // Si Fase 2 OFF (sin etapas), todos los pendientes cuentan como corte.
+  const enCorte = new Map();
   const enProd = new Map();
   for (const b of c.bultosPendientes) {
     if (!b.cod_prenda || !b.talla_key_salida) continue;
     const nombre = (typeof prendaCanon === 'function') ? prendaCanon(b.cod_prenda) : b.cod_prenda;
     const k = nombre + '|' + b.talla_key_salida;
-    enProd.set(k, (enProd.get(k) || 0) + (Number(b.cantidad_original) || 0));
+    const cant = Number(b.cantidad_original) || 0;
+    const enProceso = (Number(b.total_etapas)||0) > 0 && (Number(b.etapas_hechas)||0) > 0;
+    if (enProceso) enProd.set(k, (enProd.get(k) || 0) + cant);
+    else enCorte.set(k, (enCorte.get(k) || 0) + cant);
   }
   const enBodega = new Map();
   for (const s of c.stock) {
@@ -142,7 +149,7 @@ function renderTallasResumen() {
   }
 
   const allKeys = new Set([
-    ...demanda.keys(), ...enProd.keys(), ...enBodega.keys(), ...poolTotal.keys(),
+    ...demanda.keys(), ...enCorte.keys(), ...enProd.keys(), ...enBodega.keys(), ...poolTotal.keys(),
   ]);
   const prendasUnicas = [...new Set([...allKeys].map(k => k.split('|')[0]))].sort();
   const tallasUnicas = [...new Set([...allKeys].map(k => k.split('|')[1]))]
@@ -162,7 +169,7 @@ function renderTallasResumen() {
       const matchEsc = f.escuelas.some(eid => (dem.porEsc.get(eid) || 0) > 0);
       if (!matchEsc) continue;
     }
-    const corte = 0;
+    const corte = enCorte.get(k) || 0;
     const prod = enProd.get(k) || 0;
     const stockLibre = enBodega.get(k) || 0;
     const pTotal = poolTotal.get(k) || 0;
@@ -340,7 +347,7 @@ function renderTallasResumen() {
               <th style="padding:6px 8px;text-align:left">Talla</th>
               <th style="padding:6px 8px;text-align:right">Necesidad</th>
               ${escuelasCols.map(e => `<th style="padding:6px 8px;text-align:right;font-size:11px" title="${e.nombre||''}">🏫 ${e.alias || e.nombre}</th>`).join('')}
-              ${f.incluirCorte ? `<th style="padding:6px 8px;text-align:right" title="Trazos pendientes — no implementado todavía">✂️ Corte</th>` : ''}
+              ${f.incluirCorte ? `<th style="padding:6px 8px;text-align:right" title="Bultos cortados sin etapas iniciadas">✂️ Corte</th>` : ''}
               ${f.incluirProd ? `<th style="padding:6px 8px;text-align:right">🏭 Producción</th>` : ''}
               ${f.incluirBodega ? `<th style="padding:6px 8px;text-align:right">📦 Bodega</th>` : ''}
               ${f.incluirPool ? `<th style="padding:6px 8px;text-align:right">📥 Pool</th>` : ''}
