@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-21 20:05 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-21 21:53 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -2315,6 +2315,23 @@ const CATALOGO_BASE = {
 // Catálogo combinado (base + custom desde Supabase). Se carga al abrir Trazo.
 let CATALOGO = JSON.parse(JSON.stringify(CATALOGO_BASE));
 
+// Mapping cod_prenda → nombre canónico (mismo casing que la base de datos:
+// alumno.prenda_top, bodega_movimiento.nombre_prenda, escuela_acaparado.nombre_prenda).
+// Usar SIEMPRE este helper cuando se necesite comparar/agrupar nombre de prenda
+// que viene de un cod_prenda contra valores almacenados.
+// El CATALOGO_BASE.nombre es "Camisa" (Title) para display; este helper devuelve
+// "CAMISA" (UPPER_WITH_UNDERSCORES) que es lo guardado.
+const _PRENDA_CANON_MAP = {
+  C:'CAMISA', B:'BLUSA', CC:'CAMISA_CELESTE',
+  P:'PANTALON', PB:'PANTALON_BEIGE',
+  F:'FALDA',    FB:'FALDA_BEIGE', FCE:'FALDA_C.E',
+  S:'SHORT',
+};
+function prendaCanon(cod) {
+  if (!cod) return '';
+  return _PRENDA_CANON_MAP[cod] || String(cod).toUpperCase();
+}
+
 // Estado global
 let historialTipo = 'trazo';
 let detalleActual = null; // { tipo, id } para editar/eliminar
@@ -3214,7 +3231,7 @@ function switchSubEst(sub) {
 // Tabla pivote: filas (prenda × talla) con totales por escuela + cruce con
 // Corte (no implementado todavía), Producción (bultos pendientes), Bodega
 // (stock libre), Pool (acaparado disponible). Click en fila expande detalle
-// por escuela.
+// por escuela. Opcionalmente puede mostrar escuelas como columnas (pivot).
 // ══════════════════════════════════════════════════════════════════════
 
 let tallasResumenCache = {
@@ -3225,10 +3242,11 @@ let tallasResumenCache = {
   stock: [],
   pool: [],
   filtros: {
-    prenda: '',       // string single
+    prendas: [],      // multi-select de nombres canónicos. Vacío = todas
     talla: '',        // string single
     escuelas: [],     // multi
-    soloFaltantes: false,  // mostrar solo filas con balance negativo
+    ocultarCubiertas: false,  // si true, no muestra filas con balance >= 0
+    escuelasEnColumnas: false,  // toggle pivot por escuela
     incluirCorte: true,
     incluirProd: true,
     incluirBodega: true,
@@ -3243,7 +3261,6 @@ async function initTallasResumen() {
   root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando datos...</div>';
 
   try {
-    // Temporada activa
     if (!tallasResumenCache.temporadaId) {
       const t = (await supaFetch('temporada', 'GET', null,
         '?estado=eq.activa&select=id&order=anio.desc&limit=1'))[0]
@@ -3256,7 +3273,6 @@ async function initTallasResumen() {
       supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre,codigo_cde&order=alias.asc'),
       supaFetchAll('alumno',
         `?temporada_id=eq.${tallasResumenCache.temporadaId}&activo=eq.true&select=escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000`),
-      // Bultos en producción no terminados: pendientes o en proceso. Filtro por estado != terminado.
       supaFetchAll('vw_produccion_estado',
         '?estado_manual=neq.terminado&select=cod_prenda,talla_key_salida,cantidad_original'),
       supaFetchAll('vw_bodega_stock',
@@ -3283,6 +3299,16 @@ function onTallasFiltro(field, val) {
   tallasResumenCache.filtros[field] = val;
   renderTallasResumen();
 }
+function togglePrendaTallas(p) {
+  const arr = tallasResumenCache.filtros.prendas;
+  const i = arr.indexOf(p);
+  if (i >= 0) arr.splice(i, 1); else arr.push(p);
+  renderTallasResumen();
+}
+function limpiarPrendasTallas() {
+  tallasResumenCache.filtros.prendas = [];
+  renderTallasResumen();
+}
 function toggleExpandTalla(k) {
   const set = tallasResumenCache.expandidos;
   if (set.has(k)) set.delete(k); else set.add(k);
@@ -3295,8 +3321,7 @@ function renderTallasResumen() {
   const c = tallasResumenCache;
   const f = c.filtros;
 
-  // ─── Computar demanda por (prenda, talla, escuela) ────────────────
-  // Una pieza por alumno cuya talla matchea y estado != empacado/entregado
+  // ─── Demanda por (prenda, talla, escuela) ─────────────────────────
   const demanda = new Map();  // "prenda|talla" → { total, porEsc: Map<eid, n> }
   const bump = (prenda, talla, escId) => {
     if (!prenda || !talla) return;
@@ -3318,27 +3343,22 @@ function renderTallasResumen() {
   }
 
   // ─── Suministro por (prenda, talla) ───────────────────────────────
-  // En producción (bultos pendientes): cantidad_original sumada
   const enProd = new Map();
   for (const b of c.bultosPendientes) {
     if (!b.cod_prenda || !b.talla_key_salida) continue;
-    const nombre = (typeof CATALOGO !== 'undefined' && CATALOGO[b.cod_prenda]?.nombre) || b.cod_prenda;
+    const nombre = (typeof prendaCanon === 'function') ? prendaCanon(b.cod_prenda) : b.cod_prenda;
     const k = nombre + '|' + b.talla_key_salida;
     enProd.set(k, (enProd.get(k) || 0) + (Number(b.cantidad_original) || 0));
   }
-
-  // En bodega: stock_actual (libre) por (prenda, talla)
   const enBodega = new Map();
   for (const s of c.stock) {
-    const p = s.nombre_prenda || s.cod_prenda;
+    // nombre_prenda en bodega_movimiento ya viene canónico; si está vacío, usar cod_prenda
+    const p = s.nombre_prenda || (typeof prendaCanon === 'function' ? prendaCanon(s.cod_prenda) : s.cod_prenda);
     if (!p || !s.talla_key) continue;
     enBodega.set(p + '|' + s.talla_key, Number(s.stock_actual) || 0);
   }
-
-  // Pool por (prenda, talla, escuela): disponible = acaparada - consumida
-  // Y total pool por (prenda, talla)
   const poolTotal = new Map();
-  const poolPorEsc = new Map();   // "prenda|talla" → Map<eid, disponible>
+  const poolPorEsc = new Map();
   for (const p of c.pool) {
     const k = p.nombre_prenda + '|' + p.talla_key;
     const disp = Math.max(0, (Number(p.cantidad_acaparada)||0) - (Number(p.cantidad_consumida)||0));
@@ -3349,32 +3369,28 @@ function renderTallasResumen() {
     m.set(p.escuela_id, (m.get(p.escuela_id) || 0) + disp);
   }
 
-  // ─── Combinar todas las keys que aparecen en cualquier lado ───────
   const allKeys = new Set([
     ...demanda.keys(), ...enProd.keys(), ...enBodega.keys(), ...poolTotal.keys(),
   ]);
-
-  // Listas para selectores
   const prendasUnicas = [...new Set([...allKeys].map(k => k.split('|')[0]))].sort();
   const tallasUnicas = [...new Set([...allKeys].map(k => k.split('|')[1]))]
     .sort((a,b) => a.localeCompare(b, 'es', { numeric: true }));
   const escuelasArr = Object.values(c.escuelas).sort((a,b) =>
     (a.alias || a.nombre).localeCompare(b.alias || b.nombre, 'es'));
 
-  // Filtrar
+  // Filtrar filas
+  const prendasFiltradas = new Set(f.prendas || []);
   let rows = [];
   for (const k of allKeys) {
     const [prenda, talla] = k.split('|');
-    if (f.prenda && prenda !== f.prenda) continue;
+    if (prendasFiltradas.size > 0 && !prendasFiltradas.has(prenda)) continue;
     if (f.talla && talla !== f.talla) continue;
     const dem = demanda.get(k) || { total: 0, porEsc: new Map() };
-    // Filtro por escuelas: si hay alguna escuela elegida, solo mostrar filas donde
-    // al menos una de ellas tenga demanda > 0
     if (f.escuelas && f.escuelas.length > 0) {
       const matchEsc = f.escuelas.some(eid => (dem.porEsc.get(eid) || 0) > 0);
       if (!matchEsc) continue;
     }
-    const corte = 0;  // por ahora no separamos corte; queda 0
+    const corte = 0;
     const prod = enProd.get(k) || 0;
     const stockLibre = enBodega.get(k) || 0;
     const pTotal = poolTotal.get(k) || 0;
@@ -3383,7 +3399,7 @@ function renderTallasResumen() {
                      + (f.incluirBodega ? stockLibre : 0)
                      + (f.incluirPool ? pTotal : 0);
     const balance = suministro - dem.total;
-    if (f.soloFaltantes && balance >= 0) continue;
+    if (f.ocultarCubiertas && balance >= 0) continue;
     rows.push({
       key: k, prenda, talla,
       demanda: dem.total, porEsc: dem.porEsc,
@@ -3391,12 +3407,10 @@ function renderTallasResumen() {
       balance,
     });
   }
-
   rows.sort((a, b) =>
     a.prenda.localeCompare(b.prenda) || a.talla.localeCompare(b.talla, 'es', { numeric: true })
   );
 
-  // Totales
   const tot = rows.reduce((s, r) => ({
     demanda: s.demanda + r.demanda,
     corte: s.corte + r.corte,
@@ -3406,7 +3420,13 @@ function renderTallasResumen() {
     balance: s.balance + r.balance,
   }), { demanda: 0, corte: 0, prod: 0, stockLibre: 0, pool: 0, balance: 0 });
 
-  // ─── Render ───────────────────────────────────────────────────────
+  // Escuelas a mostrar como columnas (si filtro escuelas activo)
+  const escEnCols = f.escuelasEnColumnas && f.escuelas && f.escuelas.length > 0;
+  const escuelasCols = escEnCols
+    ? f.escuelas.map(eid => c.escuelas[eid]).filter(Boolean)
+    : [];
+
+  // ─── UI ───────────────────────────────────────────────────────────
   const escuelasSel = new Set(f.escuelas || []);
   const escChips = (f.escuelas || []).map(eid => {
     const e = c.escuelas[eid]; if (!e) return '';
@@ -3417,17 +3437,28 @@ function renderTallasResumen() {
   }).join('');
   const escDisp = escuelasArr.filter(e => !escuelasSel.has(e.id));
 
+  // Chips multi-prenda
+  const chipsPrendas = prendasUnicas.map(p => {
+    const sel = prendasFiltradas.has(p);
+    return `<button class="btn btn-sm ${sel?'btn-primary':'btn-ghost'}"
+      onclick="togglePrendaTallas('${p.replace(/'/g,"\\'")}')"
+      style="font-weight:${sel?'700':'normal'}">${p}</button>`;
+  }).join('');
+
   root.innerHTML = `
     <!-- Filtros -->
     <div class="card" style="padding:10px;margin-bottom:10px">
+      <!-- Multi-select prendas -->
+      <div style="font-size:11px;font-weight:600;color:#666;margin-bottom:4px">PRENDAS (multi)</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+        ${chipsPrendas}
+        ${prendasFiltradas.size > 0
+          ? `<button class="btn btn-ghost btn-sm" onclick="limpiarPrendasTallas()" style="font-size:11px">✕ Limpiar</button>`
+          : `<span style="font-size:11px;color:#888">Ninguna seleccionada = todas</span>`}
+      </div>
+
+      <!-- Talla single + opciones -->
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:8px">
-        <div class="field" style="margin:0">
-          <label>Prenda</label>
-          <select onchange="onTallasFiltro('prenda', this.value)">
-            <option value="">Todas</option>
-            ${prendasUnicas.map(p => `<option value="${p}" ${f.prenda===p?'selected':''}>${p}</option>`).join('')}
-          </select>
-        </div>
         <div class="field" style="margin:0">
           <label>Talla</label>
           <select onchange="onTallasFiltro('talla', this.value)">
@@ -3437,14 +3468,25 @@ function renderTallasResumen() {
         </div>
         <div class="field" style="margin:0">
           <label style="display:flex;gap:6px;align-items:center;font-weight:normal">
-            <input type="checkbox" ${f.soloFaltantes?'checked':''} onchange="onTallasFiltro('soloFaltantes', this.checked)">
-            Solo faltantes
+            <input type="checkbox" ${f.ocultarCubiertas?'checked':''}
+                   onchange="onTallasFiltro('ocultarCubiertas', this.checked)">
+            Ocultar cubiertas (balance ≥ 0)
           </label>
+        </div>
+        <div class="field" style="margin:0">
+          <label style="display:flex;gap:6px;align-items:center;font-weight:normal">
+            <input type="checkbox" ${f.escuelasEnColumnas?'checked':''}
+                   onchange="onTallasFiltro('escuelasEnColumnas', this.checked)"
+                   ${(f.escuelas||[]).length===0?'disabled':''}>
+            Escuelas como columnas
+          </label>
+          ${(f.escuelas||[]).length===0?'<div style="font-size:10px;color:#888;margin-top:2px">Elegí escuelas abajo primero</div>':''}
         </div>
         <div style="text-align:right">
           <button class="btn btn-ghost btn-sm" onclick="initTallasResumen()">🔄 Refrescar</button>
         </div>
       </div>
+
       <!-- Escuelas multi -->
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
         ${escChips}
@@ -3455,8 +3497,9 @@ function renderTallasResumen() {
           </select>
         ` : ''}
       </div>
+
       <!-- Toggles de suministro -->
-      <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;border-top:1px dashed #ddd;padding-top:6px">
         <label style="display:flex;gap:4px;align-items:center;cursor:pointer">
           <input type="checkbox" ${f.incluirCorte?'checked':''} onchange="onTallasFiltro('incluirCorte', this.checked)">
           ✂️ Corte
@@ -3502,7 +3545,10 @@ function renderTallasResumen() {
 
     <!-- Tabla principal -->
     <div class="card" style="padding:0;overflow:hidden">
-      <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">📊 Detalle por talla</div>
+      <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">
+        📊 Detalle por talla
+        ${escEnCols ? `<span style="font-size:11px;color:#666;font-weight:normal;margin-left:6px">(escuelas en columnas)</span>` : ''}
+      </div>
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:780px">
           <thead>
@@ -3511,6 +3557,7 @@ function renderTallasResumen() {
               <th style="padding:6px 8px;text-align:left">Prenda</th>
               <th style="padding:6px 8px;text-align:left">Talla</th>
               <th style="padding:6px 8px;text-align:right">Necesidad</th>
+              ${escuelasCols.map(e => `<th style="padding:6px 8px;text-align:right;font-size:11px" title="${e.nombre||''}">🏫 ${e.alias || e.nombre}</th>`).join('')}
               ${f.incluirCorte ? `<th style="padding:6px 8px;text-align:right" title="Trazos pendientes — no implementado todavía">✂️ Corte</th>` : ''}
               ${f.incluirProd ? `<th style="padding:6px 8px;text-align:right">🏭 Producción</th>` : ''}
               ${f.incluirBodega ? `<th style="padding:6px 8px;text-align:right">📦 Bodega</th>` : ''}
@@ -3520,7 +3567,7 @@ function renderTallasResumen() {
           </thead>
           <tbody>
             ${rows.length === 0 ? `
-              <tr><td colspan="9" style="padding:20px;text-align:center;color:#888">Sin resultados con los filtros aplicados.</td></tr>
+              <tr><td colspan="${9 + escuelasCols.length}" style="padding:20px;text-align:center;color:#888">Sin resultados con los filtros aplicados.</td></tr>
             ` : rows.map(r => {
               const exp = c.expandidos.has(r.key);
               const balanceColor = r.balance < 0 ? 'var(--rojo)' : 'var(--verde)';
@@ -3530,6 +3577,10 @@ function renderTallasResumen() {
                   <td style="padding:5px 8px;font-weight:600">${r.prenda}</td>
                   <td style="padding:5px 8px;font-family:monospace;font-weight:600">${r.talla}</td>
                   <td style="padding:5px 8px;text-align:right;font-weight:700">${r.demanda}</td>
+                  ${escuelasCols.map(e => {
+                    const n = r.porEsc.get(e.id) || 0;
+                    return `<td style="padding:5px 8px;text-align:right;color:${n>0?'#444':'#ccc'}">${n||'·'}</td>`;
+                  }).join('')}
                   ${f.incluirCorte ? `<td style="padding:5px 8px;text-align:right;color:#888">${r.corte || '—'}</td>` : ''}
                   ${f.incluirProd ? `<td style="padding:5px 8px;text-align:right;color:#4a8">${r.prod || 0}</td>` : ''}
                   ${f.incluirBodega ? `<td style="padding:5px 8px;text-align:right;color:var(--azul)">${r.stockLibre || 0}</td>` : ''}
@@ -3538,7 +3589,8 @@ function renderTallasResumen() {
                 </tr>
               `;
               if (!exp) return trMain;
-              // Detalle por escuela
+              // Detalle por escuela (solo cuando NO está en modo columnas, para no duplicar)
+              if (escEnCols) return trMain;
               const filasEsc = [...r.porEsc.entries()]
                 .sort((a,b) => b[1] - a[1])
                 .map(([eid, n]) => {
@@ -3568,7 +3620,9 @@ function renderTallasResumen() {
     </div>
 
     <div style="text-align:center;margin-top:8px;color:#888;font-size:11px">
-      ${rows.length} fila(s). Tocá una fila para desglosar por escuela.
+      ${rows.length} fila(s). ${escEnCols
+        ? 'Escuelas mostradas como columnas (necesidad por escuela).'
+        : 'Tocá una fila para desglosar por escuela.'}
     </div>
   `;
 }
@@ -3582,6 +3636,10 @@ function agregarTallasEsc(eid) {
 function quitarTallasEsc(eid) {
   tallasResumenCache.filtros.escuelas =
     (tallasResumenCache.filtros.escuelas || []).filter(id => id !== eid);
+  // Si vacía y estaba en modo columnas, apagar
+  if (tallasResumenCache.filtros.escuelas.length === 0) {
+    tallasResumenCache.filtros.escuelasEnColumnas = false;
+  }
   renderTallasResumen();
 }
 
@@ -6502,10 +6560,10 @@ async function cargarDemandaProd() {
 }
 
 // Helper: devuelve el badge HTML para un grupo (cod_prenda, talla_key).
-// Resuelve el nombre de la prenda desde el CATALOGO para matchear con alumnos.
+// Usa prendaCanon (cod → nombre canónico de la base) para matchear con alumnos.
 function _badgeDemandaProd(cod_prenda, talla_key) {
   if (!cod_prenda || !talla_key || !demandaProdCache) return '';
-  const nombre = CATALOGO[cod_prenda]?.nombre || cod_prenda;
+  const nombre = (typeof prendaCanon === 'function') ? prendaCanon(cod_prenda) : cod_prenda;
   const d = demandaProdCache[nombre + '|' + talla_key];
   if (!d || d.pendientes === 0) return '';
   const surplus = d.stock + d.pool - d.pendientes;
