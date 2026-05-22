@@ -313,6 +313,7 @@ function _renderAvancePorEscuela(r) {
           <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('entrega','${e.id}')" style="font-size:11px;padding:4px 8px">🚚 Entrega</button>
           <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('lista','${e.id}')" style="font-size:11px;padding:4px 8px" title="Descargar PDF de la lista de empaque">🖨 Lista</button>
           <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('resumen','${e.id}')" style="font-size:11px;padding:4px 8px" title="Descargar resumen ejecutivo PDF (2 hojas)">📑 Resumen</button>
+          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('bolsa','${e.id}')" style="font-size:11px;padding:4px 8px" title="Etiquetas grandes para bolsa (2 por hoja)">🏷 Bolsa</button>
         </div>
       </div>
     `;
@@ -386,6 +387,14 @@ function _avanceEscIrA(accion, escId) {
   if (accion === 'resumen') {
     if (typeof descargarResumenEjecutivoPDF === 'function') {
       descargarResumenEjecutivoPDF(escId);
+    } else {
+      alert('Función no disponible. Recargá la página.');
+    }
+    return;
+  }
+  if (accion === 'bolsa') {
+    if (typeof descargarEtiquetasBolsaPDF === 'function') {
+      descargarEtiquetasBolsaPDF(escId);
     } else {
       alert('Función no disponible. Recargá la página.');
     }

@@ -392,6 +392,107 @@ async function descargarListaEmpaquePDF(escuelaId) {
   }
 }
 
+// ─── ETIQUETAS GRANDES PARA BOLSA FINAL ───────────────────────────────
+// Genera un PDF con 2 etiquetas por hoja A4 (media página c/u). Cada
+// etiqueta representa la bolsa que se entrega a un alumno: nombre,
+// escuela, grado, sexo + lista de piezas dentro con tilde de empacado.
+async function descargarEtiquetasBolsaPDF(escuelaId) {
+  try {
+    const escRows = await supaFetch('escuela', 'GET', null,
+      `?id=eq.${escuelaId}&select=id,nombre,codigo_cde,alias&limit=1`);
+    if (!escRows || !escRows[0]) { alert('Escuela no encontrada'); return; }
+    const esc = escRows[0];
+
+    const tempActiva = (registroCache?.temporadas || []).find(t => t.estado === 'activa')
+      || (registroCache?.temporadas || [])[0];
+    const tempFilter = tempActiva ? `&temporada_id=eq.${tempActiva.id}` : '';
+
+    const alumnos = await supaFetchAll('alumno',
+      `?escuela_id=eq.${escuelaId}&activo=eq.true${tempFilter}&order=grado,nombre`);
+    if (alumnos.length === 0) { alert('Sin alumnos cargados para esta escuela'); return; }
+
+    const html = _htmlEtiquetasBolsa(esc, alumnos, tempActiva);
+    const safe = (esc.nombre || 'esc').replace(/[^\w]+/g, '_').slice(0, 40);
+    await generarPdfDirecto(html, `etiquetas-bolsa-${safe}.pdf`);
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+function _htmlEtiquetasBolsa(esc, alumnos, temp) {
+  const nombreEsc = esc.alias || esc.nombre || '';
+  const cde = esc.codigo_cde ? `CDE ${esc.codigo_cde}` : '';
+  const tempLbl = temp ? (temp.codigo || temp.nombre || temp.anio || '') : '';
+
+  // 2 etiquetas por hoja A4 (cada una ocupa ~ media página)
+  const etiquetas = alumnos.map(a => {
+    const sexoLbl = a.sexo === 'M' ? '♂ Masculino' : (a.sexo === 'F' ? '♀ Femenino' : '');
+    const piezas = [];
+    if (a.prenda_top || a.talla_top_key) {
+      const chk = a.estado_top === 'empacado' || a.estado_top === 'entregado' ? '☑' : '☐';
+      piezas.push({ chk, prenda: a.prenda_top || '?', talla: a.talla_top_key || '—' });
+    }
+    if (a.prenda_bottom || a.talla_bottom_key) {
+      const chk = a.estado_bottom === 'empacado' || a.estado_bottom === 'entregado' ? '☑' : '☐';
+      piezas.push({ chk, prenda: a.prenda_bottom || '?', talla: a.talla_bottom_key || '—' });
+    }
+    return `
+      <div class="etiqueta">
+        <div class="esc">🏫 ${_esc(nombreEsc)}${cde ? ' · '+cde : ''}</div>
+        <div class="nombre">${_esc(a.nombre || '')}</div>
+        <div class="meta">${_esc(a.grado || '')}${sexoLbl ? ' · '+sexoLbl : ''}</div>
+        <div class="contenido-lbl">Contenido:</div>
+        <div class="piezas">
+          ${piezas.length === 0
+            ? '<div class="muted">(sin piezas registradas)</div>'
+            : piezas.map(p => `
+              <div class="pieza">
+                <span class="chk">${p.chk}</span>
+                <span class="prenda">${_esc(p.prenda)}</span>
+                <span class="talla">${_esc(p.talla)}</span>
+              </div>
+            `).join('')}
+        </div>
+        <div class="footer-et">${tempLbl} · Taller IMIS</div>
+      </div>
+    `;
+  }).join('');
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Etiquetas Bolsa - ${_esc(nombreEsc)}</title>
+    <style>
+      @page { size: A4; margin: 8mm; }
+      body { font-family: Arial, sans-serif; font-size: 11pt; color: #000; margin: 0; }
+      .etiqueta {
+        border: 2px dashed #333;
+        padding: 14mm 12mm;
+        margin: 0 0 6mm 0;
+        page-break-inside: avoid;
+        height: 13cm;            /* media página A4 ≈ 14.85cm; -márgenes */
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+      }
+      .esc { font-size: 11pt; color: #555; margin-bottom: 4mm; }
+      .nombre {
+        font-size: 24pt; font-weight: 700; line-height: 1.1;
+        margin-bottom: 4mm; word-break: break-word;
+      }
+      .meta { font-size: 14pt; color: #333; margin-bottom: 8mm; }
+      .contenido-lbl { font-size: 11pt; color: #666; text-transform: uppercase;
+        letter-spacing: 1px; margin-bottom: 2mm; }
+      .piezas { flex: 1; }
+      .pieza { display: flex; align-items: center; gap: 10mm; font-size: 16pt; margin-bottom: 4mm; }
+      .chk { font-size: 22pt; }
+      .prenda { font-weight: 600; min-width: 50mm; }
+      .talla { font-family: monospace; font-size: 18pt; font-weight: 700; color: #06c; }
+      .muted { color: #888; font-style: italic; }
+      .footer-et { font-size: 9pt; color: #999; text-align: right; margin-top: auto; padding-top: 4mm; border-top: 1px solid #ddd; }
+    </style></head><body>
+    ${etiquetas}
+    </body></html>`;
+}
+
 // ─── RESUMEN EJECUTIVO POR ESCUELA (PDF de 2 hojas) ───────────────────
 // Hoja 1: encabezado, resumen contrato (con balance), desglose nivel×grado×sexo, fechas.
 // Hoja 2: yardaje por color (utilizado vs recibido) + recomendaciones.
