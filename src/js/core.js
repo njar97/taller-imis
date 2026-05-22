@@ -62,6 +62,23 @@ const CATALOGO_BASE = {
 // Catálogo combinado (base + custom desde Supabase). Se carga al abrir Trazo.
 let CATALOGO = JSON.parse(JSON.stringify(CATALOGO_BASE));
 
+// Mapping cod_prenda → nombre canónico (mismo casing que la base de datos:
+// alumno.prenda_top, bodega_movimiento.nombre_prenda, escuela_acaparado.nombre_prenda).
+// Usar SIEMPRE este helper cuando se necesite comparar/agrupar nombre de prenda
+// que viene de un cod_prenda contra valores almacenados.
+// El CATALOGO_BASE.nombre es "Camisa" (Title) para display; este helper devuelve
+// "CAMISA" (UPPER_WITH_UNDERSCORES) que es lo guardado.
+const _PRENDA_CANON_MAP = {
+  C:'CAMISA', B:'BLUSA', CC:'CAMISA_CELESTE',
+  P:'PANTALON', PB:'PANTALON_BEIGE',
+  F:'FALDA',    FB:'FALDA_BEIGE', FCE:'FALDA_C.E',
+  S:'SHORT',
+};
+function prendaCanon(cod) {
+  if (!cod) return '';
+  return _PRENDA_CANON_MAP[cod] || String(cod).toUpperCase();
+}
+
 // Estado global
 let historialTipo = 'trazo';
 let detalleActual = null; // { tipo, id } para editar/eliminar

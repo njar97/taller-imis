@@ -114,10 +114,10 @@ async function cargarDemandaProd() {
 }
 
 // Helper: devuelve el badge HTML para un grupo (cod_prenda, talla_key).
-// Resuelve el nombre de la prenda desde el CATALOGO para matchear con alumnos.
+// Usa prendaCanon (cod → nombre canónico de la base) para matchear con alumnos.
 function _badgeDemandaProd(cod_prenda, talla_key) {
   if (!cod_prenda || !talla_key || !demandaProdCache) return '';
-  const nombre = CATALOGO[cod_prenda]?.nombre || cod_prenda;
+  const nombre = (typeof prendaCanon === 'function') ? prendaCanon(cod_prenda) : cod_prenda;
   const d = demandaProdCache[nombre + '|' + talla_key];
   if (!d || d.pendientes === 0) return '';
   const surplus = d.stock + d.pool - d.pendientes;
