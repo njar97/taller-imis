@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-22 09:48 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-22 09:51 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -2816,6 +2816,67 @@ if (document.readyState === 'loading') {
   setTimeout(bootApp, 100);
 }
 
+// +++++++++++++++++++ data_cache.js +++++++++++++++++++
+// ══════════════════════════════════════════════════════════════════════
+// CACHE GLOBAL DE FETCHES PESADOS
+// In-memory key→value cache con TTL para evitar refetch repetido de
+// alumnos, escuelas, stock, etc. Las funciones que modifican datos
+// invalidan el namespace correspondiente.
+//
+// Uso:
+//   const alumnos = await cachedFetch('alumnos-all', () =>
+//     supaFetchAll('alumno', '?activo=eq.true&...'),
+//     { ttl: 60_000, group: 'alumnos' });
+//
+//   invalidarCache('alumnos');   // tras empacar / acaparar / editar
+// ══════════════════════════════════════════════════════════════════════
+
+const _DC = {
+  data: new Map(),     // key → { val, expira, group }
+  pending: new Map(),  // key → Promise (dedupe concurrentes)
+};
+
+const DEFAULT_TTL = 60_000;  // 60s
+
+async function cachedFetch(key, fetchFn, opts = {}) {
+  const ttl = opts.ttl || DEFAULT_TTL;
+  const group = opts.group || null;
+  const ahora = Date.now();
+
+  // Hit en cache vigente
+  const cached = _DC.data.get(key);
+  if (cached && cached.expira > ahora) return cached.val;
+
+  // Dedupe: si ya hay un fetch en curso para esta key, esperar
+  if (_DC.pending.has(key)) return _DC.pending.get(key);
+
+  const promise = (async () => {
+    try {
+      const val = await fetchFn();
+      _DC.data.set(key, { val, expira: Date.now() + ttl, group });
+      return val;
+    } finally {
+      _DC.pending.delete(key);
+    }
+  })();
+  _DC.pending.set(key, promise);
+  return promise;
+}
+
+function invalidarCache(group) {
+  if (!group) {
+    _DC.data.clear();
+    return;
+  }
+  for (const [k, v] of [..._DC.data.entries()]) {
+    if (v.group === group) _DC.data.delete(k);
+  }
+}
+
+// Expone helpers globales con nombres más cortos
+window.cachedFetch = cachedFetch;
+window.invalidarCache = invalidarCache;
+
 // +++++++++++++++++++ dashboard.js +++++++++++++++++++
 // ══════════════════════════════════════════════════════════════════════
 // DASHBOARD GENERAL (v25)
@@ -2868,9 +2929,15 @@ async function cargarDashboardHoy() {
       supaFetch('vw_pedido_escuela', 'GET', null, '?order=piezas_pendientes.desc&limit=5').catch(() => []),
       supaFetch('vw_bodega_stock', 'GET', null, '?order=stock_actual.desc&limit=10').catch(() => []),
       cargarProduccionHoy(),
-      supaFetchAll('alumno', '?activo=eq.true&select=escuela_id,estado_top,estado_bottom,talla_top_key,talla_bottom_key').catch(() => []),
-      supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre,codigo_cde&order=alias').catch(() => []),
-      supaFetchAll('escuela_acaparado', '?select=escuela_id,cantidad_acaparada,cantidad_consumida').catch(() => []),
+      cachedFetch('dashboard-alumnos',
+        () => supaFetchAll('alumno', '?activo=eq.true&select=escuela_id,estado_top,estado_bottom,talla_top_key,talla_bottom_key'),
+        { ttl: 60_000, group: 'alumnos' }).catch(() => []),
+      cachedFetch('dashboard-escuelas',
+        () => supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre,codigo_cde&order=alias'),
+        { ttl: 300_000, group: 'escuelas' }).catch(() => []),
+      cachedFetch('dashboard-pool',
+        () => supaFetchAll('escuela_acaparado', '?select=escuela_id,cantidad_acaparada,cantidad_consumida'),
+        { ttl: 30_000, group: 'pool' }).catch(() => []),
       supaFetchAll('bodega_movimiento',
         `?tipo=eq.SALIDA_EMPAQUE&fecha=gte.${desde14}&select=escuela_id,cantidad,fecha`).catch(() => []),
     ]);
@@ -4379,9 +4446,15 @@ async function actualizarBadgeEscuelasEsperando() {
 
   try {
     const [alumnos, stock, pool] = await Promise.all([
-      supaFetchAll('alumno', '?activo=eq.true&select=escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000'),
-      supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
-      supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+      cachedFetch('badge-alumnos',
+        () => supaFetchAll('alumno', '?activo=eq.true&select=escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000'),
+        { ttl: 60_000, group: 'alumnos' }),
+      cachedFetch('badge-stock',
+        () => supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
+        { ttl: 30_000, group: 'bodega' }),
+      cachedFetch('badge-pool',
+        () => supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+        { ttl: 30_000, group: 'pool' }),
     ]);
 
     // Indexar stock libre por prenda|talla
@@ -10672,6 +10745,13 @@ async function cambiarVistaBodega(v) {
 async function cargarBodegaStock() {
   const cont = document.getElementById('bodega-contenido');
   cont.innerHTML = '<div class="text-muted">Cargando stock...</div>';
+  // Cualquier carga de stock invalida caches dependientes (las acciones
+  // que llaman a cargarBodegaStock ya cambiaron el estado).
+  if (typeof invalidarCache === 'function') {
+    invalidarCache('bodega');
+    invalidarCache('pool');
+    invalidarCache('alumnos');
+  }
   try {
     const [stock, pool] = await Promise.all([
       supaFetch('vw_bodega_stock', 'GET', null, '?order=nombre_prenda,talla_key&limit=1000'),
