@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-21 22:02 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-21 23:33 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -2734,28 +2734,35 @@ async function cargarDashboardHoy() {
   const sub = document.getElementById('dashboard-sub-contenido');
   if (!sub) return;
   sub.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando...</div>';
-  
+
   try {
     const [
       temporadasResumen,
       topEscuelas,
       stockResumen,
       produccionHoy,
-      alumnosResumen,
+      alumnos,
+      escuelas,
+      pool,
     ] = await Promise.all([
       supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.desc&limit=5').catch(() => []),
       supaFetch('vw_pedido_escuela', 'GET', null, '?order=piezas_pendientes.desc&limit=5').catch(() => []),
       supaFetch('vw_bodega_stock', 'GET', null, '?order=stock_actual.desc&limit=10').catch(() => []),
       cargarProduccionHoy(),
-      supaFetchAll('alumno', '?activo=eq.true&select=estado_top,estado_bottom').catch(() => []),
+      // Necesito escuela_id + estados para construir el embudo por escuela
+      supaFetchAll('alumno', '?activo=eq.true&select=escuela_id,estado_top,estado_bottom,talla_top_key,talla_bottom_key').catch(() => []),
+      supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre,codigo_cde&order=alias').catch(() => []),
+      supaFetchAll('escuela_acaparado', '?select=escuela_id,cantidad_acaparada,cantidad_consumida').catch(() => []),
     ]);
-    
+
     dashboardCache.resumen = {
       temporadas: temporadasResumen,
       topEscuelas,
       stockResumen,
       produccionHoy,
-      alumnos: alumnosResumen,
+      alumnos,
+      escuelas,
+      pool,
     };
     renderDashboard();
   } catch(e) {
@@ -2867,6 +2874,9 @@ function renderDashboard() {
       </div>
     ` : ''}
     
+    <!-- Avance por escuela (embudo completo + accesos directos) -->
+    ${_renderAvancePorEscuela(r)}
+
     <!-- Fila 4: stock top -->
     ${stock.length > 0 ? `
       <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
@@ -2909,6 +2919,176 @@ function renderDashboard() {
       <button class="btn btn-ghost btn-sm" onclick="initDashboard()">🔄 Refrescar</button>
     </div>
   `;
+}
+
+// ─── Avance por escuela (embudo + atajos) ─────────────────────────────
+// Computa por escuela: pendientes / acaparados (pool disp) / empacados /
+// entregados, % avance y dibuja una card por cada una. Default colapsado
+// para no saturar el dashboard; expandible.
+let _avanceEscColapsado = true;
+function toggleAvanceEsc() {
+  _avanceEscColapsado = !_avanceEscColapsado;
+  renderDashboard();
+}
+
+function _renderAvancePorEscuela(r) {
+  const alumnos = r.alumnos || [];
+  const escuelas = r.escuelas || [];
+  const pool = r.pool || [];
+  if (alumnos.length === 0 || escuelas.length === 0) return '';
+
+  // Computar por escuela
+  const byEsc = {};
+  for (const e of escuelas) {
+    byEsc[e.id] = {
+      escuela: e, total: 0,
+      pendientes: 0, empacados: 0, entregados: 0, sinTallar: 0,
+      acaparados: 0,
+    };
+  }
+  for (const a of alumnos) {
+    const o = byEsc[a.escuela_id];
+    if (!o) continue;
+    // total = alumnos del esc
+    o.total++;
+    // Por pieza top
+    const evaluar = (talla, estado) => {
+      if (!talla) { o.sinTallar++; return; }
+      if (estado === 'entregado') o.entregados++;
+      else if (estado === 'empacado') o.empacados++;
+      else o.pendientes++;
+    };
+    evaluar(a.talla_top_key, a.estado_top);
+    evaluar(a.talla_bottom_key, a.estado_bottom);
+  }
+  for (const p of pool) {
+    const o = byEsc[p.escuela_id];
+    if (!o) continue;
+    o.acaparados += Math.max(0, (Number(p.cantidad_acaparada)||0) - (Number(p.cantidad_consumida)||0));
+  }
+  // Filtrar escuelas sin alumnos
+  let lista = Object.values(byEsc).filter(o => o.total > 0);
+  // % avance = entregados / piezas posibles (total * 2)
+  for (const o of lista) {
+    const piezas = o.total * 2;
+    o.pct = piezas > 0 ? Math.round(100 * o.entregados / piezas) : 0;
+    o.pctEmpaque = piezas > 0 ? Math.round(100 * (o.empacados + o.entregados) / piezas) : 0;
+  }
+  // Orden: % avance asc (más atrasadas primero)
+  lista.sort((a,b) => a.pct - b.pct || b.pendientes - a.pendientes);
+
+  if (lista.length === 0) return '';
+  const totalEsc = lista.length;
+  const colapsado = _avanceEscColapsado;
+  const mostrar = colapsado ? lista.slice(0, 5) : lista;
+
+  const cards = mostrar.map(o => {
+    const e = o.escuela;
+    const alias = e.alias || e.nombre || '';
+    const cde = e.codigo_cde ? `CDE ${e.codigo_cde}` : '';
+    const barraColor = o.pct >= 100 ? 'var(--verde)' : (o.pct > 50 ? 'var(--azul)' : (o.pct > 0 ? 'var(--naranja)' : '#ccc'));
+    return `
+      <div class="card" style="padding:10px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:13px">🏫 ${alias}</div>
+            <div style="font-size:10px;color:#888">${cde} · ${o.total} alumnos</div>
+          </div>
+          <div style="font-size:18px;font-weight:700;color:${barraColor};white-space:nowrap">${o.pct}%</div>
+        </div>
+        <!-- Embudo (numbers) -->
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;font-size:11px">
+          <span style="background:#FFF4E6;color:#a85;padding:2px 6px;border-radius:4px"><strong>${o.pendientes}</strong> pend</span>
+          ${o.acaparados > 0 ? `<span style="background:#FFF9E6;color:#a82;padding:2px 6px;border-radius:4px"><strong>${o.acaparados}</strong> acap</span>` : ''}
+          <span style="background:#E0F4E5;color:#2a6;padding:2px 6px;border-radius:4px"><strong>${o.empacados}</strong> emp</span>
+          <span style="background:#E8F0FA;color:#26a;padding:2px 6px;border-radius:4px"><strong>${o.entregados}</strong> entr</span>
+          ${o.sinTallar > 0 ? `<span style="background:#FFEEEE;color:#c44;padding:2px 6px;border-radius:4px"><strong>${o.sinTallar}</strong> sin tallar</span>` : ''}
+        </div>
+        <!-- Barra de avance -->
+        <div style="background:#EEE;height:6px;border-radius:3px;margin-top:6px;overflow:hidden">
+          <div style="background:${barraColor};height:100%;width:${o.pct}%"></div>
+        </div>
+        <!-- Atajos -->
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px">
+          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('registro','${e.id}')" style="font-size:11px;padding:4px 8px">📋 Registro</button>
+          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('acaparar','${e.id}')" style="font-size:11px;padding:4px 8px">📥 Acaparar</button>
+          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('empacar','${e.id}')" style="font-size:11px;padding:4px 8px">📦 Empacar</button>
+          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('entrega','${e.id}')" style="font-size:11px;padding:4px 8px">🚚 Entrega</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
+      <div style="background:#F5F7FA;padding:8px 12px;font-weight:600;display:flex;justify-content:space-between;align-items:center">
+        <span>🏫 Avance por escuela ${colapsado && totalEsc > 5 ? `(top ${mostrar.length} de ${totalEsc})` : `(${totalEsc})`}</span>
+        ${totalEsc > 5 ? `
+          <button class="btn btn-ghost btn-sm" onclick="toggleAvanceEsc()" style="font-size:11px">
+            ${colapsado ? `Ver todas (${totalEsc}) ▼` : 'Colapsar ▲'}
+          </button>
+        ` : ''}
+      </div>
+      <div style="padding:8px">${cards}</div>
+    </div>
+  `;
+}
+
+// Atajos: cambia de tab y prefila el filtro de escuela según la acción
+function _avanceEscIrA(accion, escId) {
+  if (accion === 'registro') {
+    if (typeof alumnosGlobalCache !== 'undefined') {
+      alumnosGlobalCache.filtroEscuelas = [escId];
+      alumnosGlobalCache.busqueda = '';
+      alumnosGlobalCache.filtroEstado = '';
+    }
+    if (typeof switchTab === 'function') switchTab('registro');
+    setTimeout(() => {
+      if (typeof alumnosGlobalCache !== 'undefined' && alumnosGlobalCache.cargado
+          && typeof renderAlumnosGlobal === 'function') renderAlumnosGlobal();
+      else if (typeof initAlumnosGlobal === 'function') initAlumnosGlobal();
+    }, 50);
+    return;
+  }
+  if (accion === 'acaparar') {
+    if (typeof switchTab === 'function') switchTab('bodega');
+    setTimeout(() => {
+      if (typeof abrirAcapararModal === 'function') {
+        abrirAcapararModal();
+        setTimeout(() => {
+          const sel = document.getElementById('aca-escuela');
+          if (sel) { sel.value = escId; if (typeof onAcapararTallaCambio === 'function') onAcapararTallaCambio(); }
+        }, 400);
+      }
+    }, 100);
+    return;
+  }
+  if (accion === 'empacar') {
+    if (typeof switchTab === 'function') switchTab('bodega');
+    setTimeout(() => {
+      if (typeof abrirEmpacarSelector === 'function') {
+        abrirEmpacarSelector();
+        setTimeout(() => {
+          const sel = document.getElementById('emp-sel-escuela');
+          if (sel) { sel.value = escId; if (typeof renderEmpSelCombos === 'function') renderEmpSelCombos(); }
+        }, 400);
+      }
+    }, 100);
+    return;
+  }
+  if (accion === 'entrega') {
+    if (typeof switchTab === 'function') switchTab('bodega');
+    setTimeout(() => {
+      if (typeof abrirEntregaModal === 'function') {
+        abrirEntregaModal();
+        setTimeout(() => {
+          const sel = document.getElementById('ent-escuela');
+          if (sel) { sel.value = escId; if (typeof onEntregaEscuelaCambio === 'function') onEntregaEscuelaCambio(); }
+        }, 400);
+      }
+    }, 100);
+    return;
+  }
 }
 
 // +++++++++++++++++++ resumen_escuela.js +++++++++++++++++++
