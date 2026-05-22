@@ -421,19 +421,31 @@ function renderAlumnosGlobal() {
       const topPuede = topMarcado || (topElig && _piezaConSuministro(a, 'top', restante));
       const botPuede = botMarcado || (botElig && _piezaConSuministro(a, 'bottom', restante));
       // El input solo se renderiza si la pieza es elegible (top en filtro de prendas).
-      // Si no es elegible se muestra raya — no hay pieza para empacar.
-      topCheck = !topElig
-        ? '<span style="color:#ccc">—</span>'
-        : `<input type="checkbox" ${topMarcado?'checked':''} ${topPuede?'':'disabled'}
+      // Si NO es elegible pero la pieza ya está empacada/entregada → ✓ clickeable
+      // para DESEMPACAR (vuelve a stock libre o pool de la escuela).
+      // Si NO es elegible y no está empacada → raya.
+      const topEmpacado = a.estado_top === 'empacado' || a.estado_top === 'entregado';
+      const botEmpacado = a.estado_bottom === 'empacado' || a.estado_bottom === 'entregado';
+      topCheck = topElig
+        ? `<input type="checkbox" ${topMarcado?'checked':''} ${topPuede?'':'disabled'}
                    onchange="toggleMarcarPieza('${a.id}','top',this.checked)"
                    title="${topPuede?'Empacar top':'Sin stock disponible'}"
-                   style="cursor:${topPuede?'pointer':'not-allowed'};opacity:${topPuede?1:0.4}">`;
-      botCheck = !botElig
-        ? '<span style="color:#ccc">—</span>'
-        : `<input type="checkbox" ${botMarcado?'checked':''} ${botPuede?'':'disabled'}
+                   style="cursor:${topPuede?'pointer':'not-allowed'};opacity:${topPuede?1:0.4}">`
+        : topEmpacado && a.prenda_top && a.talla_top_key
+          ? `<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:#E0F4E5;color:var(--verde);font-weight:700;line-height:22px;cursor:pointer;border:1px solid var(--verde)"
+                  title="Pieza empacada (${a.estado_top}). Click para desempacar (vuelve al stock disponible)."
+                  onclick="desempacarPiezaDesdeLista('${a.id}','top')">✓</span>`
+          : '<span style="color:#ccc">—</span>';
+      botCheck = botElig
+        ? `<input type="checkbox" ${botMarcado?'checked':''} ${botPuede?'':'disabled'}
                    onchange="toggleMarcarPieza('${a.id}','bottom',this.checked)"
                    title="${botPuede?'Empacar bottom':'Sin stock disponible'}"
-                   style="cursor:${botPuede?'pointer':'not-allowed'};opacity:${botPuede?1:0.4}">`;
+                   style="cursor:${botPuede?'pointer':'not-allowed'};opacity:${botPuede?1:0.4}">`
+        : botEmpacado && a.prenda_bottom && a.talla_bottom_key
+          ? `<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:#E0F4E5;color:var(--verde);font-weight:700;line-height:22px;cursor:pointer;border:1px solid var(--verde)"
+                  title="Pieza empacada (${a.estado_bottom}). Click para desempacar (vuelve al stock disponible)."
+                  onclick="desempacarPiezaDesdeLista('${a.id}','bottom')">✓</span>`
+          : '<span style="color:#ccc">—</span>';
     }
 
     const checkCell = c.modoEmpaque
@@ -558,6 +570,54 @@ function renderEmpaqueBanner(listaVisible) {
       ` : ''}
     </div>
   `;
+}
+
+// Desempacar inline desde la tabla en modo empaque. Click en el ✓ verde
+// de una pieza ya empacada → confirma → revierte estado a pendiente y
+// devuelve la unidad al stock libre (si vino de bodega) o libera el pool
+// de la escuela (si vino del pool acaparado).
+async function desempacarPiezaDesdeLista(alumnoId, pieza) {
+  const c = alumnosGlobalCache;
+  const a = c.alumnos.find(x => x.id === alumnoId);
+  if (!a) return;
+  const prenda = pieza === 'top' ? a.prenda_top : a.prenda_bottom;
+  const talla = pieza === 'top' ? a.talla_top_key : a.talla_bottom_key;
+  const esc = c.escuelas[a.escuela_id];
+  const escLbl = esc ? (esc.alias || esc.nombre || '') : '';
+  if (!confirm(
+      `¿Desempacar ${prenda} ${talla} de ${a.nombre}?\n\n` +
+      `Escuela: ${escLbl}\n\n` +
+      `Esto vuelve la pieza a "pendiente" y la libera al stock disponible ` +
+      `(si vino de bodega) o al pool de la escuela (si vino acaparada). ` +
+      `Vas a poder empacarla a otro alumno.`)) return;
+  try {
+    if (typeof desempacarPieza !== 'function') throw new Error('desempacarPieza no disponible');
+    const r = await desempacarPieza(alumnoId, pieza);
+    // Actualizar cache local sin refetch completo
+    const idx = c.alumnos.findIndex(x => x.id === alumnoId);
+    if (idx >= 0) {
+      const upd = pieza === 'top' ? { estado_top: 'pendiente' } : { estado_bottom: 'pendiente' };
+      Object.assign(c.alumnos[idx], upd);
+    }
+    // Invalidar cache de datos (stock, pool, alumnos) para badges y otras vistas
+    if (typeof invalidarCache === 'function') {
+      invalidarCache('alumnos');
+      invalidarCache('bodega');
+      invalidarCache('pool');
+    }
+    // Refrescar supply para que el checkbox de empaque se reactive con el +1
+    if (typeof cargarSupplyEmpaque === 'function') await cargarSupplyEmpaque();
+    renderAlumnosGlobal();
+    // Refrescar el badge de "esperando empaque" en el nav
+    if (typeof refrescarBadgeEsperando === 'function') refrescarBadgeEsperando();
+    // Toast simple en el banner (no alert para no romper el flujo)
+    const msg = r.vinoDeStock
+      ? `✓ Devuelto al stock libre. Disponible para empacar a otro alumno.`
+      : `✓ Liberado del pool de la escuela. Pool disponible +1.`;
+    alert(msg);
+  } catch(e) {
+    alert('Error al desempacar: ' + e.message);
+  }
 }
 
 // Marca en bulk todas las piezas elegibles de los alumnos de un grado+sexo
