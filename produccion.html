@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-22 09:30 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-22 09:37 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -16091,14 +16091,22 @@ async function initHistorico() {
     const temporadas = await supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.asc&limit=20');
     historicoCache.temporadas = temporadas;
     
-    // Para cada temporada: total alumnos y distribución por nivel
+    // Para cada temporada: alumnos + pedidos + entregas (para ciclo y por-prenda)
     await Promise.all(temporadas.map(async t => {
       try {
-        const alumnos = await supaFetchAll('alumno',
-          `?temporada_id=eq.${t.id}&activo=eq.true&select=nivel,sexo,estado_top,estado_bottom,escuela_id`);
-        historicoCache.datosPorTemporada[t.id] = { alumnos };
+        const [alumnos, pedidos, entregas] = await Promise.all([
+          supaFetchAll('alumno',
+            `?temporada_id=eq.${t.id}&activo=eq.true&select=nivel,sexo,estado_top,estado_bottom,escuela_id,creado_en,actualizado_en`),
+          supaFetchAll('pedido',
+            `?temporada_id=eq.${t.id}&select=cod_prenda,nombre_prenda,cantidad_solicitada,cantidad_entregada`),
+          // entrega_escuela no tiene temporada_id; filtramos por las escuelas de la temporada
+          // Si la temporada es la activa o reciente, esto es razonable. Si no, asumimos
+          // que las entregas viejas no son relevantes.
+          supaFetchAll('entrega_escuela', '?select=fecha&order=fecha.asc'),
+        ]);
+        historicoCache.datosPorTemporada[t.id] = { alumnos, pedidos, entregas };
       } catch(e) {
-        historicoCache.datosPorTemporada[t.id] = { alumnos: [] };
+        historicoCache.datosPorTemporada[t.id] = { alumnos: [], pedidos: [], entregas: [] };
       }
     }));
     
@@ -16122,22 +16130,43 @@ function renderHistorico() {
   
   // Stats por temporada
   const statsPorTemp = temps.map(t => {
-    const alumnos = historicoCache.datosPorTemporada[t.id]?.alumnos || [];
+    const d = historicoCache.datosPorTemporada[t.id] || {};
+    const alumnos = d.alumnos || [];
+    const pedidos = d.pedidos || [];
+    const entregas = d.entregas || [];
     const escuelasUnicas = new Set(alumnos.map(a => a.escuela_id)).size;
     const porNivel = { PARV: 0, BASICA: 0, BACH: 0, OTRO: 0 };
     const porSexo = { F: 0, M: 0, NA: 0 };
     let completos = 0, entregados = 0;
+    const fechas = [];
     for (const a of alumnos) {
       porNivel[a.nivel || 'OTRO'] = (porNivel[a.nivel || 'OTRO'] || 0) + 1;
       porSexo[a.sexo || 'NA'] = (porSexo[a.sexo || 'NA'] || 0) + 1;
       if (a.estado_top === 'empacado' && a.estado_bottom === 'empacado') completos++;
       if (a.estado_top === 'entregado' && a.estado_bottom === 'entregado') entregados++;
+      if (a.creado_en) fechas.push(new Date(a.creado_en));
+    }
+    // Por prenda: agregado de cantidad_solicitada y cantidad_entregada
+    const porPrenda = {};
+    for (const p of pedidos) {
+      const k = p.nombre_prenda || p.cod_prenda || '?';
+      if (!porPrenda[k]) porPrenda[k] = { sol: 0, ent: 0 };
+      porPrenda[k].sol += Number(p.cantidad_solicitada) || 0;
+      porPrenda[k].ent += Number(p.cantidad_entregada) || 0;
+    }
+    // Duración del ciclo: primera fecha de alumno cargado → última entrega
+    const primerCarga = fechas.length > 0 ? new Date(Math.min(...fechas.map(d => d.getTime()))) : null;
+    const ultimaEntrega = entregas.length > 0 ? new Date(entregas[entregas.length - 1].fecha) : null;
+    let diasCiclo = null;
+    if (primerCarga && ultimaEntrega) {
+      diasCiclo = Math.round((ultimaEntrega - primerCarga) / (24*60*60*1000));
     }
     return {
       ...t,
       num_alumnos_real: alumnos.length,
       escuelas_con_alumnos: escuelasUnicas,
       porNivel, porSexo, completos, entregados,
+      porPrenda, primerCarga, ultimaEntrega, diasCiclo,
     };
   });
   
@@ -16290,14 +16319,83 @@ function renderHistorico() {
     `;
   }
   
+  // Comparativo por prenda (filas=prenda, cols=temporadas, valores=sol/ent)
+  const prendasUnicas = [...new Set(
+    statsPorTemp.flatMap(s => Object.keys(s.porPrenda || {}))
+  )].sort();
+  let tablaPrenda = '';
+  if (prendasUnicas.length > 0) {
+    tablaPrenda = `
+      <div class="card" style="padding:0;overflow:auto;margin-top:12px">
+        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">👕 Por prenda (entregadas / contratadas)</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:480px">
+          <thead>
+            <tr style="background:#FAFAFA">
+              <th style="padding:6px 8px;text-align:left">Prenda</th>
+              ${statsPorTemp.map(s => `<th style="padding:6px 8px;text-align:right">${s.codigo}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${prendasUnicas.map(prenda => `
+              <tr style="border-top:1px solid #EEE">
+                <td style="padding:6px 8px;font-weight:600">${prenda}</td>
+                ${statsPorTemp.map(s => {
+                  const pp = s.porPrenda?.[prenda];
+                  if (!pp) return '<td style="padding:6px 8px;text-align:right;color:#ccc">—</td>';
+                  const pct = pp.sol > 0 ? Math.round(100 * pp.ent / pp.sol) : 0;
+                  const color = pct >= 100 ? 'var(--verde)' : (pct >= 50 ? 'var(--azul)' : (pct > 0 ? 'var(--naranja)' : '#888'));
+                  return `<td style="padding:6px 8px;text-align:right">
+                    <span style="color:${color};font-weight:600">${pp.ent.toLocaleString()}</span>
+                    <span style="color:#888">/${pp.sol.toLocaleString()}</span>
+                    <div style="font-size:10px;color:${color}">${pct}%</div>
+                  </td>`;
+                }).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  // Duración del ciclo por temporada
+  const fmt = (d) => d ? d.toLocaleDateString('es-SV', { day:'2-digit', month:'short', year:'numeric' }) : '—';
+  const tablaCiclo = `
+    <div class="card" style="padding:0;overflow:auto;margin-top:12px">
+      <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">⏱ Duración del ciclo</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:#FAFAFA">
+            <th style="padding:6px 8px;text-align:left">Temporada</th>
+            <th style="padding:6px 8px;text-align:left">Primera carga</th>
+            <th style="padding:6px 8px;text-align:left">Última entrega</th>
+            <th style="padding:6px 8px;text-align:right">Días</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${statsPorTemp.map(s => `
+            <tr style="border-top:1px solid #EEE">
+              <td style="padding:6px 8px;font-weight:600">${s.codigo}</td>
+              <td style="padding:6px 8px">${fmt(s.primerCarga)}</td>
+              <td style="padding:6px 8px">${fmt(s.ultimaEntrega)}</td>
+              <td style="padding:6px 8px;text-align:right;font-weight:700">${s.diasCiclo != null ? s.diasCiclo : '—'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+
   cont.innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">
       ${tarjetas}
     </div>
     ${tablaComp}
+    ${tablaPrenda}
+    ${tablaCiclo}
     ${comparativo}
     <div style="text-align:center;margin-top:10px">
-      <button class="btn btn-ghost btn-sm" onclick="initHistorico()">🔄 Refrescar</button>
+      <button class="btn btn-ghost btn-sm" onclick="historicoCache.datosPorTemporada={}; initHistorico()">🔄 Refrescar</button>
     </div>
   `;
 }
