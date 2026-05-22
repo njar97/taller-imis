@@ -73,16 +73,18 @@ async function cargarProduccion() {
 // Llamado desde cargarProduccion. Re-render después si llega tarde.
 async function cargarDemandaProd() {
   try {
-    const [alumnos, pool, stock] = await Promise.all([
+    const [alumnos, pool, stock, bultos] = await Promise.all([
       supaFetchAll('alumno', '?activo=eq.true&select=escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000'),
       supaFetchAll('escuela_acaparado', '?select=nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
       supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
+      supaFetchAll('vw_produccion_estado',
+        '?estado_manual=neq.terminado&select=cod_prenda,talla_key_salida,cantidad_original,total_etapas,etapas_hechas'),
     ]);
     const c = {};
     const bump = (prenda, talla, esc) => {
       if (!prenda || !talla) return;
       const k = prenda + '|' + talla;
-      if (!c[k]) c[k] = { pendientes: 0, escuelas: new Set(), pool: 0, stock: 0 };
+      if (!c[k]) c[k] = { pendientes: 0, escuelas: new Set(), pool: 0, stock: 0, corte: 0, prod: 0 };
       c[k].pendientes++;
       if (esc) c[k].escuelas.add(esc);
     };
@@ -98,13 +100,24 @@ async function cargarDemandaProd() {
     }
     for (const p of pool) {
       const k = p.nombre_prenda + '|' + p.talla_key;
-      if (!c[k]) c[k] = { pendientes: 0, escuelas: new Set(), pool: 0, stock: 0 };
+      if (!c[k]) c[k] = { pendientes: 0, escuelas: new Set(), pool: 0, stock: 0, corte: 0, prod: 0 };
       c[k].pool += Math.max(0, (Number(p.cantidad_acaparada)||0) - (Number(p.cantidad_consumida)||0));
     }
     for (const s of stock) {
       const k = (s.nombre_prenda || s.cod_prenda) + '|' + s.talla_key;
-      if (!c[k]) c[k] = { pendientes: 0, escuelas: new Set(), pool: 0, stock: 0 };
+      if (!c[k]) c[k] = { pendientes: 0, escuelas: new Set(), pool: 0, stock: 0, corte: 0, prod: 0 };
       c[k].stock = Number(s.stock_actual) || 0;
+    }
+    // Split bultos no terminados: corte (sin etapas iniciadas) vs producción (en proceso)
+    for (const b of bultos) {
+      if (!b.cod_prenda || !b.talla_key_salida) continue;
+      const nombre = (typeof prendaCanon === 'function') ? prendaCanon(b.cod_prenda) : b.cod_prenda;
+      const k = nombre + '|' + b.talla_key_salida;
+      if (!c[k]) c[k] = { pendientes: 0, escuelas: new Set(), pool: 0, stock: 0, corte: 0, prod: 0 };
+      const enProceso = (Number(b.total_etapas)||0) > 0 && (Number(b.etapas_hechas)||0) > 0;
+      const cant = Number(b.cantidad_original) || 0;
+      if (enProceso) c[k].prod += cant;
+      else c[k].corte += cant;
     }
     // Congelar escuelas a su .size
     for (const k of Object.keys(c)) c[k].escuelas = c[k].escuelas.size;
@@ -120,7 +133,10 @@ function _badgeDemandaProd(cod_prenda, talla_key) {
   const nombre = (typeof prendaCanon === 'function') ? prendaCanon(cod_prenda) : cod_prenda;
   const d = demandaProdCache[nombre + '|' + talla_key];
   if (!d || d.pendientes === 0) return '';
-  const surplus = d.stock + d.pool - d.pendientes;
+  // Suministro: corte + producción + stock + pool. La diferencia con
+  // pendientes es el surplus (positivo = cubierto, negativo = faltante).
+  const suministro = (d.corte||0) + (d.prod||0) + (d.stock||0) + (d.pool||0);
+  const surplus = suministro - d.pendientes;
   const colorEst = surplus < 0 ? '#c44' : '#6a8';
   const lblEst = surplus < 0 ? `faltan ${-surplus}` : `cubierto +${surplus}`;
   return `
@@ -130,6 +146,8 @@ function _badgeDemandaProd(cod_prenda, talla_key) {
       <span style="background:#FFF4E6;border:1px solid #F2C97D;padding:2px 6px;border-radius:4px">
         🏫 ${d.escuelas} escuela${d.escuelas===1?'':'s'} · ${d.pendientes} pend
       </span>
+      ${d.corte > 0 ? `<span style="background:#FFEEDD;border:1px solid #E0B080;padding:2px 6px;border-radius:4px">✂️ corte ${d.corte}</span>` : ''}
+      ${d.prod > 0 ? `<span style="background:#E6F4E0;border:1px solid #8CC56F;padding:2px 6px;border-radius:4px">🏭 prod ${d.prod}</span>` : ''}
       ${d.pool > 0 ? `<span style="background:#FFF9E6;border:1px solid #FFD24D;padding:2px 6px;border-radius:4px">📥 pool ${d.pool}</span>` : ''}
       ${d.stock > 0 ? `<span style="background:#E8F0FA;border:1px solid #99c;padding:2px 6px;border-radius:4px">📦 stock ${d.stock}</span>` : ''}
       <span style="background:transparent;color:${colorEst};font-weight:700">${lblEst}</span>
