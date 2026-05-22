@@ -416,12 +416,14 @@ async function empacarAcaparadosManual() {
     alumnosGlobalCache.empPoolEntries = entries.map(e => ({
       escuela_id: e.escuela_id, prenda: e.prenda, talla: e.talla,
     }));
-    alumnosGlobalCache.empMarcados = new Set();
+    alumnosGlobalCache.empMarcadosTop = new Set();
+    alumnosGlobalCache.empMarcadosBot = new Set();
     alumnosGlobalCache.empCompletarParejas = completarParejas;
     alumnosGlobalCache.busqueda = '';
     alumnosGlobalCache.filtroEscuela = '';
     alumnosGlobalCache.filtroEscuelas = escIds.length === 1 ? [escIds[0]] : escIds;
     alumnosGlobalCache.filtroEstado = '';
+    if (typeof cargarSupplyEmpaque === 'function') cargarSupplyEmpaque();
   }
   if (typeof switchTab === 'function') switchTab('registro');
   setTimeout(() => {
@@ -868,12 +870,14 @@ function confirmarEmpacarSelector() {
     alumnosGlobalCache.empCombos = combos;
     alumnosGlobalCache.empPrendas = prendas;
     alumnosGlobalCache.empPoolEntries = [];
-    alumnosGlobalCache.empMarcados = new Set();
+    alumnosGlobalCache.empMarcadosTop = new Set();
+    alumnosGlobalCache.empMarcadosBot = new Set();
     alumnosGlobalCache.empCompletarParejas = completarParejas;
     alumnosGlobalCache.busqueda = '';
     alumnosGlobalCache.filtroEscuela = '';
     alumnosGlobalCache.filtroEscuelas = escId ? [escId] : [];
     alumnosGlobalCache.filtroEstado = '';
+    if (typeof cargarSupplyEmpaque === 'function') cargarSupplyEmpaque();
   }
   if (typeof switchTab === 'function') switchTab('registro');
   setTimeout(() => {
@@ -894,9 +898,12 @@ function confirmarEmpacarSelector() {
 // Actualiza estado_top/estado_bottom = 'empacado'.
 // Retorna { actualizados, piezasPool, piezasStock, errores: [] }.
 async function empacarAlumnosDesdeRegistro(alumnos, prendasSet, opts = {}) {
-  const { completarParejas = false } = opts;
+  const { completarParejas = false, planExterno = null } = opts;
   if (!alumnos || alumnos.length === 0) throw new Error('Sin alumnos para empacar');
-  if (!prendasSet || prendasSet.size === 0) throw new Error('Sin prendas seleccionadas');
+  // Si viene un planExterno (Map<alumno_id, {top:bool, bottom:bool}>) NO
+  // necesitamos prendasSet — el plan ya dice exactamente qué empacar.
+  if (!planExterno && (!prendasSet || prendasSet.size === 0))
+    throw new Error('Sin prendas seleccionadas');
 
   // 1) Cargar pool por escuelas afectadas
   const pool = {};
@@ -928,23 +935,36 @@ async function empacarAlumnosDesdeRegistro(alumnos, prendasSet, opts = {}) {
   const piezaPendiente = (prenda, talla, estado) =>
     !!prenda && !!talla && estado !== 'empacado' && estado !== 'entregado';
 
-  const planByAlumno = new Map();
-  for (const a of alumnos) {
-    const topElig = piezaPendiente(a.prenda_top, a.talla_top_key, a.estado_top)
-      && prendasSet.has(a.prenda_top);
-    const botElig = piezaPendiente(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom)
-      && prendasSet.has(a.prenda_bottom);
-    if (!topElig && !botElig) continue;
-    let top = topElig, bottom = botElig;
-    if (completarParejas) {
-      if (top && !bottom && piezaPendiente(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom)) {
-        bottom = true;
-      }
-      if (bottom && !top && piezaPendiente(a.prenda_top, a.talla_top_key, a.estado_top)) {
-        top = true;
-      }
+  let planByAlumno;
+  if (planExterno) {
+    // Filtrar a piezas que sigan pendientes (por si el estado cambió desde la UI)
+    planByAlumno = new Map();
+    for (const a of alumnos) {
+      const ext = planExterno.get(a.id);
+      if (!ext) continue;
+      const top = ext.top && piezaPendiente(a.prenda_top, a.talla_top_key, a.estado_top);
+      const bottom = ext.bottom && piezaPendiente(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom);
+      if (top || bottom) planByAlumno.set(a.id, { top, bottom });
     }
-    planByAlumno.set(a.id, { top, bottom });
+  } else {
+    planByAlumno = new Map();
+    for (const a of alumnos) {
+      const topElig = piezaPendiente(a.prenda_top, a.talla_top_key, a.estado_top)
+        && prendasSet.has(a.prenda_top);
+      const botElig = piezaPendiente(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom)
+        && prendasSet.has(a.prenda_bottom);
+      if (!topElig && !botElig) continue;
+      let top = topElig, bottom = botElig;
+      if (completarParejas) {
+        if (top && !bottom && piezaPendiente(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom)) {
+          bottom = true;
+        }
+        if (bottom && !top && piezaPendiente(a.prenda_top, a.talla_top_key, a.estado_top)) {
+          top = true;
+        }
+      }
+      planByAlumno.set(a.id, { top, bottom });
+    }
   }
 
   // Validación pool+stock simulada
@@ -967,17 +987,18 @@ async function empacarAlumnosDesdeRegistro(alumnos, prendasSet, opts = {}) {
   // forzamos error: simplemente la dejamos pendiente. Filtramos los planes
   // que no caben en stock libre quitando esas piezas opcionales primero.
   const errores = [];
+  // Con planExterno, todo es obligatorio (el usuario eligió pieza por pieza).
+  // Sin planExterno, lo que está en prendasSet es obligatorio; las parejas
+  // opcionales se "skipean" si no caben.
+  const esObligatoria = (prenda) => planExterno || (prendasSet && prendasSet.has(prenda));
   for (const [k, n] of Object.entries(consumoStock)) {
     const disp = stockMap[k] || 0;
     if (n > disp) {
       const [p, t] = k.split('|');
-      // Si la prenda está en prendasSet → es obligatoria → error
-      if (prendasSet.has(p)) {
+      if (esObligatoria(p)) {
         errores.push(`${p} ${t}: querés ${n} de stock libre pero hay ${disp}`);
-      }
-      // Si NO está en prendasSet → es pareja opcional → marcar para skipear
-      else {
-        // Marcamos para que el apply omita estas piezas extras cuando no caben
+      } else {
+        // Pareja opcional sin stock → skipear esa pieza extra
         for (const a of alumnos) {
           const plan = planByAlumno.get(a.id);
           if (!plan) continue;
@@ -1042,9 +1063,9 @@ async function empacarAlumnosDesdeRegistro(alumnos, prendasSet, opts = {}) {
       if (esPareja) piezasPareja++;
     };
     if (plan.top) procesar(a.prenda_top, a.talla_top_key, true,
-      !prendasSet.has(a.prenda_top));
+      !planExterno && prendasSet && !prendasSet.has(a.prenda_top));
     if (plan.bottom) procesar(a.prenda_bottom, a.talla_bottom_key, false,
-      !prendasSet.has(a.prenda_bottom));
+      !planExterno && prendasSet && !prendasSet.has(a.prenda_bottom));
     if (toca) {
       await supaUpdate('alumno', a.id, update);
       actualizados++;
