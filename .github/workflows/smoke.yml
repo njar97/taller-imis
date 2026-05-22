@@ -1,0 +1,36 @@
+name: Smoke tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python (for build.py)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Rebuild produccion.html from src/
+        run: python build.py
+
+      - name: Run smoke tests
+        run: node tests/smoke.cjs
+
+      - name: Verify produccion.html matches src/
+        run: |
+          if ! git diff --quiet produccion.html; then
+            echo "::warning::produccion.html no coincide con el build de src/. El pre-commit hook debería re-generarlo."
+            git diff --stat produccion.html | head -5
+          fi
