@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-22 08:51 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-22 09:14 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -10612,12 +10612,14 @@ async function empacarAcaparadosManual() {
     alumnosGlobalCache.empPoolEntries = entries.map(e => ({
       escuela_id: e.escuela_id, prenda: e.prenda, talla: e.talla,
     }));
-    alumnosGlobalCache.empMarcados = new Set();
+    alumnosGlobalCache.empMarcadosTop = new Set();
+    alumnosGlobalCache.empMarcadosBot = new Set();
     alumnosGlobalCache.empCompletarParejas = completarParejas;
     alumnosGlobalCache.busqueda = '';
     alumnosGlobalCache.filtroEscuela = '';
     alumnosGlobalCache.filtroEscuelas = escIds.length === 1 ? [escIds[0]] : escIds;
     alumnosGlobalCache.filtroEstado = '';
+    if (typeof cargarSupplyEmpaque === 'function') cargarSupplyEmpaque();
   }
   if (typeof switchTab === 'function') switchTab('registro');
   setTimeout(() => {
@@ -11064,12 +11066,14 @@ function confirmarEmpacarSelector() {
     alumnosGlobalCache.empCombos = combos;
     alumnosGlobalCache.empPrendas = prendas;
     alumnosGlobalCache.empPoolEntries = [];
-    alumnosGlobalCache.empMarcados = new Set();
+    alumnosGlobalCache.empMarcadosTop = new Set();
+    alumnosGlobalCache.empMarcadosBot = new Set();
     alumnosGlobalCache.empCompletarParejas = completarParejas;
     alumnosGlobalCache.busqueda = '';
     alumnosGlobalCache.filtroEscuela = '';
     alumnosGlobalCache.filtroEscuelas = escId ? [escId] : [];
     alumnosGlobalCache.filtroEstado = '';
+    if (typeof cargarSupplyEmpaque === 'function') cargarSupplyEmpaque();
   }
   if (typeof switchTab === 'function') switchTab('registro');
   setTimeout(() => {
@@ -11090,9 +11094,12 @@ function confirmarEmpacarSelector() {
 // Actualiza estado_top/estado_bottom = 'empacado'.
 // Retorna { actualizados, piezasPool, piezasStock, errores: [] }.
 async function empacarAlumnosDesdeRegistro(alumnos, prendasSet, opts = {}) {
-  const { completarParejas = false } = opts;
+  const { completarParejas = false, planExterno = null } = opts;
   if (!alumnos || alumnos.length === 0) throw new Error('Sin alumnos para empacar');
-  if (!prendasSet || prendasSet.size === 0) throw new Error('Sin prendas seleccionadas');
+  // Si viene un planExterno (Map<alumno_id, {top:bool, bottom:bool}>) NO
+  // necesitamos prendasSet — el plan ya dice exactamente qué empacar.
+  if (!planExterno && (!prendasSet || prendasSet.size === 0))
+    throw new Error('Sin prendas seleccionadas');
 
   // 1) Cargar pool por escuelas afectadas
   const pool = {};
@@ -11124,23 +11131,36 @@ async function empacarAlumnosDesdeRegistro(alumnos, prendasSet, opts = {}) {
   const piezaPendiente = (prenda, talla, estado) =>
     !!prenda && !!talla && estado !== 'empacado' && estado !== 'entregado';
 
-  const planByAlumno = new Map();
-  for (const a of alumnos) {
-    const topElig = piezaPendiente(a.prenda_top, a.talla_top_key, a.estado_top)
-      && prendasSet.has(a.prenda_top);
-    const botElig = piezaPendiente(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom)
-      && prendasSet.has(a.prenda_bottom);
-    if (!topElig && !botElig) continue;
-    let top = topElig, bottom = botElig;
-    if (completarParejas) {
-      if (top && !bottom && piezaPendiente(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom)) {
-        bottom = true;
-      }
-      if (bottom && !top && piezaPendiente(a.prenda_top, a.talla_top_key, a.estado_top)) {
-        top = true;
-      }
+  let planByAlumno;
+  if (planExterno) {
+    // Filtrar a piezas que sigan pendientes (por si el estado cambió desde la UI)
+    planByAlumno = new Map();
+    for (const a of alumnos) {
+      const ext = planExterno.get(a.id);
+      if (!ext) continue;
+      const top = ext.top && piezaPendiente(a.prenda_top, a.talla_top_key, a.estado_top);
+      const bottom = ext.bottom && piezaPendiente(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom);
+      if (top || bottom) planByAlumno.set(a.id, { top, bottom });
     }
-    planByAlumno.set(a.id, { top, bottom });
+  } else {
+    planByAlumno = new Map();
+    for (const a of alumnos) {
+      const topElig = piezaPendiente(a.prenda_top, a.talla_top_key, a.estado_top)
+        && prendasSet.has(a.prenda_top);
+      const botElig = piezaPendiente(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom)
+        && prendasSet.has(a.prenda_bottom);
+      if (!topElig && !botElig) continue;
+      let top = topElig, bottom = botElig;
+      if (completarParejas) {
+        if (top && !bottom && piezaPendiente(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom)) {
+          bottom = true;
+        }
+        if (bottom && !top && piezaPendiente(a.prenda_top, a.talla_top_key, a.estado_top)) {
+          top = true;
+        }
+      }
+      planByAlumno.set(a.id, { top, bottom });
+    }
   }
 
   // Validación pool+stock simulada
@@ -11163,17 +11183,18 @@ async function empacarAlumnosDesdeRegistro(alumnos, prendasSet, opts = {}) {
   // forzamos error: simplemente la dejamos pendiente. Filtramos los planes
   // que no caben en stock libre quitando esas piezas opcionales primero.
   const errores = [];
+  // Con planExterno, todo es obligatorio (el usuario eligió pieza por pieza).
+  // Sin planExterno, lo que está en prendasSet es obligatorio; las parejas
+  // opcionales se "skipean" si no caben.
+  const esObligatoria = (prenda) => planExterno || (prendasSet && prendasSet.has(prenda));
   for (const [k, n] of Object.entries(consumoStock)) {
     const disp = stockMap[k] || 0;
     if (n > disp) {
       const [p, t] = k.split('|');
-      // Si la prenda está en prendasSet → es obligatoria → error
-      if (prendasSet.has(p)) {
+      if (esObligatoria(p)) {
         errores.push(`${p} ${t}: querés ${n} de stock libre pero hay ${disp}`);
-      }
-      // Si NO está en prendasSet → es pareja opcional → marcar para skipear
-      else {
-        // Marcamos para que el apply omita estas piezas extras cuando no caben
+      } else {
+        // Pareja opcional sin stock → skipear esa pieza extra
         for (const a of alumnos) {
           const plan = planByAlumno.get(a.id);
           if (!plan) continue;
@@ -11238,9 +11259,9 @@ async function empacarAlumnosDesdeRegistro(alumnos, prendasSet, opts = {}) {
       if (esPareja) piezasPareja++;
     };
     if (plan.top) procesar(a.prenda_top, a.talla_top_key, true,
-      !prendasSet.has(a.prenda_top));
+      !planExterno && prendasSet && !prendasSet.has(a.prenda_top));
     if (plan.bottom) procesar(a.prenda_bottom, a.talla_bottom_key, false,
-      !prendasSet.has(a.prenda_bottom));
+      !planExterno && prendasSet && !prendasSet.has(a.prenda_bottom));
     if (toca) {
       await supaUpdate('alumno', a.id, update);
       actualizados++;
@@ -13485,8 +13506,82 @@ let alumnosGlobalCache = {
   // Modo empaque (se activa desde Bodega → Empacar a alumnos)
   modoEmpaque: false,
   empPrendas: [],              // ['CAMISA','PANTALON'] — solo se ven alumnos con alguna de estas pendientes
-  empMarcados: null,           // Set<alumno_id>
+  empMarcadosTop: null,        // Set<alumno_id> — piezas top a empacar
+  empMarcadosBot: null,        // Set<alumno_id> — piezas bottom a empacar
+  empSupply: null,             // { stockMap: Map, poolMap: Map } — cargado al activar modo
 };
+
+// Carga stock + pool para el modo empaque. Se llama desde bodega cuando se
+// activa el modo (selector / acaparados / pool).
+async function cargarSupplyEmpaque() {
+  try {
+    const [stock, pool] = await Promise.all([
+      supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
+      supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+    ]);
+    const stockMap = new Map();
+    for (const s of stock) {
+      const p = s.nombre_prenda || (typeof prendaCanon === 'function' ? prendaCanon(s.cod_prenda) : s.cod_prenda);
+      if (!p || !s.talla_key) continue;
+      stockMap.set(p + '|' + s.talla_key, Number(s.stock_actual) || 0);
+    }
+    const poolMap = new Map();
+    for (const p of pool) {
+      const d = Math.max(0, (Number(p.cantidad_acaparada)||0) - (Number(p.cantidad_consumida)||0));
+      if (d <= 0) continue;
+      const k = p.escuela_id + '|' + p.nombre_prenda + '|' + p.talla_key;
+      poolMap.set(k, (poolMap.get(k) || 0) + d);
+    }
+    alumnosGlobalCache.empSupply = { stockMap, poolMap };
+  } catch(e) {
+    console.warn('cargarSupplyEmpaque:', e.message);
+    alumnosGlobalCache.empSupply = { stockMap: new Map(), poolMap: new Map() };
+  }
+}
+
+// Simula consumo de las piezas YA marcadas y devuelve el remanente.
+// Para cada fila, se compara contra este remanente para saber si la pieza
+// puede marcarse (sin overload de stock).
+function _supplyRestante() {
+  const c = alumnosGlobalCache;
+  if (!c.empSupply) return null;
+  const poolRest = new Map(c.empSupply.poolMap);
+  const stockRest = new Map(c.empSupply.stockMap);
+  const consumir = (escId, prenda, talla) => {
+    if (!prenda || !talla) return;
+    const kPool = escId + '|' + prenda + '|' + talla;
+    const pp = poolRest.get(kPool) || 0;
+    if (pp > 0) { poolRest.set(kPool, pp - 1); return; }
+    const kStock = prenda + '|' + talla;
+    const ss = stockRest.get(kStock) || 0;
+    if (ss > 0) { stockRest.set(kStock, ss - 1); return; }
+    // Si no hay ni pool ni stock, igual descontamos virtualmente para que
+    // se note el "déficit" (poolRest queda en 0, stockRest queda en 0).
+  };
+  const byId = new Map();
+  for (const a of c.alumnos) byId.set(a.id, a);
+  for (const id of (c.empMarcadosTop || new Set())) {
+    const a = byId.get(id); if (!a) continue;
+    consumir(a.escuela_id, a.prenda_top, a.talla_top_key);
+  }
+  for (const id of (c.empMarcadosBot || new Set())) {
+    const a = byId.get(id); if (!a) continue;
+    consumir(a.escuela_id, a.prenda_bottom, a.talla_bottom_key);
+  }
+  return { poolRest, stockRest };
+}
+
+// ¿Hay suministro restante (pool de la escuela o stock libre) para esa pieza?
+function _piezaConSuministro(a, pieza, restante) {
+  if (!restante) return true;
+  const prenda = pieza === 'top' ? a.prenda_top : a.prenda_bottom;
+  const talla  = pieza === 'top' ? a.talla_top_key : a.talla_bottom_key;
+  if (!prenda || !talla) return false;
+  const kPool = a.escuela_id + '|' + prenda + '|' + talla;
+  const kStock = prenda + '|' + talla;
+  return (restante.poolRest.get(kPool) || 0) > 0
+      || (restante.stockRest.get(kStock) || 0) > 0;
+}
 
 // Preferencia de orden para etiquetas — persistida en localStorage
 const ET_ORDEN_DEFAULT = ['escuela', 'sexo_fm', 'grado', 'nombre'];
@@ -13785,9 +13880,12 @@ function renderAlumnosGlobal() {
 
   const iconEstado = (e) => e === 'empacado' ? '✅' : (e === 'entregado' ? '🚚' : (e === 'reservado' ? '⏳' : '⬜'));
 
-  // En modo empaque: asegurar Set de marcados y marcar los que coinciden con prendas filtradas
-  if (c.modoEmpaque && !(c.empMarcados instanceof Set)) c.empMarcados = new Set();
+  // En modo empaque: dos sets de marcados (top + bot) + cálculo de stock
+  if (c.modoEmpaque && !(c.empMarcadosTop instanceof Set)) c.empMarcadosTop = new Set();
+  if (c.modoEmpaque && !(c.empMarcadosBot instanceof Set)) c.empMarcadosBot = new Set();
   const setP = c.modoEmpaque ? new Set(c.empPrendas || []) : null;
+  // Restante de suministro tras todas las piezas marcadas
+  const restante = c.modoEmpaque ? _supplyRestante() : null;
 
   const filas = visible.map(a => {
     const esc = c.escuelas[a.escuela_id];
@@ -13795,18 +13893,41 @@ function renderAlumnosGlobal() {
     const bg = sinTallas ? '#FFF4F0' : 'white';
 
     // En modo empaque destacamos las piezas que SE VAN A EMPACAR (verde) vs las que no entran
-    const topResalt = (c.modoEmpaque && setP && setP.has(a.prenda_top) && a.talla_top_key
+    const topElig = (c.modoEmpaque && setP && setP.has(a.prenda_top) && a.talla_top_key
       && a.estado_top !== 'empacado' && a.estado_top !== 'entregado');
-    const botResalt = (c.modoEmpaque && setP && setP.has(a.prenda_bottom) && a.talla_bottom_key
+    const botElig = (c.modoEmpaque && setP && setP.has(a.prenda_bottom) && a.talla_bottom_key
       && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado');
-    const topStyle = topResalt ? 'background:#E0F4E5;color:var(--verde);font-weight:700' : `color:${a.talla_top_key?'var(--azul)':'#c44'}`;
-    const botStyle = botResalt ? 'background:#E0F4E5;color:var(--verde);font-weight:700' : `color:${a.talla_bottom_key?'var(--azul)':'#c44'}`;
+    const topStyle = topElig ? 'background:#E0F4E5;color:var(--verde);font-weight:700' : `color:${a.talla_top_key?'var(--azul)':'#c44'}`;
+    const botStyle = botElig ? 'background:#E0F4E5;color:var(--verde);font-weight:700' : `color:${a.talla_bottom_key?'var(--azul)':'#c44'}`;
+
+    // Cálculo de habilitación por pieza
+    let topCheck = '', botCheck = '';
+    if (c.modoEmpaque) {
+      const topMarcado = c.empMarcadosTop.has(a.id);
+      const botMarcado = c.empMarcadosBot.has(a.id);
+      // Si ya está marcado, debe poder desmarcarse → enabled.
+      // Si no está marcado, enabled solo si elig + hay suministro restante.
+      const topPuede = topMarcado || (topElig && _piezaConSuministro(a, 'top', restante));
+      const botPuede = botMarcado || (botElig && _piezaConSuministro(a, 'bottom', restante));
+      // El input solo se renderiza si la pieza es elegible (top en filtro de prendas).
+      // Si no es elegible se muestra raya — no hay pieza para empacar.
+      topCheck = !topElig
+        ? '<span style="color:#ccc">—</span>'
+        : `<input type="checkbox" ${topMarcado?'checked':''} ${topPuede?'':'disabled'}
+                   onchange="toggleMarcarPieza('${a.id}','top',this.checked)"
+                   title="${topPuede?'Empacar top':'Sin stock disponible'}"
+                   style="cursor:${topPuede?'pointer':'not-allowed'};opacity:${topPuede?1:0.4}">`;
+      botCheck = !botElig
+        ? '<span style="color:#ccc">—</span>'
+        : `<input type="checkbox" ${botMarcado?'checked':''} ${botPuede?'':'disabled'}
+                   onchange="toggleMarcarPieza('${a.id}','bottom',this.checked)"
+                   title="${botPuede?'Empacar bottom':'Sin stock disponible'}"
+                   style="cursor:${botPuede?'pointer':'not-allowed'};opacity:${botPuede?1:0.4}">`;
+    }
 
     const checkCell = c.modoEmpaque
-      ? `<td style="padding:4px 8px;text-align:center" onclick="event.stopPropagation()">
-           <input type="checkbox" ${c.empMarcados.has(a.id)?'checked':''}
-                  onchange="toggleMarcarEmpaque('${a.id}', this.checked)" style="cursor:pointer">
-         </td>`
+      ? `<td style="padding:4px 8px;text-align:center" onclick="event.stopPropagation()">${topCheck}</td>
+         <td style="padding:4px 8px;text-align:center" onclick="event.stopPropagation()">${botCheck}</td>`
       : '';
 
     return `
@@ -13828,7 +13949,10 @@ function renderAlumnosGlobal() {
 
   const checkHeader = c.modoEmpaque
     ? `<th style="padding:6px 8px;text-align:center;width:30px">
-         <input type="checkbox" onchange="marcarTodosEmpaque(this.checked)" title="Marcar/desmarcar todos los visibles">
+         <input type="checkbox" onchange="marcarTodosEmpaque('top', this.checked)" title="Marcar/desmarcar todos los TOP visibles (hasta donde alcance el stock)">
+       </th>
+       <th style="padding:6px 8px;text-align:center;width:30px">
+         <input type="checkbox" onchange="marcarTodosEmpaque('bot', this.checked)" title="Marcar/desmarcar todos los BOTTOM visibles (hasta donde alcance el stock)">
        </th>`
     : '';
 
@@ -13857,17 +13981,14 @@ function renderAlumnosGlobal() {
 
 function renderEmpaqueBanner(listaVisible) {
   const c = alumnosGlobalCache;
-  if (!c.empMarcados) c.empMarcados = new Set();
-  const marcados = c.empMarcados.size;
-  const setP = new Set(c.empPrendas || []);
-  let piezasAEmpacar = 0;
-  for (const a of listaVisible) {
-    if (!c.empMarcados.has(a.id)) continue;
-    if (a.prenda_top && setP.has(a.prenda_top) && a.talla_top_key
-        && a.estado_top !== 'empacado' && a.estado_top !== 'entregado') piezasAEmpacar++;
-    if (a.prenda_bottom && setP.has(a.prenda_bottom) && a.talla_bottom_key
-        && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado') piezasAEmpacar++;
-  }
+  if (!c.empMarcadosTop) c.empMarcadosTop = new Set();
+  if (!c.empMarcadosBot) c.empMarcadosBot = new Set();
+  const piezasTop = c.empMarcadosTop.size;
+  const piezasBot = c.empMarcadosBot.size;
+  const piezasAEmpacar = piezasTop + piezasBot;
+  // alumnos únicos involucrados
+  const alumnosUnicos = new Set([...c.empMarcadosTop, ...c.empMarcadosBot]).size;
+  const marcados = alumnosUnicos;
   // Etiquetar combinaciones / pool de manera amigable
   const NIVEL_LBL = { PARV:'Parvularia', BASICA:'Básica', BACH:'Bach', OTRO:'Otro' };
   const SEXO_LBL = { F:'♀', M:'♂' };
@@ -13892,7 +14013,7 @@ function renderEmpaqueBanner(listaVisible) {
         <div style="font-size:12px;margin-top:2px">
           ${lblCombos}
           · ${listaVisible.length} alumno(s) coinciden
-          · <strong>${marcados}</strong> marcados (${piezasAEmpacar} pieza${piezasAEmpacar===1?'':'s'})
+          · <strong>${marcados}</strong> alumno(s) marcado(s) (${piezasTop} top + ${piezasBot} bot = ${piezasAEmpacar} pieza${piezasAEmpacar===1?'':'s'})
         </div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -13905,65 +14026,115 @@ function renderEmpaqueBanner(listaVisible) {
   `;
 }
 
-function toggleMarcarEmpaque(id, checked) {
+// Toggle granular por pieza: 'top' o 'bottom'
+function toggleMarcarPieza(id, pieza, checked) {
   const c = alumnosGlobalCache;
-  if (!c.empMarcados) c.empMarcados = new Set();
-  if (checked) c.empMarcados.add(id);
-  else c.empMarcados.delete(id);
+  if (!c.empMarcadosTop) c.empMarcadosTop = new Set();
+  if (!c.empMarcadosBot) c.empMarcadosBot = new Set();
+  const set = pieza === 'top' ? c.empMarcadosTop : c.empMarcadosBot;
+  if (checked) set.add(id);
+  else set.delete(id);
   renderAlumnosGlobal();
 }
 
-function marcarTodosEmpaque(checked) {
+// Compat (en caso de que algo viejo todavía llame). Marca ambas piezas si elig.
+function toggleMarcarEmpaque(id, checked) {
+  toggleMarcarPieza(id, 'top', checked);
+  toggleMarcarPieza(id, 'bottom', checked);
+}
+
+// Marca todos los visibles para una pieza ('top' o 'bot'). Respeta el stock:
+// solo marca hasta donde alcance el suministro (pool + libre).
+function marcarTodosEmpaque(piezaArg, checked) {
   const c = alumnosGlobalCache;
-  if (!c.empMarcados) c.empMarcados = new Set();
+  // Backward compat: si se llama con un solo arg booleano (uso viejo) marca ambas
+  if (typeof piezaArg === 'boolean') {
+    marcarTodosEmpaque('top', piezaArg);
+    marcarTodosEmpaque('bot', piezaArg);
+    return;
+  }
+  const pieza = piezaArg === 'top' ? 'top' : 'bottom';
+  if (!c.empMarcadosTop) c.empMarcadosTop = new Set();
+  if (!c.empMarcadosBot) c.empMarcadosBot = new Set();
+  const set = pieza === 'top' ? c.empMarcadosTop : c.empMarcadosBot;
+
+  // Construir lista de elegibles visibles aplicando los mismos filtros
+  // que renderAlumnosGlobal (escuelas, búsqueda, modo empaque).
   const setP = new Set(c.empPrendas || []);
   const combos = c.empCombos || [];
   const poolEntries = c.empPoolEntries || [];
-  const ids = c.alumnos
-    .filter(a => {
-      if (c.modoEmpaque) {
-        if (poolEntries.length > 0) {
-          const ok = poolEntries.some(p => {
-            if (a.escuela_id !== p.escuela_id) return false;
-            const topMatch = a.prenda_top === p.prenda && a.talla_top_key === p.talla
-              && a.estado_top !== 'empacado' && a.estado_top !== 'entregado';
-            const botMatch = a.prenda_bottom === p.prenda && a.talla_bottom_key === p.talla
-              && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado';
-            return topMatch || botMatch;
-          });
-          if (!ok) return false;
+  const piezaMatch = (a) => {
+    if (pieza === 'top') {
+      if (!a.prenda_top || !a.talla_top_key) return false;
+      if (a.estado_top === 'empacado' || a.estado_top === 'entregado') return false;
+      // Tiene que coincidir con el filtro (combos, pool o prendas)
+      if (poolEntries.length > 0) {
+        return poolEntries.some(p => a.escuela_id === p.escuela_id
+          && a.prenda_top === p.prenda && a.talla_top_key === p.talla);
+      }
+      if (combos.length > 0) {
+        return combos.some(co => a.nivel === co.nivel && a.sexo === co.sexo
+          && co.prenda_top && a.prenda_top === co.prenda_top);
+      }
+      return setP.has(a.prenda_top);
+    }
+    // bottom
+    if (!a.prenda_bottom || !a.talla_bottom_key) return false;
+    if (a.estado_bottom === 'empacado' || a.estado_bottom === 'entregado') return false;
+    if (poolEntries.length > 0) {
+      return poolEntries.some(p => a.escuela_id === p.escuela_id
+        && a.prenda_bottom === p.prenda && a.talla_bottom_key === p.talla);
+    }
+    if (combos.length > 0) {
+      return combos.some(co => a.nivel === co.nivel && a.sexo === co.sexo
+        && co.prenda_bottom && a.prenda_bottom === co.prenda_bottom);
+    }
+    return setP.has(a.prenda_bottom);
+  };
+
+  const filtroEscOk = (a) => {
+    if (c.filtroEscuelas && c.filtroEscuelas.length > 0) {
+      return c.filtroEscuelas.includes(a.escuela_id);
+    }
+    return true;
+  };
+  const busqOk = (a) => {
+    if (!c.busqueda) return true;
+    const q = c.busqueda.toLowerCase().trim();
+    return (a.nombre||'').toLowerCase().includes(q);
+  };
+
+  const candidatos = c.alumnos
+    .filter(a => piezaMatch(a) && filtroEscOk(a) && busqOk(a))
+    .slice(0, 500);
+
+  if (!checked) {
+    candidatos.forEach(a => set.delete(a.id));
+    renderAlumnosGlobal();
+    return;
+  }
+
+  // Marcar hasta donde alcance el suministro
+  const restante = _supplyRestante();
+  for (const a of candidatos) {
+    if (set.has(a.id)) continue;  // ya marcado, dejar
+    if (!restante || _piezaConSuministro(a, pieza, restante)) {
+      set.add(a.id);
+      // Re-simular para la próxima — descontar 1
+      if (restante) {
+        const prenda = pieza === 'top' ? a.prenda_top : a.prenda_bottom;
+        const talla  = pieza === 'top' ? a.talla_top_key : a.talla_bottom_key;
+        const kPool = a.escuela_id + '|' + prenda + '|' + talla;
+        const kStock = prenda + '|' + talla;
+        const pp = restante.poolRest.get(kPool) || 0;
+        if (pp > 0) restante.poolRest.set(kPool, pp - 1);
+        else {
+          const ss = restante.stockRest.get(kStock) || 0;
+          if (ss > 0) restante.stockRest.set(kStock, ss - 1);
         }
-        else if (combos.length > 0) {
-          const ok = combos.some(co => {
-            if (a.nivel !== co.nivel || a.sexo !== co.sexo) return false;
-            const topMatch = co.prenda_top && a.prenda_top === co.prenda_top && a.talla_top_key
-              && a.estado_top !== 'empacado' && a.estado_top !== 'entregado';
-            const botMatch = co.prenda_bottom && a.prenda_bottom === co.prenda_bottom && a.talla_bottom_key
-              && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado';
-            return topMatch || botMatch;
-          });
-          if (!ok) return false;
-        } else {
-          const topMatch = a.prenda_top && setP.has(a.prenda_top) && a.talla_top_key
-            && a.estado_top !== 'empacado' && a.estado_top !== 'entregado';
-          const botMatch = a.prenda_bottom && setP.has(a.prenda_bottom) && a.talla_bottom_key
-            && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado';
-          if (!topMatch && !botMatch) return false;
-        }
       }
-      if (c.filtroEscuelas && c.filtroEscuelas.length > 0) {
-        if (!c.filtroEscuelas.includes(a.escuela_id)) return false;
-      }
-      if (c.busqueda) {
-        const q = c.busqueda.toLowerCase().trim();
-        if (!(a.nombre||'').toLowerCase().includes(q)) return false;
-      }
-      return true;
-    })
-    .slice(0, 500)
-    .map(a => a.id);
-  if (checked) ids.forEach(id => c.empMarcados.add(id));
-  else ids.forEach(id => c.empMarcados.delete(id));
+    }
+  }
   renderAlumnosGlobal();
 }
 
@@ -13974,33 +14145,45 @@ function salirModoEmpaque() {
   c.empCombos = [];
   c.empPoolEntries = [];
   c.empCompletarParejas = false;
-  c.empMarcados = null;
+  c.empMarcadosTop = null;
+  c.empMarcadosBot = null;
+  c.empSupply = null;
   renderAlumnosGlobal();
 }
 
 async function aplicarEmpaqueMarcados() {
   const c = alumnosGlobalCache;
-  if (!c.empMarcados || c.empMarcados.size === 0) return alert('Marcá al menos un alumno');
-  const setP = new Set(c.empPrendas || []);
-  if (setP.size === 0) return alert('No hay prendas seleccionadas');
-
-  const alumnos = c.alumnos.filter(a => c.empMarcados.has(a.id));
+  if (!c.empMarcadosTop) c.empMarcadosTop = new Set();
+  if (!c.empMarcadosBot) c.empMarcadosBot = new Set();
+  if (c.empMarcadosTop.size === 0 && c.empMarcadosBot.size === 0) {
+    return alert('Marcá al menos una pieza (top o bottom)');
+  }
+  // Plan externo: una entrada por alumno con top/bottom indicado
+  const planExterno = new Map();
+  const idsInvolucrados = new Set([...c.empMarcadosTop, ...c.empMarcadosBot]);
+  for (const id of idsInvolucrados) {
+    planExterno.set(id, {
+      top: c.empMarcadosTop.has(id),
+      bottom: c.empMarcadosBot.has(id),
+    });
+  }
+  const alumnos = c.alumnos.filter(a => idsInvolucrados.has(a.id));
   if (alumnos.length === 0) return alert('Alumnos marcados no encontrados');
 
-  const completarParejas = !!c.empCompletarParejas;
-  const parejaTxt = completarParejas ? '\nAdemás, si hay stock, también se empaca la pareja pendiente.' : '';
-  if (!confirm(`¿Empacar ${alumnos.length} alumno(s) con prendas: ${[...setP].join(', ')}?\n\nLas piezas se descuentan del pool acaparado de la escuela primero, y del stock libre si el pool no alcanza.${parejaTxt}`)) return;
+  const piezasTotal = c.empMarcadosTop.size + c.empMarcadosBot.size;
+  if (!confirm(`¿Empacar ${piezasTotal} pieza(s) (${c.empMarcadosTop.size} top + ${c.empMarcadosBot.size} bot) en ${alumnos.length} alumno(s)?\n\nLas piezas se descuentan del pool acaparado de la escuela primero, y del stock libre si el pool no alcanza.`)) return;
 
   try {
-    const r = await empacarAlumnosDesdeRegistro(alumnos, setP, { completarParejas });
+    // prendasSet null porque tenemos planExterno
+    const r = await empacarAlumnosDesdeRegistro(alumnos, null, { planExterno });
     if (r.errores && r.errores.length > 0) {
       alert('❌ No hay stock suficiente:\n\n' + r.errores.join('\n') +
-            '\n\nOpciones: registrar entrada en bodega, acaparar primero, o desmarcar alumnos sin stock.');
+            '\n\nOpciones: registrar entrada en bodega, acaparar primero, o desmarcar piezas sin stock.');
       return;
     }
-    const pareja = r.piezasPareja ? `\n${r.piezasPareja} pieza(s) extras (pareja).` : '';
-    alert(`✓ ${r.actualizados} alumno(s) empacado(s).\n${r.piezasPool} pieza(s) del pool acaparado.\n${r.piezasStock} pieza(s) del stock libre.${pareja}`);
-    c.empMarcados = new Set();
+    alert(`✓ ${r.actualizados} alumno(s) empacado(s).\n${r.piezasPool} pieza(s) del pool acaparado.\n${r.piezasStock} pieza(s) del stock libre.`);
+    c.empMarcadosTop = new Set();
+    c.empMarcadosBot = new Set();
     await initAlumnosGlobal();
   } catch(e) {
     alert('Error: ' + e.message);
