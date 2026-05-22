@@ -83,6 +83,7 @@ function renderStock() {
         Mostrar vacíos
       </label>
       <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()">📥 + Entrada</button>
+      <button class="btn btn-ghost btn-sm" onclick="abrirConteoModal()" title="Carga rápida de stock físico (baseline)">📊 Conteo inicial</button>
       <button class="btn btn-warning btn-sm" onclick="abrirAcapararModal()" title="Bloquear cantidad para una escuela (sin alumnos)">📥 Acaparar</button>
       <button class="btn btn-primary btn-sm" onclick="abrirEmpacarSelector()">📦 Empacar a alumnos</button>
       ${(bodegaCache.poolTotal || 0) > 0
@@ -501,6 +502,179 @@ async function empacarAcaparadosAuto() {
     alert('Error: ' + e.message);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '⚡ Auto marcar todos'; }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CONTEO INICIAL — carga rápida de stock físico (baseline)
+// ═══════════════════════════════════════════════════════════════════
+// Lista filas editables (prenda + talla + físico). Por cada fila con
+// cantidad ingresada genera un AJUSTE_INVENTARIO con la diferencia
+// necesaria para que el stock_actual quede en el valor físico contado.
+// ═══════════════════════════════════════════════════════════════════
+let conteoCache = { stockMap: {}, filas: [] };
+
+async function abrirConteoModal() {
+  const modal = document.getElementById('bodega-conteo-modal');
+  if (!modal) return;
+  conteoCache.filas = [];
+  modal.style.display = 'flex';
+  try {
+    const stock = await supaFetchAll('vw_bodega_stock',
+      '?select=nombre_prenda,cod_prenda,talla_key,stock_actual');
+    const map = {};
+    for (const s of stock) {
+      const p = s.nombre_prenda || s.cod_prenda;
+      map[p + '|' + s.talla_key] = { prenda: p, talla: s.talla_key, stockApp: Number(s.stock_actual)||0 };
+    }
+    conteoCache.stockMap = map;
+    // Pre-cargar todas las combinaciones que ya aparecen en stock (incluso si stock=0)
+    conteoCache.filas = Object.values(map)
+      .sort((a,b) => a.prenda.localeCompare(b.prenda) || a.talla.localeCompare(b.talla, 'es', { numeric: true }))
+      .map(s => ({ prenda: s.prenda, talla: s.talla, stockApp: s.stockApp, fisico: '' }));
+    renderConteoTabla();
+  } catch(e) { alert('Error: '+e.message); }
+}
+function cerrarConteoModal() { document.getElementById('bodega-conteo-modal').style.display = 'none'; }
+
+async function conteoCargarSugeridos() {
+  // Combinaciones (prenda, talla) que aparecen en alumnos pendientes y no
+  // están todavía en las filas. Las agrega arriba.
+  try {
+    const alumnos = await supaFetchAll('alumno',
+      '?activo=eq.true&select=prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000');
+    const necesita = new Set();
+    for (const a of alumnos) {
+      if (a.prenda_top && a.talla_top_key) necesita.add(a.prenda_top + '|' + a.talla_top_key);
+      if (a.prenda_bottom && a.talla_bottom_key) necesita.add(a.prenda_bottom + '|' + a.talla_bottom_key);
+    }
+    const yaPresentes = new Set(conteoCache.filas.map(f => f.prenda + '|' + f.talla));
+    let added = 0;
+    for (const k of necesita) {
+      if (yaPresentes.has(k)) continue;
+      const [p, t] = k.split('|');
+      const existing = conteoCache.stockMap[k];
+      conteoCache.filas.push({ prenda: p, talla: t, stockApp: existing ? existing.stockApp : 0, fisico: '' });
+      added++;
+    }
+    // Re-ordenar
+    conteoCache.filas.sort((a,b) =>
+      a.prenda.localeCompare(b.prenda) || a.talla.localeCompare(b.talla, 'es', { numeric: true }));
+    renderConteoTabla();
+    if (added === 0) alert('Ya están todas las combinaciones con demanda.');
+  } catch(e) { alert('Error: '+e.message); }
+}
+
+function conteoAgregarFila() {
+  conteoCache.filas.push({ prenda: '', talla: '', stockApp: 0, fisico: '', nueva: true });
+  renderConteoTabla();
+  // Focus en la nueva fila
+  setTimeout(() => {
+    const tbody = document.getElementById('conteo-tbody');
+    const last = tbody && tbody.lastElementChild;
+    const input = last && last.querySelector('input[data-col="prenda"]');
+    if (input) input.focus();
+  }, 50);
+}
+
+function renderConteoTabla() {
+  const tbody = document.getElementById('conteo-tbody');
+  if (!tbody) return;
+  const filas = conteoCache.filas;
+  tbody.innerHTML = filas.map((f, i) => {
+    const fisicoNum = parseInt(f.fisico, 10);
+    const delta = (!isNaN(fisicoNum)) ? (fisicoNum - (f.stockApp || 0)) : null;
+    const deltaTxt = delta == null ? '<span style="color:#aaa">—</span>'
+      : (delta === 0 ? '<span style="color:#888">0</span>'
+        : `<span style="color:${delta>0?'var(--verde)':'var(--rojo)'};font-weight:700">${delta>0?'+':''}${delta}</span>`);
+    const disabled = f.nueva ? '' : 'readonly style="background:#f6f8fa;color:#666;border:none;width:100%"';
+    return `
+      <tr style="border-top:1px solid #EEE">
+        <td style="padding:4px 8px">
+          ${f.nueva
+            ? `<input type="text" value="${f.prenda||''}" data-col="prenda" oninput="conteoSetFila(${i},'prenda',this.value)" placeholder="ej: CAMISA" style="width:100%;padding:2px 4px">`
+            : `<span>${escapeHtmlAca(f.prenda)}</span>`}
+        </td>
+        <td style="padding:4px 8px">
+          ${f.nueva
+            ? `<input type="text" value="${f.talla||''}" data-col="talla" oninput="conteoSetFila(${i},'talla',this.value)" placeholder="ej: C14" style="width:100%;padding:2px 4px">`
+            : `<span style="font-family:monospace">${escapeHtmlAca(f.talla)}</span>`}
+        </td>
+        <td style="padding:4px 8px;text-align:right;color:#666">${f.stockApp || 0}</td>
+        <td style="padding:4px 8px;text-align:right">
+          <input type="number" value="${f.fisico}" min="0" data-col="fisico"
+                 oninput="conteoSetFila(${i},'fisico',this.value)"
+                 style="width:70px;padding:2px 4px;text-align:right">
+        </td>
+        <td style="padding:4px 8px;text-align:right">${deltaTxt}</td>
+        <td style="padding:4px 8px;text-align:center">
+          <button class="btn-mini" onclick="conteoQuitarFila(${i})" title="Quitar fila">✕</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+  const conCambio = filas.filter(f => {
+    const n = parseInt(f.fisico, 10);
+    return !isNaN(n) && n !== (f.stockApp || 0);
+  }).length;
+  document.getElementById('conteo-meta').textContent =
+    `${filas.length} fila(s) · ${conCambio} con cambio a aplicar`;
+}
+
+function conteoSetFila(idx, col, val) {
+  if (!conteoCache.filas[idx]) return;
+  conteoCache.filas[idx][col] = val;
+  if (col === 'fisico') renderConteoTabla();
+}
+function conteoQuitarFila(idx) {
+  conteoCache.filas.splice(idx, 1);
+  renderConteoTabla();
+}
+
+async function aplicarConteoInicial() {
+  const filas = (conteoCache.filas || []).map(f => {
+    const n = parseInt(f.fisico, 10);
+    if (isNaN(n)) return null;
+    const stockApp = f.stockApp || 0;
+    if (n === stockApp) return null;
+    if (!f.prenda || !f.talla) return null;
+    return {
+      prenda: (f.prenda || '').trim().toUpperCase(),
+      talla: (f.talla || '').trim().toUpperCase(),
+      delta: n - stockApp,
+      fisico: n,
+    };
+  }).filter(Boolean);
+
+  if (filas.length === 0) {
+    alert('No hay filas con cambio. Ingresá la cantidad física donde corresponda.');
+    return;
+  }
+
+  if (!confirm(`¿Aplicar conteo a ${filas.length} fila(s)?\n\nSe crea 1 AJUSTE_INVENTARIO por fila con la diferencia necesaria para llegar al valor físico.\nNo se puede deshacer en bloque (sí por audit log).`)) return;
+
+  const btn = document.getElementById('conteo-btn-aplicar');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Aplicando...'; }
+
+  try {
+    const today = new Date().toISOString().slice(0,10);
+    const movs = filas.map(f => ({
+      tipo: 'AJUSTE_INVENTARIO',
+      cod_prenda: _codPrenda(f.prenda),
+      nombre_prenda: f.prenda,
+      talla_key: f.talla,
+      cantidad: f.delta,  // puede ser negativo
+      fecha: today,
+      observaciones: `Conteo inicial — físico ${f.fisico}`,
+    }));
+    await supaFetch('bodega_movimiento', 'POST', movs);
+    cerrarConteoModal();
+    await cargarBodegaStock();
+    alert(`✓ Conteo aplicado: ${filas.length} ajuste(s) registrado(s) en bodega.`);
+  } catch(e) {
+    alert('Error: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✓ Aplicar conteo'; }
   }
 }
 
