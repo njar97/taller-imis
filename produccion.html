@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-22 09:24 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-22 09:26 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -2831,6 +2831,8 @@ async function cargarDashboardHoy() {
   sub.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando...</div>';
 
   try {
+    // Para pronóstico: SALIDA_EMPAQUE de los últimos 14 días por escuela
+    const desde14 = new Date(Date.now() - 14*24*60*60*1000).toISOString().slice(0,10);
     const [
       temporadasResumen,
       topEscuelas,
@@ -2839,15 +2841,17 @@ async function cargarDashboardHoy() {
       alumnos,
       escuelas,
       pool,
+      empaquesRec,
     ] = await Promise.all([
       supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.desc&limit=5').catch(() => []),
       supaFetch('vw_pedido_escuela', 'GET', null, '?order=piezas_pendientes.desc&limit=5').catch(() => []),
       supaFetch('vw_bodega_stock', 'GET', null, '?order=stock_actual.desc&limit=10').catch(() => []),
       cargarProduccionHoy(),
-      // Necesito escuela_id + estados para construir el embudo por escuela
       supaFetchAll('alumno', '?activo=eq.true&select=escuela_id,estado_top,estado_bottom,talla_top_key,talla_bottom_key').catch(() => []),
       supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre,codigo_cde&order=alias').catch(() => []),
       supaFetchAll('escuela_acaparado', '?select=escuela_id,cantidad_acaparada,cantidad_consumida').catch(() => []),
+      supaFetchAll('bodega_movimiento',
+        `?tipo=eq.SALIDA_EMPAQUE&fecha=gte.${desde14}&select=escuela_id,cantidad,fecha`).catch(() => []),
     ]);
 
     dashboardCache.resumen = {
@@ -2858,6 +2862,7 @@ async function cargarDashboardHoy() {
       alumnos,
       escuelas,
       pool,
+      empaquesRec,
     };
     renderDashboard();
   } catch(e) {
@@ -3061,6 +3066,18 @@ function _renderAvancePorEscuela(r) {
     if (!o) continue;
     o.acaparados += Math.max(0, (Number(p.cantidad_acaparada)||0) - (Number(p.cantidad_consumida)||0));
   }
+  // Velocidad por escuela: piezas empacadas en últimos 14 días / 14
+  const empaquesRec = r.empaquesRec || [];
+  const piezasPorEsc = {};
+  for (const m of empaquesRec) {
+    if (!m.escuela_id) continue;
+    piezasPorEsc[m.escuela_id] = (piezasPorEsc[m.escuela_id] || 0) + (Number(m.cantidad) || 0);
+  }
+  const VENTANA_DIAS = 14;
+  for (const o of Object.values(byEsc)) {
+    const piezas = piezasPorEsc[o.escuela.id] || 0;
+    o.velocidad = piezas / VENTANA_DIAS;  // piezas/día
+  }
   // Filtrar escuelas sin alumnos
   let lista = Object.values(byEsc).filter(o => o.total > 0);
   // % avance = entregados / piezas posibles (total * 2)
@@ -3082,6 +3099,23 @@ function _renderAvancePorEscuela(r) {
     const alias = e.alias || e.nombre || '';
     const cde = e.codigo_cde ? `CDE ${e.codigo_cde}` : '';
     const barraColor = o.pct >= 100 ? 'var(--verde)' : (o.pct > 50 ? 'var(--azul)' : (o.pct > 0 ? 'var(--naranja)' : '#ccc'));
+    // Pronóstico de fecha de entrega
+    let pronostico = '';
+    if (o.pendientes > 0 && o.velocidad > 0) {
+      const dias = Math.ceil(o.pendientes / o.velocidad);
+      const fecha = new Date(Date.now() + dias*24*60*60*1000);
+      const fechaLbl = fecha.toLocaleDateString('es-SV', { day:'2-digit', month:'short', year:'numeric' });
+      const tasaLbl = o.velocidad.toFixed(1);
+      pronostico = `<div style="font-size:11px;color:#26a;margin-top:4px"
+        title="A ritmo de ${tasaLbl} pieza(s)/día (promedio últimos 14 días)">
+        📅 Estimado: <strong>${fechaLbl}</strong> · ${dias} día(s) (${tasaLbl}/día)
+      </div>`;
+    } else if (o.pendientes > 0) {
+      pronostico = `<div style="font-size:11px;color:#888;margin-top:4px"
+        title="Sin actividad de empaque en los últimos 14 días — no se puede estimar">
+        📅 Estimado: sin actividad reciente
+      </div>`;
+    }
     return `
       <div class="card" style="padding:10px;margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
@@ -3103,6 +3137,7 @@ function _renderAvancePorEscuela(r) {
         <div style="background:#EEE;height:6px;border-radius:3px;margin-top:6px;overflow:hidden">
           <div style="background:${barraColor};height:100%;width:${o.pct}%"></div>
         </div>
+        ${pronostico}
         <!-- Atajos -->
         <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px">
           <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('registro','${e.id}')" style="font-size:11px;padding:4px 8px">📋 Registro</button>
