@@ -7,6 +7,7 @@
     <div style="display:flex;gap:4px;flex-wrap:wrap">
       <button class="btn btn-primary btn-sm" id="est-sub-escuela"   onclick="switchSubEst('escuela')"   style="flex:1;min-width:80px">🏫 Por escuela</button>
       <button class="btn btn-ghost   btn-sm" id="est-sub-tallas"    onclick="switchSubEst('tallas')"    style="flex:1;min-width:80px">📊 Por talla</button>
+      <button class="btn btn-ghost   btn-sm" id="est-sub-heatmap"   onclick="switchSubEst('heatmap')"   style="flex:1;min-width:80px">🔥 Críticas</button>
       <button class="btn btn-ghost   btn-sm" id="est-sub-historico" onclick="switchSubEst('historico')" style="flex:1;min-width:80px">📈 Histórico</button>
       <button class="btn btn-ghost   btn-sm" id="est-sub-inventario" onclick="switchSubEst('inventario')" style="flex:1;min-width:80px">📦 Inventario</button>
       <button class="btn btn-ghost   btn-sm" id="est-sub-costos"    onclick="switchSubEst('costos')"    style="flex:1;min-width:80px">💰 Costos</button>
@@ -25,6 +26,11 @@
   <!-- SUB: Por talla — demanda por escuela cruzada con corte/producción/bodega/pool -->
   <div id="est-sub-tallas-view" style="display:none">
     <div id="est-tallas-contenido"><div class="text-muted" style="padding:20px;text-align:center">Cargando resumen por talla...</div></div>
+  </div>
+
+  <!-- SUB: Heatmap de tallas críticas -->
+  <div id="est-sub-heatmap-view" style="display:none">
+    <div id="est-heatmap-contenido"><div class="text-muted" style="padding:20px;text-align:center">Cargando heatmap...</div></div>
   </div>
 
   <!-- SUB: Histórico -->
