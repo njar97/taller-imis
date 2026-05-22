@@ -365,6 +365,33 @@ function generarHojaEntrega(esc, pedidos) {
   `;
 }
 
+// Versión PDF descargable (mobile-friendly) de la lista de empaque.
+// Usa generarPdfDirecto que está en alumnos_global.js (lazy-load html2pdf).
+// Se puede llamar desde cualquier lugar pasando solo escuelaId.
+async function descargarListaEmpaquePDF(escuelaId) {
+  try {
+    const rows = await supaFetch('escuela', 'GET', null, `?id=eq.${escuelaId}&select=id,nombre,codigo_cde,alias&limit=1`);
+    if (!rows || !rows[0]) { alert('Escuela no encontrada'); return; }
+    const e = rows[0];
+    const esc = { escuela_id: e.id, escuela_nombre: e.nombre || e.alias || '', codigo_cde: e.codigo_cde || '' };
+
+    // Temporada activa para filtrar
+    const tempActiva = (registroCache?.temporadas || []).find(t => t.estado === 'activa')
+      || (registroCache?.temporadas || [])[0];
+    const tempFilter = tempActiva ? `&temporada_id=eq.${tempActiva.id}` : '';
+
+    const alumnos = await supaFetchAll('alumno',
+      `?escuela_id=eq.${escuelaId}&activo=eq.true${tempFilter}&order=nivel,grado,nombre`);
+    if (alumnos.length === 0) { alert('Sin alumnos cargados para esta escuela'); return; }
+
+    const html = generarListaEmpaque(esc, alumnos);
+    const safe = (esc.escuela_nombre || 'esc').replace(/[^\w]+/g, '_').slice(0, 40);
+    await generarPdfDirecto(html, `lista-empaque-${safe}.pdf`);
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+
 function abrirVentanaImpresion(html) {
   const win = window.open('', '_blank', 'width=900,height=700');
   if (!win) { alert('Tu navegador bloqueó la ventana. Permití popups y reintentá.'); return; }

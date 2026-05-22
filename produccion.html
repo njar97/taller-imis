@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-21 23:48 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-22 08:04 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -3035,6 +3035,7 @@ function _renderAvancePorEscuela(r) {
           <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('acaparar','${e.id}')" style="font-size:11px;padding:4px 8px">📥 Acaparar</button>
           <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('empacar','${e.id}')" style="font-size:11px;padding:4px 8px">📦 Empacar</button>
           <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('entrega','${e.id}')" style="font-size:11px;padding:4px 8px">🚚 Entrega</button>
+          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('lista','${e.id}')" style="font-size:11px;padding:4px 8px" title="Descargar PDF de la lista de empaque">🖨 Lista</button>
         </div>
       </div>
     `;
@@ -3095,6 +3096,14 @@ function _avanceEscIrA(accion, escId) {
         }, 400);
       }
     }, 100);
+    return;
+  }
+  if (accion === 'lista') {
+    if (typeof descargarListaEmpaquePDF === 'function') {
+      descargarListaEmpaquePDF(escId);
+    } else {
+      alert('Función no disponible. Recargá la página.');
+    }
     return;
   }
   if (accion === 'entrega') {
@@ -12528,6 +12537,33 @@ function generarHojaEntrega(esc, pedidos) {
     </div>
     </body></html>
   `;
+}
+
+// Versión PDF descargable (mobile-friendly) de la lista de empaque.
+// Usa generarPdfDirecto que está en alumnos_global.js (lazy-load html2pdf).
+// Se puede llamar desde cualquier lugar pasando solo escuelaId.
+async function descargarListaEmpaquePDF(escuelaId) {
+  try {
+    const rows = await supaFetch('escuela', 'GET', null, `?id=eq.${escuelaId}&select=id,nombre,codigo_cde,alias&limit=1`);
+    if (!rows || !rows[0]) { alert('Escuela no encontrada'); return; }
+    const e = rows[0];
+    const esc = { escuela_id: e.id, escuela_nombre: e.nombre || e.alias || '', codigo_cde: e.codigo_cde || '' };
+
+    // Temporada activa para filtrar
+    const tempActiva = (registroCache?.temporadas || []).find(t => t.estado === 'activa')
+      || (registroCache?.temporadas || [])[0];
+    const tempFilter = tempActiva ? `&temporada_id=eq.${tempActiva.id}` : '';
+
+    const alumnos = await supaFetchAll('alumno',
+      `?escuela_id=eq.${escuelaId}&activo=eq.true${tempFilter}&order=nivel,grado,nombre`);
+    if (alumnos.length === 0) { alert('Sin alumnos cargados para esta escuela'); return; }
+
+    const html = generarListaEmpaque(esc, alumnos);
+    const safe = (esc.escuela_nombre || 'esc').replace(/[^\w]+/g, '_').slice(0, 40);
+    await generarPdfDirecto(html, `lista-empaque-${safe}.pdf`);
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
 }
 
 function abrirVentanaImpresion(html) {
