@@ -25,6 +25,7 @@ $jsOrder = @(
     'resumen_escuela.js',
     'corte.js',
     'estadistica.js',
+    'estadistica_tallas.js',
     'inventario.js',
     'costos.js',
     'yardaje.js',
