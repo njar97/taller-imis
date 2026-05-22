@@ -21,6 +21,7 @@ Write-Host "====================================================" -ForegroundCol
 
 $jsOrder = @(
     'core.js',
+    'data_cache.js',
     'dashboard.js',
     'resumen_escuela.js',
     'corte.js',

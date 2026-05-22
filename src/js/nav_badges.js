@@ -19,9 +19,15 @@ async function actualizarBadgeEscuelasEsperando() {
 
   try {
     const [alumnos, stock, pool] = await Promise.all([
-      supaFetchAll('alumno', '?activo=eq.true&select=escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000'),
-      supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
-      supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+      cachedFetch('badge-alumnos',
+        () => supaFetchAll('alumno', '?activo=eq.true&select=escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000'),
+        { ttl: 60_000, group: 'alumnos' }),
+      cachedFetch('badge-stock',
+        () => supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
+        { ttl: 30_000, group: 'bodega' }),
+      cachedFetch('badge-pool',
+        () => supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+        { ttl: 30_000, group: 'pool' }),
     ]);
 
     // Indexar stock libre por prenda|talla

@@ -39,6 +39,13 @@ async function cambiarVistaBodega(v) {
 async function cargarBodegaStock() {
   const cont = document.getElementById('bodega-contenido');
   cont.innerHTML = '<div class="text-muted">Cargando stock...</div>';
+  // Cualquier carga de stock invalida caches dependientes (las acciones
+  // que llaman a cargarBodegaStock ya cambiaron el estado).
+  if (typeof invalidarCache === 'function') {
+    invalidarCache('bodega');
+    invalidarCache('pool');
+    invalidarCache('alumnos');
+  }
   try {
     const [stock, pool] = await Promise.all([
       supaFetch('vw_bodega_stock', 'GET', null, '?order=nombre_prenda,talla_key&limit=1000'),
