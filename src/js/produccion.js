@@ -2,6 +2,9 @@
 let produccionFiltro = 'todos';
 let produccionData = [];
 let cortesExpandidos = new Set();
+// Cache de demanda por "nombre_prenda|talla_key": { pendientes, escuelas, pool, stock }
+// Se computa al cargarProduccion para mostrar badges "X esperando" por bulto.
+let demandaProdCache = {};
 
 async function initProduccion() {
   // Mostrar u ocultar sub-pestañas según Fase 2 activa
@@ -47,6 +50,9 @@ async function cargarProduccion() {
       }
     }
 
+    // Cargar demanda + pool + stock para badges (en paralelo, no bloqueante).
+    cargarDemandaProd().catch(e => console.warn('Demanda prod:', e.message));
+
     // Cargar progreso Fase 2 (solo si está activa)
     if (FASE2_ACTIVA) {
       await cargarProgreso();
@@ -60,6 +66,88 @@ async function cargarProduccion() {
   } catch(e) {
     document.getElementById('prod-resumen-hoy').textContent = 'Error: ' + e.message;
   }
+}
+
+// Cuenta alumnos pendientes (no empacados/entregados) por prenda+talla, y suma
+// pool acaparado disponible + stock libre, para mostrar badges en cada bulto.
+// Llamado desde cargarProduccion. Re-render después si llega tarde.
+async function cargarDemandaProd() {
+  try {
+    const [alumnos, pool, stock] = await Promise.all([
+      supaFetchAll('alumno', '?activo=eq.true&select=escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000'),
+      supaFetchAll('escuela_acaparado', '?select=nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+      supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
+    ]);
+    const c = {};
+    const bump = (prenda, talla, esc) => {
+      if (!prenda || !talla) return;
+      const k = prenda + '|' + talla;
+      if (!c[k]) c[k] = { pendientes: 0, escuelas: new Set(), pool: 0, stock: 0 };
+      c[k].pendientes++;
+      if (esc) c[k].escuelas.add(esc);
+    };
+    for (const a of alumnos) {
+      if (a.prenda_top && a.talla_top_key
+          && a.estado_top !== 'empacado' && a.estado_top !== 'entregado') {
+        bump(a.prenda_top, a.talla_top_key, a.escuela_id);
+      }
+      if (a.prenda_bottom && a.talla_bottom_key
+          && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado') {
+        bump(a.prenda_bottom, a.talla_bottom_key, a.escuela_id);
+      }
+    }
+    for (const p of pool) {
+      const k = p.nombre_prenda + '|' + p.talla_key;
+      if (!c[k]) c[k] = { pendientes: 0, escuelas: new Set(), pool: 0, stock: 0 };
+      c[k].pool += Math.max(0, (Number(p.cantidad_acaparada)||0) - (Number(p.cantidad_consumida)||0));
+    }
+    for (const s of stock) {
+      const k = (s.nombre_prenda || s.cod_prenda) + '|' + s.talla_key;
+      if (!c[k]) c[k] = { pendientes: 0, escuelas: new Set(), pool: 0, stock: 0 };
+      c[k].stock = Number(s.stock_actual) || 0;
+    }
+    // Congelar escuelas a su .size
+    for (const k of Object.keys(c)) c[k].escuelas = c[k].escuelas.size;
+    demandaProdCache = c;
+    if (typeof renderProduccion === 'function') renderProduccion();
+  } catch(e) { console.warn('cargarDemandaProd:', e.message); }
+}
+
+// Helper: devuelve el badge HTML para un grupo (cod_prenda, talla_key).
+// Resuelve el nombre de la prenda desde el CATALOGO para matchear con alumnos.
+function _badgeDemandaProd(cod_prenda, talla_key) {
+  if (!cod_prenda || !talla_key || !demandaProdCache) return '';
+  const nombre = CATALOGO[cod_prenda]?.nombre || cod_prenda;
+  const d = demandaProdCache[nombre + '|' + talla_key];
+  if (!d || d.pendientes === 0) return '';
+  const surplus = d.stock + d.pool - d.pendientes;
+  const colorEst = surplus < 0 ? '#c44' : '#6a8';
+  const lblEst = surplus < 0 ? `faltan ${-surplus}` : `cubierto +${surplus}`;
+  return `
+    <div class="prod-demanda-badge" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;font-size:11px"
+         onclick="event.stopPropagation();abrirEmpacarPrendaTalla('${nombre.replace(/'/g,"\\'")}','${talla_key.replace(/'/g,"\\'")}')"
+         title="Clic para empacar esta prenda+talla">
+      <span style="background:#FFF4E6;border:1px solid #F2C97D;padding:2px 6px;border-radius:4px">
+        🏫 ${d.escuelas} escuela${d.escuelas===1?'':'s'} · ${d.pendientes} pend
+      </span>
+      ${d.pool > 0 ? `<span style="background:#FFF9E6;border:1px solid #FFD24D;padding:2px 6px;border-radius:4px">📥 pool ${d.pool}</span>` : ''}
+      ${d.stock > 0 ? `<span style="background:#E8F0FA;border:1px solid #99c;padding:2px 6px;border-radius:4px">📦 stock ${d.stock}</span>` : ''}
+      <span style="background:transparent;color:${colorEst};font-weight:700">${lblEst}</span>
+    </div>
+  `;
+}
+
+// Click en el badge → abre el modal de empacar a alumnos prefijando la prenda
+// y la talla (filtro extra). El modal listará combinaciones que matchean.
+function abrirEmpacarPrendaTalla(prenda, talla) {
+  if (typeof abrirEmpacarSelector !== 'function') {
+    alert('Función no disponible');
+    return;
+  }
+  // Setear hint para que el selector arranque con esa prenda marcada
+  // (lo procesa abrirEmpacarSelector si encuentra este hint global).
+  window._empSelHint = { prenda, talla };
+  abrirEmpacarSelector();
 }
 
 function renderProduccion() {
@@ -171,6 +259,7 @@ function renderProduccion() {
               <strong>${piezasTerm}/${piezasOrig} piezas (${pct}%)</strong> · ${terminados}/${total} bultos
             </div>
             <div class="prod-progress"><div class="prod-progress-bar" style="width:${pct}%"></div></div>
+            ${_badgeDemandaProd(grupo.cod_prenda, grupo.key)}
           </div>
           <div style="font-size:20px;margin-left:8px">${expandido?'▼':'▶'}</div>
         </div>
