@@ -440,6 +440,9 @@ async function bootApp() {
   await gateApp();
   if (supaSession && typeof initDashboard === 'function') initDashboard();
   if (supaSession && typeof initAuditRoleTab === 'function') initAuditRoleTab();
+  if (supaSession && typeof actualizarBadgeEscuelasEsperando === 'function') {
+    actualizarBadgeEscuelasEsperando();
+  }
 }
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', bootApp);

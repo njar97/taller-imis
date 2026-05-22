@@ -323,3 +323,18 @@
   .buscador-wrap input::placeholder { font-size: 11px; }
   .buscador-results { left: -50px; right: -50px; }
 }
+
+/* ─── Badge en el nav (escuelas esperando empaque, etc) ─────────────── */
+.nav-badge {
+  display: inline-block;
+  background: #c44;
+  color: white;
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 4px;
+  vertical-align: middle;
+  min-width: 16px;
+  text-align: center;
+}

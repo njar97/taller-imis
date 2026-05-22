@@ -49,6 +49,7 @@ async function cargarBodegaStock() {
     bodegaCache.poolTotal = (pool || []).reduce(
       (s, p) => s + Math.max(0, (Number(p.cantidad_acaparada)||0) - (Number(p.cantidad_consumida)||0)), 0);
     renderStock();
+    if (typeof refrescarBadgeEsperando === 'function') refrescarBadgeEsperando();
   } catch(e) {
     cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }

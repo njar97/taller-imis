@@ -20,6 +20,7 @@ JS_ORDER = [
     "estadistica.js",
     "estadistica_tallas.js",
     "busqueda_global.js",
+    "nav_badges.js",
     "inventario.js",
     "costos.js",
     "yardaje.js",
