@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-22 18:23 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-22 19:01 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -14562,6 +14562,49 @@ function renderEmpaqueBanner(listaVisible) {
   } else {
     lblCombos = (c.empPrendas||[]).join(', ') || '—';
   }
+  // Detectar combinaciones SIN suministro disponible (todas las prendas+tallas
+  // visibles donde stock + pool = 0). Útil para aclarar por qué los checkboxes
+  // están bloqueados.
+  let avisoSinStock = '';
+  if (c.empSupply) {
+    const sinStock = new Map();  // "prenda|talla" → { necesita: n, escuelas: Set }
+    const piezaSinSupply = (a, pieza) => {
+      const prenda = pieza === 'top' ? a.prenda_top : a.prenda_bottom;
+      const talla  = pieza === 'top' ? a.talla_top_key : a.talla_bottom_key;
+      const estado = pieza === 'top' ? a.estado_top : a.estado_bottom;
+      if (!prenda || !talla) return;
+      if (estado === 'empacado' || estado === 'entregado') return;
+      if (setP && !setP.has(prenda)) return;  // no está en el filtro
+      const kPool = a.escuela_id + '|' + prenda + '|' + talla;
+      const kStock = prenda + '|' + talla;
+      const pool = c.empSupply.poolMap.get(kPool) || 0;
+      const stock = c.empSupply.stockMap.get(kStock) || 0;
+      if (pool > 0 || stock > 0) return;
+      const k = prenda + '|' + talla;
+      if (!sinStock.has(k)) sinStock.set(k, { necesita: 0, escuelas: new Set() });
+      const o = sinStock.get(k);
+      o.necesita++;
+      o.escuelas.add(a.escuela_id);
+    };
+    for (const a of listaVisible) {
+      piezaSinSupply(a, 'top');
+      piezaSinSupply(a, 'bottom');
+    }
+    if (sinStock.size > 0) {
+      const filas = [...sinStock.entries()].slice(0, 5).map(([k, o]) => {
+        const [p, t] = k.split('|');
+        return `<li><strong>${p} ${t}</strong>: ${o.necesita} pieza(s) en ${o.escuelas.size} escuela(s)</li>`;
+      }).join('');
+      const mas = sinStock.size > 5 ? `<li style="color:#888">…y ${sinStock.size - 5} más</li>` : '';
+      avisoSinStock = `
+        <div style="width:100%;background:#FFEEE6;border:1px solid #F2B280;border-radius:6px;padding:8px 10px;margin-top:8px;font-size:12px;color:#a52">
+          <strong>⚠ Sin stock disponible</strong> para algunas tallas — los checkbox quedan bloqueados:
+          <ul style="margin:4px 0 0 18px;padding:0">${filas}${mas}</ul>
+          <div style="margin-top:4px;font-size:11px;color:#666">Cargá stock (📥 + Entrada en Bodega) o terminá bultos en Producción, después volvé a empacar.</div>
+        </div>`;
+    }
+  }
+
   return `
     <div class="card" style="background:#E0F4E5;border:2px solid var(--verde);padding:10px 12px;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">
       <div>
@@ -14584,6 +14627,7 @@ function renderEmpaqueBanner(listaVisible) {
           <div style="display:flex;flex-wrap:wrap;gap:4px">${grupos}</div>
         </div>
       ` : ''}
+      ${avisoSinStock}
     </div>
   `;
 }
