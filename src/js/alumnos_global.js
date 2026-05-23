@@ -425,36 +425,52 @@ function renderAlumnosGlobal() {
     if (c.modoEmpaque) {
       const topMarcado = c.empMarcadosTop.has(a.id);
       const botMarcado = c.empMarcadosBot.has(a.id);
+      const topConSupply = _piezaConSuministro(a, 'top', restante);
+      const botConSupply = _piezaConSuministro(a, 'bottom', restante);
       // Si ya está marcado, debe poder desmarcarse → enabled.
       // Si no está marcado, enabled solo si elig + hay suministro restante.
-      const topPuede = topMarcado || (topElig && _piezaConSuministro(a, 'top', restante));
-      const botPuede = botMarcado || (botElig && _piezaConSuministro(a, 'bottom', restante));
+      const topPuede = topMarcado || (topElig && topConSupply);
+      const botPuede = botMarcado || (botElig && botConSupply);
+      // Tooltip: razón real del disabled (ayuda mucho cuando el user no sabe por qué)
+      const razonDisabled = (pieza, eligible, conSupply, prenda) => {
+        if (eligible && conSupply) return '';
+        const partes = [];
+        if (!eligible) {
+          if (!prenda) partes.push('alumno sin prenda definida');
+          else partes.push(`prenda "${prenda}" no está en el filtro del empaque actual`);
+        }
+        if (eligible && !conSupply) partes.push('sin stock libre ni pool disponible');
+        return partes.join(' · ');
+      };
+      const topTitle = topMarcado ? 'Empacar top (marcado)'
+        : (topPuede ? 'Empacar top' : razonDisabled('top', topElig, topConSupply, a.prenda_top));
+      const botTitle = botMarcado ? 'Empacar bottom (marcado)'
+        : (botPuede ? 'Empacar bottom' : razonDisabled('bottom', botElig, botConSupply, a.prenda_bottom));
       // El input solo se renderiza si la pieza es elegible (top en filtro de prendas).
       // Si NO es elegible pero la pieza ya está empacada/entregada → ✓ clickeable
       // para DESEMPACAR (vuelve a stock libre o pool de la escuela).
       // Si NO es elegible y no está empacada → raya.
       const topEmpacado = a.estado_top === 'empacado' || a.estado_top === 'entregado';
       const botEmpacado = a.estado_bottom === 'empacado' || a.estado_bottom === 'entregado';
-      topCheck = topElig
-        ? `<input type="checkbox" ${topMarcado?'checked':''} ${topPuede?'':'disabled'}
-                   onchange="toggleMarcarPieza('${a.id}','top',this.checked)"
-                   title="${topPuede?'Empacar top':'Sin stock disponible'}"
-                   style="cursor:${topPuede?'pointer':'not-allowed'};opacity:${topPuede?1:0.4}">`
-        : topEmpacado && a.prenda_top && a.talla_top_key
-          ? `<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:#E0F4E5;color:var(--verde);font-weight:700;line-height:22px;cursor:pointer;border:1px solid var(--verde)"
-                  title="Pieza empacada (${a.estado_top}). Click para desempacar (vuelve al stock disponible)."
-                  onclick="desempacarPiezaDesdeLista('${a.id}','top')">✓</span>`
-          : '<span style="color:#ccc">—</span>';
-      botCheck = botElig
-        ? `<input type="checkbox" ${botMarcado?'checked':''} ${botPuede?'':'disabled'}
-                   onchange="toggleMarcarPieza('${a.id}','bottom',this.checked)"
-                   title="${botPuede?'Empacar bottom':'Sin stock disponible'}"
-                   style="cursor:${botPuede?'pointer':'not-allowed'};opacity:${botPuede?1:0.4}">`
-        : botEmpacado && a.prenda_bottom && a.talla_bottom_key
-          ? `<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:#E0F4E5;color:var(--verde);font-weight:700;line-height:22px;cursor:pointer;border:1px solid var(--verde)"
-                  title="Pieza empacada (${a.estado_bottom}). Click para desempacar (vuelve al stock disponible)."
-                  onclick="desempacarPiezaDesdeLista('${a.id}','bottom')">✓</span>`
-          : '<span style="color:#ccc">—</span>';
+      // Renderizar: si está empacada/entregada → ✓ verde (desempacar);
+      // si es elegible (en filtro + talla + pendiente) → checkbox marcable;
+      // si la prenda existe pero no está en el filtro o sin stock → checkbox disabled con tooltip claro.
+      const renderCheck = (pieza, prenda, talla, estado, marcado, puede, eligible, conSupply, empacado, title) => {
+        if (empacado && prenda && talla) {
+          return `<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:#E0F4E5;color:var(--verde);font-weight:700;line-height:22px;cursor:pointer;border:1px solid var(--verde)"
+            title="Pieza ${estado}. Click para desempacar (vuelve al stock disponible)."
+            onclick="desempacarPiezaDesdeLista('${a.id}','${pieza}')">✓</span>`;
+        }
+        if (!prenda || !talla) return '<span style="color:#ccc" title="Sin prenda/talla definida">—</span>';
+        return `<input type="checkbox" ${marcado?'checked':''} ${puede?'':'disabled'}
+                onchange="toggleMarcarPieza('${a.id}','${pieza}',this.checked)"
+                title="${title}"
+                style="cursor:${puede?'pointer':'not-allowed'};opacity:${puede?1:0.4}">`;
+      };
+      topCheck = renderCheck('top', a.prenda_top, a.talla_top_key, a.estado_top,
+        topMarcado, topPuede, topElig, topConSupply, topEmpacado, topTitle);
+      botCheck = renderCheck('bottom', a.prenda_bottom, a.talla_bottom_key, a.estado_bottom,
+        botMarcado, botPuede, botElig, botConSupply, botEmpacado, botTitle);
     }
 
     const checkCell = c.modoEmpaque
@@ -598,6 +614,31 @@ function renderEmpaqueBanner(listaVisible) {
     }
   }
 
+  // Detectar piezas pendientes que NO están en el filtro de prendas — el
+  // checkbox queda disabled aunque haya stock. Indicar al usuario que
+  // amplíe el filtro saliendo + reentrando al modo empaque con más prendas.
+  let avisoFuera = '';
+  if (setP && setP.size > 0) {
+    const fueraDeFiltro = new Set();
+    for (const a of listaVisible) {
+      const evalPieza = (prenda, talla, estado) => {
+        if (!prenda || !talla) return;
+        if (estado === 'empacado' || estado === 'entregado') return;
+        if (setP.has(prenda)) return;
+        fueraDeFiltro.add(prenda);
+      };
+      evalPieza(a.prenda_top, a.talla_top_key, a.estado_top);
+      evalPieza(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom);
+    }
+    if (fueraDeFiltro.size > 0) {
+      avisoFuera = `
+        <div style="width:100%;background:#FFF9E6;border:1px solid #F2D080;border-radius:6px;padding:8px 10px;margin-top:8px;font-size:12px;color:#946">
+          <strong>ℹ Otras prendas pendientes fuera del filtro:</strong> ${[...fueraDeFiltro].join(', ')}.
+          <div style="margin-top:4px;font-size:11px;color:#666">Para empacarlas: salí del modo empaque y vuelvé a entrar incluyendo esas prendas. (También se agregan automáticamente al desempacar una pieza inline.)</div>
+        </div>`;
+    }
+  }
+
   return `
     <div class="card" style="background:#E0F4E5;border:2px solid var(--verde);padding:10px 12px;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">
       <div>
@@ -621,6 +662,7 @@ function renderEmpaqueBanner(listaVisible) {
         </div>
       ` : ''}
       ${avisoSinStock}
+      ${avisoFuera}
     </div>
   `;
 }
