@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-22 13:00 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-22 18:08 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -14027,6 +14027,7 @@ let alumnosGlobalCache = {
   empMarcadosTop: null,        // Set<alumno_id> — piezas top a empacar
   empMarcadosBot: null,        // Set<alumno_id> — piezas bottom a empacar
   empSupply: null,             // { stockMap: Map, poolMap: Map } — cargado al activar modo
+  empPiezasExtra: null,        // Set<"alumno_id|top"|"alumno_id|bottom"> — piezas re-elegibles tras desempacar
 };
 
 // Carga stock + pool para el modo empaque. Se llama desde bodega cuando se
@@ -14410,11 +14411,19 @@ function renderAlumnosGlobal() {
     const sinTallas = alumnoSinTallas(a);
     const bg = sinTallas ? '#FFF4F0' : 'white';
 
-    // En modo empaque destacamos las piezas que SE VAN A EMPACAR (verde) vs las que no entran
-    const topElig = (c.modoEmpaque && setP && setP.has(a.prenda_top) && a.talla_top_key
-      && a.estado_top !== 'empacado' && a.estado_top !== 'entregado');
-    const botElig = (c.modoEmpaque && setP && setP.has(a.prenda_bottom) && a.talla_bottom_key
-      && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado');
+    // En modo empaque destacamos las piezas que SE VAN A EMPACAR (verde) vs las que no entran.
+    // Una pieza es elegible si:
+    //  (a) su prenda está en el filtro empPrendas, O
+    //  (b) está en empPiezasExtra (re-elegible tras un desempacar inline)
+    const extra = c.empPiezasExtra;
+    const topExtra = extra && extra.has(a.id + '|top');
+    const botExtra = extra && extra.has(a.id + '|bottom');
+    const topElig = (c.modoEmpaque && a.prenda_top && a.talla_top_key
+      && a.estado_top !== 'empacado' && a.estado_top !== 'entregado'
+      && (topExtra || (setP && setP.has(a.prenda_top))));
+    const botElig = (c.modoEmpaque && a.prenda_bottom && a.talla_bottom_key
+      && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado'
+      && (botExtra || (setP && setP.has(a.prenda_bottom))));
     const topStyle = topElig ? 'background:#E0F4E5;color:var(--verde);font-weight:700' : `color:${a.talla_top_key?'var(--azul)':'#c44'}`;
     const botStyle = botElig ? 'background:#E0F4E5;color:var(--verde);font-weight:700' : `color:${a.talla_bottom_key?'var(--azul)':'#c44'}`;
 
@@ -14606,6 +14615,11 @@ async function desempacarPiezaDesdeLista(alumnoId, pieza) {
       const upd = pieza === 'top' ? { estado_top: 'pendiente' } : { estado_bottom: 'pendiente' };
       Object.assign(c.alumnos[idx], upd);
     }
+    // Marcar la pieza como re-elegible aunque su prenda no esté en el filtro
+    // general del modo empaque — así el usuario puede volver a empacarla a
+    // este mismo alumno o destildarla del checkbox.
+    if (!c.empPiezasExtra) c.empPiezasExtra = new Set();
+    c.empPiezasExtra.add(alumnoId + '|' + pieza);
     // Invalidar cache de datos (stock, pool, alumnos) para badges y otras vistas
     if (typeof invalidarCache === 'function') {
       invalidarCache('alumnos');
@@ -14841,6 +14855,7 @@ function salirModoEmpaque() {
   c.empMarcadosTop = null;
   c.empMarcadosBot = null;
   c.empSupply = null;
+  c.empPiezasExtra = null;
   renderAlumnosGlobal();
 }
 
