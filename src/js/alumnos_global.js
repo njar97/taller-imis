@@ -609,10 +609,14 @@ async function desempacarPiezaDesdeLista(alumnoId, pieza) {
       Object.assign(c.alumnos[idx], upd);
     }
     // Marcar la pieza como re-elegible aunque su prenda no esté en el filtro
-    // general del modo empaque — así el usuario puede volver a empacarla a
-    // este mismo alumno o destildarla del checkbox.
+    // general. Además agregamos la prenda al filtro empPrendas para que
+    // sobreviva al pierde-state (ej. si se recarga, igual queda eligible).
     if (!c.empPiezasExtra) c.empPiezasExtra = new Set();
     c.empPiezasExtra.add(alumnoId + '|' + pieza);
+    if (!Array.isArray(c.empPrendas)) c.empPrendas = [];
+    if (prenda && !c.empPrendas.includes(prenda)) {
+      c.empPrendas.push(prenda);
+    }
     // Invalidar cache de datos (stock, pool, alumnos) para badges y otras vistas
     if (typeof invalidarCache === 'function') {
       invalidarCache('alumnos');
