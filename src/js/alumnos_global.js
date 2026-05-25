@@ -531,6 +531,7 @@ function renderEmpaqueBanner(listaVisible) {
   const c = alumnosGlobalCache;
   if (!c.empMarcadosTop) c.empMarcadosTop = new Set();
   if (!c.empMarcadosBot) c.empMarcadosBot = new Set();
+  const setP = new Set(c.empPrendas || []);
   const piezasTop = c.empMarcadosTop.size;
   const piezasBot = c.empMarcadosBot.size;
   const piezasAEmpacar = piezasTop + piezasBot;
