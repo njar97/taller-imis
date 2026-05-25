@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-25 14:43 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-25 15:04 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -14494,15 +14494,18 @@ function renderAlumnosGlobal() {
       // si la prenda existe pero no está en el filtro o sin stock → checkbox disabled con tooltip claro.
       const renderCheck = (pieza, prenda, talla, estado, marcado, puede, eligible, conSupply, empacado, title) => {
         if (empacado && prenda && talla) {
-          return `<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:#E0F4E5;color:var(--verde);font-weight:700;line-height:22px;cursor:pointer;border:1px solid var(--verde)"
-            title="Pieza ${estado}. Click para desempacar (vuelve al stock disponible)."
-            onclick="desempacarPiezaDesdeLista('${a.id}','${pieza}')">✓</span>`;
+          // Tap target ≥ 40×40 (Apple/Google rec.). Span es 36px visible + td le suma
+          // padding para alcanzar el área cómoda. Botón nativo para mejor handling en móvil.
+          return `<button type="button"
+            style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;min-width:36px;border-radius:50%;background:#E0F4E5;color:var(--verde);font-weight:700;font-size:18px;cursor:pointer;border:2px solid var(--verde);padding:0;line-height:1;-webkit-tap-highlight-color:rgba(40,167,69,0.3)"
+            title="Pieza ${estado}. Tocá para desempacar (vuelve al stock de bodega)."
+            onclick="desempacarPiezaDesdeLista('${a.id}','${pieza}')">✓</button>`;
         }
         if (!prenda || !talla) return '<span style="color:#ccc" title="Sin prenda/talla definida">—</span>';
         return `<input type="checkbox" ${marcado?'checked':''} ${puede?'':'disabled'}
                 onchange="toggleMarcarPieza('${a.id}','${pieza}',this.checked)"
                 title="${title}"
-                style="cursor:${puede?'pointer':'not-allowed'};opacity:${puede?1:0.4}">`;
+                style="cursor:${puede?'pointer':'not-allowed'};opacity:${puede?1:0.4};width:22px;height:22px">`;
       };
       topCheck = renderCheck('top', a.prenda_top, a.talla_top_key, a.estado_top,
         topMarcado, topPuede, topElig, topConSupply, topEmpacado, topTitle);
@@ -14511,8 +14514,8 @@ function renderAlumnosGlobal() {
     }
 
     const checkCell = c.modoEmpaque
-      ? `<td style="padding:4px 8px;text-align:center" onclick="event.stopPropagation()">${topCheck}</td>
-         <td style="padding:4px 8px;text-align:center" onclick="event.stopPropagation()">${botCheck}</td>`
+      ? `<td style="padding:6px 6px;text-align:center" onclick="event.stopPropagation()">${topCheck}</td>
+         <td style="padding:6px 6px;text-align:center" onclick="event.stopPropagation()">${botCheck}</td>`
       : '';
 
     return `
@@ -14754,11 +14757,18 @@ async function desempacarPiezaDesdeLista(alumnoId, pieza) {
     if (typeof refrescarBadgeEsperando === 'function') refrescarBadgeEsperando();
     // Toast simple en el banner (no alert para no romper el flujo)
     const msg = r.vinoDeStock
-      ? `✓ Devuelto al stock libre. Disponible para empacar a otro alumno.`
-      : `✓ Liberado del pool de la escuela. Pool disponible +1.`;
+      ? `✓ ${prenda} ${talla} devuelto al stock de bodega. Disponible para empacar a otro alumno.`
+      : `✓ ${prenda} ${talla} liberado del pool de ${escLbl}. Pool disponible +1.`;
+    console.log('[desempacar OK]', a.nombre, prenda, talla, r);
     alert(msg);
   } catch(e) {
-    alert('Error al desempacar: ' + e.message);
+    console.error('[desempacar ERROR]', a.nombre, prenda, talla, e);
+    alert(
+      `⚠ ERROR al desempacar ${prenda} ${talla} de ${a.nombre}\n\n` +
+      `Detalle: ${e.message || e}\n\n` +
+      `Verificá la conexión a internet. La pieza sigue marcada como empacada — ` +
+      `volvé a intentar cuando tengas conexión estable.`
+    );
   }
 }
 
