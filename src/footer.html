@@ -1,10 +1,64 @@
 
 </div>
 
+<!-- PWA: banner de actualización disponible -->
+<div id="pwa-update-banner" style="display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1F4E79;color:#fff;padding:12px 16px;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.3);z-index:9999;gap:12px;align-items:center;font-family:Arial,sans-serif;font-size:14px;max-width:calc(100vw - 32px)">
+  <span>🔄 Hay una nueva versión disponible</span>
+  <button id="pwa-update-btn" type="button" style="background:#FFD700;color:#1F4E79;border:none;padding:6px 12px;border-radius:6px;font-weight:700;cursor:pointer;font-size:14px">Actualizar</button>
+  <button id="pwa-dismiss-btn" type="button" aria-label="Descartar" style="background:transparent;color:#fff;border:none;font-size:20px;cursor:pointer;padding:0 4px;line-height:1">×</button>
+</div>
+
 @@MODALS@@
 
 <script>
 @@JS_INLINE@@
+</script>
+
+<script>
+// ── PWA: registro de Service Worker + flujo de actualización ──
+(function() {
+  if (!('serviceWorker' in navigator)) return;
+
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
+
+  function showPwaUpdate(worker) {
+    const banner = document.getElementById('pwa-update-banner');
+    if (!banner) return;
+    banner.style.display = 'flex';
+    document.getElementById('pwa-update-btn').onclick = () => {
+      worker.postMessage({ type: 'SKIP_WAITING' });
+    };
+    document.getElementById('pwa-dismiss-btn').onclick = () => {
+      banner.style.display = 'none';
+    };
+  }
+
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      if (reg.waiting && navigator.serviceWorker.controller) {
+        showPwaUpdate(reg.waiting);
+      }
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', () => {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            showPwaUpdate(nw);
+          }
+        });
+      });
+    }).catch(err => console.warn('SW registration failed:', err));
+
+    setInterval(() => {
+      navigator.serviceWorker.getRegistration().then(reg => reg && reg.update());
+    }, 30 * 60 * 1000);
+  });
+})();
 </script>
 </body>
 </html>
