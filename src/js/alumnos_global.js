@@ -54,6 +54,17 @@ async function cargarSupplyEmpaque() {
 // Simula consumo de las piezas YA marcadas y devuelve el remanente.
 // Para cada fila, se compara contra este remanente para saber si la pieza
 // puede marcarse (sin overload de stock).
+// Helper: talla a usar para una pieza al empacar. Si el usuario eligió talla
+// alterna (vía mini-modal en la celda), se usa esa; sino la pedida.
+function _getTallaEmpaque(a, pieza) {
+  const c = alumnosGlobalCache;
+  if (c && c.empTallaAlt) {
+    const alt = c.empTallaAlt.get(a.id + '|' + pieza);
+    if (alt) return alt;
+  }
+  return pieza === 'top' ? a.talla_top_key : a.talla_bottom_key;
+}
+
 function _supplyRestante() {
   const c = alumnosGlobalCache;
   if (!c.empSupply) return null;
@@ -74,25 +85,60 @@ function _supplyRestante() {
   for (const a of c.alumnos) byId.set(a.id, a);
   for (const id of (c.empMarcadosTop || new Set())) {
     const a = byId.get(id); if (!a) continue;
-    consumir(a.escuela_id, a.prenda_top, a.talla_top_key);
+    consumir(a.escuela_id, a.prenda_top, _getTallaEmpaque(a, 'top'));
   }
   for (const id of (c.empMarcadosBot || new Set())) {
     const a = byId.get(id); if (!a) continue;
-    consumir(a.escuela_id, a.prenda_bottom, a.talla_bottom_key);
+    consumir(a.escuela_id, a.prenda_bottom, _getTallaEmpaque(a, 'bottom'));
   }
   return { poolRest, stockRest };
 }
 
 // ¿Hay suministro restante (pool de la escuela o stock libre) para esa pieza?
+// Si la pieza ya tiene talla alterna asignada, chequea esa; sino la pedida.
 function _piezaConSuministro(a, pieza, restante) {
   if (!restante) return true;
   const prenda = pieza === 'top' ? a.prenda_top : a.prenda_bottom;
-  const talla  = pieza === 'top' ? a.talla_top_key : a.talla_bottom_key;
+  const talla  = _getTallaEmpaque(a, pieza);
   if (!prenda || !talla) return false;
   const kPool = a.escuela_id + '|' + prenda + '|' + talla;
   const kStock = prenda + '|' + talla;
   return (restante.poolRest.get(kPool) || 0) > 0
       || (restante.stockRest.get(kStock) || 0) > 0;
+}
+
+// Devuelve [{talla, stock, pool, total}] para una prenda en una escuela.
+// Usado por el modal de selección de talla alterna.
+function _tallasDisponiblesParaEmpaque(prenda, escuelaId, restante) {
+  const c = alumnosGlobalCache;
+  if (!c.empSupply) return [];
+  const rest = restante || _supplyRestante();
+  const sMap = rest ? rest.stockRest : c.empSupply.stockMap;
+  const pMap = rest ? rest.poolRest : c.empSupply.poolMap;
+  const tallas = new Map();
+  for (const [k, qty] of sMap.entries()) {
+    const idx = k.indexOf('|');
+    if (idx < 0) continue;
+    const p = k.slice(0, idx);
+    const t = k.slice(idx + 1);
+    if (p !== prenda || qty <= 0) continue;
+    if (!tallas.has(t)) tallas.set(t, { stock: 0, pool: 0 });
+    tallas.get(t).stock = qty;
+  }
+  for (const [k, qty] of pMap.entries()) {
+    const parts = k.split('|');
+    if (parts.length < 3 || qty <= 0) continue;
+    const escId = parts[0];
+    const p = parts[1];
+    const t = parts.slice(2).join('|');
+    if (escId !== escuelaId || p !== prenda) continue;
+    if (!tallas.has(t)) tallas.set(t, { stock: 0, pool: 0 });
+    tallas.get(t).pool = qty;
+  }
+  return [...tallas.entries()]
+    .map(([t, v]) => ({ talla: t, stock: v.stock, pool: v.pool, total: v.stock + v.pool }))
+    .filter(e => e.total > 0)
+    .sort((a, b) => a.talla.localeCompare(b.talla, 'es', { numeric: true }));
 }
 
 // Preferencia de orden para etiquetas — persistida en localStorage
@@ -481,6 +527,34 @@ function renderAlumnosGlobal() {
          <td style="padding:6px 6px;text-align:center" onclick="event.stopPropagation()">${botCheck}</td>`
       : '';
 
+    // Render de celda Top/Bot: muestra talla pedida, alterna persistida en BD,
+    // o alterna pendiente en cache (c.empTallaAlt). Cuando hay alterna, se ve
+    // "F7 F6tachado" sobre fondo amarillo con outline punteado. La celda es
+    // clickeable solo si la pieza es elegible para empacar (modo empaque +
+    // elig + no empacada + tiene talla pedida) — abre el selector de talla.
+    const renderCellTalla = (esTop) => {
+      const tallaPedida = esTop ? a.talla_top_key : a.talla_bottom_key;
+      const persistida  = esTop ? a.talla_empacada_top : a.talla_empacada_bot;
+      const altCache    = c.modoEmpaque && c.empTallaAlt
+        ? c.empTallaAlt.get(a.id + '|' + (esTop ? 'top' : 'bottom')) : null;
+      const tallaShow = altCache || persistida || tallaPedida;
+      const esAlterna = !!(altCache || persistida) && tallaShow && tallaShow !== tallaPedida;
+      const style = esTop ? topStyle : botStyle;
+      const elig  = esTop ? topElig  : botElig;
+      const empacado = esTop
+        ? (a.estado_top === 'empacado'    || a.estado_top === 'entregado')
+        : (a.estado_bottom === 'empacado' || a.estado_bottom === 'entregado');
+      const clickeable = c.modoEmpaque && elig && !empacado && !!tallaPedida;
+      const display = !tallaPedida ? '⚠'
+        : esAlterna ? `${tallaShow}<span style="font-size:9px;color:#888;text-decoration:line-through;margin-left:3px;font-weight:400">${tallaPedida}</span>`
+        : tallaShow;
+      const baseStyle = `padding:4px 8px;text-align:center;font-family:monospace;${style}${esAlterna?';background:#FFF4CC;outline:1px dashed #C90;outline-offset:-2px':''}`;
+      if (clickeable) {
+        return `<td style="${baseStyle};cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();abrirSelectorTallaAlt('${a.id}','${esTop?'top':'bottom'}')" title="Tocá para empacar con otra talla (default: ${tallaPedida})">${display}</td>`;
+      }
+      return `<td style="${baseStyle}">${display}</td>`;
+    };
+
     return `
       <tr style="border-top:1px solid #EEE;background:${bg};cursor:pointer" onclick="editarAlumnoRapido('${a.id}')" title="Clic para editar">
         ${checkCell}
@@ -488,8 +562,8 @@ function renderAlumnosGlobal() {
         <td style="padding:4px 8px;font-size:11px;color:#666">${esc ? esc.nombre : '-'}</td>
         <td style="padding:4px 8px;font-size:11px">${a.grado || '-'}</td>
         <td style="padding:4px 8px;text-align:center">${a.sexo==='F'?'♀':(a.sexo==='M'?'♂':'-')}</td>
-        <td style="padding:4px 8px;text-align:center;font-family:monospace;${topStyle}">${a.talla_top_key || '⚠'}</td>
-        <td style="padding:4px 8px;text-align:center;font-family:monospace;${botStyle}">${a.talla_bottom_key || '⚠'}</td>
+        ${renderCellTalla(true)}
+        ${renderCellTalla(false)}
         <td style="padding:4px 8px;text-align:center">${iconEstado(a.estado_top)}${iconEstado(a.estado_bottom)}</td>
         <td style="padding:4px 8px;text-align:center" onclick="event.stopPropagation()">
           <button class="btn-mini" onclick="editarAlumnoRapido('${a.id}')" title="Editar">✏</button>
@@ -950,6 +1024,111 @@ function salirModoEmpaque() {
   c.empMarcadosBot = null;
   c.empSupply = null;
   c.empPiezasExtra = null;
+  c.empTallaAlt = null;
+  renderAlumnosGlobal();
+}
+
+// ─── Selector de talla alterna ───────────────────────────────────────
+// Permite empacar una pieza con talla distinta a la pedida (caso pantalón
+// largo). Guarda la elección en c.empTallaAlt = Map<"id|pieza", talla>.
+// Al aplicar empaque, las entradas distintas a la pedida se mandan al
+// backend en opts.tallasAlt, y se persisten en alumno.talla_empacada_*.
+function abrirSelectorTallaAlt(alumnoId, pieza) {
+  const c = alumnosGlobalCache;
+  const a = c.alumnos.find(x => x.id === alumnoId);
+  if (!a) return;
+  const prenda = pieza === 'top' ? a.prenda_top : a.prenda_bottom;
+  const tallaPedida = pieza === 'top' ? a.talla_top_key : a.talla_bottom_key;
+  if (!prenda || !tallaPedida) return;
+  if (!c.empTallaAlt) c.empTallaAlt = new Map();
+  const tallaActual = c.empTallaAlt.get(alumnoId + '|' + pieza) || tallaPedida;
+
+  // Restante simulando consumo, PERO sin contar la talla que esta pieza
+  // ya tiene asignada (para no doble-descontarla en su propia listado).
+  const restante = _supplyRestante();
+  if (restante) {
+    const tallaActualEnConsumo = c.empTallaAlt.get(alumnoId + '|' + pieza) || tallaPedida;
+    const marcado = (pieza === 'top' ? c.empMarcadosTop : c.empMarcadosBot) || new Set();
+    if (marcado.has(alumnoId)) {
+      // Sumar 1 al restante para que el usuario vea la talla actual disponible
+      const kPool = a.escuela_id + '|' + prenda + '|' + tallaActualEnConsumo;
+      const kStock = prenda + '|' + tallaActualEnConsumo;
+      if ((c.empSupply.poolMap.get(kPool) || 0) > 0) {
+        restante.poolRest.set(kPool, (restante.poolRest.get(kPool) || 0) + 1);
+      } else {
+        restante.stockRest.set(kStock, (restante.stockRest.get(kStock) || 0) + 1);
+      }
+    }
+  }
+
+  const tallas = _tallasDisponiblesParaEmpaque(prenda, a.escuela_id, restante);
+  // Asegurar que la talla pedida aparece aunque no tenga stock (por consistencia visual)
+  if (!tallas.some(t => t.talla === tallaPedida)) {
+    tallas.push({ talla: tallaPedida, stock: 0, pool: 0, total: 0 });
+    tallas.sort((a, b) => a.talla.localeCompare(b.talla, 'es', { numeric: true }));
+  }
+
+  const sub = document.getElementById('talla-alt-sub');
+  if (sub) sub.innerHTML = `<strong>${a.nombre}</strong> · ${prenda} · pedida <strong>${tallaPedida}</strong>${tallaActual !== tallaPedida ? ` · actual <strong style="color:#C90">${tallaActual}</strong>` : ''}`;
+  const lista = document.getElementById('talla-alt-lista');
+  if (lista) {
+    const rows = tallas.map(t => {
+      const esPedida = t.talla === tallaPedida;
+      const esSeleccionada = t.talla === tallaActual;
+      const stockLbl = t.stock > 0 ? `<span style="color:var(--verde)">stock ${t.stock}</span>` : '<span style="color:#aaa">stock 0</span>';
+      const poolLbl  = t.pool  > 0 ? `<span style="color:#C90">pool ${t.pool}</span>`  : '';
+      const disponLbl = [stockLbl, poolLbl].filter(Boolean).join(' · ');
+      const disabled = t.total === 0 && !esPedida;
+      const bg = esSeleccionada ? '#E0F4E5' : (esPedida ? '#F8FBFF' : 'white');
+      const border = esSeleccionada ? '2px solid var(--verde)' : '1px solid #DDD';
+      return `<button type="button" ${disabled ? 'disabled' : ''}
+        onclick="confirmarTallaAlt('${alumnoId}','${pieza}','${t.talla.replace(/'/g, "\\'")}')"
+        style="width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px 14px;margin-bottom:6px;background:${bg};border:${border};border-radius:8px;cursor:${disabled?'not-allowed':'pointer'};opacity:${disabled?0.45:1};font-family:Arial,sans-serif;text-align:left">
+        <span>
+          <span style="font-family:monospace;font-weight:700;font-size:15px">${t.talla}</span>
+          ${esPedida ? '<span style="font-size:11px;color:#666;margin-left:6px">· talla pedida</span>' : ''}
+          ${esSeleccionada && !esPedida ? '<span style="font-size:11px;color:var(--verde);margin-left:6px;font-weight:700">✓ elegida</span>' : ''}
+        </span>
+        <span style="font-size:12px">${disponLbl || '<span style="color:#aaa">sin disponibilidad</span>'}</span>
+      </button>`;
+    }).join('');
+    const hayAlterna = tallaActual !== tallaPedida;
+    const quitarBtn = hayAlterna
+      ? `<button type="button" onclick="quitarTallaAlt('${alumnoId}','${pieza}')" style="width:100%;padding:10px 14px;margin-top:8px;background:#F8F8F8;border:1px dashed #CCC;border-radius:8px;cursor:pointer;font-size:13px;color:#666">↩ Volver a talla pedida (${tallaPedida})</button>`
+      : '';
+    lista.innerHTML = rows + quitarBtn +
+      `<div style="margin-top:10px;font-size:11px;color:#888;line-height:1.4">
+        Al aplicar empaque, la talla elegida se descuenta del stock o pool, y se guarda en el alumno para que la trazabilidad sea correcta.
+      </div>`;
+  }
+  const overlay = document.getElementById('talla-alt-overlay');
+  if (overlay) overlay.style.display = 'flex';
+}
+
+function cerrarSelectorTallaAlt() {
+  const overlay = document.getElementById('talla-alt-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function confirmarTallaAlt(alumnoId, pieza, talla) {
+  const c = alumnosGlobalCache;
+  if (!c.empTallaAlt) c.empTallaAlt = new Map();
+  const a = c.alumnos.find(x => x.id === alumnoId);
+  if (!a) { cerrarSelectorTallaAlt(); return; }
+  const tallaPedida = pieza === 'top' ? a.talla_top_key : a.talla_bottom_key;
+  if (talla === tallaPedida) {
+    c.empTallaAlt.delete(alumnoId + '|' + pieza);
+  } else {
+    c.empTallaAlt.set(alumnoId + '|' + pieza, talla);
+  }
+  cerrarSelectorTallaAlt();
+  renderAlumnosGlobal();
+}
+
+function quitarTallaAlt(alumnoId, pieza) {
+  const c = alumnosGlobalCache;
+  if (c.empTallaAlt) c.empTallaAlt.delete(alumnoId + '|' + pieza);
+  cerrarSelectorTallaAlt();
   renderAlumnosGlobal();
 }
 
@@ -977,7 +1156,21 @@ async function aplicarEmpaqueMarcados() {
 
   try {
     // prendasSet null porque tenemos planExterno
-    const r = await empacarAlumnosDesdeRegistro(alumnos, null, { planExterno });
+    // tallasAlt: solo incluir entradas con valor distinto a la talla pedida
+    let tallasAlt = null;
+    if (c.empTallaAlt && c.empTallaAlt.size > 0) {
+      tallasAlt = new Map();
+      const byId = new Map();
+      for (const a of c.alumnos) byId.set(a.id, a);
+      for (const [k, v] of c.empTallaAlt.entries()) {
+        const [aid, pieza] = k.split('|');
+        const a = byId.get(aid); if (!a || !v) continue;
+        const pedida = pieza === 'top' ? a.talla_top_key : a.talla_bottom_key;
+        if (v !== pedida) tallasAlt.set(k, v);
+      }
+      if (tallasAlt.size === 0) tallasAlt = null;
+    }
+    const r = await empacarAlumnosDesdeRegistro(alumnos, null, { planExterno, tallasAlt });
     if (r.errores && r.errores.length > 0) {
       alert('❌ No hay stock suficiente:\n\n' + r.errores.join('\n') +
             '\n\nOpciones: registrar entrada en bodega, acaparar primero, o desmarcar piezas sin stock.');

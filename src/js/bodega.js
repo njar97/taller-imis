@@ -906,7 +906,18 @@ function confirmarEmpacarSelector() {
 // Actualiza estado_top/estado_bottom = 'empacado'.
 // Retorna { actualizados, piezasPool, piezasStock, errores: [] }.
 async function empacarAlumnosDesdeRegistro(alumnos, prendasSet, opts = {}) {
-  const { completarParejas = false, planExterno = null } = opts;
+  const { completarParejas = false, planExterno = null, tallasAlt = null } = opts;
+  // tallasAlt: Map<"alumnoId|top"|"alumnoId|bottom", "TALLA_KEY">. Si una entrada
+  // está presente, se empaca con esa talla en lugar de la pedida del alumno
+  // (caso pantalón largo). Stock y SALIDA_EMPAQUE descuentan la talla USADA.
+  // talla_empacada_top/bot se persiste solo si difiere de la pedida.
+  const getTalla = (a, pieza) => {
+    if (tallasAlt) {
+      const alt = tallasAlt.get(a.id + '|' + pieza);
+      if (alt) return alt;
+    }
+    return pieza === 'top' ? a.talla_top_key : a.talla_bottom_key;
+  };
   if (!alumnos || alumnos.length === 0) throw new Error('Sin alumnos para empacar');
   // Si viene un planExterno (Map<alumno_id, {top:bool, bottom:bool}>) NO
   // necesitamos prendasSet — el plan ya dice exactamente qué empacar.
@@ -988,8 +999,8 @@ async function empacarAlumnosDesdeRegistro(alumnos, prendasSet, opts = {}) {
       const kStock = prenda + '|' + talla;
       consumoStock[kStock] = (consumoStock[kStock] || 0) + 1;
     };
-    if (plan.top)    tryConsume(a.prenda_top, a.talla_top_key);
-    if (plan.bottom) tryConsume(a.prenda_bottom, a.talla_bottom_key);
+    if (plan.top)    tryConsume(a.prenda_top, getTalla(a, 'top'));
+    if (plan.bottom) tryConsume(a.prenda_bottom, getTalla(a, 'bottom'));
   }
   // Para "completar parejas", si la pieza extra no tiene pool ni stock, no
   // forzamos error: simplemente la dejamos pendiente. Filtramos los planes
@@ -1049,8 +1060,15 @@ async function empacarAlumnosDesdeRegistro(alumnos, prendasSet, opts = {}) {
     let toca = false;
     const procesar = (prenda, talla, esTop, esPareja) => {
       if (!prenda || !talla) return;
-      if (esTop) update.estado_top = 'empacado';
-      else update.estado_bottom = 'empacado';
+      const tallaPedida = esTop ? a.talla_top_key : a.talla_bottom_key;
+      const esAlterna = !!tallaPedida && talla !== tallaPedida;
+      if (esTop) {
+        update.estado_top = 'empacado';
+        update.talla_empacada_top = esAlterna ? talla : null;
+      } else {
+        update.estado_bottom = 'empacado';
+        update.talla_empacada_bot = esAlterna ? talla : null;
+      }
       toca = true;
       if (consumirDelPool(a.escuela_id, prenda, talla)) {
         piezasPool++;
@@ -1064,15 +1082,15 @@ async function empacarAlumnosDesdeRegistro(alumnos, prendasSet, opts = {}) {
           alumno_id: a.id,
           escuela_id: a.escuela_id,
           fecha: new Date().toISOString().slice(0,10),
-          observaciones: `Empacado para ${a.nombre}${esPareja ? ' (pareja)' : ''}`,
+          observaciones: `Empacado para ${a.nombre}${esPareja ? ' (pareja)' : ''}${esAlterna ? ` [alterna ${talla}≠${tallaPedida}]` : ''}`,
         });
         piezasStock++;
       }
       if (esPareja) piezasPareja++;
     };
-    if (plan.top) procesar(a.prenda_top, a.talla_top_key, true,
+    if (plan.top) procesar(a.prenda_top, getTalla(a, 'top'), true,
       !planExterno && prendasSet && !prendasSet.has(a.prenda_top));
-    if (plan.bottom) procesar(a.prenda_bottom, a.talla_bottom_key, false,
+    if (plan.bottom) procesar(a.prenda_bottom, getTalla(a, 'bottom'), false,
       !planExterno && prendasSet && !prendasSet.has(a.prenda_bottom));
     if (toca) {
       await supaUpdate('alumno', a.id, update);
@@ -1105,32 +1123,41 @@ async function desempacarPieza(alumnoId, pieza /* 'top' | 'bottom' */) {
   if (!rows || rows.length === 0) throw new Error('Alumno no encontrado');
   const a = rows[0];
   const prenda = pieza === 'top' ? a.prenda_top : a.prenda_bottom;
-  const talla  = pieza === 'top' ? a.talla_top_key : a.talla_bottom_key;
+  const tallaPedida = pieza === 'top' ? a.talla_top_key : a.talla_bottom_key;
+  const tallaAlterna = pieza === 'top' ? a.talla_empacada_top : a.talla_empacada_bot;
+  // Talla a devolver: si hubo alterna registrada, esa; sino la pedida.
+  // El movimiento SALIDA_EMPAQUE tiene la talla USADA, igual cross-check abajo.
+  const tallaPersistida = tallaAlterna || tallaPedida;
   const estado = pieza === 'top' ? a.estado_top : a.estado_bottom;
   if (estado !== 'empacado' && estado !== 'entregado') {
     throw new Error('La pieza no está empacada ni entregada');
   }
-  if (!prenda || !talla) throw new Error('Faltan datos de prenda/talla');
+  if (!prenda) throw new Error('Falta prenda en el alumno');
   const cod = _codPrenda(prenda);
 
-  // 2) ¿Salió por SALIDA_EMPAQUE con este alumno?
+  // 2) Buscar SALIDA_EMPAQUE para este alumno+prenda SIN filtrar por talla.
+  // La talla del movimiento es la REAL que se sacó del stock — puede diferir
+  // de talla_pedida si se empacó con talla alterna (pantalón largo, etc).
   const movs = await supaFetch('bodega_movimiento', 'GET', null,
-    `?alumno_id=eq.${alumnoId}&cod_prenda=eq.${cod}&talla_key=eq.${encodeURIComponent(talla)}&tipo=eq.SALIDA_EMPAQUE&order=creado_en.desc&limit=1`);
+    `?alumno_id=eq.${alumnoId}&cod_prenda=eq.${cod}&tipo=eq.SALIDA_EMPAQUE&order=creado_en.desc&limit=1`);
   const vinoDeStock = movs && movs.length > 0;
+  // Talla a devolver: prioridad al movimiento real (más confiable).
+  const tallaDevolver = vinoDeStock ? movs[0].talla_key : (tallaPersistida || tallaPedida);
+  if (!tallaDevolver) throw new Error('No se pudo determinar la talla a devolver');
 
   if (vinoDeStock) {
-    // Compensar con ENTRADA_MANUAL (suma 1 al stock)
+    // Compensar con ENTRADA_MANUAL (suma 1 al stock de la talla que se sacó)
     await supaFetch('bodega_movimiento', 'POST', {
       tipo: 'ENTRADA_MANUAL', cod_prenda: cod, nombre_prenda: prenda,
-      talla_key: talla, cantidad: 1,
+      talla_key: tallaDevolver, cantidad: 1,
       alumno_id: alumnoId, escuela_id: a.escuela_id,
       fecha: new Date().toISOString().slice(0,10),
-      observaciones: `Desempacado de ${a.nombre}`,
+      observaciones: `Desempacado de ${a.nombre}${tallaDevolver !== tallaPedida ? ` [talla usada ${tallaDevolver}, pedida ${tallaPedida}]` : ''}`,
     });
   } else {
     // Vino del pool → buscar una fila con consumida > 0 y bajar 1
     const poolRows = await supaFetch('escuela_acaparado', 'GET', null,
-      `?escuela_id=eq.${a.escuela_id}&nombre_prenda=eq.${encodeURIComponent(prenda)}&talla_key=eq.${encodeURIComponent(talla)}&cantidad_consumida=gt.0&order=cantidad_consumida.desc&limit=1`);
+      `?escuela_id=eq.${a.escuela_id}&nombre_prenda=eq.${encodeURIComponent(prenda)}&talla_key=eq.${encodeURIComponent(tallaDevolver)}&cantidad_consumida=gt.0&order=cantidad_consumida.desc&limit=1`);
     if (poolRows && poolRows.length > 0) {
       await _consumePoolBatch({ [poolRows[0].id]: -1 });
     } else {
@@ -1138,7 +1165,7 @@ async function desempacarPieza(alumnoId, pieza /* 'top' | 'bottom' */) {
       // para no perder la unidad físicamente.
       await supaFetch('bodega_movimiento', 'POST', {
         tipo: 'ENTRADA_MANUAL', cod_prenda: cod, nombre_prenda: prenda,
-        talla_key: talla, cantidad: 1,
+        talla_key: tallaDevolver, cantidad: 1,
         alumno_id: alumnoId, escuela_id: a.escuela_id,
         fecha: new Date().toISOString().slice(0,10),
         observaciones: `Desempacado de ${a.nombre} (sin origen claro)`,
@@ -1146,13 +1173,18 @@ async function desempacarPieza(alumnoId, pieza /* 'top' | 'bottom' */) {
     }
   }
 
-  // 3) Estado de la pieza → pendiente
+  // 3) Estado → pendiente + limpiar talla_empacada (vuelve al estado "se empacaría con la talla pedida")
   const update = { actualizado_en: new Date().toISOString() };
-  if (pieza === 'top') update.estado_top = 'pendiente';
-  else update.estado_bottom = 'pendiente';
+  if (pieza === 'top') {
+    update.estado_top = 'pendiente';
+    update.talla_empacada_top = null;
+  } else {
+    update.estado_bottom = 'pendiente';
+    update.talla_empacada_bot = null;
+  }
   await supaUpdate('alumno', alumnoId, update);
 
-  return { ok: true, vinoDeStock };
+  return { ok: true, vinoDeStock, tallaDevuelta: tallaDevolver, eraAlterna: tallaDevolver !== tallaPedida };
 }
 
 // Helper: incrementa cantidad_consumida del pool en batch via RPC dedicada
