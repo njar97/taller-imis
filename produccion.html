@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-25 14:41 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-25 14:43 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -2189,6 +2189,16 @@
     <div class="text-muted mb8" style="font-size:12px">Bajar todas las tablas de la app a un archivo Excel. Útil como respaldo manual o para compartir info con terceros.</div>
     <button class="btn btn-primary" onclick="descargarBackupExcel()" id="btn-backup-excel">📥 Descargar respaldo (Excel)</button>
     <div id="backup-status" style="margin-top:8px;font-size:12px;color:#666"></div>
+  </div>
+
+  <!-- App / PWA -->
+  <div class="card">
+    <div class="card-title">📱 App (PWA)</div>
+    <div class="text-muted mb8" style="font-size:12px">
+      Esta app funciona como PWA — se puede instalar desde el menú del navegador. Cuando hay una versión nueva normalmente aparece un banner azul abajo; si querés forzar la búsqueda ahora, tocá el botón.
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="window.PWA && window.PWA.checkUpdate(document.getElementById('pwa-update-status'))">🔄 Buscar actualizaciones</button>
+    <div id="pwa-update-status" style="margin-top:8px;font-size:12px;color:#666"></div>
   </div>
 
   <!-- Catálogo de grados (oculto, se abre por botón) -->
@@ -18319,7 +18329,14 @@ async function verificarConexion() {
 <script>
 // ── PWA: registro de Service Worker + flujo de actualización ──
 (function() {
-  if (!('serviceWorker' in navigator)) return;
+  if (!('serviceWorker' in navigator)) {
+    window.PWA = {
+      checkUpdate(statusEl) {
+        if (statusEl) statusEl.textContent = '⚠ Tu navegador no soporta Service Workers.';
+      },
+    };
+    return;
+  }
 
   let refreshing = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -18339,6 +18356,34 @@ async function verificarConexion() {
       banner.style.display = 'none';
     };
   }
+
+  window.PWA = {
+    showUpdateBanner: showPwaUpdate,
+    async checkUpdate(statusEl) {
+      const setStatus = (txt) => { if (statusEl) statusEl.textContent = txt; };
+      setStatus('🔄 Buscando actualizaciones…');
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (!reg) {
+          setStatus('⚠ Service Worker aún no registrado — recargá la página una vez (Ctrl+F5) y volvé a intentar.');
+          return;
+        }
+        await reg.update();
+        if (reg.waiting && navigator.serviceWorker.controller) {
+          setStatus('✨ Nueva versión disponible — usá el banner azul de abajo para aplicarla.');
+          showPwaUpdate(reg.waiting);
+          return;
+        }
+        if (reg.installing) {
+          setStatus('⬇ Descargando nueva versión… Esperá unos segundos y volvé a tocar el botón.');
+          return;
+        }
+        setStatus('✓ Ya estás en la última versión.');
+      } catch (err) {
+        setStatus('⚠ Error al buscar actualizaciones: ' + (err && err.message || err));
+      }
+    },
+  };
 
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').then(reg => {

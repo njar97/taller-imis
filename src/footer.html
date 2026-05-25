@@ -17,7 +17,14 @@
 <script>
 // ── PWA: registro de Service Worker + flujo de actualización ──
 (function() {
-  if (!('serviceWorker' in navigator)) return;
+  if (!('serviceWorker' in navigator)) {
+    window.PWA = {
+      checkUpdate(statusEl) {
+        if (statusEl) statusEl.textContent = '⚠ Tu navegador no soporta Service Workers.';
+      },
+    };
+    return;
+  }
 
   let refreshing = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -37,6 +44,34 @@
       banner.style.display = 'none';
     };
   }
+
+  window.PWA = {
+    showUpdateBanner: showPwaUpdate,
+    async checkUpdate(statusEl) {
+      const setStatus = (txt) => { if (statusEl) statusEl.textContent = txt; };
+      setStatus('🔄 Buscando actualizaciones…');
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (!reg) {
+          setStatus('⚠ Service Worker aún no registrado — recargá la página una vez (Ctrl+F5) y volvé a intentar.');
+          return;
+        }
+        await reg.update();
+        if (reg.waiting && navigator.serviceWorker.controller) {
+          setStatus('✨ Nueva versión disponible — usá el banner azul de abajo para aplicarla.');
+          showPwaUpdate(reg.waiting);
+          return;
+        }
+        if (reg.installing) {
+          setStatus('⬇ Descargando nueva versión… Esperá unos segundos y volvé a tocar el botón.');
+          return;
+        }
+        setStatus('✓ Ya estás en la última versión.');
+      } catch (err) {
+        setStatus('⚠ Error al buscar actualizaciones: ' + (err && err.message || err));
+      }
+    },
+  };
 
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').then(reg => {

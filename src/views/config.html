@@ -85,6 +85,16 @@
     <div id="backup-status" style="margin-top:8px;font-size:12px;color:#666"></div>
   </div>
 
+  <!-- App / PWA -->
+  <div class="card">
+    <div class="card-title">📱 App (PWA)</div>
+    <div class="text-muted mb8" style="font-size:12px">
+      Esta app funciona como PWA — se puede instalar desde el menú del navegador. Cuando hay una versión nueva normalmente aparece un banner azul abajo; si querés forzar la búsqueda ahora, tocá el botón.
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="window.PWA && window.PWA.checkUpdate(document.getElementById('pwa-update-status'))">🔄 Buscar actualizaciones</button>
+    <div id="pwa-update-status" style="margin-top:8px;font-size:12px;color:#666"></div>
+  </div>
+
   <!-- Catálogo de grados (oculto, se abre por botón) -->
   <div id="cfg-grados-card" class="card" style="display:none">
     <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
