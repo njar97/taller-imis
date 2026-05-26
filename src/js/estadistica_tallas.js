@@ -585,21 +585,30 @@ async function exportarTallasPDF() {
       </div>
     </div>`;
 
-  // Render off-screen
+  // Render off-screen (visible para html2canvas, pero fuera del viewport).
+  // position:absolute en lugar de fixed para que el browser le compute layout
+  // aunque esté off-screen (algunos Android móviles ignoran fixed off-screen
+  // y el canvas queda vacío). Width en Letter landscape ~270mm útil.
   const wrap = document.createElement('div');
-  wrap.style.position = 'fixed';
+  wrap.style.position = 'absolute';
   wrap.style.left = '-99999px';
   wrap.style.top = '0';
-  wrap.style.width = '270mm';
+  wrap.style.width = '260mm';
+  wrap.style.background = '#FFFFFF';
   wrap.innerHTML = html;
   document.body.appendChild(wrap);
+  // Forzar layout sync — leer offsetHeight obliga al browser a hacer reflow
+  // antes de que html2canvas trate de capturar.
+  // eslint-disable-next-line no-unused-expressions
+  wrap.offsetHeight;
+  await new Promise(r => setTimeout(r, 50));
 
   const opt = {
     margin: [8, 8, 8, 8],
     filename: `tallas-resumen-${fileFecha}.pdf`,
     image: { type: 'jpeg', quality: 0.95 },
-    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#FFFFFF' },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+    html2canvas: { scale: 1.6, useCORS: true, backgroundColor: '#FFFFFF', logging: false },
+    jsPDF: { unit: 'mm', format: 'letter', orientation: 'landscape' },
     pagebreak: { mode: ['css', 'legacy'] },
   };
 
