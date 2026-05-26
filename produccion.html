@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-25 22:18 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-26 08:29 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -2572,114 +2572,19 @@ async function supaFetch(table, method = 'GET', body = null, params = '') {
 // Pagina en chunks para sortear el max-rows del backend (1000 por defecto).
 // Uso: supaFetchAll('alumno', '?escuela_id=eq.X&order=nombre')
 // `params` no debe traer limit/offset; se inyectan acá. pageSize <= max-rows.
-//
-// Trae la primera página secuencial; las siguientes en batches paralelos
-// (4 a la vez). Para tabla alumno (~6k filas): 7 round-trips secuenciales
-// → 2 batches paralelos. Reduce el tiempo de carga ~3-4x en red móvil.
-async function supaFetchAll(table, params = '', pageSize = 1000, parallel = 4) {
+async function supaFetchAll(table, params = '', pageSize = 1000) {
   const sep = params.includes('?') ? '&' : '?';
-  const fetchPage = (offset) =>
-    supaFetch(table, 'GET', null, `${params}${sep}limit=${pageSize}&offset=${offset}`);
-
-  // Primera página: si trae menos que pageSize ya está todo.
-  const first = await fetchPage(0);
-  if (!Array.isArray(first) || first.length < pageSize) return first || [];
-
-  const out = [...first];
-  let nextOffset = pageSize;
+  const out = [];
+  let offset = 0;
   while (true) {
-    const offsets = Array.from({ length: parallel }, (_, i) => nextOffset + i * pageSize);
-    const pages = await Promise.all(offsets.map(fetchPage));
-    let alcanzoFin = false;
-    for (const page of pages) {
-      if (!Array.isArray(page) || page.length === 0) { alcanzoFin = true; break; }
-      out.push(...page);
-      if (page.length < pageSize) { alcanzoFin = true; break; }
-    }
-    if (alcanzoFin) break;
-    nextOffset += parallel * pageSize;
+    const page = await supaFetch(table, 'GET', null,
+      `${params}${sep}limit=${pageSize}&offset=${offset}`);
+    if (!Array.isArray(page) || page.length === 0) break;
+    out.push(...page);
+    if (page.length < pageSize) break;
+    offset += pageSize;
   }
   return out;
-}
-
-// ══════════════════════════════════════════════════════════════════════
-// Cache local de datos (localStorage). Acelera 2ª+ aperturas de la app:
-// initAlumnosGlobal puede pintar instantáneo desde acá mientras refresca
-// en background contra Supabase (patrón stale-while-revalidate).
-//
-// **Bumpear TI_CACHE_VERSION cuando cambie el shape de los datos cacheados**
-// (ej: agregar columnas que el render asume presentes). Caches viejos
-// quedan inválidos automáticamente — no se rompe nada en updates de la app.
-// ══════════════════════════════════════════════════════════════════════
-const TI_CACHE_PREFIX = 'ti_data_';
-const TI_CACHE_VERSION = 1;
-const TI_CACHE_TTL_DEFAULT = 24 * 60 * 60 * 1000;  // 24h
-
-function tiCacheSet(key, data, ttlMs = TI_CACHE_TTL_DEFAULT) {
-  const payload = JSON.stringify({ v: TI_CACHE_VERSION, ts: Date.now(), ttl: ttlMs, data });
-  try {
-    localStorage.setItem(TI_CACHE_PREFIX + key, payload);
-  } catch (e) {
-    // QuotaExceeded → tirar todos los caches y reintentar una vez
-    tiCacheClearAll();
-    try { localStorage.setItem(TI_CACHE_PREFIX + key, payload); } catch (_) {}
-  }
-}
-
-function tiCacheGet(key) {
-  try {
-    const raw = localStorage.getItem(TI_CACHE_PREFIX + key);
-    if (!raw) return null;
-    const obj = JSON.parse(raw);
-    if (obj.v !== TI_CACHE_VERSION) return null;
-    if (Date.now() - obj.ts > (obj.ttl || TI_CACHE_TTL_DEFAULT)) return null;
-    return obj.data;
-  } catch (e) { return null; }
-}
-
-function tiCacheClearAll() {
-  try {
-    const keys = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith(TI_CACHE_PREFIX)) keys.push(k);
-    }
-    keys.forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
-  } catch (_) {}
-}
-
-// Helper genérico stale-while-revalidate:
-//  1) Si hay cache, llama onData(cached, fromCache=true) inmediatamente.
-//  2) Dispara fetchFn(), persiste y llama onData(fresh, fromCache=false).
-//  3) Si fetchFn falla y había cache → log silencioso (offline-tolerante).
-//
-// Uso típico desde una init de vista:
-//   await tiSWR('mi_vista_v1', async () => {
-//     const [a, b] = await Promise.all([fetchA(), fetchB()]);
-//     return { a, b };
-//   }, (data, fromCache) => {
-//     miCache.a = data.a; miCache.b = data.b;
-//     renderMiVista();
-//   }, { ttl: 60 * 60 * 1000 });  // 1h
-async function tiSWR(cacheKey, fetchFn, onData, opts = {}) {
-  const cached = tiCacheGet(cacheKey);
-  let mostradoDesdeCache = false;
-  if (cached !== null && cached !== undefined) {
-    try { onData(cached, true); mostradoDesdeCache = true; }
-    catch (e) { console.warn(`[SWR ${cacheKey}] onData(cached) falló:`, e); }
-  }
-  try {
-    const fresh = await fetchFn();
-    tiCacheSet(cacheKey, fresh, opts.ttl);
-    onData(fresh, false);
-    return fresh;
-  } catch (e) {
-    if (mostradoDesdeCache) {
-      console.warn(`[SWR ${cacheKey}] refresh falló, usando cache:`, e.message);
-      return cached;
-    }
-    throw e;
-  }
 }
 
 async function supaUploadFoto(file, trazoId) {
@@ -2880,9 +2785,6 @@ async function doLogout() {
     const cli = initSupaClient();
     if (cli) await cli.auth.signOut();
   } catch (e) { /* ignore */ }
-  // Limpiar cache local de datos para que el próximo login no vea
-  // info del usuario anterior (en caso de uso compartido del browser).
-  if (typeof tiCacheClearAll === 'function') tiCacheClearAll();
   supaSession = null;
   renderUserChip();
   const auditTab = document.getElementById('nav-tab-audit');
@@ -3827,43 +3729,38 @@ let tallasResumenCache = {
 async function initTallasResumen() {
   const root = document.getElementById('est-tallas-contenido');
   if (!root) return;
-
-  const tieneCache = (typeof tiCacheGet === 'function') && tiCacheGet('estadistica_tallas_v1');
-  if (!tieneCache) root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando datos...</div>';
+  root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando datos...</div>';
 
   try {
-    await tiSWR('estadistica_tallas_v1', async () => {
-      if (!tallasResumenCache.temporadaId) {
-        const t = (await supaFetch('temporada', 'GET', null,
-          '?estado=eq.activa&select=id&order=anio.desc&limit=1'))[0]
-          || (await supaFetch('temporada', 'GET', null, '?select=id&order=anio.desc&limit=1'))[0];
-        if (!t) throw new Error('No hay temporada cargada');
-        tallasResumenCache.temporadaId = t.id;
-      }
+    if (!tallasResumenCache.temporadaId) {
+      const t = (await supaFetch('temporada', 'GET', null,
+        '?estado=eq.activa&select=id&order=anio.desc&limit=1'))[0]
+        || (await supaFetch('temporada', 'GET', null, '?select=id&order=anio.desc&limit=1'))[0];
+      if (!t) throw new Error('No hay temporada cargada');
+      tallasResumenCache.temporadaId = t.id;
+    }
 
-      const [escuelas, alumnos, bultosPend, stock, pool] = await Promise.all([
-        supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre,codigo_cde&order=alias.asc'),
-        supaFetchAll('alumno',
-          `?temporada_id=eq.${tallasResumenCache.temporadaId}&activo=eq.true&select=escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000`),
-        supaFetchAll('vw_produccion_estado',
-          '?estado_manual=neq.terminado&select=cod_prenda,talla_key_salida,cantidad_original,estado_manual,total_etapas,etapas_hechas'),
-        supaFetchAll('vw_bodega_stock',
-          '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
-        supaFetchAll('escuela_acaparado',
-          '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
-      ]);
-      return { escuelas, alumnos, bultosPend, stock, pool, temporadaId: tallasResumenCache.temporadaId };
-    }, (data) => {
-      const escMap = {};
-      for (const e of data.escuelas) escMap[e.id] = e;
-      tallasResumenCache.escuelas = escMap;
-      tallasResumenCache.alumnos = data.alumnos;
-      tallasResumenCache.bultosPendientes = data.bultosPend;
-      tallasResumenCache.stock = data.stock;
-      tallasResumenCache.pool = data.pool;
-      tallasResumenCache.temporadaId = data.temporadaId;
-      renderTallasResumen();
-    }, { ttl: 60 * 60 * 1000 });
+    const [escuelas, alumnos, bultosPend, stock, pool] = await Promise.all([
+      supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre,codigo_cde&order=alias.asc'),
+      supaFetchAll('alumno',
+        `?temporada_id=eq.${tallasResumenCache.temporadaId}&activo=eq.true&select=escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000`),
+      supaFetchAll('vw_produccion_estado',
+        '?estado_manual=neq.terminado&select=cod_prenda,talla_key_salida,cantidad_original,estado_manual,total_etapas,etapas_hechas'),
+      supaFetchAll('vw_bodega_stock',
+        '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
+      supaFetchAll('escuela_acaparado',
+        '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+    ]);
+
+    const escMap = {};
+    for (const e of escuelas) escMap[e.id] = e;
+    tallasResumenCache.escuelas = escMap;
+    tallasResumenCache.alumnos = alumnos;
+    tallasResumenCache.bultosPendientes = bultosPend;
+    tallasResumenCache.stock = stock;
+    tallasResumenCache.pool = pool;
+
+    renderTallasResumen();
   } catch (e) {
     root.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }
@@ -4001,6 +3898,10 @@ function renderTallasResumen() {
     balance: s.balance + r.balance,
   }), { demanda: 0, corte: 0, prod: 0, stockLibre: 0, pool: 0, balance: 0 });
 
+  // Persistir último cómputo para exportar PDF sin recomputar (se actualiza
+  // en cada render). exportarTallasPDF() lo lee.
+  c._ultimoReporte = { rows, tot, escuelasCols: null, generadoEn: new Date() };
+
   // Escuelas a mostrar como columnas:
   // - Si hay filtro de escuelas activo, usar esas.
   // - Sino, autodetectar todas las que tengan demanda > 0 en las filas visibles.
@@ -4017,6 +3918,7 @@ function renderTallasResumen() {
         .sort((a,b) => (a.alias || a.nombre).localeCompare(b.alias || b.nombre, 'es'));
     }
   }
+  if (c._ultimoReporte) c._ultimoReporte.escuelasCols = escuelasCols;
 
   // ─── UI ───────────────────────────────────────────────────────────
   const escuelasSel = new Set(f.escuelas || []);
@@ -4073,7 +3975,8 @@ function renderTallasResumen() {
           </label>
           <div style="font-size:10px;color:#888;margin-top:2px">${(f.escuelas||[]).length>0?'Solo las elegidas abajo':'Todas las que tengan demanda'}</div>
         </div>
-        <div style="text-align:right">
+        <div style="text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:flex-start;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="exportarTallasPDF()" title="Descargar el reporte actual (con los filtros aplicados) en PDF">📥 PDF</button>
           <button class="btn btn-ghost btn-sm" onclick="initTallasResumen()">🔄 Refrescar</button>
         </div>
       </div>
@@ -4234,6 +4137,180 @@ function quitarTallasEsc(eid) {
   renderTallasResumen();
 }
 
+// ─── Exportar reporte por talla a PDF ────────────────────────────────
+// Toma el último cómputo de renderTallasResumen (rows + tot + escuelasCols)
+// y arma un HTML clean para html2pdf. A4 landscape porque con escuelas
+// como columnas la tabla es ancha.
+async function exportarTallasPDF() {
+  const c = tallasResumenCache;
+  const f = c.filtros;
+  if (!c._ultimoReporte || !Array.isArray(c._ultimoReporte.rows)) {
+    renderTallasResumen();
+    if (!c._ultimoReporte) { alert('No hay datos para exportar.'); return; }
+  }
+  const { rows, tot, escuelasCols, generadoEn } = c._ultimoReporte;
+  if (rows.length === 0) {
+    alert('Sin filas para exportar con los filtros actuales. Ajustá los filtros y volvé a intentar.');
+    return;
+  }
+
+  try {
+    if (typeof cargarHtml2Pdf === 'function') await cargarHtml2Pdf();
+    else throw new Error('Loader de html2pdf no disponible');
+  } catch (e) {
+    alert('No se pudo cargar la librería PDF: ' + e.message);
+    return;
+  }
+
+  const esc = escuelasCols || [];
+  const showEsc = !!f.escuelasEnColumnas && esc.length > 0;
+  const fecha = (generadoEn instanceof Date ? generadoEn : new Date());
+  const fmtFecha = fecha.toLocaleString('es-SV', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+  const fileFecha = fecha.toISOString().slice(0, 16).replace(/[:T]/g, '-');
+
+  // Filtros activos como texto legible
+  const filtroPartes = [];
+  if (f.prendas && f.prendas.length > 0) filtroPartes.push(`Prendas: <strong>${f.prendas.join(', ')}</strong>`);
+  else filtroPartes.push('Prendas: todas');
+  if (f.talla) filtroPartes.push(`Talla: <strong>${f.talla}</strong>`);
+  if (f.escuelas && f.escuelas.length > 0) {
+    const nombres = f.escuelas.map(eid => (c.escuelas[eid] || {}).alias || (c.escuelas[eid] || {}).nombre).filter(Boolean).join(', ');
+    filtroPartes.push(`Escuelas: <strong>${nombres}</strong>`);
+  }
+  if (f.ocultarCubiertas) filtroPartes.push('<em>(ocultando cubiertas)</em>');
+  const incluyendo = [
+    f.incluirCorte  ? 'Corte'      : null,
+    f.incluirProd   ? 'Producción' : null,
+    f.incluirBodega ? 'Bodega'     : null,
+    f.incluirPool   ? 'Pool'       : null,
+  ].filter(Boolean).join(' + ');
+  filtroPartes.push(`Incluye: <strong>${incluyendo || '(ninguno)'}</strong>`);
+
+  // KPIs cards
+  const kpi = (label, val, color) =>
+    `<td style="border:1px solid #DDD;padding:6px 8px;text-align:center;background:#F8FBFF">
+       <div style="font-size:9px;color:#666;text-transform:uppercase;letter-spacing:.5px">${label}</div>
+       <div style="font-size:16px;font-weight:700;color:${color}">${val}</div>
+     </td>`;
+
+  const kpisRow = `
+    <table style="width:100%;border-collapse:collapse;margin:8px 0 12px 0">
+      <tr>
+        ${kpi('Demanda total', tot.demanda.toLocaleString(), '#222')}
+        ${f.incluirCorte  ? kpi('En corte',      (tot.corte||0).toLocaleString(),       '#888') : ''}
+        ${f.incluirProd   ? kpi('En producción', tot.prod.toLocaleString(),              '#2a8f4a') : ''}
+        ${f.incluirBodega ? kpi('En bodega',     tot.stockLibre.toLocaleString(),        '#1F4E79') : ''}
+        ${f.incluirPool   ? kpi('Pool acaparado',tot.pool.toLocaleString(),              '#a82') : ''}
+        ${kpi('Balance', (tot.balance >= 0 ? '+' : '') + tot.balance.toLocaleString(), tot.balance < 0 ? '#C00' : '#2a8f4a')}
+      </tr>
+    </table>`;
+
+  const thStyle = 'background:#1F4E79;color:white;padding:5px 6px;text-align:right;font-weight:600;font-size:10px;border:1px solid #1F4E79;white-space:nowrap';
+  const thLeftStyle = thStyle + ';text-align:left';
+  const tdStyle = 'padding:4px 6px;border:1px solid #E5E5E5;font-size:10px;text-align:right;font-family:Arial,sans-serif';
+  const tdLeftStyle = tdStyle + ';text-align:left';
+
+  const headerCols = `
+    <th style="${thLeftStyle}">Prenda</th>
+    <th style="${thLeftStyle}">Talla</th>
+    <th style="${thStyle}">Necesidad</th>
+    ${showEsc ? esc.map(e => `<th style="${thStyle};font-size:9px" title="${(e.nombre||'').replace(/"/g,'&quot;')}">🏫 ${e.alias || e.nombre}</th>`).join('') : ''}
+    ${f.incluirCorte  ? `<th style="${thStyle}">✂️ Corte</th>` : ''}
+    ${f.incluirProd   ? `<th style="${thStyle}">🏭 Prod.</th>` : ''}
+    ${f.incluirBodega ? `<th style="${thStyle}">📦 Bodega</th>` : ''}
+    ${f.incluirPool   ? `<th style="${thStyle}">📥 Pool</th>` : ''}
+    <th style="${thStyle}">Balance</th>`;
+
+  const dataRows = rows.map((r, i) => {
+    const bg = i % 2 === 0 ? 'background:white' : 'background:#FAFAFA';
+    const balColor = r.balance < 0 ? '#C00' : '#2a8f4a';
+    return `<tr style="${bg}">
+      <td style="${tdLeftStyle};font-weight:600">${r.prenda}</td>
+      <td style="${tdLeftStyle};font-family:monospace;font-weight:700">${r.talla}</td>
+      <td style="${tdStyle};font-weight:700">${r.demanda}</td>
+      ${showEsc ? esc.map(e => {
+        const n = r.porEsc.get(e.id) || 0;
+        return `<td style="${tdStyle};color:${n>0?'#222':'#CCC'}">${n||'·'}</td>`;
+      }).join('') : ''}
+      ${f.incluirCorte  ? `<td style="${tdStyle};color:#888">${r.corte || '—'}</td>` : ''}
+      ${f.incluirProd   ? `<td style="${tdStyle};color:#2a8f4a">${r.prod || 0}</td>` : ''}
+      ${f.incluirBodega ? `<td style="${tdStyle};color:#1F4E79">${r.stockLibre || 0}</td>` : ''}
+      ${f.incluirPool   ? `<td style="${tdStyle};color:#a82">${r.pool || 0}</td>` : ''}
+      <td style="${tdStyle};font-weight:700;color:${balColor}">${r.balance>=0?'+':''}${r.balance}</td>
+    </tr>`;
+  }).join('');
+
+  // Totales
+  const totalRow = `<tr style="background:#E8F0FE;font-weight:700">
+    <td style="${tdLeftStyle};font-weight:700" colspan="2">TOTALES</td>
+    <td style="${tdStyle};font-weight:700">${tot.demanda}</td>
+    ${showEsc ? esc.map(e => {
+      const sum = rows.reduce((s, r) => s + (r.porEsc.get(e.id) || 0), 0);
+      return `<td style="${tdStyle};font-weight:700">${sum||'·'}</td>`;
+    }).join('') : ''}
+    ${f.incluirCorte  ? `<td style="${tdStyle};font-weight:700">${tot.corte}</td>` : ''}
+    ${f.incluirProd   ? `<td style="${tdStyle};font-weight:700">${tot.prod}</td>` : ''}
+    ${f.incluirBodega ? `<td style="${tdStyle};font-weight:700">${tot.stockLibre}</td>` : ''}
+    ${f.incluirPool   ? `<td style="${tdStyle};font-weight:700">${tot.pool}</td>` : ''}
+    <td style="${tdStyle};font-weight:700;color:${tot.balance<0?'#C00':'#2a8f4a'}">${tot.balance>=0?'+':''}${tot.balance}</td>
+  </tr>`;
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;color:#222;padding:6px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1F4E79;padding-bottom:6px;margin-bottom:8px">
+        <div>
+          <div style="font-size:18px;font-weight:700;color:#1F4E79">📊 Reporte por talla — Taller IMIS</div>
+          <div style="font-size:11px;color:#666;margin-top:2px">Estado de demanda vs suministro (corte, producción, bodega, pool)</div>
+        </div>
+        <div style="text-align:right;font-size:10px;color:#666">
+          <div>Generado: <strong>${fmtFecha}</strong></div>
+          <div>${rows.length} fila(s) · ${showEsc ? esc.length + ' escuela(s) en columnas' : 'sin desglose por escuela'}</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:#444;line-height:1.5;margin-bottom:4px">
+        ${filtroPartes.join(' &nbsp;·&nbsp; ')}
+      </div>
+      ${kpisRow}
+      <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif">
+        <thead><tr>${headerCols}</tr></thead>
+        <tbody>${dataRows}${totalRow}</tbody>
+      </table>
+      <div style="margin-top:10px;font-size:9px;color:#888;text-align:center">
+        Generado desde Taller IMIS · <strong>Necesidad</strong> = piezas pendientes (no empacadas/entregadas) ·
+        <strong>Balance</strong> = (corte + producción + bodega + pool) − necesidad
+      </div>
+    </div>`;
+
+  // Render off-screen
+  const wrap = document.createElement('div');
+  wrap.style.position = 'fixed';
+  wrap.style.left = '-99999px';
+  wrap.style.top = '0';
+  wrap.style.width = '270mm';
+  wrap.innerHTML = html;
+  document.body.appendChild(wrap);
+
+  const opt = {
+    margin: [8, 8, 8, 8],
+    filename: `tallas-resumen-${fileFecha}.pdf`,
+    image: { type: 'jpeg', quality: 0.95 },
+    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#FFFFFF' },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+    pagebreak: { mode: ['css', 'legacy'] },
+  };
+
+  try {
+    await html2pdf().set(opt).from(wrap).save();
+  } catch (e) {
+    alert('Error al generar PDF: ' + (e && e.message || e));
+  } finally {
+    document.body.removeChild(wrap);
+  }
+}
+
 // +++++++++++++++++++ estadistica_heatmap.js +++++++++++++++++++
 // ══════════════════════════════════════════════════════════════════════
 // ESTADÍSTICA — HEATMAP DE TALLAS CRÍTICAS
@@ -4250,37 +4327,29 @@ let heatmapCache = {
 async function initHeatmapCritico() {
   const root = document.getElementById('est-heatmap-contenido');
   if (!root) return;
-
-  // Stale-while-revalidate: pinta del cache local mientras refresca.
-  const tieneCache = (typeof tiCacheGet === 'function') && tiCacheGet('estadistica_heatmap_v1');
-  if (!tieneCache) root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando datos...</div>';
+  root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando datos...</div>';
 
   try {
-    await tiSWR('estadistica_heatmap_v1', async () => {
-      if (!heatmapCache.temporadaId) {
-        const t = (await supaFetch('temporada', 'GET', null,
-          '?estado=eq.activa&select=id&order=anio.desc&limit=1'))[0]
-          || (await supaFetch('temporada', 'GET', null, '?select=id&order=anio.desc&limit=1'))[0];
-        if (!t) throw new Error('No hay temporada cargada');
-        heatmapCache.temporadaId = t.id;
-      }
-      const [alumnos, stock, pool, bultos] = await Promise.all([
-        supaFetchAll('alumno',
-          `?temporada_id=eq.${heatmapCache.temporadaId}&activo=eq.true&select=prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000`),
-        supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
-        supaFetchAll('escuela_acaparado', '?select=nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
-        supaFetchAll('vw_produccion_estado',
-          '?estado_manual=neq.terminado&select=cod_prenda,talla_key_salida,cantidad_original,total_etapas,etapas_hechas'),
-      ]);
-      return { alumnos, stock, pool, bultos, temporadaId: heatmapCache.temporadaId };
-    }, (data) => {
-      heatmapCache.alumnos = data.alumnos;
-      heatmapCache.stock = data.stock;
-      heatmapCache.pool = data.pool;
-      heatmapCache.bultos = data.bultos;
-      heatmapCache.temporadaId = data.temporadaId;
-      renderHeatmapCritico();
-    }, { ttl: 60 * 60 * 1000 });  // 1h — datos de estadística cambian lento
+    if (!heatmapCache.temporadaId) {
+      const t = (await supaFetch('temporada', 'GET', null,
+        '?estado=eq.activa&select=id&order=anio.desc&limit=1'))[0]
+        || (await supaFetch('temporada', 'GET', null, '?select=id&order=anio.desc&limit=1'))[0];
+      if (!t) throw new Error('No hay temporada cargada');
+      heatmapCache.temporadaId = t.id;
+    }
+    const [alumnos, stock, pool, bultos] = await Promise.all([
+      supaFetchAll('alumno',
+        `?temporada_id=eq.${heatmapCache.temporadaId}&activo=eq.true&select=prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000`),
+      supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
+      supaFetchAll('escuela_acaparado', '?select=nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+      supaFetchAll('vw_produccion_estado',
+        '?estado_manual=neq.terminado&select=cod_prenda,talla_key_salida,cantidad_original,total_etapas,etapas_hechas'),
+    ]);
+    heatmapCache.alumnos = alumnos;
+    heatmapCache.stock = stock;
+    heatmapCache.pool = pool;
+    heatmapCache.bultos = bultos;
+    renderHeatmapCritico();
   } catch (e) {
     root.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }
@@ -4769,37 +4838,33 @@ let invCache = {
 async function initInventario() {
   const root = document.getElementById('est-sub-inventario-view');
   if (!root) return;
-
-  const tieneCache = (typeof tiCacheGet === 'function') && tiCacheGet('inventario_v1');
-  if (!tieneCache) root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando inventario...</div>';
+  root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando inventario...</div>';
 
   try {
-    await tiSWR('inventario_v1', async () => {
-      if (!invCache.temporadaId) {
-        const t = (await supaFetch('temporada', 'GET', null,
-          '?estado=eq.activa&select=id,anio&order=anio.desc&limit=1'))[0]
-          || (await supaFetch('temporada', 'GET', null,
-          '?select=id,anio&order=anio.desc&limit=1'))[0];
-        if (!t) throw new Error('No hay temporada cargada');
-        invCache.temporadaId = t.id;
-      }
-      const [escuelas, alumnos, stock] = await Promise.all([
-        supaFetchAll('escuela',
-          '?activa=eq.true&select=id,alias,codigo_cde,nombre&order=alias.asc'),
-        supaFetchAll('alumno',
-          `?temporada_id=eq.${invCache.temporadaId}&activo=eq.true` +
-          '&select=escuela_id,prenda_top,talla_top_key,prenda_bottom,talla_bottom_key'),
-        supaFetchAll('vw_bodega_stock',
-          '?select=nombre_prenda,talla_key,stock_actual,reservado_empaque'),
-      ]);
-      return { escuelas, alumnos, stock, temporadaId: invCache.temporadaId };
-    }, (data) => {
-      invCache.escuelas = data.escuelas;
-      invCache.alumnos = data.alumnos;
-      invCache.stock = data.stock;
-      invCache.temporadaId = data.temporadaId;
-      renderInventario();
-    }, { ttl: 30 * 60 * 1000 });
+    if (!invCache.temporadaId) {
+      const t = (await supaFetch('temporada', 'GET', null,
+        '?estado=eq.activa&select=id,anio&order=anio.desc&limit=1'))[0]
+        || (await supaFetch('temporada', 'GET', null,
+        '?select=id,anio&order=anio.desc&limit=1'))[0];
+      if (!t) throw new Error('No hay temporada cargada');
+      invCache.temporadaId = t.id;
+    }
+
+    if (!invCache.escuelas) {
+      invCache.escuelas = await supaFetchAll('escuela',
+        '?activa=eq.true&select=id,alias,codigo_cde,nombre&order=alias.asc');
+    }
+
+    // Demanda: alumnos activos de la temporada
+    invCache.alumnos = await supaFetchAll('alumno',
+      `?temporada_id=eq.${invCache.temporadaId}&activo=eq.true` +
+      '&select=escuela_id,prenda_top,talla_top_key,prenda_bottom,talla_bottom_key');
+
+    // Stock actual desde la vista
+    invCache.stock = await supaFetchAll('vw_bodega_stock',
+      '?select=nombre_prenda,talla_key,stock_actual,reservado_empaque');
+
+    renderInventario();
   } catch (e) {
     root.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }
@@ -10903,7 +10968,7 @@ async function cambiarVistaBodega(v) {
 
 async function cargarBodegaStock() {
   const cont = document.getElementById('bodega-contenido');
-  if (cont) cont.innerHTML = '<div class="text-muted">Cargando stock...</div>';
+  cont.innerHTML = '<div class="text-muted">Cargando stock...</div>';
   // Cualquier carga de stock invalida caches dependientes (las acciones
   // que llaman a cargarBodegaStock ya cambiaron el estado).
   if (typeof invalidarCache === 'function') {
@@ -10912,22 +10977,18 @@ async function cargarBodegaStock() {
     invalidarCache('alumnos');
   }
   try {
-    await tiSWR('bodega_stock_v1', async () => {
-      const [stock, pool] = await Promise.all([
-        supaFetch('vw_bodega_stock', 'GET', null, '?order=nombre_prenda,talla_key&limit=1000'),
-        supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
-      ]);
-      return { stock, pool };
-    }, (data /*, fromCache */) => {
-      bodegaCache.stock = data.stock;
-      bodegaCache.pool = data.pool;
-      bodegaCache.poolTotal = (data.pool || []).reduce(
-        (s, p) => s + Math.max(0, (Number(p.cantidad_acaparada)||0) - (Number(p.cantidad_consumida)||0)), 0);
-      renderStock();
-      if (typeof refrescarBadgeEsperando === 'function') refrescarBadgeEsperando();
-    }, { ttl: 60 * 1000 });  // 60s — stock cambia rápido por acciones del user
+    const [stock, pool] = await Promise.all([
+      supaFetch('vw_bodega_stock', 'GET', null, '?order=nombre_prenda,talla_key&limit=1000'),
+      supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+    ]);
+    bodegaCache.stock = stock;
+    bodegaCache.pool = pool;
+    bodegaCache.poolTotal = (pool || []).reduce(
+      (s, p) => s + Math.max(0, (Number(p.cantidad_acaparada)||0) - (Number(p.cantidad_consumida)||0)), 0);
+    renderStock();
+    if (typeof refrescarBadgeEsperando === 'function') refrescarBadgeEsperando();
   } catch(e) {
-    if (cont) cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+    cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }
 }
 
@@ -14226,36 +14287,30 @@ let alumnosGlobalCache = {
 };
 
 // Carga stock + pool para el modo empaque. Se llama desde bodega cuando se
-// activa el modo (selector / acaparados / pool). Cachea con SWR para que
-// al entrar al modo empaque por 2ª+ vez no haya delay perceptible.
+// activa el modo (selector / acaparados / pool).
 async function cargarSupplyEmpaque() {
-  const aplicar = (data) => {
+  try {
+    const [stock, pool] = await Promise.all([
+      supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
+      supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+    ]);
     const stockMap = new Map();
-    for (const s of (data.stock || [])) {
+    for (const s of stock) {
       const p = s.nombre_prenda || (typeof prendaCanon === 'function' ? prendaCanon(s.cod_prenda) : s.cod_prenda);
       if (!p || !s.talla_key) continue;
       stockMap.set(p + '|' + s.talla_key, Number(s.stock_actual) || 0);
     }
     const poolMap = new Map();
-    for (const p of (data.pool || [])) {
+    for (const p of pool) {
       const d = Math.max(0, (Number(p.cantidad_acaparada)||0) - (Number(p.cantidad_consumida)||0));
       if (d <= 0) continue;
       const k = p.escuela_id + '|' + p.nombre_prenda + '|' + p.talla_key;
       poolMap.set(k, (poolMap.get(k) || 0) + d);
     }
     alumnosGlobalCache.empSupply = { stockMap, poolMap };
-  };
-  try {
-    await tiSWR('emp_supply_v1', async () => {
-      const [stock, pool] = await Promise.all([
-        supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
-        supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
-      ]);
-      return { stock, pool };
-    }, aplicar, { ttl: 60 * 1000 });  // 60s — supply cambia rápido por empacar/acaparar
   } catch(e) {
     console.warn('cargarSupplyEmpaque:', e.message);
-    if (!alumnosGlobalCache.empSupply) alumnosGlobalCache.empSupply = { stockMap: new Map(), poolMap: new Map() };
+    alumnosGlobalCache.empSupply = { stockMap: new Map(), poolMap: new Map() };
   }
 }
 
@@ -14362,36 +14417,11 @@ function etOrdenSet(arr) {
   localStorage.setItem('et_orden', JSON.stringify(arr));
 }
 
-// Persistir el estado actual de c.alumnos + escuelas al cache local.
-// Llamar tras cambios in-memory para que la próxima apertura desde cache
-// refleje el último estado conocido (ej: tras desempacar inline).
-function _persistAlumnosCache() {
-  const c = alumnosGlobalCache;
-  if (!c.cargado || !Array.isArray(c.alumnos) || typeof tiCacheSet !== 'function') return;
-  const escuelas = Object.values(c.escuelas || {});
-  tiCacheSet('alumnos_v1', { alumnos: c.alumnos, escuelas });
-}
-
 async function initAlumnosGlobal() {
   const cont = document.getElementById('alumnos-global-contenido');
   if (!cont) return;
-
-  // Stale-while-revalidate: si hay cache válido (< 24h, mismo schema), pintar
-  // instantáneo. En paralelo, hacer fetch fresh y reemplazar cuando responda.
-  const cached = (typeof tiCacheGet === 'function') ? tiCacheGet('alumnos_v1') : null;
-  let mostradoDesdeCache = false;
-  if (cached && Array.isArray(cached.alumnos) && Array.isArray(cached.escuelas)) {
-    const escMap = {};
-    for (const e of cached.escuelas) escMap[e.id] = e;
-    alumnosGlobalCache.escuelas = escMap;
-    alumnosGlobalCache.alumnos = cached.alumnos;
-    alumnosGlobalCache.cargado = true;
-    renderAlumnosGlobal();
-    mostradoDesdeCache = true;
-  } else {
-    cont.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando alumnos...</div>';
-  }
-
+  cont.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando alumnos...</div>';
+  
   try {
     const [escuelas, alumnos] = await Promise.all([
       supaFetchAll('escuela'),
@@ -14407,32 +14437,23 @@ async function initAlumnosGlobal() {
         'observaciones,tiene_talla_no_estandar' +
         '&order=nombre'),
     ]);
-
+    
     const escMap = {};
     for (const e of escuelas) escMap[e.id] = e;
     alumnosGlobalCache.escuelas = escMap;
     alumnosGlobalCache.alumnos = alumnos;
     alumnosGlobalCache.cargado = true;
-
+    
     // Asegurar que tenemos la lista de temporadas
     if (!registroCache.temporadas || registroCache.temporadas.length === 0) {
       try {
         registroCache.temporadas = await supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.desc&limit=20');
       } catch(e) { registroCache.temporadas = []; }
     }
-
-    // Persistir snapshot fresh y re-render. Si ya estábamos mostrando desde
-    // cache, el reemplazo se ve como un refresh discreto.
-    if (typeof tiCacheSet === 'function') tiCacheSet('alumnos_v1', { alumnos, escuelas });
+    
     renderAlumnosGlobal();
   } catch(e) {
-    // Si no había cache + falla la red → mostrar error. Si había cache →
-    // log silencioso, el usuario sigue viendo datos del cache (offline OK).
-    if (!mostradoDesdeCache) {
-      cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
-    } else {
-      console.warn('[init] refresh falló, usando cache local:', e.message);
-    }
+    cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }
 }
 
@@ -14539,20 +14560,6 @@ function aplicarFiltrosAlumnos(c, opts = {}) {
   return lista;
 }
 
-// Render diferido para hot paths (toggles de checkbox, input de búsqueda).
-// Coalesce múltiples llamadas en un solo render por frame. El feedback
-// inmediato del browser (el check marcado, el texto escrito) sigue ahí —
-// solo el recálculo de disabled/banner/avisos se diferre al próximo frame.
-let _renderAlumnosRaf = 0;
-function scheduleRenderAlumnos() {
-  if (_renderAlumnosRaf) return;
-  _renderAlumnosRaf = (typeof requestAnimationFrame === 'function'
-    ? requestAnimationFrame : (cb) => setTimeout(cb, 16))(() => {
-    _renderAlumnosRaf = 0;
-    renderAlumnosGlobal();
-  });
-}
-
 function renderAlumnosGlobal() {
   const cont = document.getElementById('alumnos-global-contenido');
   if (!cont) return;
@@ -14634,7 +14641,7 @@ function renderAlumnosGlobal() {
       <!-- Fila 3: buscar + acciones -->
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
         <input type="text" placeholder="🔍 Buscar nombre..." value="${c.busqueda}"
-          oninput="alumnosGlobalCache.busqueda = this.value; scheduleRenderAlumnos()"
+          oninput="alumnosGlobalCache.busqueda = this.value; renderAlumnosGlobal()"
           style="flex:1;min-width:140px;padding:6px 10px;border:1px solid var(--borde);border-radius:4px">
         <button class="btn btn-success btn-sm" onclick="abrirNuevoAlumno()">+ Nuevo alumno</button>
         <button class="btn btn-primary btn-sm" onclick="generarEtiquetasDirecto()" title="Genera PDF con los filtros y orden actuales">🏷 Imprimir etiquetas</button>
@@ -14974,17 +14981,10 @@ function renderEmpaqueBanner(listaVisible) {
       evalPieza(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom);
     }
     if (fueraDeFiltro.size > 0) {
-      const botones = [...fueraDeFiltro].map(p =>
-        `<button type="button" class="btn btn-success btn-sm"
-          style="font-size:11px;padding:4px 10px;margin:2px"
-          onclick="event.stopPropagation();agregarPrendaAlFiltroEmpaque('${p.replace(/'/g, "\\'")}')"
-          title="Sumar ${p} al filtro de empaque actual (sin salir del modo)">+ ${p}</button>`
-      ).join('');
       avisoFuera = `
         <div style="width:100%;background:#FFF9E6;border:1px solid #F2D080;border-radius:6px;padding:8px 10px;margin-top:8px;font-size:12px;color:#946">
-          <strong>ℹ Otras prendas pendientes fuera del filtro:</strong>
-          <div style="margin-top:6px">${botones}</div>
-          <div style="margin-top:6px;font-size:11px;color:#666">Tocá una prenda para sumarla al filtro y poder marcar sus piezas pendientes en esta misma sesión.</div>
+          <strong>ℹ Otras prendas pendientes fuera del filtro:</strong> ${[...fueraDeFiltro].join(', ')}.
+          <div style="margin-top:4px;font-size:11px;color:#666">Para empacarlas: salí del modo empaque y vuelvé a entrar incluyendo esas prendas. (También se agregan automáticamente al desempacar una pieza inline.)</div>
         </div>`;
     }
   }
@@ -15061,9 +15061,6 @@ async function desempacarPiezaDesdeLista(alumnoId, pieza) {
     }
     // Refrescar supply para que el checkbox de empaque se reactive con el +1
     if (typeof cargarSupplyEmpaque === 'function') await cargarSupplyEmpaque();
-    // Persistir cambio al cache local (la próxima apertura ya verá la pieza
-    // como pendiente sin esperar el refresh contra Supabase).
-    _persistAlumnosCache();
     renderAlumnosGlobal();
     // Refrescar el badge de "esperando empaque" en el nav
     if (typeof refrescarBadgeEsperando === 'function') refrescarBadgeEsperando();
@@ -15184,9 +15181,7 @@ function toggleMarcarPieza(id, pieza, checked) {
   const set = pieza === 'top' ? c.empMarcadosTop : c.empMarcadosBot;
   if (checked) set.add(id);
   else set.delete(id);
-  // El browser ya pintó el check change. Diferimos el recálculo de
-  // disabled/banner/avisos al próximo frame para no bloquear taps rápidos.
-  scheduleRenderAlumnos();
+  renderAlumnosGlobal();
 }
 
 // Compat (en caso de que algo viejo todavía llame). Marca ambas piezas si elig.
@@ -15287,17 +15282,6 @@ function marcarTodosEmpaque(piezaArg, checked) {
       }
     }
   }
-  renderAlumnosGlobal();
-}
-
-// Agrega una prenda al filtro del modo empaque sin requerir salir/reentrar.
-// Útil para que las piezas que volvieron a pendiente (desempacar + recarga)
-// se puedan empacar de nuevo sin perder el resto del estado del sprint.
-function agregarPrendaAlFiltroEmpaque(prenda) {
-  const c = alumnosGlobalCache;
-  if (!c.modoEmpaque || !prenda) return;
-  if (!Array.isArray(c.empPrendas)) c.empPrendas = [];
-  if (!c.empPrendas.includes(prenda)) c.empPrendas.push(prenda);
   renderAlumnosGlobal();
 }
 

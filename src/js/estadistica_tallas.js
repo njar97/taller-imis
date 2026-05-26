@@ -30,43 +30,38 @@ let tallasResumenCache = {
 async function initTallasResumen() {
   const root = document.getElementById('est-tallas-contenido');
   if (!root) return;
-
-  const tieneCache = (typeof tiCacheGet === 'function') && tiCacheGet('estadistica_tallas_v1');
-  if (!tieneCache) root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando datos...</div>';
+  root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando datos...</div>';
 
   try {
-    await tiSWR('estadistica_tallas_v1', async () => {
-      if (!tallasResumenCache.temporadaId) {
-        const t = (await supaFetch('temporada', 'GET', null,
-          '?estado=eq.activa&select=id&order=anio.desc&limit=1'))[0]
-          || (await supaFetch('temporada', 'GET', null, '?select=id&order=anio.desc&limit=1'))[0];
-        if (!t) throw new Error('No hay temporada cargada');
-        tallasResumenCache.temporadaId = t.id;
-      }
+    if (!tallasResumenCache.temporadaId) {
+      const t = (await supaFetch('temporada', 'GET', null,
+        '?estado=eq.activa&select=id&order=anio.desc&limit=1'))[0]
+        || (await supaFetch('temporada', 'GET', null, '?select=id&order=anio.desc&limit=1'))[0];
+      if (!t) throw new Error('No hay temporada cargada');
+      tallasResumenCache.temporadaId = t.id;
+    }
 
-      const [escuelas, alumnos, bultosPend, stock, pool] = await Promise.all([
-        supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre,codigo_cde&order=alias.asc'),
-        supaFetchAll('alumno',
-          `?temporada_id=eq.${tallasResumenCache.temporadaId}&activo=eq.true&select=escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000`),
-        supaFetchAll('vw_produccion_estado',
-          '?estado_manual=neq.terminado&select=cod_prenda,talla_key_salida,cantidad_original,estado_manual,total_etapas,etapas_hechas'),
-        supaFetchAll('vw_bodega_stock',
-          '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
-        supaFetchAll('escuela_acaparado',
-          '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
-      ]);
-      return { escuelas, alumnos, bultosPend, stock, pool, temporadaId: tallasResumenCache.temporadaId };
-    }, (data) => {
-      const escMap = {};
-      for (const e of data.escuelas) escMap[e.id] = e;
-      tallasResumenCache.escuelas = escMap;
-      tallasResumenCache.alumnos = data.alumnos;
-      tallasResumenCache.bultosPendientes = data.bultosPend;
-      tallasResumenCache.stock = data.stock;
-      tallasResumenCache.pool = data.pool;
-      tallasResumenCache.temporadaId = data.temporadaId;
-      renderTallasResumen();
-    }, { ttl: 60 * 60 * 1000 });
+    const [escuelas, alumnos, bultosPend, stock, pool] = await Promise.all([
+      supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre,codigo_cde&order=alias.asc'),
+      supaFetchAll('alumno',
+        `?temporada_id=eq.${tallasResumenCache.temporadaId}&activo=eq.true&select=escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000`),
+      supaFetchAll('vw_produccion_estado',
+        '?estado_manual=neq.terminado&select=cod_prenda,talla_key_salida,cantidad_original,estado_manual,total_etapas,etapas_hechas'),
+      supaFetchAll('vw_bodega_stock',
+        '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
+      supaFetchAll('escuela_acaparado',
+        '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+    ]);
+
+    const escMap = {};
+    for (const e of escuelas) escMap[e.id] = e;
+    tallasResumenCache.escuelas = escMap;
+    tallasResumenCache.alumnos = alumnos;
+    tallasResumenCache.bultosPendientes = bultosPend;
+    tallasResumenCache.stock = stock;
+    tallasResumenCache.pool = pool;
+
+    renderTallasResumen();
   } catch (e) {
     root.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }
@@ -204,6 +199,10 @@ function renderTallasResumen() {
     balance: s.balance + r.balance,
   }), { demanda: 0, corte: 0, prod: 0, stockLibre: 0, pool: 0, balance: 0 });
 
+  // Persistir último cómputo para exportar PDF sin recomputar (se actualiza
+  // en cada render). exportarTallasPDF() lo lee.
+  c._ultimoReporte = { rows, tot, escuelasCols: null, generadoEn: new Date() };
+
   // Escuelas a mostrar como columnas:
   // - Si hay filtro de escuelas activo, usar esas.
   // - Sino, autodetectar todas las que tengan demanda > 0 en las filas visibles.
@@ -220,6 +219,7 @@ function renderTallasResumen() {
         .sort((a,b) => (a.alias || a.nombre).localeCompare(b.alias || b.nombre, 'es'));
     }
   }
+  if (c._ultimoReporte) c._ultimoReporte.escuelasCols = escuelasCols;
 
   // ─── UI ───────────────────────────────────────────────────────────
   const escuelasSel = new Set(f.escuelas || []);
@@ -276,7 +276,8 @@ function renderTallasResumen() {
           </label>
           <div style="font-size:10px;color:#888;margin-top:2px">${(f.escuelas||[]).length>0?'Solo las elegidas abajo':'Todas las que tengan demanda'}</div>
         </div>
-        <div style="text-align:right">
+        <div style="text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:flex-start;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="exportarTallasPDF()" title="Descargar el reporte actual (con los filtros aplicados) en PDF">📥 PDF</button>
           <button class="btn btn-ghost btn-sm" onclick="initTallasResumen()">🔄 Refrescar</button>
         </div>
       </div>
@@ -435,4 +436,178 @@ function quitarTallasEsc(eid) {
     tallasResumenCache.filtros.escuelasEnColumnas = false;
   }
   renderTallasResumen();
+}
+
+// ─── Exportar reporte por talla a PDF ────────────────────────────────
+// Toma el último cómputo de renderTallasResumen (rows + tot + escuelasCols)
+// y arma un HTML clean para html2pdf. A4 landscape porque con escuelas
+// como columnas la tabla es ancha.
+async function exportarTallasPDF() {
+  const c = tallasResumenCache;
+  const f = c.filtros;
+  if (!c._ultimoReporte || !Array.isArray(c._ultimoReporte.rows)) {
+    renderTallasResumen();
+    if (!c._ultimoReporte) { alert('No hay datos para exportar.'); return; }
+  }
+  const { rows, tot, escuelasCols, generadoEn } = c._ultimoReporte;
+  if (rows.length === 0) {
+    alert('Sin filas para exportar con los filtros actuales. Ajustá los filtros y volvé a intentar.');
+    return;
+  }
+
+  try {
+    if (typeof cargarHtml2Pdf === 'function') await cargarHtml2Pdf();
+    else throw new Error('Loader de html2pdf no disponible');
+  } catch (e) {
+    alert('No se pudo cargar la librería PDF: ' + e.message);
+    return;
+  }
+
+  const esc = escuelasCols || [];
+  const showEsc = !!f.escuelasEnColumnas && esc.length > 0;
+  const fecha = (generadoEn instanceof Date ? generadoEn : new Date());
+  const fmtFecha = fecha.toLocaleString('es-SV', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+  const fileFecha = fecha.toISOString().slice(0, 16).replace(/[:T]/g, '-');
+
+  // Filtros activos como texto legible
+  const filtroPartes = [];
+  if (f.prendas && f.prendas.length > 0) filtroPartes.push(`Prendas: <strong>${f.prendas.join(', ')}</strong>`);
+  else filtroPartes.push('Prendas: todas');
+  if (f.talla) filtroPartes.push(`Talla: <strong>${f.talla}</strong>`);
+  if (f.escuelas && f.escuelas.length > 0) {
+    const nombres = f.escuelas.map(eid => (c.escuelas[eid] || {}).alias || (c.escuelas[eid] || {}).nombre).filter(Boolean).join(', ');
+    filtroPartes.push(`Escuelas: <strong>${nombres}</strong>`);
+  }
+  if (f.ocultarCubiertas) filtroPartes.push('<em>(ocultando cubiertas)</em>');
+  const incluyendo = [
+    f.incluirCorte  ? 'Corte'      : null,
+    f.incluirProd   ? 'Producción' : null,
+    f.incluirBodega ? 'Bodega'     : null,
+    f.incluirPool   ? 'Pool'       : null,
+  ].filter(Boolean).join(' + ');
+  filtroPartes.push(`Incluye: <strong>${incluyendo || '(ninguno)'}</strong>`);
+
+  // KPIs cards
+  const kpi = (label, val, color) =>
+    `<td style="border:1px solid #DDD;padding:6px 8px;text-align:center;background:#F8FBFF">
+       <div style="font-size:9px;color:#666;text-transform:uppercase;letter-spacing:.5px">${label}</div>
+       <div style="font-size:16px;font-weight:700;color:${color}">${val}</div>
+     </td>`;
+
+  const kpisRow = `
+    <table style="width:100%;border-collapse:collapse;margin:8px 0 12px 0">
+      <tr>
+        ${kpi('Demanda total', tot.demanda.toLocaleString(), '#222')}
+        ${f.incluirCorte  ? kpi('En corte',      (tot.corte||0).toLocaleString(),       '#888') : ''}
+        ${f.incluirProd   ? kpi('En producción', tot.prod.toLocaleString(),              '#2a8f4a') : ''}
+        ${f.incluirBodega ? kpi('En bodega',     tot.stockLibre.toLocaleString(),        '#1F4E79') : ''}
+        ${f.incluirPool   ? kpi('Pool acaparado',tot.pool.toLocaleString(),              '#a82') : ''}
+        ${kpi('Balance', (tot.balance >= 0 ? '+' : '') + tot.balance.toLocaleString(), tot.balance < 0 ? '#C00' : '#2a8f4a')}
+      </tr>
+    </table>`;
+
+  const thStyle = 'background:#1F4E79;color:white;padding:5px 6px;text-align:right;font-weight:600;font-size:10px;border:1px solid #1F4E79;white-space:nowrap';
+  const thLeftStyle = thStyle + ';text-align:left';
+  const tdStyle = 'padding:4px 6px;border:1px solid #E5E5E5;font-size:10px;text-align:right;font-family:Arial,sans-serif';
+  const tdLeftStyle = tdStyle + ';text-align:left';
+
+  const headerCols = `
+    <th style="${thLeftStyle}">Prenda</th>
+    <th style="${thLeftStyle}">Talla</th>
+    <th style="${thStyle}">Necesidad</th>
+    ${showEsc ? esc.map(e => `<th style="${thStyle};font-size:9px" title="${(e.nombre||'').replace(/"/g,'&quot;')}">🏫 ${e.alias || e.nombre}</th>`).join('') : ''}
+    ${f.incluirCorte  ? `<th style="${thStyle}">✂️ Corte</th>` : ''}
+    ${f.incluirProd   ? `<th style="${thStyle}">🏭 Prod.</th>` : ''}
+    ${f.incluirBodega ? `<th style="${thStyle}">📦 Bodega</th>` : ''}
+    ${f.incluirPool   ? `<th style="${thStyle}">📥 Pool</th>` : ''}
+    <th style="${thStyle}">Balance</th>`;
+
+  const dataRows = rows.map((r, i) => {
+    const bg = i % 2 === 0 ? 'background:white' : 'background:#FAFAFA';
+    const balColor = r.balance < 0 ? '#C00' : '#2a8f4a';
+    return `<tr style="${bg}">
+      <td style="${tdLeftStyle};font-weight:600">${r.prenda}</td>
+      <td style="${tdLeftStyle};font-family:monospace;font-weight:700">${r.talla}</td>
+      <td style="${tdStyle};font-weight:700">${r.demanda}</td>
+      ${showEsc ? esc.map(e => {
+        const n = r.porEsc.get(e.id) || 0;
+        return `<td style="${tdStyle};color:${n>0?'#222':'#CCC'}">${n||'·'}</td>`;
+      }).join('') : ''}
+      ${f.incluirCorte  ? `<td style="${tdStyle};color:#888">${r.corte || '—'}</td>` : ''}
+      ${f.incluirProd   ? `<td style="${tdStyle};color:#2a8f4a">${r.prod || 0}</td>` : ''}
+      ${f.incluirBodega ? `<td style="${tdStyle};color:#1F4E79">${r.stockLibre || 0}</td>` : ''}
+      ${f.incluirPool   ? `<td style="${tdStyle};color:#a82">${r.pool || 0}</td>` : ''}
+      <td style="${tdStyle};font-weight:700;color:${balColor}">${r.balance>=0?'+':''}${r.balance}</td>
+    </tr>`;
+  }).join('');
+
+  // Totales
+  const totalRow = `<tr style="background:#E8F0FE;font-weight:700">
+    <td style="${tdLeftStyle};font-weight:700" colspan="2">TOTALES</td>
+    <td style="${tdStyle};font-weight:700">${tot.demanda}</td>
+    ${showEsc ? esc.map(e => {
+      const sum = rows.reduce((s, r) => s + (r.porEsc.get(e.id) || 0), 0);
+      return `<td style="${tdStyle};font-weight:700">${sum||'·'}</td>`;
+    }).join('') : ''}
+    ${f.incluirCorte  ? `<td style="${tdStyle};font-weight:700">${tot.corte}</td>` : ''}
+    ${f.incluirProd   ? `<td style="${tdStyle};font-weight:700">${tot.prod}</td>` : ''}
+    ${f.incluirBodega ? `<td style="${tdStyle};font-weight:700">${tot.stockLibre}</td>` : ''}
+    ${f.incluirPool   ? `<td style="${tdStyle};font-weight:700">${tot.pool}</td>` : ''}
+    <td style="${tdStyle};font-weight:700;color:${tot.balance<0?'#C00':'#2a8f4a'}">${tot.balance>=0?'+':''}${tot.balance}</td>
+  </tr>`;
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;color:#222;padding:6px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1F4E79;padding-bottom:6px;margin-bottom:8px">
+        <div>
+          <div style="font-size:18px;font-weight:700;color:#1F4E79">📊 Reporte por talla — Taller IMIS</div>
+          <div style="font-size:11px;color:#666;margin-top:2px">Estado de demanda vs suministro (corte, producción, bodega, pool)</div>
+        </div>
+        <div style="text-align:right;font-size:10px;color:#666">
+          <div>Generado: <strong>${fmtFecha}</strong></div>
+          <div>${rows.length} fila(s) · ${showEsc ? esc.length + ' escuela(s) en columnas' : 'sin desglose por escuela'}</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:#444;line-height:1.5;margin-bottom:4px">
+        ${filtroPartes.join(' &nbsp;·&nbsp; ')}
+      </div>
+      ${kpisRow}
+      <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif">
+        <thead><tr>${headerCols}</tr></thead>
+        <tbody>${dataRows}${totalRow}</tbody>
+      </table>
+      <div style="margin-top:10px;font-size:9px;color:#888;text-align:center">
+        Generado desde Taller IMIS · <strong>Necesidad</strong> = piezas pendientes (no empacadas/entregadas) ·
+        <strong>Balance</strong> = (corte + producción + bodega + pool) − necesidad
+      </div>
+    </div>`;
+
+  // Render off-screen
+  const wrap = document.createElement('div');
+  wrap.style.position = 'fixed';
+  wrap.style.left = '-99999px';
+  wrap.style.top = '0';
+  wrap.style.width = '270mm';
+  wrap.innerHTML = html;
+  document.body.appendChild(wrap);
+
+  const opt = {
+    margin: [8, 8, 8, 8],
+    filename: `tallas-resumen-${fileFecha}.pdf`,
+    image: { type: 'jpeg', quality: 0.95 },
+    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#FFFFFF' },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+    pagebreak: { mode: ['css', 'legacy'] },
+  };
+
+  try {
+    await html2pdf().set(opt).from(wrap).save();
+  } catch (e) {
+    alert('Error al generar PDF: ' + (e && e.message || e));
+  } finally {
+    document.body.removeChild(wrap);
+  }
 }
