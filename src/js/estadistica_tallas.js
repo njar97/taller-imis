@@ -503,21 +503,47 @@ async function exportarTallasPDF() {
       </tr>
     </table>`;
 
-  const thStyle = 'background:#1F4E79;color:white;padding:5px 6px;text-align:right;font-weight:600;font-size:10px;border:1px solid #1F4E79;white-space:nowrap';
+  // Anchos en porcentaje. Las escuelas comparten igual el espacio restante
+  // así todas tienen el mismo ancho de columna (uniforme).
+  const numSuministro = (f.incluirCorte?1:0) + (f.incluirProd?1:0) + (f.incluirBodega?1:0) + (f.incluirPool?1:0);
+  const wPrenda = 8, wTalla = 5, wNec = 6, wSum = 6, wBal = 7;
+  const fijoTotal = wPrenda + wTalla + wNec + (numSuministro * wSum) + wBal;
+  const escWidth = (showEsc && esc.length > 0) ? ((100 - fijoTotal) / esc.length) : 0;
+  const escTooManys = esc.length > 10;  // a partir de 11 escuelas, fuentes aún más chicas
+  const fsBody = escTooManys ? 8 : 9;
+
+  const colgroup = `<colgroup>
+    <col style="width:${wPrenda}%">
+    <col style="width:${wTalla}%">
+    <col style="width:${wNec}%">
+    ${showEsc ? esc.map(() => `<col style="width:${escWidth.toFixed(3)}%">`).join('') : ''}
+    ${f.incluirCorte  ? `<col style="width:${wSum}%">` : ''}
+    ${f.incluirProd   ? `<col style="width:${wSum}%">` : ''}
+    ${f.incluirBodega ? `<col style="width:${wSum}%">` : ''}
+    ${f.incluirPool   ? `<col style="width:${wSum}%">` : ''}
+    <col style="width:${wBal}%">
+  </colgroup>`;
+
+  const thStyle = `background:#1F4E79;color:white;padding:4px 4px;text-align:right;font-weight:600;font-size:${fsBody}px;border:1px solid #1F4E79;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`;
   const thLeftStyle = thStyle + ';text-align:left';
-  const tdStyle = 'padding:4px 6px;border:1px solid #E5E5E5;font-size:10px;text-align:right;font-family:Arial,sans-serif';
+  // Header de escuela: rotado vertical para que el nombre completo quepa
+  // en columna angosta. height fijo da uniformidad. align bottom para que
+  // se "anclen" abajo del header rotado.
+  const thEscStyle = `background:#1F4E79;color:white;padding:4px 2px;text-align:center;vertical-align:bottom;font-weight:600;font-size:${escTooManys?7:8}px;border:1px solid #1F4E79;white-space:nowrap;height:80px;overflow:hidden`;
+  const thEscTextStyle = 'display:inline-block;transform:rotate(-90deg);transform-origin:center center;white-space:nowrap;min-width:70px';
+  const tdStyle = `padding:3px 4px;border:1px solid #E5E5E5;font-size:${fsBody}px;text-align:right;font-family:Arial,sans-serif;overflow:hidden;text-overflow:ellipsis`;
   const tdLeftStyle = tdStyle + ';text-align:left';
 
   const headerCols = `
     <th style="${thLeftStyle}">Prenda</th>
     <th style="${thLeftStyle}">Talla</th>
-    <th style="${thStyle}">Necesidad</th>
-    ${showEsc ? esc.map(e => `<th style="${thStyle};font-size:9px" title="${(e.nombre||'').replace(/"/g,'&quot;')}">🏫 ${e.alias || e.nombre}</th>`).join('') : ''}
-    ${f.incluirCorte  ? `<th style="${thStyle}">✂️ Corte</th>` : ''}
-    ${f.incluirProd   ? `<th style="${thStyle}">🏭 Prod.</th>` : ''}
-    ${f.incluirBodega ? `<th style="${thStyle}">📦 Bodega</th>` : ''}
-    ${f.incluirPool   ? `<th style="${thStyle}">📥 Pool</th>` : ''}
-    <th style="${thStyle}">Balance</th>`;
+    <th style="${thStyle};text-align:center">Necesidad</th>
+    ${showEsc ? esc.map(e => `<th style="${thEscStyle}" title="${(e.nombre||'').replace(/"/g,'&quot;')}"><span style="${thEscTextStyle}">${e.alias || e.nombre}</span></th>`).join('') : ''}
+    ${f.incluirCorte  ? `<th style="${thStyle};text-align:center">✂️ Corte</th>` : ''}
+    ${f.incluirProd   ? `<th style="${thStyle};text-align:center">🏭 Prod.</th>` : ''}
+    ${f.incluirBodega ? `<th style="${thStyle};text-align:center">📦 Bodega</th>` : ''}
+    ${f.incluirPool   ? `<th style="${thStyle};text-align:center">📥 Pool</th>` : ''}
+    <th style="${thStyle};text-align:center">Balance</th>`;
 
   const dataRows = rows.map((r, i) => {
     const bg = i % 2 === 0 ? 'background:white' : 'background:#FAFAFA';
@@ -528,7 +554,7 @@ async function exportarTallasPDF() {
       <td style="${tdStyle};font-weight:700">${r.demanda}</td>
       ${showEsc ? esc.map(e => {
         const n = r.porEsc.get(e.id) || 0;
-        return `<td style="${tdStyle};color:${n>0?'#222':'#CCC'}">${n||'·'}</td>`;
+        return `<td style="${tdStyle};text-align:center;color:${n>0?'#222':'#CCC'}">${n||'·'}</td>`;
       }).join('') : ''}
       ${f.incluirCorte  ? `<td style="${tdStyle};color:#888">${r.corte || '—'}</td>` : ''}
       ${f.incluirProd   ? `<td style="${tdStyle};color:#2a8f4a">${r.prod || 0}</td>` : ''}
@@ -544,7 +570,7 @@ async function exportarTallasPDF() {
     <td style="${tdStyle};font-weight:700">${tot.demanda}</td>
     ${showEsc ? esc.map(e => {
       const sum = rows.reduce((s, r) => s + (r.porEsc.get(e.id) || 0), 0);
-      return `<td style="${tdStyle};font-weight:700">${sum||'·'}</td>`;
+      return `<td style="${tdStyle};text-align:center;font-weight:700">${sum||'·'}</td>`;
     }).join('') : ''}
     ${f.incluirCorte  ? `<td style="${tdStyle};font-weight:700">${tot.corte}</td>` : ''}
     ${f.incluirProd   ? `<td style="${tdStyle};font-weight:700">${tot.prod}</td>` : ''}
@@ -569,7 +595,8 @@ async function exportarTallasPDF() {
         ${filtroPartes.join(' &nbsp;·&nbsp; ')}
       </div>
       ${kpisRow}
-      <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif">
+      <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;table-layout:fixed">
+        ${colgroup}
         <thead><tr>${headerCols}</tr></thead>
         <tbody>${dataRows}${totalRow}</tbody>
       </table>
