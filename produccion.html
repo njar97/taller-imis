@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-25 20:53 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-25 21:10 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -14830,10 +14830,17 @@ function renderEmpaqueBanner(listaVisible) {
       evalPieza(a.prenda_bottom, a.talla_bottom_key, a.estado_bottom);
     }
     if (fueraDeFiltro.size > 0) {
+      const botones = [...fueraDeFiltro].map(p =>
+        `<button type="button" class="btn btn-success btn-sm"
+          style="font-size:11px;padding:4px 10px;margin:2px"
+          onclick="event.stopPropagation();agregarPrendaAlFiltroEmpaque('${p.replace(/'/g, "\\'")}')"
+          title="Sumar ${p} al filtro de empaque actual (sin salir del modo)">+ ${p}</button>`
+      ).join('');
       avisoFuera = `
         <div style="width:100%;background:#FFF9E6;border:1px solid #F2D080;border-radius:6px;padding:8px 10px;margin-top:8px;font-size:12px;color:#946">
-          <strong>ℹ Otras prendas pendientes fuera del filtro:</strong> ${[...fueraDeFiltro].join(', ')}.
-          <div style="margin-top:4px;font-size:11px;color:#666">Para empacarlas: salí del modo empaque y vuelvé a entrar incluyendo esas prendas. (También se agregan automáticamente al desempacar una pieza inline.)</div>
+          <strong>ℹ Otras prendas pendientes fuera del filtro:</strong>
+          <div style="margin-top:6px">${botones}</div>
+          <div style="margin-top:6px;font-size:11px;color:#666">Tocá una prenda para sumarla al filtro y poder marcar sus piezas pendientes en esta misma sesión.</div>
         </div>`;
     }
   }
@@ -15133,6 +15140,17 @@ function marcarTodosEmpaque(piezaArg, checked) {
       }
     }
   }
+  renderAlumnosGlobal();
+}
+
+// Agrega una prenda al filtro del modo empaque sin requerir salir/reentrar.
+// Útil para que las piezas que volvieron a pendiente (desempacar + recarga)
+// se puedan empacar de nuevo sin perder el resto del estado del sprint.
+function agregarPrendaAlFiltroEmpaque(prenda) {
+  const c = alumnosGlobalCache;
+  if (!c.modoEmpaque || !prenda) return;
+  if (!Array.isArray(c.empPrendas)) c.empPrendas = [];
+  if (!c.empPrendas.includes(prenda)) c.empPrendas.push(prenda);
   renderAlumnosGlobal();
 }
 
