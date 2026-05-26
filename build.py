@@ -119,6 +119,28 @@ def main() -> int:
 
     OUT.write_text(html, encoding="utf-8", newline="")
 
+    # Bumpear CACHE_VERSION del Service Worker para que cada build genere
+    # un sw.js distinto. El browser detecta el cambio, instala el SW nuevo,
+    # y dispara el banner "🔄 Nueva versión disponible". Sin esto los
+    # cambios a produccion.html no eran perceptibles hasta que el usuario
+    # forzaba un refresh manual.
+    sw_path = ROOT / "sw.js"
+    if sw_path.exists():
+        sw = sw_path.read_text(encoding="utf-8")
+        nueva_ver = "v" + datetime.now().strftime("%Y%m%d-%H%M%S")
+        sw_nuevo = re.sub(
+            r"^const CACHE_VERSION = '[^']*';",
+            f"const CACHE_VERSION = '{nueva_ver}';",
+            sw,
+            count=1,
+            flags=re.MULTILINE,
+        )
+        if sw_nuevo != sw:
+            sw_path.write_text(sw_nuevo, encoding="utf-8", newline="\n")
+            print(f"  + sw.js  CACHE_VERSION={nueva_ver}")
+        else:
+            print("  ! sw.js — patrón CACHE_VERSION no encontrado (revisar formato)")
+
     size = OUT.stat().st_size
     lines = html.count("\n") + 1
 

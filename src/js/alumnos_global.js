@@ -24,30 +24,36 @@ let alumnosGlobalCache = {
 };
 
 // Carga stock + pool para el modo empaque. Se llama desde bodega cuando se
-// activa el modo (selector / acaparados / pool).
+// activa el modo (selector / acaparados / pool). Cachea con SWR para que
+// al entrar al modo empaque por 2ª+ vez no haya delay perceptible.
 async function cargarSupplyEmpaque() {
-  try {
-    const [stock, pool] = await Promise.all([
-      supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
-      supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
-    ]);
+  const aplicar = (data) => {
     const stockMap = new Map();
-    for (const s of stock) {
+    for (const s of (data.stock || [])) {
       const p = s.nombre_prenda || (typeof prendaCanon === 'function' ? prendaCanon(s.cod_prenda) : s.cod_prenda);
       if (!p || !s.talla_key) continue;
       stockMap.set(p + '|' + s.talla_key, Number(s.stock_actual) || 0);
     }
     const poolMap = new Map();
-    for (const p of pool) {
+    for (const p of (data.pool || [])) {
       const d = Math.max(0, (Number(p.cantidad_acaparada)||0) - (Number(p.cantidad_consumida)||0));
       if (d <= 0) continue;
       const k = p.escuela_id + '|' + p.nombre_prenda + '|' + p.talla_key;
       poolMap.set(k, (poolMap.get(k) || 0) + d);
     }
     alumnosGlobalCache.empSupply = { stockMap, poolMap };
+  };
+  try {
+    await tiSWR('emp_supply_v1', async () => {
+      const [stock, pool] = await Promise.all([
+        supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
+        supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+      ]);
+      return { stock, pool };
+    }, aplicar, { ttl: 60 * 1000 });  // 60s — supply cambia rápido por empacar/acaparar
   } catch(e) {
     console.warn('cargarSupplyEmpaque:', e.message);
-    alumnosGlobalCache.empSupply = { stockMap: new Map(), poolMap: new Map() };
+    if (!alumnosGlobalCache.empSupply) alumnosGlobalCache.empSupply = { stockMap: new Map(), poolMap: new Map() };
   }
 }
 
