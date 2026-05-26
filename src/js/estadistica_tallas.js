@@ -439,9 +439,11 @@ function quitarTallasEsc(eid) {
 }
 
 // ─── Exportar reporte por talla a PDF ────────────────────────────────
-// Toma el último cómputo de renderTallasResumen (rows + tot + escuelasCols)
-// y arma un HTML clean para html2pdf. A4 landscape porque con escuelas
-// como columnas la tabla es ancha.
+// V5: usa la API nativa de impresión del browser via iframe oculto, en
+// vez de html2pdf/html2canvas (que daban blanco en Chrome Android por
+// issues de layout off-screen). Al hacer print() en el iframe, Android
+// abre el dialog "Imprimir o guardar como PDF" — el usuario elige PDF
+// y queda guardado. Funciona en Chrome móvil/desktop, Safari iOS, etc.
 async function exportarTallasPDF() {
   const c = tallasResumenCache;
   const f = c.filtros;
@@ -452,14 +454,6 @@ async function exportarTallasPDF() {
   const { rows, tot, escuelasCols, generadoEn } = c._ultimoReporte;
   if (rows.length === 0) {
     alert('Sin filas para exportar con los filtros actuales. Ajustá los filtros y volvé a intentar.');
-    return;
-  }
-
-  try {
-    if (typeof cargarHtml2Pdf === 'function') await cargarHtml2Pdf();
-    else throw new Error('Loader de html2pdf no disponible');
-  } catch (e) {
-    alert('No se pudo cargar la librería PDF: ' + e.message);
     return;
   }
 
@@ -585,61 +579,78 @@ async function exportarTallasPDF() {
       </div>
     </div>`;
 
-  console.log('[tallas PDF] v4 — patrón etiquetas (flujo normal + overlay). rows:', rows.length, 'esc:', esc.length);
-  const esMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  console.log('[tallas PDF] v5 — iframe + window.print() nativo. rows:', rows.length, 'esc:', esc.length);
 
-  // Overlay primero, así tapa el wrap apenas se agrega.
-  const overlay = document.createElement('div');
-  overlay.style.cssText =
-    'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;' +
-    'display:flex;align-items:center;justify-content:center;color:white;' +
-    'font-size:18px;text-align:center;padding:20px';
-  overlay.innerHTML = `
-    <div>
-      <div style="font-size:48px;margin-bottom:10px">📊</div>
-      <div>Generando PDF de tallas...</div>
-      <div style="font-size:14px;opacity:0.7;margin-top:8px">No cierres esta página</div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
+  // Construir documento HTML completo con @page para tamaño Letter landscape
+  // y márgenes consistentes. El browser maneja paginación + render nativo.
+  const docHtml = `<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8">
+<title>tallas-resumen-${fileFecha}</title>
+<style>
+  @page { size: letter landscape; margin: 0.4in; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; color: #222; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { padding: 6px; }
+  table { border-collapse: collapse; }
+  thead { display: table-header-group; }
+  tr { page-break-inside: avoid; }
+  @media print {
+    body { padding: 0; }
+  }
+</style>
+</head>
+<body>${html}</body>
+</html>`;
 
-  // Wrap en FLUJO NORMAL — sin position:fixed. html2canvas necesita layout
-  // real, y en Chrome Android los elementos fixed off-screen no lo reciben.
-  // Mismo patrón que generarPdfDirecto() de etiquetas, que funciona OK.
-  // Width 11in = Letter landscape ancho total (margen lo aplica html2pdf).
-  const wrap = document.createElement('div');
-  wrap.id = 'tallas-pdf-wrap';
-  wrap.style.cssText = 'width:11in;background:white;color:#000;font-family:Arial,sans-serif;';
-  wrap.innerHTML = html;
-  document.body.appendChild(wrap);
+  // Iframe oculto en flujo del documento. Algunos browsers móviles no
+  // permiten window.open() sin gesto explícito — el iframe sí carga
+  // siempre porque viene del mismo origin sin popup.
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  iframe.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(iframe);
 
-  // Forzar reflow + pausa para que el render del browser termine.
-  void wrap.offsetHeight;
-  await new Promise(r => setTimeout(r, 200));
-  console.log('[tallas PDF] wrap dims:', wrap.offsetWidth, 'x', wrap.offsetHeight);
-
-  const opt = {
-    margin: [8, 8, 8, 8],
-    filename: `tallas-resumen-${fileFecha}.pdf`,
-    image: { type: 'jpeg', quality: 0.95 },
-    html2canvas: {
-      scale: esMobile ? 1.5 : 2,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-    },
-    jsPDF: { unit: 'mm', format: 'letter', orientation: 'landscape', compress: true },
-    pagebreak: { mode: ['css', 'legacy'] },
-  };
+  // Sentinel para evitar reentradas si el usuario tap dos veces el botón.
+  if (window._tallasPdfPending) {
+    console.warn('[tallas PDF] ya hay una impresión en curso, ignorando');
+    document.body.removeChild(iframe);
+    return;
+  }
+  window._tallasPdfPending = true;
 
   try {
-    await html2pdf().set(opt).from(wrap).save();
-    console.log('[tallas PDF] generado OK');
+    const idoc = iframe.contentDocument || iframe.contentWindow.document;
+    idoc.open();
+    idoc.write(docHtml);
+    idoc.close();
+
+    // Esperar a que el contenido se layoutee + fuentes se carguen.
+    await new Promise(resolve => {
+      let done = false;
+      const finish = () => { if (!done) { done = true; resolve(); } };
+      // Si ya está cargado (sincrónico tras write+close), igual esperar 1 tick
+      if (iframe.contentDocument.readyState === 'complete') {
+        setTimeout(finish, 200);
+      } else {
+        iframe.addEventListener('load', () => setTimeout(finish, 200), { once: true });
+        setTimeout(finish, 1500);  // safety net
+      }
+    });
+
+    // Disparar diálogo de impresión del browser.
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+    console.log('[tallas PDF] print() disparado');
   } catch (e) {
     console.error('[tallas PDF] error:', e);
-    alert('Error al generar PDF: ' + (e && e.message || e));
+    alert('Error al abrir la vista de impresión: ' + (e && e.message || e));
   } finally {
-    if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
-    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    // Esperar antes de remover el iframe — algunos browsers cancelan la
+    // impresión si se quita el iframe antes de que el usuario interactúe.
+    setTimeout(() => {
+      window._tallasPdfPending = false;
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    }, 30000);
   }
 }
