@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-26 11:10 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-26 11:23 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -4300,81 +4300,98 @@ async function exportarTallasPDF() {
       </tr>
     </table>`;
 
-  // Anchos en porcentaje. Las escuelas comparten igual el espacio restante
-  // así todas tienen el mismo ancho de columna (uniforme).
+  // Chunks de hasta 6 escuelas por tabla. Permite usar fuente 11px legible
+  // y nombres de escuelas horizontales sin rotación (que no renderiza bien
+  // en print). Cada tabla = 1 página. Filas (prendas+tallas), suministros y
+  // balance se repiten en cada chunk para que cada página sea autocontenida.
   const numSuministro = (f.incluirCorte?1:0) + (f.incluirProd?1:0) + (f.incluirBodega?1:0) + (f.incluirPool?1:0);
-  const wPrenda = 8, wTalla = 5, wNec = 6, wSum = 6, wBal = 7;
-  const fijoTotal = wPrenda + wTalla + wNec + (numSuministro * wSum) + wBal;
-  const escWidth = (showEsc && esc.length > 0) ? ((100 - fijoTotal) / esc.length) : 0;
-  const escTooManys = esc.length > 10;  // a partir de 11 escuelas, fuentes aún más chicas
-  const fsBody = escTooManys ? 8 : 9;
+  const CHUNK_ESC = 6;
+  const escChunks = [];
+  if (showEsc && esc.length > 0) {
+    if (esc.length <= CHUNK_ESC) escChunks.push(esc);
+    else for (let i = 0; i < esc.length; i += CHUNK_ESC) escChunks.push(esc.slice(i, i + CHUNK_ESC));
+  } else {
+    escChunks.push([]);  // una sola tabla sin desglose por escuela
+  }
 
-  const colgroup = `<colgroup>
-    <col style="width:${wPrenda}%">
-    <col style="width:${wTalla}%">
-    <col style="width:${wNec}%">
-    ${showEsc ? esc.map(() => `<col style="width:${escWidth.toFixed(3)}%">`).join('') : ''}
-    ${f.incluirCorte  ? `<col style="width:${wSum}%">` : ''}
-    ${f.incluirProd   ? `<col style="width:${wSum}%">` : ''}
-    ${f.incluirBodega ? `<col style="width:${wSum}%">` : ''}
-    ${f.incluirPool   ? `<col style="width:${wSum}%">` : ''}
-    <col style="width:${wBal}%">
-  </colgroup>`;
+  function buildTablaChunk(chunkEsc, chunkIdx, totChunks) {
+    const showEscChunk = chunkEsc.length > 0;
+    // Anchos %: prenda 11, talla 6, necesidad 8, cada suministro 8, balance 9
+    // Escuelas comparten lo restante por partes iguales.
+    const wPrenda = 11, wTalla = 6, wNec = 8, wSum = 8, wBal = 9;
+    const fijoTotal = wPrenda + wTalla + wNec + (numSuministro * wSum) + wBal;
+    const escW = showEscChunk ? ((100 - fijoTotal) / chunkEsc.length) : 0;
 
-  const thStyle = `background:#1F4E79;color:white;padding:4px 4px;text-align:right;font-weight:600;font-size:${fsBody}px;border:1px solid #1F4E79;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`;
-  const thLeftStyle = thStyle + ';text-align:left';
-  // Header de escuela: rotado vertical para que el nombre completo quepa
-  // en columna angosta. height fijo da uniformidad. align bottom para que
-  // se "anclen" abajo del header rotado.
-  const thEscStyle = `background:#1F4E79;color:white;padding:4px 2px;text-align:center;vertical-align:bottom;font-weight:600;font-size:${escTooManys?7:8}px;border:1px solid #1F4E79;white-space:nowrap;height:80px;overflow:hidden`;
-  const thEscTextStyle = 'display:inline-block;transform:rotate(-90deg);transform-origin:center center;white-space:nowrap;min-width:70px';
-  const tdStyle = `padding:3px 4px;border:1px solid #E5E5E5;font-size:${fsBody}px;text-align:right;font-family:Arial,sans-serif;overflow:hidden;text-overflow:ellipsis`;
-  const tdLeftStyle = tdStyle + ';text-align:left';
+    const cg = `<colgroup>
+      <col style="width:${wPrenda}%">
+      <col style="width:${wTalla}%">
+      <col style="width:${wNec}%">
+      ${showEscChunk ? chunkEsc.map(() => `<col style="width:${escW.toFixed(3)}%">`).join('') : ''}
+      ${f.incluirCorte  ? `<col style="width:${wSum}%">` : ''}
+      ${f.incluirProd   ? `<col style="width:${wSum}%">` : ''}
+      ${f.incluirBodega ? `<col style="width:${wSum}%">` : ''}
+      ${f.incluirPool   ? `<col style="width:${wSum}%">` : ''}
+      <col style="width:${wBal}%">
+    </colgroup>`;
 
-  const headerCols = `
-    <th style="${thLeftStyle}">Prenda</th>
-    <th style="${thLeftStyle}">Talla</th>
-    <th style="${thStyle};text-align:center">Necesidad</th>
-    ${showEsc ? esc.map(e => `<th style="${thEscStyle}" title="${(e.nombre||'').replace(/"/g,'&quot;')}"><span style="${thEscTextStyle}">${e.alias || e.nombre}</span></th>`).join('') : ''}
-    ${f.incluirCorte  ? `<th style="${thStyle};text-align:center">✂️ Corte</th>` : ''}
-    ${f.incluirProd   ? `<th style="${thStyle};text-align:center">🏭 Prod.</th>` : ''}
-    ${f.incluirBodega ? `<th style="${thStyle};text-align:center">📦 Bodega</th>` : ''}
-    ${f.incluirPool   ? `<th style="${thStyle};text-align:center">📥 Pool</th>` : ''}
-    <th style="${thStyle};text-align:center">Balance</th>`;
+    const thS = 'background:#1F4E79;color:white;padding:5px 4px;text-align:center;font-weight:600;font-size:10px;border:1px solid #1F4E79;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    const thL = thS + ';text-align:left';
+    const tdS = 'padding:4px 5px;border:1px solid #E5E5E5;font-size:11px;text-align:right;font-family:Arial,sans-serif;overflow:hidden';
+    const tdL = tdS + ';text-align:left';
 
-  const dataRows = rows.map((r, i) => {
-    const bg = i % 2 === 0 ? 'background:white' : 'background:#FAFAFA';
-    const balColor = r.balance < 0 ? '#C00' : '#2a8f4a';
-    return `<tr style="${bg}">
-      <td style="${tdLeftStyle};font-weight:600">${r.prenda}</td>
-      <td style="${tdLeftStyle};font-family:monospace;font-weight:700">${r.talla}</td>
-      <td style="${tdStyle};font-weight:700">${r.demanda}</td>
-      ${showEsc ? esc.map(e => {
-        const n = r.porEsc.get(e.id) || 0;
-        return `<td style="${tdStyle};text-align:center;color:${n>0?'#222':'#CCC'}">${n||'·'}</td>`;
+    const hdr = `
+      <th style="${thL}">Prenda</th>
+      <th style="${thL}">Talla</th>
+      <th style="${thS}">Necesidad</th>
+      ${showEscChunk ? chunkEsc.map(e => `<th style="${thS}" title="${(e.nombre||'').replace(/"/g,'&quot;')}">🏫 ${e.alias || e.nombre}</th>`).join('') : ''}
+      ${f.incluirCorte  ? `<th style="${thS}">✂️ Corte</th>` : ''}
+      ${f.incluirProd   ? `<th style="${thS}">🏭 Prod.</th>` : ''}
+      ${f.incluirBodega ? `<th style="${thS}">📦 Bodega</th>` : ''}
+      ${f.incluirPool   ? `<th style="${thS}">📥 Pool</th>` : ''}
+      <th style="${thS}">Balance</th>`;
+
+    const dr = rows.map((r, i) => {
+      const bg = i % 2 === 0 ? 'background:white' : 'background:#FAFAFA';
+      const balColor = r.balance < 0 ? '#C00' : '#2a8f4a';
+      return `<tr style="${bg}">
+        <td style="${tdL};font-weight:600">${r.prenda}</td>
+        <td style="${tdL};font-family:monospace;font-weight:700">${r.talla}</td>
+        <td style="${tdS};font-weight:700">${r.demanda}</td>
+        ${showEscChunk ? chunkEsc.map(e => {
+          const n = r.porEsc.get(e.id) || 0;
+          return `<td style="${tdS};text-align:center;color:${n>0?'#222':'#CCC'}">${n||'·'}</td>`;
+        }).join('') : ''}
+        ${f.incluirCorte  ? `<td style="${tdS};color:#888">${r.corte || '—'}</td>` : ''}
+        ${f.incluirProd   ? `<td style="${tdS};color:#2a8f4a">${r.prod || 0}</td>` : ''}
+        ${f.incluirBodega ? `<td style="${tdS};color:#1F4E79">${r.stockLibre || 0}</td>` : ''}
+        ${f.incluirPool   ? `<td style="${tdS};color:#a82">${r.pool || 0}</td>` : ''}
+        <td style="${tdS};font-weight:700;color:${balColor}">${r.balance>=0?'+':''}${r.balance}</td>
+      </tr>`;
+    }).join('');
+
+    const tr = `<tr style="background:#E8F0FE;font-weight:700">
+      <td style="${tdL};font-weight:700" colspan="2">TOTALES</td>
+      <td style="${tdS};font-weight:700">${tot.demanda}</td>
+      ${showEscChunk ? chunkEsc.map(e => {
+        const sum = rows.reduce((s, r) => s + (r.porEsc.get(e.id) || 0), 0);
+        return `<td style="${tdS};text-align:center;font-weight:700">${sum||'·'}</td>`;
       }).join('') : ''}
-      ${f.incluirCorte  ? `<td style="${tdStyle};color:#888">${r.corte || '—'}</td>` : ''}
-      ${f.incluirProd   ? `<td style="${tdStyle};color:#2a8f4a">${r.prod || 0}</td>` : ''}
-      ${f.incluirBodega ? `<td style="${tdStyle};color:#1F4E79">${r.stockLibre || 0}</td>` : ''}
-      ${f.incluirPool   ? `<td style="${tdStyle};color:#a82">${r.pool || 0}</td>` : ''}
-      <td style="${tdStyle};font-weight:700;color:${balColor}">${r.balance>=0?'+':''}${r.balance}</td>
+      ${f.incluirCorte  ? `<td style="${tdS};font-weight:700">${tot.corte}</td>` : ''}
+      ${f.incluirProd   ? `<td style="${tdS};font-weight:700">${tot.prod}</td>` : ''}
+      ${f.incluirBodega ? `<td style="${tdS};font-weight:700">${tot.stockLibre}</td>` : ''}
+      ${f.incluirPool   ? `<td style="${tdS};font-weight:700">${tot.pool}</td>` : ''}
+      <td style="${tdS};font-weight:700;color:${tot.balance<0?'#C00':'#2a8f4a'}">${tot.balance>=0?'+':''}${tot.balance}</td>
     </tr>`;
-  }).join('');
 
-  // Totales
-  const totalRow = `<tr style="background:#E8F0FE;font-weight:700">
-    <td style="${tdLeftStyle};font-weight:700" colspan="2">TOTALES</td>
-    <td style="${tdStyle};font-weight:700">${tot.demanda}</td>
-    ${showEsc ? esc.map(e => {
-      const sum = rows.reduce((s, r) => s + (r.porEsc.get(e.id) || 0), 0);
-      return `<td style="${tdStyle};text-align:center;font-weight:700">${sum||'·'}</td>`;
-    }).join('') : ''}
-    ${f.incluirCorte  ? `<td style="${tdStyle};font-weight:700">${tot.corte}</td>` : ''}
-    ${f.incluirProd   ? `<td style="${tdStyle};font-weight:700">${tot.prod}</td>` : ''}
-    ${f.incluirBodega ? `<td style="${tdStyle};font-weight:700">${tot.stockLibre}</td>` : ''}
-    ${f.incluirPool   ? `<td style="${tdStyle};font-weight:700">${tot.pool}</td>` : ''}
-    <td style="${tdStyle};font-weight:700;color:${tot.balance<0?'#C00':'#2a8f4a'}">${tot.balance>=0?'+':''}${tot.balance}</td>
-  </tr>`;
+    const subtituloChunk = (totChunks > 1 && showEscChunk)
+      ? `<div style="margin:8px 0 4px;font-size:12px;font-weight:600;color:#1F4E79">📍 Bloque ${chunkIdx+1}/${totChunks} · Escuelas: ${chunkEsc.map(e => e.alias || e.nombre).join(', ')}</div>`
+      : '';
+    const pageBreak = chunkIdx > 0 ? '<div style="page-break-before:always"></div>' : '';
+
+    return `${pageBreak}${subtituloChunk}<table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;table-layout:fixed">${cg}<thead><tr>${hdr}</tr></thead><tbody>${dr}${tr}</tbody></table>`;
+  }
+
+  const tablasHtml = escChunks.map((ch, i) => buildTablaChunk(ch, i, escChunks.length)).join('');
 
   const html = `
     <div style="font-family:Arial,sans-serif;color:#222;padding:6px">
@@ -4392,11 +4409,7 @@ async function exportarTallasPDF() {
         ${filtroPartes.join(' &nbsp;·&nbsp; ')}
       </div>
       ${kpisRow}
-      <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;table-layout:fixed">
-        ${colgroup}
-        <thead><tr>${headerCols}</tr></thead>
-        <tbody>${dataRows}${totalRow}</tbody>
-      </table>
+      ${tablasHtml}
       <div style="margin-top:10px;font-size:9px;color:#888;text-align:center">
         Generado desde Taller IMIS · <strong>Necesidad</strong> = piezas pendientes (no empacadas/entregadas) ·
         <strong>Balance</strong> = (corte + producción + bodega + pool) − necesidad
