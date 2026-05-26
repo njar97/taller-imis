@@ -503,12 +503,12 @@ async function exportarTallasPDF() {
       </tr>
     </table>`;
 
-  // Chunks de hasta 6 escuelas por tabla. Permite usar fuente 11px legible
-  // y nombres de escuelas horizontales sin rotación (que no renderiza bien
-  // en print). Cada tabla = 1 página. Filas (prendas+tallas), suministros y
-  // balance se repiten en cada chunk para que cada página sea autocontenida.
+  // Chunks de hasta 4 escuelas por tabla — necesario para que la fuente
+  // sea ≥12pt sin que se aplasten las columnas. Cada tabla = 1 página.
+  // Filas (prendas+tallas), suministros y balance se repiten en cada
+  // chunk para que cada página sea autocontenida.
   const numSuministro = (f.incluirCorte?1:0) + (f.incluirProd?1:0) + (f.incluirBodega?1:0) + (f.incluirPool?1:0);
-  const CHUNK_ESC = 6;
+  const CHUNK_ESC = 4;
   const escChunks = [];
   if (showEsc && esc.length > 0) {
     if (esc.length <= CHUNK_ESC) escChunks.push(esc);
@@ -519,9 +519,10 @@ async function exportarTallasPDF() {
 
   function buildTablaChunk(chunkEsc, chunkIdx, totChunks) {
     const showEscChunk = chunkEsc.length > 0;
-    // Anchos %: prenda 11, talla 6, necesidad 8, cada suministro 8, balance 9
-    // Escuelas comparten lo restante por partes iguales.
-    const wPrenda = 11, wTalla = 6, wNec = 8, wSum = 8, wBal = 9;
+    // Anchos %: prenda 12, talla 7, necesidad 9, cada suministro 8, balance 10
+    // Escuelas comparten lo restante por partes iguales (con 4 escuelas
+    // queda ~7.5% c/u → ~72px en Letter landscape, suficiente para 12pt).
+    const wPrenda = 12, wTalla = 7, wNec = 9, wSum = 8, wBal = 10;
     const fijoTotal = wPrenda + wTalla + wNec + (numSuministro * wSum) + wBal;
     const escW = showEscChunk ? ((100 - fijoTotal) / chunkEsc.length) : 0;
 
@@ -537,9 +538,11 @@ async function exportarTallasPDF() {
       <col style="width:${wBal}%">
     </colgroup>`;
 
-    const thS = 'background:#1F4E79;color:white;padding:5px 4px;text-align:center;font-weight:600;font-size:10px;border:1px solid #1F4E79;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    // Fuente en pt (no px): pt es absoluto y print lo respeta tal cual.
+    // 12pt ≈ 16px. Padding más generoso para que respire.
+    const thS = 'background:#1F4E79;color:white;padding:6px 5px;text-align:center;font-weight:600;font-size:12pt;border:1px solid #1F4E79;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
     const thL = thS + ';text-align:left';
-    const tdS = 'padding:4px 5px;border:1px solid #E5E5E5;font-size:11px;text-align:right;font-family:Arial,sans-serif;overflow:hidden';
+    const tdS = 'padding:5px 6px;border:1px solid #E5E5E5;font-size:12pt;text-align:right;font-family:Arial,sans-serif;overflow:hidden';
     const tdL = tdS + ';text-align:left';
 
     const hdr = `
