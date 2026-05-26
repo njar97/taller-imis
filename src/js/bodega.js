@@ -38,7 +38,7 @@ async function cambiarVistaBodega(v) {
 
 async function cargarBodegaStock() {
   const cont = document.getElementById('bodega-contenido');
-  cont.innerHTML = '<div class="text-muted">Cargando stock...</div>';
+  if (cont) cont.innerHTML = '<div class="text-muted">Cargando stock...</div>';
   // Cualquier carga de stock invalida caches dependientes (las acciones
   // que llaman a cargarBodegaStock ya cambiaron el estado).
   if (typeof invalidarCache === 'function') {
@@ -47,18 +47,22 @@ async function cargarBodegaStock() {
     invalidarCache('alumnos');
   }
   try {
-    const [stock, pool] = await Promise.all([
-      supaFetch('vw_bodega_stock', 'GET', null, '?order=nombre_prenda,talla_key&limit=1000'),
-      supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
-    ]);
-    bodegaCache.stock = stock;
-    bodegaCache.pool = pool;
-    bodegaCache.poolTotal = (pool || []).reduce(
-      (s, p) => s + Math.max(0, (Number(p.cantidad_acaparada)||0) - (Number(p.cantidad_consumida)||0)), 0);
-    renderStock();
-    if (typeof refrescarBadgeEsperando === 'function') refrescarBadgeEsperando();
+    await tiSWR('bodega_stock_v1', async () => {
+      const [stock, pool] = await Promise.all([
+        supaFetch('vw_bodega_stock', 'GET', null, '?order=nombre_prenda,talla_key&limit=1000'),
+        supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+      ]);
+      return { stock, pool };
+    }, (data /*, fromCache */) => {
+      bodegaCache.stock = data.stock;
+      bodegaCache.pool = data.pool;
+      bodegaCache.poolTotal = (data.pool || []).reduce(
+        (s, p) => s + Math.max(0, (Number(p.cantidad_acaparada)||0) - (Number(p.cantidad_consumida)||0)), 0);
+      renderStock();
+      if (typeof refrescarBadgeEsperando === 'function') refrescarBadgeEsperando();
+    }, { ttl: 60 * 1000 });  // 60s — stock cambia rápido por acciones del user
   } catch(e) {
-    cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+    if (cont) cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }
 }
 

@@ -238,6 +238,40 @@ function tiCacheClearAll() {
   } catch (_) {}
 }
 
+// Helper genérico stale-while-revalidate:
+//  1) Si hay cache, llama onData(cached, fromCache=true) inmediatamente.
+//  2) Dispara fetchFn(), persiste y llama onData(fresh, fromCache=false).
+//  3) Si fetchFn falla y había cache → log silencioso (offline-tolerante).
+//
+// Uso típico desde una init de vista:
+//   await tiSWR('mi_vista_v1', async () => {
+//     const [a, b] = await Promise.all([fetchA(), fetchB()]);
+//     return { a, b };
+//   }, (data, fromCache) => {
+//     miCache.a = data.a; miCache.b = data.b;
+//     renderMiVista();
+//   }, { ttl: 60 * 60 * 1000 });  // 1h
+async function tiSWR(cacheKey, fetchFn, onData, opts = {}) {
+  const cached = tiCacheGet(cacheKey);
+  let mostradoDesdeCache = false;
+  if (cached !== null && cached !== undefined) {
+    try { onData(cached, true); mostradoDesdeCache = true; }
+    catch (e) { console.warn(`[SWR ${cacheKey}] onData(cached) falló:`, e); }
+  }
+  try {
+    const fresh = await fetchFn();
+    tiCacheSet(cacheKey, fresh, opts.ttl);
+    onData(fresh, false);
+    return fresh;
+  } catch (e) {
+    if (mostradoDesdeCache) {
+      console.warn(`[SWR ${cacheKey}] refresh falló, usando cache:`, e.message);
+      return cached;
+    }
+    throw e;
+  }
+}
+
 async function supaUploadFoto(file, trazoId) {
   const ext = file.name.split('.').pop();
   const path = `${trazoId}.${ext}`;

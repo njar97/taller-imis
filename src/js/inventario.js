@@ -14,33 +14,37 @@ let invCache = {
 async function initInventario() {
   const root = document.getElementById('est-sub-inventario-view');
   if (!root) return;
-  root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando inventario...</div>';
+
+  const tieneCache = (typeof tiCacheGet === 'function') && tiCacheGet('inventario_v1');
+  if (!tieneCache) root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando inventario...</div>';
 
   try {
-    if (!invCache.temporadaId) {
-      const t = (await supaFetch('temporada', 'GET', null,
-        '?estado=eq.activa&select=id,anio&order=anio.desc&limit=1'))[0]
-        || (await supaFetch('temporada', 'GET', null,
-        '?select=id,anio&order=anio.desc&limit=1'))[0];
-      if (!t) throw new Error('No hay temporada cargada');
-      invCache.temporadaId = t.id;
-    }
-
-    if (!invCache.escuelas) {
-      invCache.escuelas = await supaFetchAll('escuela',
-        '?activa=eq.true&select=id,alias,codigo_cde,nombre&order=alias.asc');
-    }
-
-    // Demanda: alumnos activos de la temporada
-    invCache.alumnos = await supaFetchAll('alumno',
-      `?temporada_id=eq.${invCache.temporadaId}&activo=eq.true` +
-      '&select=escuela_id,prenda_top,talla_top_key,prenda_bottom,talla_bottom_key');
-
-    // Stock actual desde la vista
-    invCache.stock = await supaFetchAll('vw_bodega_stock',
-      '?select=nombre_prenda,talla_key,stock_actual,reservado_empaque');
-
-    renderInventario();
+    await tiSWR('inventario_v1', async () => {
+      if (!invCache.temporadaId) {
+        const t = (await supaFetch('temporada', 'GET', null,
+          '?estado=eq.activa&select=id,anio&order=anio.desc&limit=1'))[0]
+          || (await supaFetch('temporada', 'GET', null,
+          '?select=id,anio&order=anio.desc&limit=1'))[0];
+        if (!t) throw new Error('No hay temporada cargada');
+        invCache.temporadaId = t.id;
+      }
+      const [escuelas, alumnos, stock] = await Promise.all([
+        supaFetchAll('escuela',
+          '?activa=eq.true&select=id,alias,codigo_cde,nombre&order=alias.asc'),
+        supaFetchAll('alumno',
+          `?temporada_id=eq.${invCache.temporadaId}&activo=eq.true` +
+          '&select=escuela_id,prenda_top,talla_top_key,prenda_bottom,talla_bottom_key'),
+        supaFetchAll('vw_bodega_stock',
+          '?select=nombre_prenda,talla_key,stock_actual,reservado_empaque'),
+      ]);
+      return { escuelas, alumnos, stock, temporadaId: invCache.temporadaId };
+    }, (data) => {
+      invCache.escuelas = data.escuelas;
+      invCache.alumnos = data.alumnos;
+      invCache.stock = data.stock;
+      invCache.temporadaId = data.temporadaId;
+      renderInventario();
+    }, { ttl: 30 * 60 * 1000 });
   } catch (e) {
     root.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }

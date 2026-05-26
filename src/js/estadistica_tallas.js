@@ -30,38 +30,43 @@ let tallasResumenCache = {
 async function initTallasResumen() {
   const root = document.getElementById('est-tallas-contenido');
   if (!root) return;
-  root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando datos...</div>';
+
+  const tieneCache = (typeof tiCacheGet === 'function') && tiCacheGet('estadistica_tallas_v1');
+  if (!tieneCache) root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando datos...</div>';
 
   try {
-    if (!tallasResumenCache.temporadaId) {
-      const t = (await supaFetch('temporada', 'GET', null,
-        '?estado=eq.activa&select=id&order=anio.desc&limit=1'))[0]
-        || (await supaFetch('temporada', 'GET', null, '?select=id&order=anio.desc&limit=1'))[0];
-      if (!t) throw new Error('No hay temporada cargada');
-      tallasResumenCache.temporadaId = t.id;
-    }
+    await tiSWR('estadistica_tallas_v1', async () => {
+      if (!tallasResumenCache.temporadaId) {
+        const t = (await supaFetch('temporada', 'GET', null,
+          '?estado=eq.activa&select=id&order=anio.desc&limit=1'))[0]
+          || (await supaFetch('temporada', 'GET', null, '?select=id&order=anio.desc&limit=1'))[0];
+        if (!t) throw new Error('No hay temporada cargada');
+        tallasResumenCache.temporadaId = t.id;
+      }
 
-    const [escuelas, alumnos, bultosPend, stock, pool] = await Promise.all([
-      supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre,codigo_cde&order=alias.asc'),
-      supaFetchAll('alumno',
-        `?temporada_id=eq.${tallasResumenCache.temporadaId}&activo=eq.true&select=escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000`),
-      supaFetchAll('vw_produccion_estado',
-        '?estado_manual=neq.terminado&select=cod_prenda,talla_key_salida,cantidad_original,estado_manual,total_etapas,etapas_hechas'),
-      supaFetchAll('vw_bodega_stock',
-        '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
-      supaFetchAll('escuela_acaparado',
-        '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
-    ]);
-
-    const escMap = {};
-    for (const e of escuelas) escMap[e.id] = e;
-    tallasResumenCache.escuelas = escMap;
-    tallasResumenCache.alumnos = alumnos;
-    tallasResumenCache.bultosPendientes = bultosPend;
-    tallasResumenCache.stock = stock;
-    tallasResumenCache.pool = pool;
-
-    renderTallasResumen();
+      const [escuelas, alumnos, bultosPend, stock, pool] = await Promise.all([
+        supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre,codigo_cde&order=alias.asc'),
+        supaFetchAll('alumno',
+          `?temporada_id=eq.${tallasResumenCache.temporadaId}&activo=eq.true&select=escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000`),
+        supaFetchAll('vw_produccion_estado',
+          '?estado_manual=neq.terminado&select=cod_prenda,talla_key_salida,cantidad_original,estado_manual,total_etapas,etapas_hechas'),
+        supaFetchAll('vw_bodega_stock',
+          '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
+        supaFetchAll('escuela_acaparado',
+          '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+      ]);
+      return { escuelas, alumnos, bultosPend, stock, pool, temporadaId: tallasResumenCache.temporadaId };
+    }, (data) => {
+      const escMap = {};
+      for (const e of data.escuelas) escMap[e.id] = e;
+      tallasResumenCache.escuelas = escMap;
+      tallasResumenCache.alumnos = data.alumnos;
+      tallasResumenCache.bultosPendientes = data.bultosPend;
+      tallasResumenCache.stock = data.stock;
+      tallasResumenCache.pool = data.pool;
+      tallasResumenCache.temporadaId = data.temporadaId;
+      renderTallasResumen();
+    }, { ttl: 60 * 60 * 1000 });
   } catch (e) {
     root.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }

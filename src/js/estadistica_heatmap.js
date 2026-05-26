@@ -13,29 +13,37 @@ let heatmapCache = {
 async function initHeatmapCritico() {
   const root = document.getElementById('est-heatmap-contenido');
   if (!root) return;
-  root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando datos...</div>';
+
+  // Stale-while-revalidate: pinta del cache local mientras refresca.
+  const tieneCache = (typeof tiCacheGet === 'function') && tiCacheGet('estadistica_heatmap_v1');
+  if (!tieneCache) root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando datos...</div>';
 
   try {
-    if (!heatmapCache.temporadaId) {
-      const t = (await supaFetch('temporada', 'GET', null,
-        '?estado=eq.activa&select=id&order=anio.desc&limit=1'))[0]
-        || (await supaFetch('temporada', 'GET', null, '?select=id&order=anio.desc&limit=1'))[0];
-      if (!t) throw new Error('No hay temporada cargada');
-      heatmapCache.temporadaId = t.id;
-    }
-    const [alumnos, stock, pool, bultos] = await Promise.all([
-      supaFetchAll('alumno',
-        `?temporada_id=eq.${heatmapCache.temporadaId}&activo=eq.true&select=prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000`),
-      supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
-      supaFetchAll('escuela_acaparado', '?select=nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
-      supaFetchAll('vw_produccion_estado',
-        '?estado_manual=neq.terminado&select=cod_prenda,talla_key_salida,cantidad_original,total_etapas,etapas_hechas'),
-    ]);
-    heatmapCache.alumnos = alumnos;
-    heatmapCache.stock = stock;
-    heatmapCache.pool = pool;
-    heatmapCache.bultos = bultos;
-    renderHeatmapCritico();
+    await tiSWR('estadistica_heatmap_v1', async () => {
+      if (!heatmapCache.temporadaId) {
+        const t = (await supaFetch('temporada', 'GET', null,
+          '?estado=eq.activa&select=id&order=anio.desc&limit=1'))[0]
+          || (await supaFetch('temporada', 'GET', null, '?select=id&order=anio.desc&limit=1'))[0];
+        if (!t) throw new Error('No hay temporada cargada');
+        heatmapCache.temporadaId = t.id;
+      }
+      const [alumnos, stock, pool, bultos] = await Promise.all([
+        supaFetchAll('alumno',
+          `?temporada_id=eq.${heatmapCache.temporadaId}&activo=eq.true&select=prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000`),
+        supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
+        supaFetchAll('escuela_acaparado', '?select=nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+        supaFetchAll('vw_produccion_estado',
+          '?estado_manual=neq.terminado&select=cod_prenda,talla_key_salida,cantidad_original,total_etapas,etapas_hechas'),
+      ]);
+      return { alumnos, stock, pool, bultos, temporadaId: heatmapCache.temporadaId };
+    }, (data) => {
+      heatmapCache.alumnos = data.alumnos;
+      heatmapCache.stock = data.stock;
+      heatmapCache.pool = data.pool;
+      heatmapCache.bultos = data.bultos;
+      heatmapCache.temporadaId = data.temporadaId;
+      renderHeatmapCritico();
+    }, { ttl: 60 * 60 * 1000 });  // 1h — datos de estadística cambian lento
   } catch (e) {
     root.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }
