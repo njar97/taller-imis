@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-25 15:59 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-25 20:53 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -2572,17 +2572,32 @@ async function supaFetch(table, method = 'GET', body = null, params = '') {
 // Pagina en chunks para sortear el max-rows del backend (1000 por defecto).
 // Uso: supaFetchAll('alumno', '?escuela_id=eq.X&order=nombre')
 // `params` no debe traer limit/offset; se inyectan acá. pageSize <= max-rows.
-async function supaFetchAll(table, params = '', pageSize = 1000) {
+//
+// Trae la primera página secuencial; las siguientes en batches paralelos
+// (4 a la vez). Para tabla alumno (~6k filas): 7 round-trips secuenciales
+// → 2 batches paralelos. Reduce el tiempo de carga ~3-4x en red móvil.
+async function supaFetchAll(table, params = '', pageSize = 1000, parallel = 4) {
   const sep = params.includes('?') ? '&' : '?';
-  const out = [];
-  let offset = 0;
+  const fetchPage = (offset) =>
+    supaFetch(table, 'GET', null, `${params}${sep}limit=${pageSize}&offset=${offset}`);
+
+  // Primera página: si trae menos que pageSize ya está todo.
+  const first = await fetchPage(0);
+  if (!Array.isArray(first) || first.length < pageSize) return first || [];
+
+  const out = [...first];
+  let nextOffset = pageSize;
   while (true) {
-    const page = await supaFetch(table, 'GET', null,
-      `${params}${sep}limit=${pageSize}&offset=${offset}`);
-    if (!Array.isArray(page) || page.length === 0) break;
-    out.push(...page);
-    if (page.length < pageSize) break;
-    offset += pageSize;
+    const offsets = Array.from({ length: parallel }, (_, i) => nextOffset + i * pageSize);
+    const pages = await Promise.all(offsets.map(fetchPage));
+    let alcanzoFin = false;
+    for (const page of pages) {
+      if (!Array.isArray(page) || page.length === 0) { alcanzoFin = true; break; }
+      out.push(...page);
+      if (page.length < pageSize) { alcanzoFin = true; break; }
+    }
+    if (alcanzoFin) break;
+    nextOffset += parallel * pageSize;
   }
   return out;
 }
@@ -14245,8 +14260,17 @@ async function initAlumnosGlobal() {
   try {
     const [escuelas, alumnos] = await Promise.all([
       supaFetchAll('escuela'),
-      // traer TODOS incluso los sin tallas
-      supaFetchAll('alumno', '?activo=eq.true&order=nombre'),
+      // traer TODOS incluso los sin tallas — select explícito para evitar
+      // bajar columnas no usadas (creado_en/actualizado_en). Si después se
+      // agregan columnas grandes a alumno, no van a afectar el load inicial.
+      supaFetchAll('alumno',
+        '?activo=eq.true&select=' +
+        'id,temporada_id,escuela_id,nombre,grado,nivel,ciclo,sexo,activo,' +
+        'prenda_top,talla_top_key,estado_top,empacado_top_en,' +
+        'prenda_bottom,talla_bottom_key,estado_bottom,empacado_bottom_en,' +
+        'talla_empacada_top,talla_empacada_bot,' +
+        'observaciones,tiene_talla_no_estandar' +
+        '&order=nombre'),
     ]);
     
     const escMap = {};
@@ -14371,6 +14395,20 @@ function aplicarFiltrosAlumnos(c, opts = {}) {
   return lista;
 }
 
+// Render diferido para hot paths (toggles de checkbox, input de búsqueda).
+// Coalesce múltiples llamadas en un solo render por frame. El feedback
+// inmediato del browser (el check marcado, el texto escrito) sigue ahí —
+// solo el recálculo de disabled/banner/avisos se diferre al próximo frame.
+let _renderAlumnosRaf = 0;
+function scheduleRenderAlumnos() {
+  if (_renderAlumnosRaf) return;
+  _renderAlumnosRaf = (typeof requestAnimationFrame === 'function'
+    ? requestAnimationFrame : (cb) => setTimeout(cb, 16))(() => {
+    _renderAlumnosRaf = 0;
+    renderAlumnosGlobal();
+  });
+}
+
 function renderAlumnosGlobal() {
   const cont = document.getElementById('alumnos-global-contenido');
   if (!cont) return;
@@ -14452,7 +14490,7 @@ function renderAlumnosGlobal() {
       <!-- Fila 3: buscar + acciones -->
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
         <input type="text" placeholder="🔍 Buscar nombre..." value="${c.busqueda}"
-          oninput="alumnosGlobalCache.busqueda = this.value; renderAlumnosGlobal()"
+          oninput="alumnosGlobalCache.busqueda = this.value; scheduleRenderAlumnos()"
           style="flex:1;min-width:140px;padding:6px 10px;border:1px solid var(--borde);border-radius:4px">
         <button class="btn btn-success btn-sm" onclick="abrirNuevoAlumno()">+ Nuevo alumno</button>
         <button class="btn btn-primary btn-sm" onclick="generarEtiquetasDirecto()" title="Genera PDF con los filtros y orden actuales">🏷 Imprimir etiquetas</button>
@@ -14992,7 +15030,9 @@ function toggleMarcarPieza(id, pieza, checked) {
   const set = pieza === 'top' ? c.empMarcadosTop : c.empMarcadosBot;
   if (checked) set.add(id);
   else set.delete(id);
-  renderAlumnosGlobal();
+  // El browser ya pintó el check change. Diferimos el recálculo de
+  // disabled/banner/avisos al próximo frame para no bloquear taps rápidos.
+  scheduleRenderAlumnos();
 }
 
 // Compat (en caso de que algo viejo todavía llame). Marca ambas piezas si elig.

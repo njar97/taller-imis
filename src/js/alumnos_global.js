@@ -162,8 +162,17 @@ async function initAlumnosGlobal() {
   try {
     const [escuelas, alumnos] = await Promise.all([
       supaFetchAll('escuela'),
-      // traer TODOS incluso los sin tallas
-      supaFetchAll('alumno', '?activo=eq.true&order=nombre'),
+      // traer TODOS incluso los sin tallas — select explícito para evitar
+      // bajar columnas no usadas (creado_en/actualizado_en). Si después se
+      // agregan columnas grandes a alumno, no van a afectar el load inicial.
+      supaFetchAll('alumno',
+        '?activo=eq.true&select=' +
+        'id,temporada_id,escuela_id,nombre,grado,nivel,ciclo,sexo,activo,' +
+        'prenda_top,talla_top_key,estado_top,empacado_top_en,' +
+        'prenda_bottom,talla_bottom_key,estado_bottom,empacado_bottom_en,' +
+        'talla_empacada_top,talla_empacada_bot,' +
+        'observaciones,tiene_talla_no_estandar' +
+        '&order=nombre'),
     ]);
     
     const escMap = {};
@@ -288,6 +297,20 @@ function aplicarFiltrosAlumnos(c, opts = {}) {
   return lista;
 }
 
+// Render diferido para hot paths (toggles de checkbox, input de búsqueda).
+// Coalesce múltiples llamadas en un solo render por frame. El feedback
+// inmediato del browser (el check marcado, el texto escrito) sigue ahí —
+// solo el recálculo de disabled/banner/avisos se diferre al próximo frame.
+let _renderAlumnosRaf = 0;
+function scheduleRenderAlumnos() {
+  if (_renderAlumnosRaf) return;
+  _renderAlumnosRaf = (typeof requestAnimationFrame === 'function'
+    ? requestAnimationFrame : (cb) => setTimeout(cb, 16))(() => {
+    _renderAlumnosRaf = 0;
+    renderAlumnosGlobal();
+  });
+}
+
 function renderAlumnosGlobal() {
   const cont = document.getElementById('alumnos-global-contenido');
   if (!cont) return;
@@ -369,7 +392,7 @@ function renderAlumnosGlobal() {
       <!-- Fila 3: buscar + acciones -->
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
         <input type="text" placeholder="🔍 Buscar nombre..." value="${c.busqueda}"
-          oninput="alumnosGlobalCache.busqueda = this.value; renderAlumnosGlobal()"
+          oninput="alumnosGlobalCache.busqueda = this.value; scheduleRenderAlumnos()"
           style="flex:1;min-width:140px;padding:6px 10px;border:1px solid var(--borde);border-radius:4px">
         <button class="btn btn-success btn-sm" onclick="abrirNuevoAlumno()">+ Nuevo alumno</button>
         <button class="btn btn-primary btn-sm" onclick="generarEtiquetasDirecto()" title="Genera PDF con los filtros y orden actuales">🏷 Imprimir etiquetas</button>
@@ -909,7 +932,9 @@ function toggleMarcarPieza(id, pieza, checked) {
   const set = pieza === 'top' ? c.empMarcadosTop : c.empMarcadosBot;
   if (checked) set.add(id);
   else set.delete(id);
-  renderAlumnosGlobal();
+  // El browser ya pintó el check change. Diferimos el recálculo de
+  // disabled/banner/avisos al próximo frame para no bloquear taps rápidos.
+  scheduleRenderAlumnos();
 }
 
 // Compat (en caso de que algo viejo todavía llame). Marca ambas piezas si elig.

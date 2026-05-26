@@ -162,17 +162,32 @@ async function supaFetch(table, method = 'GET', body = null, params = '') {
 // Pagina en chunks para sortear el max-rows del backend (1000 por defecto).
 // Uso: supaFetchAll('alumno', '?escuela_id=eq.X&order=nombre')
 // `params` no debe traer limit/offset; se inyectan acá. pageSize <= max-rows.
-async function supaFetchAll(table, params = '', pageSize = 1000) {
+//
+// Trae la primera página secuencial; las siguientes en batches paralelos
+// (4 a la vez). Para tabla alumno (~6k filas): 7 round-trips secuenciales
+// → 2 batches paralelos. Reduce el tiempo de carga ~3-4x en red móvil.
+async function supaFetchAll(table, params = '', pageSize = 1000, parallel = 4) {
   const sep = params.includes('?') ? '&' : '?';
-  const out = [];
-  let offset = 0;
+  const fetchPage = (offset) =>
+    supaFetch(table, 'GET', null, `${params}${sep}limit=${pageSize}&offset=${offset}`);
+
+  // Primera página: si trae menos que pageSize ya está todo.
+  const first = await fetchPage(0);
+  if (!Array.isArray(first) || first.length < pageSize) return first || [];
+
+  const out = [...first];
+  let nextOffset = pageSize;
   while (true) {
-    const page = await supaFetch(table, 'GET', null,
-      `${params}${sep}limit=${pageSize}&offset=${offset}`);
-    if (!Array.isArray(page) || page.length === 0) break;
-    out.push(...page);
-    if (page.length < pageSize) break;
-    offset += pageSize;
+    const offsets = Array.from({ length: parallel }, (_, i) => nextOffset + i * pageSize);
+    const pages = await Promise.all(offsets.map(fetchPage));
+    let alcanzoFin = false;
+    for (const page of pages) {
+      if (!Array.isArray(page) || page.length === 0) { alcanzoFin = true; break; }
+      out.push(...page);
+      if (page.length < pageSize) { alcanzoFin = true; break; }
+    }
+    if (alcanzoFin) break;
+    nextOffset += parallel * pageSize;
   }
   return out;
 }
