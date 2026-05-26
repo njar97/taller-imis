@@ -503,93 +503,132 @@ async function exportarTallasPDF() {
       </tr>
     </table>`;
 
-  // UNA SOLA tabla con todas las escuelas. Headers de escuela rotados
-  // verticales (position:absolute + transform) — esto sí renderiza en
-  // print, a diferencia de writing-mode que falla en algunos motores.
-  // Fuente diferenciada: 12pt en columnas principales (prenda, talla,
-  // necesidad, suministros, balance) y 10pt en datos de escuelas (los
-  // números chicos 0-999 entran cómodos). Así pueden caber 16 escuelas
-  // sin sacrificar la legibilidad de las columnas importantes.
+  // Agrupar rows por prenda (cada prenda en una página separada).
+  // Excepción: FALDA y FALDA C.E van JUNTAS en una misma página, mezcladas
+  // y ordenadas por talla + largo, con la columna Prenda visible.
   const numSuministro = (f.incluirCorte?1:0) + (f.incluirProd?1:0) + (f.incluirBodega?1:0) + (f.incluirPool?1:0);
+  const FALDA_VARIANTS = new Set(['FALDA', 'FALDA C.E', 'FALDA CE', 'FALDA-C.E']);
+  const groupMap = new Map();
+  const groupOrder = [];
+  for (const r of rows) {
+    const key = FALDA_VARIANTS.has(r.prenda) ? '__FALDA_COMBI__' : r.prenda;
+    if (!groupMap.has(key)) { groupMap.set(key, []); groupOrder.push(key); }
+    groupMap.get(key).push(r);
+  }
 
-  // Anchos: las columnas fijas tienen ancho mínimo cómodo, las escuelas
-  // comparten lo restante. Con 16 escuelas y 4 suministros: queda ~45%
-  // del ancho para escuelas / 16 = ~2.8% c/u (~27px en Letter landscape).
-  const wPrenda = 9, wTalla = 5, wNec = 7, wSum = 6, wBal = 8;
-  const fijoTotal = wPrenda + wTalla + wNec + (numSuministro * wSum) + wBal;
-  const escW = (showEsc && esc.length > 0) ? ((100 - fijoTotal) / esc.length) : 0;
+  // Parser de talla para orden por número + largo. Tallas tipo: B8, B8-3L,
+  // B10+5L, F12, etc. Sufijo de largo: '' < -3L < -5L < +5L.
+  function parseTallaParts(t) {
+    const m = String(t || '').match(/^([A-Z]*)(\d+)(.*)$/);
+    if (!m) return { num: 9999, sufijoOrden: 99, sufijoStr: String(t||'') };
+    const sufijo = m[3] || '';
+    const sufijoOrden = sufijo === '' ? 0
+      : sufijo === '-3L' ? 1 : sufijo === '-5L' ? 2 : sufijo === '+5L' ? 3 : 99;
+    return { num: parseInt(m[2], 10) || 0, sufijoOrden, sufijoStr: sufijo };
+  }
+  function cmpTalla(a, b) {
+    const ta = parseTallaParts(a.talla), tb = parseTallaParts(b.talla);
+    if (ta.num !== tb.num) return ta.num - tb.num;
+    if (ta.sufijoOrden !== tb.sufijoOrden) return ta.sufijoOrden - tb.sufijoOrden;
+    if (ta.sufijoStr !== tb.sufijoStr) return ta.sufijoStr.localeCompare(tb.sufijoStr);
+    return (a.prenda || '').localeCompare(b.prenda || '');
+  }
+  for (const grp of groupMap.values()) grp.sort(cmpTalla);
 
-  const colgroup = `<colgroup>
-    <col style="width:${wPrenda}%">
-    <col style="width:${wTalla}%">
-    <col style="width:${wNec}%">
-    ${showEsc ? esc.map(() => `<col style="width:${escW.toFixed(3)}%">`).join('') : ''}
-    ${f.incluirCorte  ? `<col style="width:${wSum}%">` : ''}
-    ${f.incluirProd   ? `<col style="width:${wSum}%">` : ''}
-    ${f.incluirBodega ? `<col style="width:${wSum}%">` : ''}
-    ${f.incluirPool   ? `<col style="width:${wSum}%">` : ''}
-    <col style="width:${wBal}%">
-  </colgroup>`;
-
-  // Columnas principales: 12pt. Escuelas (datos): 10pt para entrar.
-  const thS = 'background:#1F4E79;color:white;padding:6px 5px;text-align:center;font-weight:600;font-size:12pt;border:1px solid #1F4E79;white-space:nowrap';
-  const thL = thS + ';text-align:left';
+  // Estilos compartidos. Headers TODOS verticales (consistencia visual y
+  // así caben columnas angostas con texto completo). Usa position:absolute
+  // + transform:rotate(-90deg), patrón que sí renderiza en print Android.
+  const thVert = 'background:#1F4E79;color:white;padding:0;height:130px;border:1px solid #1F4E79;position:relative;vertical-align:middle;text-align:center';
+  const thVertInner = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-90deg);transform-origin:center center;white-space:nowrap;font-size:12pt;font-weight:600;width:120px;text-align:center;line-height:1';
+  const thEscInner = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-90deg);transform-origin:center center;white-space:nowrap;font-size:11pt;font-weight:600;width:120px;text-align:center;line-height:1';
   const tdS = 'padding:5px 6px;border:1px solid #E5E5E5;font-size:12pt;text-align:right;font-family:Arial,sans-serif';
   const tdL = tdS + ';text-align:left';
-  // Datos en columnas de escuelas: 10pt, padding chico para densidad.
   const tdEsc = 'padding:5px 2px;border:1px solid #E5E5E5;font-size:10pt;text-align:center;font-family:Arial,sans-serif';
-  // Header rotado: contenedor th con height fijo + relative; texto interno
-  // con position:absolute centrado y rotado 90deg antihorario. Esto SÍ
-  // funciona en motores de print (writing-mode vertical-rl no funciona en
-  // print mode de Chrome Android, dejaba blanco).
-  const thEsc = 'background:#1F4E79;color:white;padding:0;height:120px;border:1px solid #1F4E79;position:relative;vertical-align:middle';
-  const thEscInner = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-90deg);transform-origin:center center;white-space:nowrap;font-size:11pt;font-weight:600;width:110px;text-align:center;line-height:1';
 
-  const headerCols = `
-    <th style="${thL}">Prenda</th>
-    <th style="${thL}">Talla</th>
-    <th style="${thS}">Necesidad</th>
-    ${showEsc ? esc.map(e => `<th style="${thEsc}" title="${(e.nombre||'').replace(/"/g,'&quot;')}"><div style="${thEscInner}">🏫 ${e.alias || e.nombre}</div></th>`).join('') : ''}
-    ${f.incluirCorte  ? `<th style="${thS}">✂️ Corte</th>` : ''}
-    ${f.incluirProd   ? `<th style="${thS}">🏭 Prod.</th>` : ''}
-    ${f.incluirBodega ? `<th style="${thS}">📦 Bodega</th>` : ''}
-    ${f.incluirPool   ? `<th style="${thS}">📥 Pool</th>` : ''}
-    <th style="${thS}">Balance</th>`;
+  function buildTablaGrupo(grupoKey, groupRows, isFirst) {
+    const isCombi = grupoKey === '__FALDA_COMBI__';
+    const nombrePrenda = isCombi ? 'FALDA + FALDA C.E' : grupoKey;
+    const subtitulo = isCombi
+      ? `<h2 style="margin:14px 0 8px;font-size:18pt;color:#1F4E79;font-weight:700">👗 FALDA + FALDA C.E <span style="font-size:11pt;font-weight:400;color:#666">(mezcladas, ordenadas por talla y largo)</span></h2>`
+      : `<h2 style="margin:14px 0 8px;font-size:18pt;color:#1F4E79;font-weight:700">👕 ${nombrePrenda}</h2>`;
 
-  const dataRows = rows.map((r, i) => {
-    const bg = i % 2 === 0 ? 'background:white' : 'background:#FAFAFA';
-    const balColor = r.balance < 0 ? '#C00' : '#2a8f4a';
-    return `<tr style="${bg}">
-      <td style="${tdL};font-weight:600">${r.prenda}</td>
-      <td style="${tdL};font-family:monospace;font-weight:700">${r.talla}</td>
-      <td style="${tdS};font-weight:700">${r.demanda}</td>
+    // Anchos: cuando NO hay columna Prenda, redistribuir su espacio
+    // a Talla. En combi (FALDA), sí hay columna Prenda.
+    const wPrenda = isCombi ? 10 : 0;
+    const wTalla = isCombi ? 6 : 12;
+    const wNec = 7, wSum = 6, wBal = 8;
+    const fijoTotal = wPrenda + wTalla + wNec + (numSuministro * wSum) + wBal;
+    const escW = (showEsc && esc.length > 0) ? ((100 - fijoTotal) / esc.length) : 0;
+
+    const cg = `<colgroup>
+      ${isCombi ? `<col style="width:${wPrenda}%">` : ''}
+      <col style="width:${wTalla}%">
+      <col style="width:${wNec}%">
+      ${showEsc ? esc.map(() => `<col style="width:${escW.toFixed(3)}%">`).join('') : ''}
+      ${f.incluirCorte  ? `<col style="width:${wSum}%">` : ''}
+      ${f.incluirProd   ? `<col style="width:${wSum}%">` : ''}
+      ${f.incluirBodega ? `<col style="width:${wSum}%">` : ''}
+      ${f.incluirPool   ? `<col style="width:${wSum}%">` : ''}
+      <col style="width:${wBal}%">
+    </colgroup>`;
+
+    const hdr = `
+      ${isCombi ? `<th style="${thVert}"><div style="${thVertInner}">Prenda</div></th>` : ''}
+      <th style="${thVert}"><div style="${thVertInner}">Talla</div></th>
+      <th style="${thVert}"><div style="${thVertInner}">Necesidad</div></th>
+      ${showEsc ? esc.map(e => `<th style="${thVert}" title="${(e.nombre||'').replace(/"/g,'&quot;')}"><div style="${thEscInner}">🏫 ${e.alias || e.nombre}</div></th>`).join('') : ''}
+      ${f.incluirCorte  ? `<th style="${thVert}"><div style="${thVertInner}">✂️ Corte</div></th>` : ''}
+      ${f.incluirProd   ? `<th style="${thVert}"><div style="${thVertInner}">🏭 Prod.</div></th>` : ''}
+      ${f.incluirBodega ? `<th style="${thVert}"><div style="${thVertInner}">📦 Bodega</div></th>` : ''}
+      ${f.incluirPool   ? `<th style="${thVert}"><div style="${thVertInner}">📥 Pool</div></th>` : ''}
+      <th style="${thVert}"><div style="${thVertInner}">Balance</div></th>`;
+
+    const dr = groupRows.map((r, i) => {
+      const bg = i % 2 === 0 ? 'background:white' : 'background:#FAFAFA';
+      const balColor = r.balance < 0 ? '#C00' : '#2a8f4a';
+      return `<tr style="${bg}">
+        ${isCombi ? `<td style="${tdL};font-weight:600">${r.prenda}</td>` : ''}
+        <td style="${tdL};font-family:monospace;font-weight:700">${r.talla}</td>
+        <td style="${tdS};font-weight:700">${r.demanda}</td>
+        ${showEsc ? esc.map(e => {
+          const n = r.porEsc.get(e.id) || 0;
+          return `<td style="${tdEsc};color:${n>0?'#222':'#CCC'}">${n||'·'}</td>`;
+        }).join('') : ''}
+        ${f.incluirCorte  ? `<td style="${tdS};color:#888">${r.corte || '—'}</td>` : ''}
+        ${f.incluirProd   ? `<td style="${tdS};color:#2a8f4a">${r.prod || 0}</td>` : ''}
+        ${f.incluirBodega ? `<td style="${tdS};color:#1F4E79">${r.stockLibre || 0}</td>` : ''}
+        ${f.incluirPool   ? `<td style="${tdS};color:#a82">${r.pool || 0}</td>` : ''}
+        <td style="${tdS};font-weight:700;color:${balColor}">${r.balance>=0?'+':''}${r.balance}</td>
+      </tr>`;
+    }).join('');
+
+    // Totales del grupo (no globales)
+    const gTot = groupRows.reduce((s, r) => ({
+      demanda: s.demanda + r.demanda, corte: s.corte + r.corte, prod: s.prod + r.prod,
+      stockLibre: s.stockLibre + r.stockLibre, pool: s.pool + r.pool, balance: s.balance + r.balance,
+    }), { demanda: 0, corte: 0, prod: 0, stockLibre: 0, pool: 0, balance: 0 });
+
+    const tr = `<tr style="background:#E8F0FE;font-weight:700">
+      <td style="${tdL};font-weight:700" colspan="${isCombi ? 2 : 1}">TOTAL ${nombrePrenda}</td>
+      <td style="${tdS};font-weight:700">${gTot.demanda}</td>
       ${showEsc ? esc.map(e => {
-        const n = r.porEsc.get(e.id) || 0;
-        return `<td style="${tdEsc};color:${n>0?'#222':'#CCC'}">${n||'·'}</td>`;
+        const sum = groupRows.reduce((s, r) => s + (r.porEsc.get(e.id) || 0), 0);
+        return `<td style="${tdEsc};font-weight:700">${sum||'·'}</td>`;
       }).join('') : ''}
-      ${f.incluirCorte  ? `<td style="${tdS};color:#888">${r.corte || '—'}</td>` : ''}
-      ${f.incluirProd   ? `<td style="${tdS};color:#2a8f4a">${r.prod || 0}</td>` : ''}
-      ${f.incluirBodega ? `<td style="${tdS};color:#1F4E79">${r.stockLibre || 0}</td>` : ''}
-      ${f.incluirPool   ? `<td style="${tdS};color:#a82">${r.pool || 0}</td>` : ''}
-      <td style="${tdS};font-weight:700;color:${balColor}">${r.balance>=0?'+':''}${r.balance}</td>
+      ${f.incluirCorte  ? `<td style="${tdS};font-weight:700">${gTot.corte}</td>` : ''}
+      ${f.incluirProd   ? `<td style="${tdS};font-weight:700">${gTot.prod}</td>` : ''}
+      ${f.incluirBodega ? `<td style="${tdS};font-weight:700">${gTot.stockLibre}</td>` : ''}
+      ${f.incluirPool   ? `<td style="${tdS};font-weight:700">${gTot.pool}</td>` : ''}
+      <td style="${tdS};font-weight:700;color:${gTot.balance<0?'#C00':'#2a8f4a'}">${gTot.balance>=0?'+':''}${gTot.balance}</td>
     </tr>`;
-  }).join('');
 
-  const totalRow = `<tr style="background:#E8F0FE;font-weight:700">
-    <td style="${tdL};font-weight:700" colspan="2">TOTALES</td>
-    <td style="${tdS};font-weight:700">${tot.demanda}</td>
-    ${showEsc ? esc.map(e => {
-      const sum = rows.reduce((s, r) => s + (r.porEsc.get(e.id) || 0), 0);
-      return `<td style="${tdEsc};font-weight:700">${sum||'·'}</td>`;
-    }).join('') : ''}
-    ${f.incluirCorte  ? `<td style="${tdS};font-weight:700">${tot.corte}</td>` : ''}
-    ${f.incluirProd   ? `<td style="${tdS};font-weight:700">${tot.prod}</td>` : ''}
-    ${f.incluirBodega ? `<td style="${tdS};font-weight:700">${tot.stockLibre}</td>` : ''}
-    ${f.incluirPool   ? `<td style="${tdS};font-weight:700">${tot.pool}</td>` : ''}
-    <td style="${tdS};font-weight:700;color:${tot.balance<0?'#C00':'#2a8f4a'}">${tot.balance>=0?'+':''}${tot.balance}</td>
-  </tr>`;
+    const pageBreak = isFirst ? '' : '<div style="page-break-before:always"></div>';
+    return `${pageBreak}${subtitulo}<table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;table-layout:fixed">${cg}<thead><tr>${hdr}</tr></thead><tbody>${dr}${tr}</tbody></table>`;
+  }
 
-  const tablasHtml = `<table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;table-layout:fixed">${colgroup}<thead><tr>${headerCols}</tr></thead><tbody>${dataRows}${totalRow}</tbody></table>`;
+  const tablasHtml = groupOrder.map((key, idx) =>
+    buildTablaGrupo(key, groupMap.get(key), idx === 0)
+  ).join('');
 
   const html = `
     <div style="font-family:Arial,sans-serif;color:#222;padding:6px">
@@ -630,6 +669,7 @@ async function exportarTallasPDF() {
   table { border-collapse: collapse; }
   thead { display: table-header-group; }
   tr { page-break-inside: avoid; }
+  h2 { page-break-after: avoid; }
   @media print {
     body { padding: 0; }
   }
