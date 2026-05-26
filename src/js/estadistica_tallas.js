@@ -585,50 +585,50 @@ async function exportarTallasPDF() {
       </div>
     </div>`;
 
-  console.log('[tallas PDF] v3 — render visible + overlay. rows:', rows.length, 'esc:', esc.length);
+  console.log('[tallas PDF] v4 — patrón etiquetas (flujo normal + overlay). rows:', rows.length, 'esc:', esc.length);
+  const esMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  // Render DENTRO del viewport para que el browser haga layout real
-  // (Android Chrome ignora layouts off-screen y html2canvas captura
-  // un elemento sin dimensiones → PDF en blanco). Lo cubrimos con un
-  // overlay opaco para que el usuario no vea el flash.
+  // Overlay primero, así tapa el wrap apenas se agrega.
   const overlay = document.createElement('div');
   overlay.style.cssText =
-    'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:99999;' +
+    'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;' +
     'display:flex;align-items:center;justify-content:center;color:white;' +
-    'font-family:Arial,sans-serif;font-size:16px;font-weight:600;text-align:center';
-  overlay.innerHTML = '⏳ Generando PDF…<br><span style="font-size:12px;font-weight:400;opacity:0.85;margin-top:8px;display:inline-block">Puede tardar unos segundos</span>';
+    'font-size:18px;text-align:center;padding:20px';
+  overlay.innerHTML = `
+    <div>
+      <div style="font-size:48px;margin-bottom:10px">📊</div>
+      <div>Generando PDF de tallas...</div>
+      <div style="font-size:14px;opacity:0.7;margin-top:8px">No cierres esta página</div>
+    </div>
+  `;
   document.body.appendChild(overlay);
 
+  // Wrap en FLUJO NORMAL — sin position:fixed. html2canvas necesita layout
+  // real, y en Chrome Android los elementos fixed off-screen no lo reciben.
+  // Mismo patrón que generarPdfDirecto() de etiquetas, que funciona OK.
+  // Width 11in = Letter landscape ancho total (margen lo aplica html2pdf).
   const wrap = document.createElement('div');
-  // En viewport (top:0, left:0). Width fijo en mm para que html2canvas
-  // capture en la resolución correcta. z-index < overlay para quedar tapado.
-  wrap.style.cssText =
-    'position:fixed;top:0;left:0;width:260mm;background:#FFFFFF;' +
-    'z-index:99998;color:#222;line-height:1.3;overflow:hidden';
+  wrap.id = 'tallas-pdf-wrap';
+  wrap.style.cssText = 'width:11in;background:white;color:#000;font-family:Arial,sans-serif;';
   wrap.innerHTML = html;
   document.body.appendChild(wrap);
 
-  // Forzar layout sync + pequeña pausa para que el render del browser
-  // termine antes de que html2canvas capture.
-  // eslint-disable-next-line no-unused-expressions
-  wrap.offsetHeight;
-  await new Promise(r => setTimeout(r, 150));
-  console.log('[tallas PDF] wrap dimensions:', wrap.offsetWidth, 'x', wrap.offsetHeight);
+  // Forzar reflow + pausa para que el render del browser termine.
+  void wrap.offsetHeight;
+  await new Promise(r => setTimeout(r, 200));
+  console.log('[tallas PDF] wrap dims:', wrap.offsetWidth, 'x', wrap.offsetHeight);
 
   const opt = {
     margin: [8, 8, 8, 8],
     filename: `tallas-resumen-${fileFecha}.pdf`,
     image: { type: 'jpeg', quality: 0.95 },
     html2canvas: {
-      scale: 1.5,
+      scale: esMobile ? 1.5 : 2,
       useCORS: true,
-      backgroundColor: '#FFFFFF',
+      backgroundColor: '#ffffff',
       logging: false,
-      // Importante en móvil: usar las dims del elemento, no del window
-      windowWidth: wrap.offsetWidth,
-      windowHeight: wrap.offsetHeight,
     },
-    jsPDF: { unit: 'mm', format: 'letter', orientation: 'landscape' },
+    jsPDF: { unit: 'mm', format: 'letter', orientation: 'landscape', compress: true },
     pagebreak: { mode: ['css', 'legacy'] },
   };
 
