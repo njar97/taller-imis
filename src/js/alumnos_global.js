@@ -154,11 +154,36 @@ function etOrdenSet(arr) {
   localStorage.setItem('et_orden', JSON.stringify(arr));
 }
 
+// Persistir el estado actual de c.alumnos + escuelas al cache local.
+// Llamar tras cambios in-memory para que la próxima apertura desde cache
+// refleje el último estado conocido (ej: tras desempacar inline).
+function _persistAlumnosCache() {
+  const c = alumnosGlobalCache;
+  if (!c.cargado || !Array.isArray(c.alumnos) || typeof tiCacheSet !== 'function') return;
+  const escuelas = Object.values(c.escuelas || {});
+  tiCacheSet('alumnos_v1', { alumnos: c.alumnos, escuelas });
+}
+
 async function initAlumnosGlobal() {
   const cont = document.getElementById('alumnos-global-contenido');
   if (!cont) return;
-  cont.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando alumnos...</div>';
-  
+
+  // Stale-while-revalidate: si hay cache válido (< 24h, mismo schema), pintar
+  // instantáneo. En paralelo, hacer fetch fresh y reemplazar cuando responda.
+  const cached = (typeof tiCacheGet === 'function') ? tiCacheGet('alumnos_v1') : null;
+  let mostradoDesdeCache = false;
+  if (cached && Array.isArray(cached.alumnos) && Array.isArray(cached.escuelas)) {
+    const escMap = {};
+    for (const e of cached.escuelas) escMap[e.id] = e;
+    alumnosGlobalCache.escuelas = escMap;
+    alumnosGlobalCache.alumnos = cached.alumnos;
+    alumnosGlobalCache.cargado = true;
+    renderAlumnosGlobal();
+    mostradoDesdeCache = true;
+  } else {
+    cont.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando alumnos...</div>';
+  }
+
   try {
     const [escuelas, alumnos] = await Promise.all([
       supaFetchAll('escuela'),
@@ -174,23 +199,32 @@ async function initAlumnosGlobal() {
         'observaciones,tiene_talla_no_estandar' +
         '&order=nombre'),
     ]);
-    
+
     const escMap = {};
     for (const e of escuelas) escMap[e.id] = e;
     alumnosGlobalCache.escuelas = escMap;
     alumnosGlobalCache.alumnos = alumnos;
     alumnosGlobalCache.cargado = true;
-    
+
     // Asegurar que tenemos la lista de temporadas
     if (!registroCache.temporadas || registroCache.temporadas.length === 0) {
       try {
         registroCache.temporadas = await supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.desc&limit=20');
       } catch(e) { registroCache.temporadas = []; }
     }
-    
+
+    // Persistir snapshot fresh y re-render. Si ya estábamos mostrando desde
+    // cache, el reemplazo se ve como un refresh discreto.
+    if (typeof tiCacheSet === 'function') tiCacheSet('alumnos_v1', { alumnos, escuelas });
     renderAlumnosGlobal();
   } catch(e) {
-    cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+    // Si no había cache + falla la red → mostrar error. Si había cache →
+    // log silencioso, el usuario sigue viendo datos del cache (offline OK).
+    if (!mostradoDesdeCache) {
+      cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+    } else {
+      console.warn('[init] refresh falló, usando cache local:', e.message);
+    }
   }
 }
 
@@ -819,6 +853,9 @@ async function desempacarPiezaDesdeLista(alumnoId, pieza) {
     }
     // Refrescar supply para que el checkbox de empaque se reactive con el +1
     if (typeof cargarSupplyEmpaque === 'function') await cargarSupplyEmpaque();
+    // Persistir cambio al cache local (la próxima apertura ya verá la pieza
+    // como pendiente sin esperar el refresh contra Supabase).
+    _persistAlumnosCache();
     renderAlumnosGlobal();
     // Refrescar el badge de "esperando empaque" en el nav
     if (typeof refrescarBadgeEsperando === 'function') refrescarBadgeEsperando();

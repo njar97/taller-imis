@@ -192,6 +192,52 @@ async function supaFetchAll(table, params = '', pageSize = 1000, parallel = 4) {
   return out;
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// Cache local de datos (localStorage). Acelera 2ª+ aperturas de la app:
+// initAlumnosGlobal puede pintar instantáneo desde acá mientras refresca
+// en background contra Supabase (patrón stale-while-revalidate).
+//
+// **Bumpear TI_CACHE_VERSION cuando cambie el shape de los datos cacheados**
+// (ej: agregar columnas que el render asume presentes). Caches viejos
+// quedan inválidos automáticamente — no se rompe nada en updates de la app.
+// ══════════════════════════════════════════════════════════════════════
+const TI_CACHE_PREFIX = 'ti_data_';
+const TI_CACHE_VERSION = 1;
+const TI_CACHE_TTL_DEFAULT = 24 * 60 * 60 * 1000;  // 24h
+
+function tiCacheSet(key, data, ttlMs = TI_CACHE_TTL_DEFAULT) {
+  const payload = JSON.stringify({ v: TI_CACHE_VERSION, ts: Date.now(), ttl: ttlMs, data });
+  try {
+    localStorage.setItem(TI_CACHE_PREFIX + key, payload);
+  } catch (e) {
+    // QuotaExceeded → tirar todos los caches y reintentar una vez
+    tiCacheClearAll();
+    try { localStorage.setItem(TI_CACHE_PREFIX + key, payload); } catch (_) {}
+  }
+}
+
+function tiCacheGet(key) {
+  try {
+    const raw = localStorage.getItem(TI_CACHE_PREFIX + key);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (obj.v !== TI_CACHE_VERSION) return null;
+    if (Date.now() - obj.ts > (obj.ttl || TI_CACHE_TTL_DEFAULT)) return null;
+    return obj.data;
+  } catch (e) { return null; }
+}
+
+function tiCacheClearAll() {
+  try {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(TI_CACHE_PREFIX)) keys.push(k);
+    }
+    keys.forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+  } catch (_) {}
+}
+
 async function supaUploadFoto(file, trazoId) {
   const ext = file.name.split('.').pop();
   const path = `${trazoId}.${ext}`;
@@ -390,6 +436,9 @@ async function doLogout() {
     const cli = initSupaClient();
     if (cli) await cli.auth.signOut();
   } catch (e) { /* ignore */ }
+  // Limpiar cache local de datos para que el próximo login no vea
+  // info del usuario anterior (en caso de uso compartido del browser).
+  if (typeof tiCacheClearAll === 'function') tiCacheClearAll();
   supaSession = null;
   renderUserChip();
   const auditTab = document.getElementById('nav-tab-audit');
