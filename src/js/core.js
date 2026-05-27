@@ -202,7 +202,7 @@ async function supaFetchAll(table, params = '', pageSize = 1000, parallel = 4) {
 // quedan inválidos automáticamente — no se rompe nada en updates de la app.
 // ══════════════════════════════════════════════════════════════════════
 const TI_CACHE_PREFIX = 'ti_data_';
-const TI_CACHE_VERSION = 1;
+const TI_CACHE_VERSION = 2;  // bump: select de escuelas ahora incluye grupo_produccion
 const TI_CACHE_TTL_DEFAULT = 24 * 60 * 60 * 1000;  // 24h
 
 function tiCacheSet(key, data, ttlMs = TI_CACHE_TTL_DEFAULT) {

@@ -24,6 +24,7 @@ let tallasResumenCache = {
     incluirBodega: true,
     incluirPool: true,
     orientacionPDF: 'horizontal',  // 'horizontal' (landscape) | 'vertical' (portrait)
+    subtotalGrupos: false,         // sumar sub-total por escuela.grupo_produccion (solo afecta PDF)
   },
   expandidos: new Set(),  // claves "prenda|talla"
 };
@@ -43,7 +44,7 @@ async function initTallasResumen() {
     }
 
     const [escuelas, alumnos, bultosPend, stock, pool] = await Promise.all([
-      supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre,codigo_cde&order=alias.asc'),
+      supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre,codigo_cde,grupo_produccion&order=alias.asc'),
       supaFetchAll('alumno',
         `?temporada_id=eq.${tallasResumenCache.temporadaId}&activo=eq.true&select=escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000`),
       supaFetchAll('vw_produccion_estado',
@@ -278,6 +279,10 @@ function renderTallasResumen() {
           <div style="font-size:10px;color:#888;margin-top:2px">${(f.escuelas||[]).length>0?'Solo las elegidas abajo':'Todas las que tengan demanda'}</div>
         </div>
         <div style="text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:flex-start;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer" title="Agregar sub-total por grupo_produccion de las escuelas (PDF)">
+            <input type="checkbox" ${f.subtotalGrupos?'checked':''} onchange="onTallasFiltro('subtotalGrupos', this.checked)">
+            Σ Sub-total grupos
+          </label>
           <select onchange="onTallasFiltro('orientacionPDF', this.value)" title="Orientación del PDF" style="padding:5px 6px;font-size:12px;border:1px solid #CCC;border-radius:6px;background:white">
             <option value="horizontal" ${(f.orientacionPDF||'horizontal')==='horizontal'?'selected':''}>📄 Horizontal</option>
             <option value="vertical" ${f.orientacionPDF==='vertical'?'selected':''}>📃 Vertical</option>
@@ -561,6 +566,34 @@ async function exportarTallasPDF() {
   const tdL = tdS + ';text-align:left';
   const tdEsc = 'padding:5px 2px;border:1px solid #E5E5E5;font-size:10pt;text-align:center;font-family:Arial,sans-serif';
 
+  // Construye la lista de columnas para la sección "escuelas" del PDF.
+  // Si f.subtotalGrupos está activo, agrupa por escuela.grupo_produccion
+  // y agrega una columna "Σ Grupo X" después de cada grupo con >1 esc.
+  // Cada item: { tipo: 'esc', escuela } o { tipo: 'subtotal', grupo, escuelas }.
+  function buildEscColsExt(escuelas, withSubtotal) {
+    if (!withSubtotal) return escuelas.map(e => ({ tipo: 'esc', escuela: e }));
+    const groupMap = new Map();
+    const groupOrder = [];
+    for (const e of escuelas) {
+      const grp = e.grupo_produccion || '__SIN_GRUPO__';
+      if (!groupMap.has(grp)) { groupMap.set(grp, []); groupOrder.push(grp); }
+      groupMap.get(grp).push(e);
+    }
+    // Sin grupo al final
+    const ordered = groupOrder.filter(g => g !== '__SIN_GRUPO__');
+    if (groupMap.has('__SIN_GRUPO__')) ordered.push('__SIN_GRUPO__');
+    const cols = [];
+    for (const grp of ordered) {
+      const escsGrp = groupMap.get(grp);
+      for (const e of escsGrp) cols.push({ tipo: 'esc', escuela: e });
+      // Sub-total solo si grupo tiene nombre y >1 escuela (sino es redundante)
+      if (grp !== '__SIN_GRUPO__' && escsGrp.length > 1) {
+        cols.push({ tipo: 'subtotal', grupo: grp, escuelas: escsGrp });
+      }
+    }
+    return cols;
+  }
+
   function buildTablaGrupo(grupoKey, groupRows, isFirst) {
     const isCombi = grupoKey === '__FALDA_COMBI__';
     const nombrePrenda = isCombi ? 'FALDA + FALDA C.E' : grupoKey;
@@ -568,17 +601,26 @@ async function exportarTallasPDF() {
       ? `<h2 style="margin:10px 0 6px;font-size:18pt;color:#1F4E79;font-weight:700">👗 FALDA + FALDA C.E <span style="font-size:11pt;font-weight:400;color:#666">(mezcladas, ordenadas por talla y largo · <strong>(CE)</strong> = con elástico)</span></h2>`
       : `<h2 style="margin:10px 0 6px;font-size:18pt;color:#1F4E79;font-weight:700">👕 ${nombrePrenda}</h2>`;
 
+    // Columnas extendidas: escuelas + sub-totales por grupo_produccion
+    // si el usuario activó el toggle (y hay escuelas con grupo definido).
+    const colsExt = showEsc ? buildEscColsExt(esc, !!f.subtotalGrupos) : [];
+    const numEscCols = colsExt.length;
+
     // Sin columna "Prenda" en ningún grupo — el subtítulo ya identifica
     // el grupo. En el grupo combinado FALDA+CE, agregamos sufijo "(CE)"
     // a la talla cuando la prenda es FALDA con elástico para distinguir.
     const wTalla = 12, wNec = 8, wSum = 7, wBal = 9;
     const fijoTotal = wTalla + wNec + (numSuministro * wSum) + wBal;
-    const escW = (showEsc && esc.length > 0) ? ((100 - fijoTotal) / esc.length) : 0;
+    const escW = numEscCols > 0 ? ((100 - fijoTotal) / numEscCols) : 0;
+
+    // Estilos sub-total: fondo dorado para distinguir vs escuelas (azul)
+    const thSubVert = 'background:#C9961A;color:white;padding:0;height:130px;border:1px solid #B57A00;position:relative;vertical-align:middle;text-align:center';
+    const tdSub = 'padding:5px 2px;border:1px solid #B57A00;font-size:10pt;text-align:center;font-family:Arial,sans-serif;background:#FFF3CC;font-weight:700;color:#7A4D00';
 
     const cg = `<colgroup>
       <col style="width:${wTalla}%">
       <col style="width:${wNec}%">
-      ${showEsc ? esc.map(() => `<col style="width:${escW.toFixed(3)}%">`).join('') : ''}
+      ${colsExt.map(() => `<col style="width:${escW.toFixed(3)}%">`).join('')}
       ${f.incluirCorte  ? `<col style="width:${wSum}%">` : ''}
       ${f.incluirProd   ? `<col style="width:${wSum}%">` : ''}
       ${f.incluirBodega ? `<col style="width:${wSum}%">` : ''}
@@ -589,7 +631,14 @@ async function exportarTallasPDF() {
     const hdr = `
       <th style="${thVert}"><div style="${thVertInner}">Talla</div></th>
       <th style="${thVert}"><div style="${thVertInner}">Necesidad</div></th>
-      ${showEsc ? esc.map(e => `<th style="${thVert}" title="${(e.nombre||'').replace(/"/g,'&quot;')}"><div style="${thEscInner}">🏫 ${e.alias || e.nombre}</div></th>`).join('') : ''}
+      ${colsExt.map(c => {
+        if (c.tipo === 'esc') {
+          const e = c.escuela;
+          return `<th style="${thVert}" title="${(e.nombre||'').replace(/"/g,'&quot;')}"><div style="${thEscInner}">🏫 ${e.alias || e.nombre}</div></th>`;
+        }
+        // subtotal
+        return `<th style="${thSubVert}" title="Sub-total grupo ${c.grupo} (${c.escuelas.length} escuelas)"><div style="${thEscInner}">Σ ${c.grupo}</div></th>`;
+      }).join('')}
       ${f.incluirCorte  ? `<th style="${thVert}"><div style="${thVertInner}">✂️ Corte</div></th>` : ''}
       ${f.incluirProd   ? `<th style="${thVert}"><div style="${thVertInner}">🏭 Prod.</div></th>` : ''}
       ${f.incluirBodega ? `<th style="${thVert}"><div style="${thVertInner}">📦 Bodega</div></th>` : ''}
@@ -607,10 +656,14 @@ async function exportarTallasPDF() {
       return `<tr style="${bg}">
         <td style="${tdL};font-family:monospace;font-weight:700">${r.talla}${ceTag}</td>
         <td style="${tdS};font-weight:700">${r.demanda}</td>
-        ${showEsc ? esc.map(e => {
-          const n = r.porEsc.get(e.id) || 0;
-          return `<td style="${tdEsc};color:${n>0?'#222':'#CCC'}">${n||'·'}</td>`;
-        }).join('') : ''}
+        ${colsExt.map(c => {
+          if (c.tipo === 'esc') {
+            const n = r.porEsc.get(c.escuela.id) || 0;
+            return `<td style="${tdEsc};color:${n>0?'#222':'#CCC'}">${n||'·'}</td>`;
+          }
+          const sumGrp = c.escuelas.reduce((s, e) => s + (r.porEsc.get(e.id) || 0), 0);
+          return `<td style="${tdSub}">${sumGrp||'·'}</td>`;
+        }).join('')}
         ${f.incluirCorte  ? `<td style="${tdS};color:#888">${r.corte || '—'}</td>` : ''}
         ${f.incluirProd   ? `<td style="${tdS};color:#2a8f4a">${r.prod || 0}</td>` : ''}
         ${f.incluirBodega ? `<td style="${tdS};color:#1F4E79">${r.stockLibre || 0}</td>` : ''}
@@ -628,10 +681,15 @@ async function exportarTallasPDF() {
     const tr = `<tr style="background:#E8F0FE;font-weight:700">
       <td style="${tdL};font-weight:700">TOTAL ${nombrePrenda}</td>
       <td style="${tdS};font-weight:700">${gTot.demanda}</td>
-      ${showEsc ? esc.map(e => {
-        const sum = groupRows.reduce((s, r) => s + (r.porEsc.get(e.id) || 0), 0);
-        return `<td style="${tdEsc};font-weight:700">${sum||'·'}</td>`;
-      }).join('') : ''}
+      ${colsExt.map(c => {
+        if (c.tipo === 'esc') {
+          const sum = groupRows.reduce((s, r) => s + (r.porEsc.get(c.escuela.id) || 0), 0);
+          return `<td style="${tdEsc};font-weight:700">${sum||'·'}</td>`;
+        }
+        const sumGrp = groupRows.reduce((s, r) =>
+          s + c.escuelas.reduce((s2, e) => s2 + (r.porEsc.get(e.id) || 0), 0), 0);
+        return `<td style="${tdSub}">${sumGrp||'·'}</td>`;
+      }).join('')}
       ${f.incluirCorte  ? `<td style="${tdS};font-weight:700">${gTot.corte}</td>` : ''}
       ${f.incluirProd   ? `<td style="${tdS};font-weight:700">${gTot.prod}</td>` : ''}
       ${f.incluirBodega ? `<td style="${tdS};font-weight:700">${gTot.stockLibre}</td>` : ''}
