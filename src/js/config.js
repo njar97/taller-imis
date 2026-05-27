@@ -363,6 +363,141 @@ async function cargarGruposEscuelas() {
   }
 }
 
+// ─── Agrupador automático (LPT por cantidad de alumnos) ─────────────
+// Algoritmo Longest-Processing-Time: ordena escuelas por carga DESC y
+// las asigna una a una al grupo con menor carga acumulada. Garantiza
+// que la diferencia entre el grupo más cargado y el menos no exceda
+// la carga de la escuela más grande — bueno para repartir trabajo.
+
+let _autoGruposPlan = null;  // estado del plan calculado, hasta que se aplique
+
+function abrirAutoGrupos() {
+  document.getElementById('ag-preview').innerHTML = '';
+  document.getElementById('ag-aplicar-btn').style.display = 'none';
+  _autoGruposPlan = null;
+  document.getElementById('auto-grupos-modal').style.display = 'flex';
+}
+
+function cerrarAutoGrupos() {
+  document.getElementById('auto-grupos-modal').style.display = 'none';
+}
+
+async function calcularAutoGrupos() {
+  const N = Math.max(2, Math.min(20, parseInt(document.getElementById('ag-n').value, 10) || 5));
+  const prefijo = (document.getElementById('ag-prefijo').value || 'G').trim().slice(0, 8) || 'G';
+  const preview = document.getElementById('ag-preview');
+  preview.innerHTML = '<div class="text-muted" style="font-size:12px;padding:6px">Calculando…</div>';
+  document.getElementById('ag-aplicar-btn').style.display = 'none';
+
+  try {
+    // Cargar escuelas activas + count de alumnos por escuela.
+    const [escuelas, alumnos] = await Promise.all([
+      supaFetch('escuela', 'GET', null, '?activa=eq.true&select=id,nombre,alias,codigo_cde&order=alias.asc&limit=500'),
+      supaFetchAll('alumno', '?activo=eq.true&select=escuela_id'),
+    ]);
+    const countPorEsc = new Map();
+    for (const a of alumnos) {
+      if (!a.escuela_id) continue;
+      countPorEsc.set(a.escuela_id, (countPorEsc.get(a.escuela_id) || 0) + 1);
+    }
+
+    // Items con carga > 0 (excluir escuelas sin alumnos para no
+    // ensuciar grupos con escuelas vacías).
+    const items = escuelas
+      .map(e => ({ escuela: e, carga: countPorEsc.get(e.id) || 0 }))
+      .filter(it => it.carga > 0)
+      .sort((a, b) => b.carga - a.carga);  // DESC
+
+    if (items.length === 0) {
+      preview.innerHTML = '<div class="alert alert-info">No hay escuelas con alumnos activos para agrupar.</div>';
+      return;
+    }
+    if (N > items.length) {
+      preview.innerHTML = `<div class="alert alert-error">Tenés ${items.length} escuela(s) con alumnos pero pediste ${N} grupos. Bajá la cantidad de grupos.</div>`;
+      return;
+    }
+
+    // Inicializar N grupos
+    const grupos = Array.from({ length: N }, (_, i) => ({
+      nombre: prefijo + (i + 1),
+      escuelas: [],
+      cargaTotal: 0,
+    }));
+
+    // LPT: para cada item, asignar al grupo con menor cargaTotal
+    for (const it of items) {
+      let minIdx = 0;
+      for (let i = 1; i < grupos.length; i++) {
+        if (grupos[i].cargaTotal < grupos[minIdx].cargaTotal) minIdx = i;
+      }
+      grupos[minIdx].escuelas.push(it);
+      grupos[minIdx].cargaTotal += it.carga;
+    }
+
+    // Métricas: rango (max - min) como indicador de balance
+    const cargas = grupos.map(g => g.cargaTotal);
+    const maxC = Math.max(...cargas);
+    const minC = Math.min(...cargas);
+    const rango = maxC - minC;
+    const promedio = Math.round(cargas.reduce((s, c) => s + c, 0) / N);
+
+    // Render preview
+    const totalEsc = items.length;
+    const totalAlumnos = items.reduce((s, it) => s + it.carga, 0);
+    preview.innerHTML = `
+      <div style="font-size:12px;margin-bottom:6px">
+        <strong>${totalEsc}</strong> escuelas · <strong>${totalAlumnos.toLocaleString()}</strong> alumnos ·
+        promedio <strong>${promedio}</strong>/grupo · rango max−min: <strong style="color:${rango > promedio*0.3 ? '#C00' : '#2a8f4a'}">${rango}</strong>
+      </div>
+      ${grupos.map(g => `
+        <div style="margin:5px 0;padding:8px 10px;background:#F5F7FA;border-left:3px solid #1F4E79;border-radius:4px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <strong style="color:#1F4E79">📦 ${g.nombre}</strong>
+            <span style="font-size:11px;color:#666">${g.escuelas.length} escuela(s) · <strong>${g.cargaTotal}</strong> alumnos</span>
+          </div>
+          <div style="font-size:11px;color:#444;margin-top:3px">
+            ${g.escuelas.map(it => `${it.escuela.alias || it.escuela.nombre} <span style="color:#888">(${it.carga})</span>`).join(' · ')}
+          </div>
+        </div>
+      `).join('')}
+      <div style="font-size:11px;color:#888;margin-top:6px">
+        💡 Cualquier escuela sin alumnos activos no se incluye. Aplicar SOBRESCRIBE los grupos actuales.
+      </div>
+    `;
+
+    _autoGruposPlan = grupos;
+    document.getElementById('ag-aplicar-btn').style.display = 'inline-block';
+  } catch (e) {
+    preview.innerHTML = `<div class="alert alert-error">Error: ${e && e.message || e}</div>`;
+  }
+}
+
+async function aplicarAutoGrupos() {
+  if (!_autoGruposPlan || _autoGruposPlan.length === 0) return;
+  const totalEsc = _autoGruposPlan.reduce((s, g) => s + g.escuelas.length, 0);
+  if (!confirm(`¿Aplicar la agrupación a ${totalEsc} escuela(s)?\n\nEsto SOBRESCRIBE los grupos actuales asignados.`)) return;
+
+  const btn = document.getElementById('ag-aplicar-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Aplicando…'; }
+  try {
+    // Sequential para evitar saturar rate-limits + permitir cancelación si falla
+    for (const g of _autoGruposPlan) {
+      for (const it of g.escuelas) {
+        await supaUpdate('escuela', it.escuela.id, { grupo_produccion: g.nombre });
+      }
+    }
+    if (typeof tiCacheClearAll === 'function') tiCacheClearAll();
+    if (typeof invalidarCache === 'function') invalidarCache('escuelas');
+    cerrarAutoGrupos();
+    await cargarGruposEscuelas();
+    alert(`✓ Aplicado: ${totalEsc} escuelas distribuidas en ${_autoGruposPlan.length} grupos.`);
+  } catch (e) {
+    alert('Error al aplicar: ' + (e && e.message || e));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✓ Aplicar (sobrescribe los grupos actuales)'; }
+  }
+}
+
 async function guardarGrupoEscuelaConfig(escuelaId, valor) {
   const grupo = String(valor || '').trim() || null;
   const inp = document.getElementById('ge-input-' + escuelaId);

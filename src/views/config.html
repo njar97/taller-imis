@@ -81,13 +81,50 @@
   <div class="card">
     <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
       <span>🏫 Grupos de escuelas</span>
-      <button class="btn btn-ghost btn-sm" onclick="cargarGruposEscuelas()" title="Refrescar lista">🔄</button>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-success btn-sm" onclick="abrirAutoGrupos()" title="Repartir escuelas en N grupos equilibrados por cantidad de alumnos">🪄 Agrupar auto</button>
+        <button class="btn btn-ghost btn-sm" onclick="cargarGruposEscuelas()" title="Refrescar lista">🔄</button>
+      </div>
     </div>
     <div class="text-muted mb8" style="font-size:12px">
       Asigná un código a cada escuela en el campo "Grupo". Escuelas con el mismo código se agrupan como sub-total en el PDF de <strong>Estadística → Tallas</strong> cuando activás <em>Σ Sub-total grupos</em>. Dejá vacío para no asignar grupo.
     </div>
     <div id="cfg-grupos-escuelas-lista">
       <div class="text-muted" style="font-size:12px;padding:6px">Tocá 🔄 para cargar las escuelas.</div>
+    </div>
+  </div>
+
+  <!-- Modal: agrupar automáticamente (LPT por carga) -->
+  <div id="auto-grupos-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:520px">
+      <div class="modal-header">
+        <div class="card-title">🪄 Agrupar automáticamente</div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarAutoGrupos()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="text-muted mb8" style="font-size:12px">
+          Reparte las escuelas activas en N grupos con cargas similares. Usa la <strong>cantidad de alumnos</strong> de cada escuela como peso, y asigna con un algoritmo greedy (Longest-Processing-Time): primero las escuelas más grandes, cada una al grupo con menor carga acumulada.
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+          <div class="field" style="margin:0">
+            <label>Cantidad de grupos</label>
+            <input type="number" id="ag-n" min="2" max="20" value="5" style="width:90px">
+          </div>
+          <div class="field" style="margin:0">
+            <label>Prefijo</label>
+            <input type="text" id="ag-prefijo" value="G" maxlength="8" style="width:90px" placeholder="G">
+            <div style="font-size:10px;color:#888">→ G1, G2…</div>
+          </div>
+          <div class="field" style="margin:0;flex:1;text-align:right">
+            <button class="btn btn-primary btn-sm" onclick="calcularAutoGrupos()">📊 Calcular sugerencia</button>
+          </div>
+        </div>
+        <div id="ag-preview" style="margin-top:12px"></div>
+      </div>
+      <div class="modal-footer" style="display:flex;gap:6px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="cerrarAutoGrupos()">Cancelar</button>
+        <button class="btn btn-success" id="ag-aplicar-btn" onclick="aplicarAutoGrupos()" style="display:none">✓ Aplicar (sobrescribe los grupos actuales)</button>
+      </div>
     </div>
   </div>
 
