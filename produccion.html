@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-26 19:15 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-26 20:51 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -4492,54 +4492,68 @@ async function exportarTallasPDF() {
 <body>${html}</body>
 </html>`;
 
-  // Iframe oculto en flujo del documento. Algunos browsers móviles no
-  // permiten window.open() sin gesto explícito — el iframe sí carga
-  // siempre porque viene del mismo origin sin popup.
-  const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
-  iframe.setAttribute('aria-hidden', 'true');
-  document.body.appendChild(iframe);
-
-  // Sentinel para evitar reentradas si el usuario tap dos veces el botón.
-  if (window._tallasPdfPending) {
-    console.warn('[tallas PDF] ya hay una impresión en curso, ignorando');
-    document.body.removeChild(iframe);
+  // Throttle suave: si tocó hace menos de 1s, ignorar (evita doble-tap).
+  // Usa timestamp en vez de boolean para que NO se quede pegado si algo falla.
+  const now = Date.now();
+  if (now - (window._tallasPdfLastTry || 0) < 1000) {
+    console.warn('[tallas PDF] throttle (doble-tap), ignorando');
     return;
   }
-  window._tallasPdfPending = true;
+  window._tallasPdfLastTry = now;
 
+  let iframe = null;
   try {
-    const idoc = iframe.contentDocument || iframe.contentWindow.document;
-    idoc.open();
-    idoc.write(docHtml);
-    idoc.close();
-
-    // Esperar a que el contenido se layoutee + fuentes se carguen.
-    await new Promise(resolve => {
-      let done = false;
-      const finish = () => { if (!done) { done = true; resolve(); } };
-      // Si ya está cargado (sincrónico tras write+close), igual esperar 1 tick
-      if (iframe.contentDocument.readyState === 'complete') {
-        setTimeout(finish, 200);
-      } else {
-        iframe.addEventListener('load', () => setTimeout(finish, 200), { once: true });
-        setTimeout(finish, 1500);  // safety net
-      }
+    // Iframe usando srcdoc — más confiable en PWA standalone que el
+    // approach document.write(), que en algunos contextos (Chrome
+    // Android instalado como PWA) puede no triggerear el evento load.
+    iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.setAttribute('sandbox', 'allow-same-origin allow-modals allow-scripts');
+    // Esperar load ANTES de inyectar srcdoc — así no perdemos el evento.
+    const loaded = new Promise((resolve, reject) => {
+      iframe.addEventListener('load', () => resolve('load'), { once: true });
+      iframe.addEventListener('error', () => reject(new Error('Falló la carga del iframe')), { once: true });
+      setTimeout(() => resolve('timeout'), 4000);
     });
+    iframe.srcdoc = docHtml;
+    document.body.appendChild(iframe);
 
-    // Disparar diálogo de impresión del browser.
+    const reason = await loaded;
+    console.log('[tallas PDF] iframe ready via:', reason);
+
+    // Pausa extra para que fuentes terminen de aplicar
+    await new Promise(r => setTimeout(r, 250));
+
+    if (!iframe.contentWindow) throw new Error('contentWindow no disponible — sandbox o navegación bloqueó el iframe');
     iframe.contentWindow.focus();
     iframe.contentWindow.print();
-    console.log('[tallas PDF] print() disparado');
+    console.log('[tallas PDF] print() OK');
   } catch (e) {
     console.error('[tallas PDF] error:', e);
-    alert('Error al abrir la vista de impresión: ' + (e && e.message || e));
+    // Fallback: abrir ventana nueva con el HTML para que el usuario
+    // pueda usar el menú del navegador → Imprimir manualmente.
+    try {
+      const win = window.open('', '_blank');
+      if (win) {
+        win.document.open();
+        win.document.write(docHtml);
+        win.document.close();
+        win.focus();
+        setTimeout(() => { try { win.print(); } catch (_) {} }, 500);
+      } else {
+        alert('No se pudo abrir el PDF (' + (e && e.message || e) +
+              ').\n\nProbá tocar el botón otra vez. Si sigue sin funcionar, ' +
+              'cerrá y reabrí la app desde el ícono.');
+      }
+    } catch (e2) {
+      alert('Error al generar el PDF: ' + (e && e.message || e));
+    }
   } finally {
-    // Esperar antes de remover el iframe — algunos browsers cancelan la
-    // impresión si se quita el iframe antes de que el usuario interactúe.
+    // Remover iframe después de 30s — algunos browsers cancelan la
+    // impresión si se quita antes de que el usuario complete el flujo.
     setTimeout(() => {
-      window._tallasPdfPending = false;
-      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      if (iframe && iframe.parentNode) iframe.parentNode.removeChild(iframe);
     }, 30000);
   }
 }
