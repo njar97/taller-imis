@@ -512,15 +512,17 @@ async function exportarTallasPDF() {
   // Excepción: FALDA y FALDA C.E van JUNTAS en una misma página, mezcladas
   // y ordenadas por talla + largo, con la columna Prenda visible.
   const numSuministro = (f.incluirCorte?1:0) + (f.incluirProd?1:0) + (f.incluirBodega?1:0) + (f.incluirPool?1:0);
-  // Normaliza espacios + uppercase. Cualquier variante de FALDA (con/sin
-  // elástico, con o sin puntos) entra al mismo grupo combinado para que
+  // Normaliza: upper + trim + underscore/hyphen → espacio + colapsar espacios.
+  // Cualquier variante de FALDA (con/sin elástico, con o sin puntos, con
+  // underscore como en FALDA_C.E) entra al mismo grupo combinado para que
   // se intercalen ordenadas por talla y largo en una misma página.
-  const normPrenda = (p) => String(p || '').toUpperCase().trim().replace(/\s+/g, ' ');
+  // NO se mezcla con FALDA_BEIGE u otras (esas siguen como grupos aparte).
+  const normPrenda = (p) => String(p || '').toUpperCase().trim().replace(/[_\-]+/g, ' ').replace(/\s+/g, ' ');
   const esFaldaVar = (p) => {
     const n = normPrenda(p);
     return n === 'FALDA'
-      || /^FALDA[\s\-]*C\.?\s*E\.?$/i.test(p || '')
-      || /^FALDA\s+CON\s+EL[AÁ]STICO$/i.test(p || '');
+      || /^FALDA\s*C\.?\s*E\.?$/.test(n)
+      || /^FALDA\s+CON\s+EL[AÁ]STICO$/.test(n);
   };
   const groupMap = new Map();
   const groupOrder = [];
