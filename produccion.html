@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-26 22:55 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-27 13:06 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -4479,7 +4479,7 @@ async function exportarTallasPDF() {
     const isCombi = grupoKey === '__FALDA_COMBI__';
     const nombrePrenda = isCombi ? 'FALDA + FALDA C.E' : grupoKey;
     const subtitulo = isCombi
-      ? `<h2 style="margin:10px 0 6px;font-size:18pt;color:#1F4E79;font-weight:700">👗 FALDA + FALDA C.E <span style="font-size:11pt;font-weight:400;color:#666">(mezcladas, ordenadas por talla y largo · <strong>(CE)</strong> = con elástico)</span></h2>`
+      ? `<h2 style="margin:10px 0 6px;font-size:18pt;color:#1F4E79;font-weight:700">👗 FALDA + FALDA C.E <span style="font-size:11pt;font-weight:400;color:#666">(mezcladas, ordenadas por talla y largo · tallas con prefijo <strong>FCE</strong> = con elástico)</span></h2>`
       : `<h2 style="margin:10px 0 6px;font-size:18pt;color:#1F4E79;font-weight:700">👕 ${nombrePrenda}</h2>`;
 
     // Columnas extendidas: escuelas + sub-totales por grupo_produccion
@@ -4526,16 +4526,15 @@ async function exportarTallasPDF() {
       ${f.incluirPool   ? `<th style="${thVert}"><div style="${thVertInner}">📥 Pool</div></th>` : ''}
       <th style="${thVert}"><div style="${thVertInner}">Balance</div></th>`;
 
-    // Detectar si una fila es FALDA_C.E (con elástico). Usado solo en
-    // el grupo combinado para anexar "(CE)" en la celda Talla.
-    const esCE = (prenda) => isCombi && prenda && !/^FALDA$/i.test(String(prenda).trim());
+    // En el grupo combinado las tallas FALDA C.E vienen con prefijo "FCE"
+    // (ej. FCE635) y las FALDA normales con "F" (ej. F635), así que no
+    // hace falta sufijo extra para distinguirlas — el código ya lo indica.
 
     const dr = groupRows.map((r, i) => {
       const bg = i % 2 === 0 ? 'background:white' : 'background:#FAFAFA';
       const balColor = r.balance < 0 ? '#C00' : '#2a8f4a';
-      const ceTag = esCE(r.prenda) ? ` <span style="font-size:9pt;color:#1F4E79;font-weight:600">(CE)</span>` : '';
       return `<tr style="${bg}">
-        <td style="${tdL};font-family:monospace;font-weight:700">${r.talla}${ceTag}</td>
+        <td style="${tdL};font-family:monospace;font-weight:700">${r.talla}</td>
         <td style="${tdS};font-weight:700">${r.demanda}</td>
         ${colsExt.map(c => {
           if (c.tipo === 'esc') {
