@@ -320,6 +320,16 @@ async function cargarEscuelasHE() {
 
 const NIVEL_LBL_HE = { PARV: 'Parvularia', BASICA: 'Básica', BACH: 'Bachillerato', OTRO: 'Otro' };
 
+// Factores de tela (yardas por alumno) por color × ciclo × sexo.
+// Extraído de BASE_2025_OPTIMIZADA.xlsm, hoja RESUMEN, "Cálculo de tela a usar".
+// Indexado por alumno.ciclo (0=PARV, 1=I ciclo, 2=II ciclo, 3=III ciclo, 4=BACH).
+const FACTORES_TELA_HE = {
+  celeste: { 0: { M: 0.75, F: 0.75 }, 1: { M: 1.00, F: 1.00 }, 2: { M: 1.25, F: 1.25 }, 3: { M: 1.50, F: 1.50 }, 4: { M: 1.50, F: 1.50 } },
+  blanca:  { 0: { M: 0.75, F: 0.75 }, 1: { M: 1.00, F: 1.00 }, 2: { M: 1.25, F: 1.25 }, 3: { M: 1.50, F: 1.50 }, 4: { M: 1.50, F: 1.50 } },
+  azul:    { 0: { M: 0.75, F: 0.60 }, 1: { M: 1.00, F: 0.75 }, 2: { M: 1.25, F: 1.00 }, 3: { M: 1.50, F: 1.25 }, 4: { M: 1.65, F: 1.50 } },
+  // beige: pendiente — el Excel no tiene factor explícito para Beige.
+};
+
 async function exportarHojaEntregaPDF() {
   const sel = document.getElementById('he-escuela-sel');
   const escuelaId = sel && sel.value;
@@ -339,7 +349,7 @@ async function exportarHojaEntregaPDF() {
       supaFetch('escuela', 'GET', null, `?id=eq.${escuelaId}&limit=1`),
       supaFetch('contrato_escuela', 'GET', null, `?escuela_id=eq.${escuelaId}&order=anio.desc&limit=1`),
       supaFetchAll('alumno',
-        `?escuela_id=eq.${escuelaId}&activo=eq.true&select=grado,nivel,sexo,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom`),
+        `?escuela_id=eq.${escuelaId}&activo=eq.true&select=grado,nivel,ciclo,sexo,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom`),
       supaFetchAll('pedido',
         `?escuela_id=eq.${escuelaId}&select=nivel,cod_prenda,nombre_prenda,cantidad_solicitada,cantidad_entregada`),
     ]);
@@ -460,33 +470,64 @@ async function exportarHojaEntregaPDF() {
       </table>
     `;
 
+    // 5) Tela usada estimada (factor por alumno × ciclo × sexo, según
+    //    tabla del Excel BASE_2025_OPTIMIZADA hoja RESUMEN).
+    const usado = { celeste: 0, blanca: 0, azul: 0, beige: 0 };
+    let alumnosFactorizables = 0, alumnosSinDato = 0;
+    for (const a of alumnos) {
+      const ciclo = (a.ciclo === null || a.ciclo === undefined) ? null : Number(a.ciclo);
+      const sexo = (a.sexo === 'M' || a.sexo === 'F') ? a.sexo : null;
+      if (ciclo === null || !sexo || !FACTORES_TELA_HE.celeste[ciclo]) {
+        alumnosSinDato++;
+        continue;
+      }
+      alumnosFactorizables++;
+      for (const color of ['celeste', 'blanca', 'azul']) {
+        usado[color] += FACTORES_TELA_HE[color][ciclo][sexo] || 0;
+      }
+    }
+    const fmtYd = (v) => Number(v).toLocaleString('es-SV', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
     const telaHtml = contrato ? `
-      <h3 style="margin:14px 0 4px;font-size:13pt;color:#1F4E79">🧵 Tela contratada</h3>
+      <h3 style="margin:14px 0 4px;font-size:13pt;color:#1F4E79">🧵 Tela: contratada vs estimada usada</h3>
       <table style="${tabCss}">
         <thead><tr>
           <th style="${thCss};text-align:left">Color</th>
           <th style="${thCss}">Contratado (yd)</th>
-          <th style="${thCss}">Usado (yd)</th>
+          <th style="${thCss}">Estimado usado (yd)</th>
           <th style="${thCss}">Diferencia</th>
+          <th style="${thCss}">Estado</th>
         </tr></thead>
         <tbody>
           ${[
-            { lbl: 'Celeste', val: contrato.tela_celeste_yd },
-            { lbl: 'Blanca',  val: contrato.tela_blanca_yd },
-            { lbl: 'Azul',    val: contrato.tela_azul_yd },
-            { lbl: 'Beige',   val: contrato.tela_beige_yd },
-          ].filter(t => (Number(t.val) || 0) > 0).map(t => `
-            <tr>
-              <td style="${tdLeftCss}">${t.lbl}</td>
-              <td style="${tdCss}">${Number(t.val).toLocaleString('es-SV', { maximumFractionDigits: 2 })}</td>
-              <td style="${tdCss};color:#888">— por confirmar —</td>
-              <td style="${tdCss};color:#888">—</td>
-            </tr>
-          `).join('')}
+            { key: 'celeste', lbl: 'Celeste', contratado: contrato.tela_celeste_yd, usado: usado.celeste, factor: true },
+            { key: 'blanca',  lbl: 'Blanca',  contratado: contrato.tela_blanca_yd,  usado: usado.blanca,  factor: true },
+            { key: 'azul',    lbl: 'Azul',    contratado: contrato.tela_azul_yd,    usado: usado.azul,    factor: true },
+            { key: 'beige',   lbl: 'Beige',   contratado: contrato.tela_beige_yd,   usado: 0,             factor: false },
+          ].filter(t => (Number(t.contratado) || 0) > 0 || t.usado > 0).map(t => {
+            const c = Number(t.contratado) || 0;
+            const diff = c - t.usado;
+            const color = diff > 0 ? '#2a8f4a' : (diff < 0 ? '#C00' : '#666');
+            const estado = !t.factor ? '<span style="color:#888">sin factor</span>'
+              : diff > 0 ? `<span style="color:#2a8f4a">✓ sobran ${fmtYd(diff)} yd</span>`
+              : diff < 0 ? `<span style="color:#C00">⚠ faltan ${fmtYd(-diff)} yd</span>`
+              : '<span style="color:#666">exacto</span>';
+            return `
+              <tr>
+                <td style="${tdLeftCss}">${t.lbl}</td>
+                <td style="${tdCss}">${fmtYd(c)}</td>
+                <td style="${tdCss}">${t.factor ? fmtYd(t.usado) : '<span style="color:#888">—</span>'}</td>
+                <td style="${tdCss};font-weight:700;color:${color}">${t.factor ? (diff >= 0 ? '+' : '') + fmtYd(diff) : '—'}</td>
+                <td style="${tdCss}">${estado}</td>
+              </tr>
+            `;
+          }).join('')}
         </tbody>
       </table>
-      <div style="font-size:10pt;color:#888;margin-top:4px">
-        ⓘ Cálculo de tela usada vs sobrante pendiente de implementar — confirmar fuente de datos (tendido_rollo, trazo, etc).
+      <div style="font-size:9pt;color:#888;margin-top:4px;line-height:1.4">
+        ⓘ Factor por alumno × ciclo × sexo (fuente: <em>BASE_2025_OPTIMIZADA.xlsm</em>, hoja RESUMEN).
+        ${alumnosSinDato > 0 ? `<strong style="color:#C00"> ${alumnosSinDato} alumno(s)</strong> sin ciclo/sexo definido — no se factorizaron.` : ''}
+        Beige: pendiente factor en el Excel base.
       </div>
     ` : '<div style="font-size:11pt;color:#888;margin-top:10px">⚠ Esta escuela no tiene contrato registrado todavía.</div>';
 
