@@ -297,6 +297,97 @@ const BACKUP_TABLAS = [
   { nombre: 'operaria',           query: '?select=*&order=nombre' },
 ];
 
+// ─── Gestor de grupos de escuelas (asigna escuela.grupo_produccion) ───
+// Lista las escuelas activas agrupadas por su grupo actual, con un input
+// editable inline por escuela. Al cambiar el valor (onchange) persiste y
+// muestra feedback verde breve. Datalist sugiere grupos ya usados.
+async function cargarGruposEscuelas() {
+  const cont = document.getElementById('cfg-grupos-escuelas-lista');
+  if (!cont) return;
+  cont.innerHTML = '<div class="text-muted" style="font-size:12px;padding:6px">Cargando escuelas…</div>';
+  try {
+    const escuelas = await supaFetch('escuela', 'GET', null,
+      '?activa=eq.true&select=id,nombre,alias,codigo_cde,grupo_produccion&order=alias.asc&limit=500');
+
+    // Datalist con grupos existentes (para autocompletar)
+    const gruposExistentes = [...new Set(
+      escuelas.map(e => e.grupo_produccion).filter(Boolean)
+    )].sort();
+
+    // Agrupar visualmente por grupo actual
+    const groupMap = new Map();
+    for (const e of escuelas) {
+      const g = e.grupo_produccion || '__SIN_GRUPO__';
+      if (!groupMap.has(g)) groupMap.set(g, []);
+      groupMap.get(g).push(e);
+    }
+    const gruposOrden = [...groupMap.keys()].filter(g => g !== '__SIN_GRUPO__').sort();
+    if (groupMap.has('__SIN_GRUPO__')) gruposOrden.push('__SIN_GRUPO__');
+
+    const datalistHtml = `<datalist id="grupos-esc-datalist">${
+      gruposExistentes.map(g => `<option value="${g.replace(/"/g, '&quot;')}">`).join('')
+    }</datalist>`;
+
+    const escItemHtml = (e) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid #EEE">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.alias || e.nombre}</div>
+          <div style="font-size:10px;color:#888">${e.codigo_cde || '—'}</div>
+        </div>
+        <input type="text" id="ge-input-${e.id}" value="${(e.grupo_produccion||'').replace(/"/g,'&quot;')}"
+          list="grupos-esc-datalist" placeholder="Sin grupo"
+          style="padding:5px 8px;width:110px;font-size:12px;border:1px solid #CCC;border-radius:6px"
+          onchange="guardarGrupoEscuelaConfig('${e.id}', this.value)">
+      </div>
+    `;
+
+    const gruposHtml = gruposOrden.map(g => {
+      const nombre = g === '__SIN_GRUPO__'
+        ? '<span style="color:#888">⚪ Sin grupo</span>'
+        : `<span style="color:#1F4E79">📦 ${g}</span>`;
+      const items = groupMap.get(g);
+      return `
+        <div style="margin-top:8px;padding:6px 8px;background:#F5F7FA;border-radius:6px">
+          <div style="font-weight:700;font-size:13px;margin-bottom:4px">${nombre} <span style="color:#888;font-weight:400;font-size:11px">(${items.length})</span></div>
+          ${items.map(escItemHtml).join('')}
+        </div>
+      `;
+    }).join('');
+
+    cont.innerHTML = datalistHtml + gruposHtml +
+      `<div style="margin-top:8px;font-size:11px;color:#888">
+        💡 El campo guarda al perder el foco (tocá afuera del input). Borde verde = guardado OK.
+      </div>`;
+  } catch (e) {
+    cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+  }
+}
+
+async function guardarGrupoEscuelaConfig(escuelaId, valor) {
+  const grupo = String(valor || '').trim() || null;
+  const inp = document.getElementById('ge-input-' + escuelaId);
+  try {
+    await supaUpdate('escuela', escuelaId, { grupo_produccion: grupo });
+    // Invalida caches dependientes para que la pestaña Tallas tome el cambio
+    if (typeof tiCacheClearAll === 'function') tiCacheClearAll();
+    if (typeof invalidarCache === 'function') invalidarCache('escuelas');
+    // Visual: borde verde temporal
+    if (inp) {
+      inp.style.borderColor = 'var(--verde)';
+      inp.style.background = '#E8F5E9';
+      setTimeout(() => {
+        if (inp) {
+          inp.style.borderColor = '#CCC';
+          inp.style.background = 'white';
+        }
+      }, 1200);
+    }
+  } catch (e) {
+    if (inp) { inp.style.borderColor = 'var(--rojo)'; inp.style.background = '#FDEAEA'; }
+    alert('Error al guardar grupo: ' + (e && e.message || e));
+  }
+}
+
 async function descargarBackupExcel() {
   const btn = document.getElementById('btn-backup-excel');
   const status = document.getElementById('backup-status');

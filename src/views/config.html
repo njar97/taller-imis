@@ -77,6 +77,20 @@
     </div>
   </div>
 
+  <!-- Grupos de escuelas (asignación masiva) -->
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>🏫 Grupos de escuelas</span>
+      <button class="btn btn-ghost btn-sm" onclick="cargarGruposEscuelas()" title="Refrescar lista">🔄</button>
+    </div>
+    <div class="text-muted mb8" style="font-size:12px">
+      Asigná un código a cada escuela en el campo "Grupo". Escuelas con el mismo código se agrupan como sub-total en el PDF de <strong>Estadística → Tallas</strong> cuando activás <em>Σ Sub-total grupos</em>. Dejá vacío para no asignar grupo.
+    </div>
+    <div id="cfg-grupos-escuelas-lista">
+      <div class="text-muted" style="font-size:12px;padding:6px">Tocá 🔄 para cargar las escuelas.</div>
+    </div>
+  </div>
+
   <!-- Backup / Exportar -->
   <div class="card">
     <div class="card-title">💾 Backup y exportar</div>
