@@ -23,6 +23,7 @@ let tallasResumenCache = {
     incluirProd: true,
     incluirBodega: true,
     incluirPool: true,
+    orientacionPDF: 'horizontal',  // 'horizontal' (landscape) | 'vertical' (portrait)
   },
   expandidos: new Set(),  // claves "prenda|talla"
 };
@@ -277,6 +278,10 @@ function renderTallasResumen() {
           <div style="font-size:10px;color:#888;margin-top:2px">${(f.escuelas||[]).length>0?'Solo las elegidas abajo':'Todas las que tengan demanda'}</div>
         </div>
         <div style="text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:flex-start;flex-wrap:wrap">
+          <select onchange="onTallasFiltro('orientacionPDF', this.value)" title="Orientación del PDF" style="padding:5px 6px;font-size:12px;border:1px solid #CCC;border-radius:6px;background:white">
+            <option value="horizontal" ${(f.orientacionPDF||'horizontal')==='horizontal'?'selected':''}>📄 Horizontal</option>
+            <option value="vertical" ${f.orientacionPDF==='vertical'?'selected':''}>📃 Vertical</option>
+          </select>
           <button class="btn btn-primary btn-sm" onclick="exportarTallasPDF()" title="Descargar el reporte actual (con los filtros aplicados) en PDF">📥 PDF</button>
           <button class="btn btn-ghost btn-sm" onclick="initTallasResumen()">🔄 Refrescar</button>
         </div>
@@ -507,11 +512,20 @@ async function exportarTallasPDF() {
   // Excepción: FALDA y FALDA C.E van JUNTAS en una misma página, mezcladas
   // y ordenadas por talla + largo, con la columna Prenda visible.
   const numSuministro = (f.incluirCorte?1:0) + (f.incluirProd?1:0) + (f.incluirBodega?1:0) + (f.incluirPool?1:0);
-  const FALDA_VARIANTS = new Set(['FALDA', 'FALDA C.E', 'FALDA CE', 'FALDA-C.E']);
+  // Normaliza espacios + uppercase. Cualquier variante de FALDA (con/sin
+  // elástico, con o sin puntos) entra al mismo grupo combinado para que
+  // se intercalen ordenadas por talla y largo en una misma página.
+  const normPrenda = (p) => String(p || '').toUpperCase().trim().replace(/\s+/g, ' ');
+  const esFaldaVar = (p) => {
+    const n = normPrenda(p);
+    return n === 'FALDA'
+      || /^FALDA[\s\-]*C\.?\s*E\.?$/i.test(p || '')
+      || /^FALDA\s+CON\s+EL[AÁ]STICO$/i.test(p || '');
+  };
   const groupMap = new Map();
   const groupOrder = [];
   for (const r of rows) {
-    const key = FALDA_VARIANTS.has(r.prenda) ? '__FALDA_COMBI__' : r.prenda;
+    const key = esFaldaVar(r.prenda) ? '__FALDA_COMBI__' : r.prenda;
     if (!groupMap.has(key)) { groupMap.set(key, []); groupOrder.push(key); }
     groupMap.get(key).push(r);
   }
@@ -653,16 +667,17 @@ async function exportarTallasPDF() {
       </div>
     </div>`;
 
-  console.log('[tallas PDF] v5 — iframe + window.print() nativo. rows:', rows.length, 'esc:', esc.length);
+  const orientacion = (f.orientacionPDF === 'vertical') ? 'portrait' : 'landscape';
+  console.log('[tallas PDF] v6 — orientación:', orientacion, 'rows:', rows.length, 'esc:', esc.length);
 
-  // Construir documento HTML completo con @page para tamaño Letter landscape
-  // y márgenes consistentes. El browser maneja paginación + render nativo.
+  // Construir documento HTML completo con @page para tamaño Letter +
+  // orientación elegida por el usuario. El browser maneja paginación.
   const docHtml = `<!DOCTYPE html>
 <html lang="es"><head>
 <meta charset="UTF-8">
 <title>tallas-resumen-${fileFecha}</title>
 <style>
-  @page { size: letter landscape; margin: 0.4in; }
+  @page { size: letter ${orientacion}; margin: 0.4in; }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; color: #222; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { padding: 6px; }
