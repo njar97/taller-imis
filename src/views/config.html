@@ -77,6 +77,24 @@
     </div>
   </div>
 
+  <!-- Hoja de entrega por escuela (PDF para director) -->
+  <div class="card">
+    <div class="card-title">📄 Hoja de entrega por escuela</div>
+    <div class="text-muted mb8" style="font-size:12px">
+      Reporte interno para entregar al director de la institución. Incluye detalle por grado (♀/♂/total), comparación contrato vs entregado por nivel educativo, totales y tela contratada. Carta vertical, listo para imprimir.
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
+      <div class="field" style="margin:0;flex:1;min-width:200px">
+        <label>Escuela</label>
+        <select id="he-escuela-sel" style="padding:6px 8px;width:100%">
+          <option value="">Cargá la lista primero…</option>
+        </select>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="cargarEscuelasHE()" title="Cargar lista de escuelas">🔄 Cargar</button>
+      <button class="btn btn-primary btn-sm" onclick="exportarHojaEntregaPDF()" id="he-pdf-btn" disabled>📥 Generar PDF</button>
+    </div>
+  </div>
+
   <!-- Grupos de escuelas (asignación masiva) -->
   <div class="card">
     <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">

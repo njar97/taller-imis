@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-27 13:06 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-27 14:36 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -2213,6 +2213,24 @@
         <div style="font-weight:600">🔍 Audit log</div>
         <div style="font-size:11px;color:#666;margin-top:2px">Historial de cambios (admin)</div>
       </button>
+    </div>
+  </div>
+
+  <!-- Hoja de entrega por escuela (PDF para director) -->
+  <div class="card">
+    <div class="card-title">📄 Hoja de entrega por escuela</div>
+    <div class="text-muted mb8" style="font-size:12px">
+      Reporte interno para entregar al director de la institución. Incluye detalle por grado (♀/♂/total), comparación contrato vs entregado por nivel educativo, totales y tela contratada. Carta vertical, listo para imprimir.
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
+      <div class="field" style="margin:0;flex:1;min-width:200px">
+        <label>Escuela</label>
+        <select id="he-escuela-sel" style="padding:6px 8px;width:100%">
+          <option value="">Cargá la lista primero…</option>
+        </select>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="cargarEscuelasHE()" title="Cargar lista de escuelas">🔄 Cargar</button>
+      <button class="btn btn-primary btn-sm" onclick="exportarHojaEntregaPDF()" id="he-pdf-btn" disabled>📥 Generar PDF</button>
     </div>
   </div>
 
@@ -19022,6 +19040,294 @@ const BACKUP_TABLAS = [
   { nombre: 'grupo_produccion',   query: '?select=*' },
   { nombre: 'operaria',           query: '?select=*&order=nombre' },
 ];
+
+// ─── Hoja de entrega por escuela (PDF para el director) ─────────────
+// Carta vertical. Una hoja por escuela. Usa window.print() vía iframe
+// srcdoc (mismo approach que el PDF de tallas — confiable en PWA móvil).
+
+async function cargarEscuelasHE() {
+  const sel = document.getElementById('he-escuela-sel');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Cargando…</option>';
+  try {
+    const escuelas = await supaFetch('escuela', 'GET', null,
+      '?activa=eq.true&select=id,nombre,alias,codigo_cde&order=alias.asc&limit=500');
+    sel.innerHTML = '<option value="">— Elegí una escuela —</option>' +
+      escuelas.map(e => `<option value="${e.id}">${e.alias || e.nombre} · ${e.codigo_cde || '—'}</option>`).join('');
+    sel.onchange = () => {
+      document.getElementById('he-pdf-btn').disabled = !sel.value;
+    };
+  } catch (e) {
+    sel.innerHTML = `<option value="">Error: ${e.message}</option>`;
+  }
+}
+
+const NIVEL_LBL_HE = { PARV: 'Parvularia', BASICA: 'Básica', BACH: 'Bachillerato', OTRO: 'Otro' };
+
+async function exportarHojaEntregaPDF() {
+  const sel = document.getElementById('he-escuela-sel');
+  const escuelaId = sel && sel.value;
+  if (!escuelaId) { alert('Elegí una escuela primero.'); return; }
+
+  // Throttle anti doble-tap
+  const now = Date.now();
+  if (now - (window._heLastTry || 0) < 1000) { console.warn('[hoja entrega] throttle'); return; }
+  window._heLastTry = now;
+
+  const btn = document.getElementById('he-pdf-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Cargando…'; }
+
+  try {
+    // 1) Cargar todos los datos necesarios en paralelo
+    const [escArr, contratoArr, alumnos, pedidos] = await Promise.all([
+      supaFetch('escuela', 'GET', null, `?id=eq.${escuelaId}&limit=1`),
+      supaFetch('contrato_escuela', 'GET', null, `?escuela_id=eq.${escuelaId}&order=anio.desc&limit=1`),
+      supaFetchAll('alumno',
+        `?escuela_id=eq.${escuelaId}&activo=eq.true&select=grado,nivel,sexo,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom`),
+      supaFetchAll('pedido',
+        `?escuela_id=eq.${escuelaId}&select=nivel,cod_prenda,nombre_prenda,cantidad_solicitada,cantidad_entregada`),
+    ]);
+
+    const esc = (escArr && escArr[0]) || null;
+    const contrato = (contratoArr && contratoArr[0]) || null;
+    if (!esc) throw new Error('Escuela no encontrada');
+
+    // 2) Detalle por grado (♀/♂/total)
+    const porGrado = new Map();  // grado → { f, m, total, nivel }
+    for (const a of alumnos) {
+      const g = (a.grado || '—').toUpperCase();
+      if (!porGrado.has(g)) porGrado.set(g, { f: 0, m: 0, total: 0, nivel: a.nivel || '' });
+      const o = porGrado.get(g);
+      if (a.sexo === 'F') o.f++;
+      else if (a.sexo === 'M') o.m++;
+      o.total++;
+    }
+    // Ordenar grados: por nivel primero (PARV → BASICA → BACH → OTRO), después numérico
+    const ordNivel = { PARV: 0, BASICA: 1, BACH: 2, OTRO: 9 };
+    const gradosOrdenados = [...porGrado.entries()].sort((a, b) => {
+      const na = ordNivel[a[1].nivel] ?? 5;
+      const nb = ordNivel[b[1].nivel] ?? 5;
+      if (na !== nb) return na - nb;
+      return a[0].localeCompare(b[0], 'es', { numeric: true });
+    });
+    const totGrado = { f: 0, m: 0, total: 0 };
+    for (const [, v] of gradosOrdenados) { totGrado.f += v.f; totGrado.m += v.m; totGrado.total += v.total; }
+
+    // 3) Contrato vs entregado por NIVEL educativo (usando pedido)
+    const porNivel = new Map();  // nivel → { contratado, entregado }
+    for (const p of pedidos) {
+      const niv = p.nivel || 'OTRO';
+      if (!porNivel.has(niv)) porNivel.set(niv, { contratado: 0, entregado: 0 });
+      const o = porNivel.get(niv);
+      o.contratado += Number(p.cantidad_solicitada) || 0;
+      o.entregado  += Number(p.cantidad_entregada)  || 0;
+    }
+    const nivelesOrden = ['PARV', 'BASICA', 'BACH', 'OTRO'].filter(n => porNivel.has(n));
+    for (const n of porNivel.keys()) if (!nivelesOrden.includes(n)) nivelesOrden.push(n);
+    const totNivel = { contratado: 0, entregado: 0 };
+    for (const v of porNivel.values()) { totNivel.contratado += v.contratado; totNivel.entregado += v.entregado; }
+
+    // 4) HTML
+    const hoy = new Date().toLocaleDateString('es-SV', { day:'2-digit', month:'2-digit', year:'numeric' });
+    const fileFecha = new Date().toISOString().slice(0, 10);
+    const escNombre = (esc.alias || esc.nombre || '').replace(/[^\w\-]/g, '_').slice(0, 30);
+
+    // CSS común para tablas
+    const tabCss = 'width:100%;border-collapse:collapse;font-family:Arial,sans-serif;margin-top:6px';
+    const thCss = 'background:#1F4E79;color:white;padding:6px 8px;text-align:center;font-weight:600;font-size:11pt;border:1px solid #1F4E79';
+    const tdCss = 'padding:5px 8px;border:1px solid #DDD;font-size:11pt;text-align:center;font-family:Arial,sans-serif';
+    const tdLeftCss = tdCss + ';text-align:left;font-weight:600';
+    const trTotCss = 'background:#E8F0FE;font-weight:700';
+
+    const detalleGradoHtml = `
+      <h3 style="margin:12px 0 4px;font-size:13pt;color:#1F4E79">📊 Detalle por grado</h3>
+      <table style="${tabCss}">
+        <thead><tr>
+          <th style="${thCss};text-align:left">Grado</th>
+          <th style="${thCss}">♀ Niñas</th>
+          <th style="${thCss}">♂ Niños</th>
+          <th style="${thCss}">Total</th>
+        </tr></thead>
+        <tbody>
+          ${gradosOrdenados.map(([g, v]) => `
+            <tr>
+              <td style="${tdLeftCss}">${g}</td>
+              <td style="${tdCss}">${v.f || '·'}</td>
+              <td style="${tdCss}">${v.m || '·'}</td>
+              <td style="${tdCss};font-weight:700">${v.total}</td>
+            </tr>
+          `).join('')}
+          <tr style="${trTotCss}">
+            <td style="${tdLeftCss}">TOTAL</td>
+            <td style="${tdCss};font-weight:700">${totGrado.f}</td>
+            <td style="${tdCss};font-weight:700">${totGrado.m}</td>
+            <td style="${tdCss};font-weight:700">${totGrado.total}</td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+
+    const contratoVsEntregadoHtml = `
+      <h3 style="margin:14px 0 4px;font-size:13pt;color:#1F4E79">📋 Contrato vs entregado por nivel</h3>
+      <table style="${tabCss}">
+        <thead><tr>
+          <th style="${thCss};text-align:left">Nivel educativo</th>
+          <th style="${thCss}">Contratado</th>
+          <th style="${thCss}">Entregado</th>
+          <th style="${thCss}">Pendiente</th>
+          <th style="${thCss}">% avance</th>
+        </tr></thead>
+        <tbody>
+          ${nivelesOrden.map(n => {
+            const v = porNivel.get(n);
+            const pend = v.contratado - v.entregado;
+            const pct = v.contratado > 0 ? Math.round((v.entregado / v.contratado) * 100) : 0;
+            const pendColor = pend > 0 ? '#C00' : '#2a8f4a';
+            return `
+              <tr>
+                <td style="${tdLeftCss}">${NIVEL_LBL_HE[n] || n}</td>
+                <td style="${tdCss}">${v.contratado.toLocaleString()}</td>
+                <td style="${tdCss}">${v.entregado.toLocaleString()}</td>
+                <td style="${tdCss};font-weight:700;color:${pendColor}">${pend.toLocaleString()}</td>
+                <td style="${tdCss}">${pct}%</td>
+              </tr>
+            `;
+          }).join('')}
+          <tr style="${trTotCss}">
+            <td style="${tdLeftCss}">TOTAL</td>
+            <td style="${tdCss};font-weight:700">${totNivel.contratado.toLocaleString()}</td>
+            <td style="${tdCss};font-weight:700">${totNivel.entregado.toLocaleString()}</td>
+            <td style="${tdCss};font-weight:700;color:${(totNivel.contratado-totNivel.entregado)>0?'#C00':'#2a8f4a'}">${(totNivel.contratado - totNivel.entregado).toLocaleString()}</td>
+            <td style="${tdCss};font-weight:700">${totNivel.contratado > 0 ? Math.round((totNivel.entregado / totNivel.contratado) * 100) : 0}%</td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+
+    const telaHtml = contrato ? `
+      <h3 style="margin:14px 0 4px;font-size:13pt;color:#1F4E79">🧵 Tela contratada</h3>
+      <table style="${tabCss}">
+        <thead><tr>
+          <th style="${thCss};text-align:left">Color</th>
+          <th style="${thCss}">Contratado (yd)</th>
+          <th style="${thCss}">Usado (yd)</th>
+          <th style="${thCss}">Diferencia</th>
+        </tr></thead>
+        <tbody>
+          ${[
+            { lbl: 'Celeste', val: contrato.tela_celeste_yd },
+            { lbl: 'Blanca',  val: contrato.tela_blanca_yd },
+            { lbl: 'Azul',    val: contrato.tela_azul_yd },
+            { lbl: 'Beige',   val: contrato.tela_beige_yd },
+          ].filter(t => (Number(t.val) || 0) > 0).map(t => `
+            <tr>
+              <td style="${tdLeftCss}">${t.lbl}</td>
+              <td style="${tdCss}">${Number(t.val).toLocaleString('es-SV', { maximumFractionDigits: 2 })}</td>
+              <td style="${tdCss};color:#888">— por confirmar —</td>
+              <td style="${tdCss};color:#888">—</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      <div style="font-size:10pt;color:#888;margin-top:4px">
+        ⓘ Cálculo de tela usada vs sobrante pendiente de implementar — confirmar fuente de datos (tendido_rollo, trazo, etc).
+      </div>
+    ` : '<div style="font-size:11pt;color:#888;margin-top:10px">⚠ Esta escuela no tiene contrato registrado todavía.</div>';
+
+    const contratoInfoHtml = contrato ? `
+      <div style="font-size:11pt;line-height:1.6">
+        <div><strong>Contrato:</strong> ${contrato.cod_contrato || '—'} · <strong>Año:</strong> ${contrato.anio || '—'}</div>
+        <div><strong>Persona responsable:</strong> ${contrato.persona || '—'}</div>
+        <div><strong>Lote 1:</strong> ${(contrato.piezas_lote1 || 0).toLocaleString()} pzas · $${(Number(contrato.monto_lote1) || 0).toFixed(2)}${
+          (contrato.piezas_lote2 || 0) > 0
+            ? ` &nbsp;·&nbsp; <strong>Lote 2:</strong> ${contrato.piezas_lote2.toLocaleString()} pzas · $${(Number(contrato.monto_lote2)||0).toFixed(2)}`
+            : ''
+        }</div>
+      </div>
+    ` : '<div style="font-size:11pt;color:#888">Sin contrato registrado.</div>';
+
+    const firmasHtml = `
+      <div style="margin-top:36px;display:flex;justify-content:space-around;gap:30px">
+        <div style="text-align:center;flex:1">
+          <div style="border-top:1px solid #222;width:80%;margin:0 auto"></div>
+          <div style="font-size:11pt;margin-top:4px"><strong>Director / Receptor</strong></div>
+          <div style="font-size:9pt;color:#666">Nombre, firma y sello</div>
+        </div>
+        <div style="text-align:center;flex:1">
+          <div style="border-top:1px solid #222;width:80%;margin:0 auto"></div>
+          <div style="font-size:11pt;margin-top:4px"><strong>Taller IMIS — Entrega</strong></div>
+          <div style="font-size:9pt;color:#666">Nombre y firma</div>
+        </div>
+      </div>
+      <div style="margin-top:24px;font-size:10pt">
+        <strong>Observaciones:</strong>
+        <div style="border:1px solid #DDD;border-radius:4px;padding:6px;min-height:50px;margin-top:4px">&nbsp;</div>
+      </div>
+    `;
+
+    const docHtml = `<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8">
+<title>hoja-entrega-${escNombre}-${fileFecha}</title>
+<style>
+  @page { size: letter portrait; margin: 0.4in; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; color: #222; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { padding: 6px; }
+  h3 { page-break-after: avoid; }
+  table { page-break-inside: auto; }
+  tr { page-break-inside: avoid; }
+  thead { display: table-header-group; }
+</style>
+</head><body>
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1F4E79;padding-bottom:6px;margin-bottom:8px">
+    <div>
+      <div style="font-size:18pt;font-weight:700;color:#1F4E79">📄 Hoja de entrega</div>
+      <div style="font-size:11pt;color:#666;margin-top:2px">Taller IMIS · Reporte interno</div>
+    </div>
+    <div style="text-align:right;font-size:10pt;color:#666">
+      <div>Fecha: <strong>${hoy}</strong></div>
+    </div>
+  </div>
+
+  <div style="font-size:13pt;font-weight:700;color:#1F4E79;margin-top:4px">
+    🏫 ${esc.nombre || ''}${esc.alias && esc.alias !== esc.nombre ? ` <span style="font-size:11pt;color:#666;font-weight:400">(${esc.alias})</span>` : ''}
+  </div>
+  <div style="font-size:11pt;margin-bottom:6px">
+    <strong>CDE:</strong> ${esc.codigo_cde || '—'} ${esc.director ? `&nbsp;·&nbsp; <strong>Director:</strong> ${esc.director}` : ''}
+    ${esc.municipio ? `&nbsp;·&nbsp; <strong>Municipio:</strong> ${esc.municipio}` : ''}
+  </div>
+
+  ${contratoInfoHtml}
+  ${detalleGradoHtml}
+  ${contratoVsEntregadoHtml}
+  ${telaHtml}
+  ${firmasHtml}
+</body></html>`;
+
+    // Print via iframe srcdoc
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.setAttribute('sandbox', 'allow-same-origin allow-modals allow-scripts');
+    const loaded = new Promise(resolve => {
+      iframe.addEventListener('load', () => resolve('load'), { once: true });
+      setTimeout(() => resolve('timeout'), 4000);
+    });
+    iframe.srcdoc = docHtml;
+    document.body.appendChild(iframe);
+    await loaded;
+    await new Promise(r => setTimeout(r, 250));
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+    setTimeout(() => { if (iframe.parentNode) iframe.parentNode.removeChild(iframe); }, 30000);
+  } catch (e) {
+    console.error('[hoja entrega]', e);
+    alert('Error al generar la hoja: ' + (e && e.message || e));
+  } finally {
+    if (btn) { btn.disabled = !sel.value; btn.textContent = '📥 Generar PDF'; }
+  }
+}
 
 // ─── Gestor de grupos de escuelas (asigna escuela.grupo_produccion) ───
 // Lista las escuelas activas agrupadas por su grupo actual, con un input
