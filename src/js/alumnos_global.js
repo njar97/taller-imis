@@ -397,93 +397,103 @@ function renderAlumnosGlobal() {
   // Opciones de escuela que aún NO están seleccionadas
   const escuelasDisponibles = escuelasOpts.filter(e => !escuelasSel.includes(e.id));
 
+  // Contador de "filtros activos" para el badge del botón de opciones
+  const filtrosActivos = (escuelasSel.length > 0 ? 1 : 0) +
+    (c.filtroNivel ? 1 : 0) + (c.filtroTemporada ? 1 : 0);
+
   const header = `
     <div class="card" style="padding:10px 12px;margin-bottom:10px">
-      <!-- Fila 1: chips de estado con stats integrados -->
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+      <!-- Visible siempre: búsqueda + nuevo alumno + refrescar -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+        <input type="text" placeholder="🔍 Buscar nombre..." value="${c.busqueda}"
+          oninput="alumnosGlobalCache.busqueda = this.value; alumnosGlobalCache.pagina = 1; scheduleRenderAlumnos()"
+          style="flex:1;min-width:160px;padding:8px 12px;border:1px solid var(--borde);border-radius:6px;font-size:14px">
+        <button class="btn btn-success btn-sm" onclick="abrirNuevoAlumno()">+ Nuevo alumno</button>
+        <button class="btn btn-ghost btn-sm" onclick="initAlumnosGlobal()" title="Refrescar">🔄</button>
+      </div>
+
+      <!-- Visible siempre: chips de estado (los más usados) + contador -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
         <button class="btn btn-sm ${!c.filtroEstado && escuelasSel.length===0 && !c.busqueda?'btn-primary':'btn-ghost'}"
           onclick="limpiarFiltros()">👥 Todos (${tot.toLocaleString()})</button>
         <button class="btn btn-sm ${c.filtroEstado==='sin_tallas'?'btn-primary':'btn-ghost'}"
           onclick="aplicarFiltroEstado('sin_tallas')">⚠️ Falta tallar (${sinTallas})</button>
         <button class="btn btn-sm ${c.filtroEstado==='completo'?'btn-primary':'btn-ghost'}"
           onclick="aplicarFiltroEstado('completo')">✅ Completos (${completos})</button>
-        <span style="margin-left:auto;color:#888;font-size:11px;align-self:center">Mostrando ${totMostrando.toLocaleString()}</span>
+        <span style="margin-left:auto;color:#888;font-size:11px;align-self:center">${totMostrando.toLocaleString()} mostrando</span>
       </div>
 
-      <!-- Fila 2: chips de escuelas seleccionadas + agregar -->
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
-        ${escuelasSel.length === 0 ? `<span style="color:#888;font-size:12px">🏫 Todas las escuelas</span>` : ''}
-        ${escuelasSel.map(eid => {
-          const e = c.escuelas[eid];
-          if (!e) return '';
-          const label = e.alias || e.nombre;
-          const sinAlias = !e.alias;
-          return `<span class="btn btn-sm btn-primary" style="cursor:default">🏫 ${label}${sinAlias ? ' ⚠️' : ''} <span style="margin-left:4px;cursor:pointer;opacity:0.85" onclick="editarEscuela('${eid}')" title="Editar escuela (alias, datos)">✏️</span> <span style="margin-left:2px;cursor:pointer" onclick="quitarFiltroEscuela('${eid}')" title="Quitar filtro">✕</span></span>`;
-        }).join('')}
-        ${escuelasDisponibles.length > 0 ? `
-          <select onchange="if(this.value){agregarFiltroEscuela(this.value); this.value='';}" style="padding:4px 6px;font-size:12px;border:1px solid var(--borde);border-radius:4px">
-            <option value="">+ Agregar escuela…</option>
-            ${escuelasDisponibles.map(e => `<option value="${e.id}">${e.alias ? e.alias + ' · ' : ''}${e.nombre}</option>`).join('')}
-          </select>
-        ` : ''}
-        <button class="btn btn-ghost btn-sm" onclick="nuevaEscuela()" title="Crear escuela nueva (datos + contrato + tela)">🏫 + Nueva escuela</button>
-      </div>
-
-      <!-- Fila 3: buscar + acciones -->
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
-        <input type="text" placeholder="🔍 Buscar nombre..." value="${c.busqueda}"
-          oninput="alumnosGlobalCache.busqueda = this.value; alumnosGlobalCache.pagina = 1; scheduleRenderAlumnos()"
-          style="flex:1;min-width:140px;padding:6px 10px;border:1px solid var(--borde);border-radius:4px">
-        <button class="btn btn-success btn-sm" onclick="abrirNuevoAlumno()">+ Nuevo alumno</button>
-        <button class="btn btn-primary btn-sm" onclick="generarEtiquetasDirecto()" title="Genera PDF con los filtros y orden actuales">🏷 Imprimir etiquetas</button>
-        <button class="btn btn-ghost btn-sm" onclick="initAlumnosGlobal()" title="Refrescar">🔄</button>
-      </div>
-
-      <!-- Fila 4: toggle más filtros + limpiar -->
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <button class="btn btn-ghost btn-sm" onclick="alumnosGlobalCache.masFiltrosAbierto = !alumnosGlobalCache.masFiltrosAbierto; renderAlumnosGlobal()">
-          ⚙️ Más filtros / Orden ${masFiltrosAbierto?'▲':'▼'}
-        </button>
-        ${algunFiltro ? `<button class="btn btn-ghost btn-sm" onclick="limpiarFiltros()">✗ Limpiar</button>` : ''}
-      </div>
-
-      <!-- Más filtros (colapsable) -->
-      ${masFiltrosAbierto ? `
-        <div style="margin-top:8px;padding-top:8px;border-top:1px solid #EEE">
-          <div style="font-size:11px;font-weight:600;color:#666;margin-bottom:4px">FILTROS AVANZADOS</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;margin-bottom:10px">
-          <select onchange="alumnosGlobalCache.filtroNivel = this.value; alumnosGlobalCache.pagina = 1; renderAlumnosGlobal()" style="padding:6px">
-            <option value="">Todo nivel</option>
-            <option value="PARV"   ${c.filtroNivel==='PARV'?'selected':''}>PARV</option>
-            <option value="BASICA" ${c.filtroNivel==='BASICA'?'selected':''}>BASICA</option>
-            <option value="BACH"   ${c.filtroNivel==='BACH'?'selected':''}>BACH</option>
-            <option value="OTRO"   ${c.filtroNivel==='OTRO'?'selected':''}>OTRO</option>
-          </select>
-          <select onchange="alumnosGlobalCache.filtroEstado = this.value; alumnosGlobalCache.pagina = 1; renderAlumnosGlobal()" style="padding:6px">
-            <option value="">Estado avanzado…</option>
-            <option value="pendiente" ${c.filtroEstado==='pendiente'?'selected':''}>❌❌ Pendiente (sin empacar)</option>
-            <option value="parcial"   ${c.filtroEstado==='parcial'?'selected':''}>✅❌ Parcial empacado</option>
-            <option value="entregado" ${c.filtroEstado==='entregado'?'selected':''}>🚚 Entregado</option>
-          </select>
-        </div>
-
-        <div style="font-size:11px;font-weight:600;color:#666;margin:8px 0 4px 0;display:flex;justify-content:space-between;align-items:center">
-          <span>ORDEN DE LA LISTA (Y DEL PDF DE ETIQUETAS)</span>
-          <button class="btn btn-ghost btn-sm" onclick="ordenDefault()" style="font-size:10px;padding:2px 8px">↺ Default</button>
-        </div>
-        <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 8px;align-items:center;font-size:12px;max-width:380px">
-          ${[1,2,3,4].map(n => {
-            const val = (alumnosGlobalCache.ordenList || etOrdenGuardado())[n-1] || '';
-            return `
-              <span style="font-weight:600;color:#666">${n}°</span>
-              <select onchange="cambiarOrden(${n-1}, this.value)" style="padding:4px 6px;width:100%">
-                ${ET_ORDEN_OPCIONES.map(o => `<option value="${o.val}" ${o.val===val?'selected':''}>${o.label}</option>`).join('')}
+      <!-- Colapsado por defecto: filtros avanzados + escuelas + acciones secundarias -->
+      <details ${masFiltrosAbierto ? 'open' : ''} ontoggle="alumnosGlobalCache.masFiltrosAbierto = this.open">
+        <summary style="cursor:pointer;list-style:none;padding:8px 12px;background:#F5F7FA;border-radius:6px;font-size:13px;font-weight:600;color:#555;display:flex;align-items:center;justify-content:space-between;user-select:none">
+          <span>🎛 Más opciones${filtrosActivos > 0 ? ` <span style="background:var(--azul);color:white;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px">${filtrosActivos} filtro${filtrosActivos>1?'s':''}</span>` : ''}</span>
+          <span style="opacity:0.6">▼</span>
+        </summary>
+        <div style="padding:10px 4px 0 4px;display:flex;flex-direction:column;gap:8px">
+          <!-- Escuelas seleccionadas + agregar -->
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            ${escuelasSel.length === 0 ? `<span style="color:#888;font-size:12px">🏫 Todas las escuelas</span>` : ''}
+            ${escuelasSel.map(eid => {
+              const e = c.escuelas[eid];
+              if (!e) return '';
+              const label = e.alias || e.nombre;
+              const sinAlias = !e.alias;
+              return `<span class="btn btn-sm btn-primary" style="cursor:default">🏫 ${label}${sinAlias ? ' ⚠️' : ''} <span style="margin-left:4px;cursor:pointer;opacity:0.85" onclick="editarEscuela('${eid}')" title="Editar escuela (alias, datos)">✏️</span> <span style="margin-left:2px;cursor:pointer" onclick="quitarFiltroEscuela('${eid}')" title="Quitar filtro">✕</span></span>`;
+            }).join('')}
+            ${escuelasDisponibles.length > 0 ? `
+              <select onchange="if(this.value){agregarFiltroEscuela(this.value); this.value='';}" style="padding:4px 6px;font-size:12px;border:1px solid var(--borde);border-radius:4px">
+                <option value="">+ Filtrar por escuela…</option>
+                ${escuelasDisponibles.map(e => `<option value="${e.id}">${e.alias ? e.alias + ' · ' : ''}${e.nombre}</option>`).join('')}
               </select>
-            `;
-          }).join('')}
+            ` : ''}
+            <button class="btn btn-ghost btn-sm" onclick="nuevaEscuela()" title="Crear escuela nueva">🏫 + Nueva</button>
+          </div>
+          <!-- Acciones secundarias y limpiar -->
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding-top:6px;border-top:1px dashed #E0E0E0">
+            <button class="btn btn-primary btn-sm" onclick="generarEtiquetasDirecto()" title="Genera PDF con los filtros y orden actuales">🏷 Imprimir etiquetas</button>
+            ${algunFiltro ? `<button class="btn btn-ghost btn-sm" onclick="limpiarFiltros()" style="margin-left:auto">✗ Limpiar filtros</button>` : ''}
+          </div>
+
+          <!-- Filtros avanzados: nivel + estado avanzado -->
+          <div style="padding-top:6px;border-top:1px dashed #E0E0E0">
+            <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Filtros avanzados</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px">
+              <select onchange="alumnosGlobalCache.filtroNivel = this.value; alumnosGlobalCache.pagina = 1; renderAlumnosGlobal()" style="padding:6px">
+                <option value="">Todo nivel</option>
+                <option value="PARV"   ${c.filtroNivel==='PARV'?'selected':''}>PARV</option>
+                <option value="BASICA" ${c.filtroNivel==='BASICA'?'selected':''}>BASICA</option>
+                <option value="BACH"   ${c.filtroNivel==='BACH'?'selected':''}>BACH</option>
+                <option value="OTRO"   ${c.filtroNivel==='OTRO'?'selected':''}>OTRO</option>
+              </select>
+              <select onchange="alumnosGlobalCache.filtroEstado = this.value; alumnosGlobalCache.pagina = 1; renderAlumnosGlobal()" style="padding:6px">
+                <option value="">Estado avanzado…</option>
+                <option value="pendiente" ${c.filtroEstado==='pendiente'?'selected':''}>❌❌ Pendiente (sin empacar)</option>
+                <option value="parcial"   ${c.filtroEstado==='parcial'?'selected':''}>✅❌ Parcial empacado</option>
+                <option value="entregado" ${c.filtroEstado==='entregado'?'selected':''}>🚚 Entregado</option>
+              </select>
+            </div>
+          </div>
+          <!-- Orden de la lista -->
+          <div style="padding-top:6px;border-top:1px dashed #E0E0E0">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <span style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px">Orden de la lista (y del PDF de etiquetas)</span>
+              <button class="btn btn-ghost btn-sm" onclick="ordenDefault()" style="font-size:10px;padding:2px 8px">↺ Default</button>
+            </div>
+            <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 8px;align-items:center;font-size:12px;max-width:380px">
+              ${[1,2,3,4].map(n => {
+                const val = (alumnosGlobalCache.ordenList || etOrdenGuardado())[n-1] || '';
+                return `
+                  <span style="font-weight:600;color:#666">${n}°</span>
+                  <select onchange="cambiarOrden(${n-1}, this.value)" style="padding:4px 6px;width:100%">
+                    ${ET_ORDEN_OPCIONES.map(o => `<option value="${o.val}" ${o.val===val?'selected':''}>${o.label}</option>`).join('')}
+                  </select>
+                `;
+              }).join('')}
+            </div>
+            <div style="font-size:11px;color:#888;margin-top:4px">Si el 1° es "Escuela", se agrupan en hojas separadas al imprimir.</div>
+          </div>
         </div>
-        <div style="font-size:11px;color:#888;margin-top:4px">Si el 1° es "Escuela", se agrupan en hojas separadas al imprimir.</div>
-      ` : ''}
+      </details>
     </div>
   `;
   

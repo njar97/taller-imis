@@ -12,6 +12,10 @@ function initEstadistica() {
 function switchSubEst(sub) {
   estSubActual = sub;
   const subs = ['escuela', 'tallas', 'heatmap', 'historico', 'inventario', 'costos', 'yardaje', 'contratos'];
+  // Sincronizar el select (si fue cambio programático) — los botones
+  // legacy siguen funcionando si todavía existen en el DOM en algún lugar.
+  const sel = document.getElementById('est-sub-select');
+  if (sel && sel.value !== sub) sel.value = sub;
   subs.forEach(s => {
     const btn = document.getElementById('est-sub-' + s);
     if (btn) {
