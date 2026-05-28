@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-27 22:01 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-27 23:18 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -19125,14 +19125,25 @@ async function exportarHojaEntregaPDF() {
     const totGrado = { f: 0, m: 0, total: 0 };
     for (const [, v] of gradosOrdenados) { totGrado.f += v.f; totGrado.m += v.m; totGrado.total += v.total; }
 
-    // 3) Contrato vs entregado por NIVEL educativo (usando pedido)
-    const porNivel = new Map();  // nivel → { contratado, entregado }
+    // 3) Contrato vs entregado por NIVEL educativo
+    //    - Contratado: SUM(pedido.cantidad_solicitada) por nivel
+    //    - Entregado:  conteo de piezas (top+bottom) en alumnos con estado
+    //      'empacado' o 'entregado' (porque pedido.cantidad_entregada no
+    //      se actualiza automáticamente en este sistema).
+    const porNivel = new Map();
+    const ensure = (n) => {
+      if (!porNivel.has(n)) porNivel.set(n, { contratado: 0, entregado: 0 });
+      return porNivel.get(n);
+    };
     for (const p of pedidos) {
-      const niv = p.nivel || 'OTRO';
-      if (!porNivel.has(niv)) porNivel.set(niv, { contratado: 0, entregado: 0 });
-      const o = porNivel.get(niv);
-      o.contratado += Number(p.cantidad_solicitada) || 0;
-      o.entregado  += Number(p.cantidad_entregada)  || 0;
+      ensure(p.nivel || 'OTRO').contratado += Number(p.cantidad_solicitada) || 0;
+    }
+    const ESTADOS_ENTREGADOS = new Set(['empacado', 'entregado']);
+    for (const a of alumnos) {
+      const niv = a.nivel || 'OTRO';
+      const slot = ensure(niv);
+      if (a.prenda_top && a.talla_top_key && ESTADOS_ENTREGADOS.has(a.estado_top)) slot.entregado++;
+      if (a.prenda_bottom && a.talla_bottom_key && ESTADOS_ENTREGADOS.has(a.estado_bottom)) slot.entregado++;
     }
     const nivelesOrden = ['PARV', 'BASICA', 'BACH', 'OTRO'].filter(n => porNivel.has(n));
     for (const n of porNivel.keys()) if (!nivelesOrden.includes(n)) nivelesOrden.push(n);
@@ -19312,7 +19323,7 @@ async function exportarHojaEntregaPDF() {
 <meta charset="UTF-8">
 <title>hoja-entrega-${escNombre}-${fileFecha}</title>
 <style>
-  @page { size: letter portrait; margin: 0.4in; }
+  @page { size: letter portrait; margin: 0.85in 0.75in; }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; color: #222; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { padding: 6px; }

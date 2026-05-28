@@ -7,7 +7,7 @@
  *  - Update flow: SW nuevo queda en "waiting" hasta que el cliente lo libera
  *    via postMessage SKIP_WAITING (botón "Actualizar" del banner).
  */
-const CACHE_VERSION = 'v20260527-220133';
+const CACHE_VERSION = 'v20260527-231826';
 const CACHE_NAME = `taller-imis-${CACHE_VERSION}`;
 const PRECACHE_URLS = [
   './',
