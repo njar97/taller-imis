@@ -242,87 +242,134 @@ function renderTallasResumen() {
       style="font-weight:${sel?'700':'normal'}">${p}</button>`;
   }).join('');
 
+  // Contar filtros activos (vs defaults) para mostrar badge en el panel
+  const incluirOff = (!f.incluirCorte) + (!f.incluirProd) + (!f.incluirBodega) + (!f.incluirPool);
+  const filtrosActivos = (prendasFiltradas.size > 0 ? 1 : 0)
+    + (f.talla ? 1 : 0)
+    + ((f.escuelas || []).length > 0 ? 1 : 0)
+    + (f.ocultarCubiertas ? 1 : 0)
+    + (f.subtotalGrupos ? 1 : 0)
+    + (incluirOff > 0 ? 1 : 0);
+
+  // Resumen textual rápido de qué hay aplicado (para mostrar en el header)
+  const resumenFiltros = [];
+  if (prendasFiltradas.size > 0) resumenFiltros.push(`${prendasFiltradas.size} prenda${prendasFiltradas.size>1?'s':''}`);
+  if (f.talla) resumenFiltros.push(`talla ${f.talla}`);
+  if ((f.escuelas || []).length > 0) resumenFiltros.push(`${f.escuelas.length} escuela${f.escuelas.length>1?'s':''}`);
+  if (f.ocultarCubiertas) resumenFiltros.push('ocultando cubiertas');
+  const resumenStr = resumenFiltros.length > 0
+    ? resumenFiltros.join(' · ')
+    : 'sin filtros (todo)';
+
+  // Panel abierto por default solo si NO hay filtros (para enseñar la
+  // existencia de opciones). Cuando hay filtros, dejarlo colapsado para
+  // no taparlos al usuario que sabe lo que aplicó.
+  const _panelOpen = (typeof c._panelFiltrosOpen === 'boolean') ? c._panelFiltrosOpen : (filtrosActivos === 0);
+
   root.innerHTML = `
-    <!-- Filtros -->
-    <div class="card" style="padding:10px;margin-bottom:10px">
-      <!-- Multi-select prendas -->
-      <div style="font-size:11px;font-weight:600;color:#666;margin-bottom:4px">PRENDAS (multi)</div>
-      <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
-        ${chipsPrendas}
-        ${prendasFiltradas.size > 0
-          ? `<button class="btn btn-ghost btn-sm" onclick="limpiarPrendasTallas()" style="font-size:11px">✕ Limpiar</button>`
-          : `<span style="font-size:11px;color:#888">Ninguna seleccionada = todas</span>`}
+    <!-- Toolbar siempre visible: resumen + acciones (PDF + refrescar) -->
+    <div class="card" style="padding:8px 12px;margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;flex-direction:column;flex:1;min-width:160px">
+        <div style="font-size:12px;color:#555;font-weight:600">📊 Reporte por talla</div>
+        <div style="font-size:11px;color:#888">${resumenStr}</div>
       </div>
-
-      <!-- Talla single + opciones -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:8px">
-        <div class="field" style="margin:0">
-          <label>Talla</label>
-          <select onchange="onTallasFiltro('talla', this.value)">
-            <option value="">Todas</option>
-            ${tallasUnicas.map(t => `<option value="${t}" ${f.talla===t?'selected':''}>${t}</option>`).join('')}
-          </select>
-        </div>
-        <div class="field" style="margin:0">
-          <label style="display:flex;gap:6px;align-items:center;font-weight:normal">
-            <input type="checkbox" ${f.ocultarCubiertas?'checked':''}
-                   onchange="onTallasFiltro('ocultarCubiertas', this.checked)">
-            Ocultar cubiertas (balance ≥ 0)
-          </label>
-        </div>
-        <div class="field" style="margin:0">
-          <label style="display:flex;gap:6px;align-items:center;font-weight:normal">
-            <input type="checkbox" ${f.escuelasEnColumnas?'checked':''}
-                   onchange="onTallasFiltro('escuelasEnColumnas', this.checked)">
-            Escuelas como columnas
-          </label>
-          <div style="font-size:10px;color:#888;margin-top:2px">${(f.escuelas||[]).length>0?'Solo las elegidas abajo':'Todas las que tengan demanda'}</div>
-        </div>
-        <div style="text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:flex-start;flex-wrap:wrap">
-          <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer" title="Agregar sub-total por grupo_produccion de las escuelas (PDF)">
-            <input type="checkbox" ${f.subtotalGrupos?'checked':''} onchange="onTallasFiltro('subtotalGrupos', this.checked)">
-            Σ Sub-total grupos
-          </label>
-          <select onchange="onTallasFiltro('orientacionPDF', this.value)" title="Orientación del PDF" style="padding:5px 6px;font-size:12px;border:1px solid #CCC;border-radius:6px;background:white">
-            <option value="horizontal" ${(f.orientacionPDF||'horizontal')==='horizontal'?'selected':''}>📄 Horizontal</option>
-            <option value="vertical" ${f.orientacionPDF==='vertical'?'selected':''}>📃 Vertical</option>
-          </select>
-          <button class="btn btn-primary btn-sm" onclick="exportarTallasPDF()" title="Descargar el reporte actual (con los filtros aplicados) en PDF">📥 PDF</button>
-          <button class="btn btn-ghost btn-sm" onclick="initTallasResumen()">🔄 Refrescar</button>
-        </div>
-      </div>
-
-      <!-- Escuelas multi -->
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
-        ${escChips}
-        ${escDisp.length > 0 ? `
-          <select onchange="if(this.value){agregarTallasEsc(this.value); this.value='';}" style="padding:4px 6px;font-size:12px">
-            <option value="">+ Filtrar por escuela…</option>
-            ${escDisp.map(e => `<option value="${e.id}">${e.alias || e.nombre}</option>`).join('')}
-          </select>
-        ` : ''}
-      </div>
-
-      <!-- Toggles de suministro -->
-      <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;border-top:1px dashed #ddd;padding-top:6px">
-        <label style="display:flex;gap:4px;align-items:center;cursor:pointer">
-          <input type="checkbox" ${f.incluirCorte?'checked':''} onchange="onTallasFiltro('incluirCorte', this.checked)">
-          ✂️ Corte
-        </label>
-        <label style="display:flex;gap:4px;align-items:center;cursor:pointer">
-          <input type="checkbox" ${f.incluirProd?'checked':''} onchange="onTallasFiltro('incluirProd', this.checked)">
-          🏭 Producción
-        </label>
-        <label style="display:flex;gap:4px;align-items:center;cursor:pointer">
-          <input type="checkbox" ${f.incluirBodega?'checked':''} onchange="onTallasFiltro('incluirBodega', this.checked)">
-          📦 Bodega
-        </label>
-        <label style="display:flex;gap:4px;align-items:center;cursor:pointer">
-          <input type="checkbox" ${f.incluirPool?'checked':''} onchange="onTallasFiltro('incluirPool', this.checked)">
-          📥 Pool acaparado
-        </label>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <select onchange="onTallasFiltro('orientacionPDF', this.value)" title="Orientación del PDF" style="padding:6px 8px;font-size:12px;border:1px solid var(--borde);border-radius:6px;background:white">
+          <option value="horizontal" ${(f.orientacionPDF||'horizontal')==='horizontal'?'selected':''}>📄 Horizontal</option>
+          <option value="vertical" ${f.orientacionPDF==='vertical'?'selected':''}>📃 Vertical</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="exportarTallasPDF()" title="Descargar el reporte actual (con los filtros aplicados) en PDF">📥 PDF</button>
+        <button class="btn btn-ghost btn-sm" onclick="initTallasResumen()" title="Recargar datos">🔄</button>
       </div>
     </div>
+
+    <!-- Filtros colapsables: por defecto cerrados si hay filtros (no tapar al user) -->
+    <details ${_panelOpen ? 'open' : ''} ontoggle="tallasResumenCache._panelFiltrosOpen = this.open" style="margin-bottom:10px">
+      <summary style="cursor:pointer;list-style:none;padding:10px 14px;background:white;border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;align-items:center;justify-content:space-between;user-select:none;border:1px solid var(--borde)">
+        <span>🎛 Filtros ${filtrosActivos > 0 ? `<span style="background:var(--azul);color:white;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px">${filtrosActivos}</span>` : '<span style="color:#888;font-weight:400;margin-left:4px;font-size:11px">(ninguno)</span>'}</span>
+        <span style="opacity:0.6;font-size:11px">▼</span>
+      </summary>
+      <div style="padding:12px;background:white;border:1px solid var(--borde);border-top:none;border-radius:0 0 8px 8px;display:flex;flex-direction:column;gap:12px">
+
+        <!-- Prendas (chips multi) -->
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">
+            <span>👕 Prendas (multi)</span>
+            ${prendasFiltradas.size > 0
+              ? `<button class="btn btn-ghost btn-sm" onclick="limpiarPrendasTallas()" style="font-size:10px;padding:2px 8px">✕ Limpiar</button>`
+              : `<span style="font-size:10px;color:#888;font-weight:400;text-transform:none">Ninguna = todas</span>`}
+          </div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+            ${chipsPrendas}
+          </div>
+        </div>
+
+        <!-- Talla + escuelas (filtros de scope) -->
+        <div style="padding-top:8px;border-top:1px dashed #E0E0E0">
+          <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">📐 Talla y escuelas</div>
+          <div class="field" style="margin-bottom:6px">
+            <label>Talla específica</label>
+            <select onchange="onTallasFiltro('talla', this.value)">
+              <option value="">Todas las tallas</option>
+              ${tallasUnicas.map(t => `<option value="${t}" ${f.talla===t?'selected':''}>${t}</option>`).join('')}
+            </select>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            ${escChips}
+            ${escDisp.length > 0 ? `
+              <select onchange="if(this.value){agregarTallasEsc(this.value); this.value='';}" style="padding:6px 8px;font-size:12px">
+                <option value="">+ Filtrar por escuela…</option>
+                ${escDisp.map(e => `<option value="${e.id}">${e.alias || e.nombre}</option>`).join('')}
+              </select>
+            ` : ''}
+            ${(f.escuelas || []).length === 0 ? '<span style="font-size:11px;color:#888">Sin filtro = todas las escuelas con demanda</span>' : ''}
+          </div>
+        </div>
+
+        <!-- Qué incluir en el cálculo de suministro -->
+        <div style="padding-top:8px;border-top:1px dashed #E0E0E0">
+          <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">📊 Incluir en suministro</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;font-size:13px">
+            <label style="display:flex;gap:6px;align-items:center;cursor:pointer;padding:6px 8px;background:#F5F7FA;border-radius:6px">
+              <input type="checkbox" ${f.incluirCorte?'checked':''} onchange="onTallasFiltro('incluirCorte', this.checked)" style="width:auto">
+              <span>✂️ Corte</span>
+            </label>
+            <label style="display:flex;gap:6px;align-items:center;cursor:pointer;padding:6px 8px;background:#F5F7FA;border-radius:6px">
+              <input type="checkbox" ${f.incluirProd?'checked':''} onchange="onTallasFiltro('incluirProd', this.checked)" style="width:auto">
+              <span>🏭 Producción</span>
+            </label>
+            <label style="display:flex;gap:6px;align-items:center;cursor:pointer;padding:6px 8px;background:#F5F7FA;border-radius:6px">
+              <input type="checkbox" ${f.incluirBodega?'checked':''} onchange="onTallasFiltro('incluirBodega', this.checked)" style="width:auto">
+              <span>📦 Bodega</span>
+            </label>
+            <label style="display:flex;gap:6px;align-items:center;cursor:pointer;padding:6px 8px;background:#F5F7FA;border-radius:6px">
+              <input type="checkbox" ${f.incluirPool?'checked':''} onchange="onTallasFiltro('incluirPool', this.checked)" style="width:auto">
+              <span>📥 Pool acaparado</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Opciones de visualización -->
+        <div style="padding-top:8px;border-top:1px dashed #E0E0E0">
+          <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">⚙️ Visualización del reporte</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:13px">
+            <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
+              <input type="checkbox" ${f.ocultarCubiertas?'checked':''} onchange="onTallasFiltro('ocultarCubiertas', this.checked)" style="width:auto">
+              <span>Ocultar filas cubiertas (balance ≥ 0)</span>
+            </label>
+            <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer">
+              <input type="checkbox" ${f.escuelasEnColumnas?'checked':''} onchange="onTallasFiltro('escuelasEnColumnas', this.checked)" style="width:auto;margin-top:3px">
+              <span>Escuelas como columnas <span style="font-size:11px;color:#888;display:block;font-weight:400">${(f.escuelas||[]).length>0?'Solo las elegidas arriba':'Todas las que tengan demanda'}</span></span>
+            </label>
+            <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer" title="Agregar sub-total por grupo_produccion de las escuelas (PDF)">
+              <input type="checkbox" ${f.subtotalGrupos?'checked':''} onchange="onTallasFiltro('subtotalGrupos', this.checked)" style="width:auto;margin-top:3px">
+              <span>Σ Sub-total por grupo de escuelas <span style="font-size:11px;color:#888;display:block;font-weight:400">Agrega columna de suma por grupo_produccion</span></span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+    </details>
 
     <!-- KPIs totales -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px;margin-bottom:10px">
