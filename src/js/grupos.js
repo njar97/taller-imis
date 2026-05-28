@@ -129,12 +129,20 @@ function cerrarGrupoModal() {
 }
 
 async function guardarGrupo() {
+  const v = validateForm({
+    'grp-codigo': { required: true, label: 'Código' },
+    'grp-nombre': { required: true, label: 'Nombre' },
+  });
+  if (!v.valid) {
+    showToast(v.firstError, 'error');
+    const el = document.getElementById(v.firstInvalidId);
+    if (el) el.focus();
+    return;
+  }
   const id = document.getElementById('grp-id').value;
   const codigo = document.getElementById('grp-codigo').value.trim();
   const nombre = document.getElementById('grp-nombre').value.trim();
   const tipo = document.getElementById('grp-tipo').value;
-  
-  if (!codigo || !nombre) { alert('Código y nombre son obligatorios'); return; }
   
   try {
     if (id) {

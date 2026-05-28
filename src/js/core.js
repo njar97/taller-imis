@@ -149,6 +149,105 @@ function showToast(msg, type = 'info', ms = 5000) {
   setTimeout(() => { if (toast.parentNode) toast.remove(); }, ms);
 }
 
+// Modal helper: centraliza apertura/cierre + manejo de tecla Esc +
+// click-en-backdrop para cerrar. Reemplaza los patrones repetidos
+// `document.getElementById('xxx').style.display = 'flex'/'none'`.
+//
+// Uso:
+//   openModal('mi-modal');            // mostrar
+//   closeModal('mi-modal');           // ocultar
+//   openModal('mi-modal', { onClose: () => limpiarFormulario() });
+//
+// Los modales viejos siguen funcionando — esto es un helper opcional.
+// Migración incremental: cuando toques un modal, podés cambiarlo.
+const _modalState = new Map();  // id → { onClose }
+
+function openModal(id, opts = {}) {
+  const el = document.getElementById(id);
+  if (!el) { console.warn('[openModal] no encontré', id); return; }
+  el.style.display = 'flex';
+  _modalState.set(id, { onClose: opts.onClose || null });
+  // Si es la primera vez, instalar listener global de Esc + backdrop
+  if (!window._modalListeners) {
+    window._modalListeners = true;
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      // Cerrar el último modal abierto (mayor z-index)
+      const abiertos = [..._modalState.keys()].filter(mid => {
+        const m = document.getElementById(mid);
+        return m && m.style.display !== 'none';
+      });
+      if (abiertos.length) closeModal(abiertos[abiertos.length - 1]);
+    });
+  }
+  // Click en backdrop cierra (si el modal lo soporta — chequea si el
+  // click cayó EXACTAMENTE en el contenedor .modal, no en .modal-content)
+  if (!el._backdropListenerAdded) {
+    el._backdropListenerAdded = true;
+    el.addEventListener('click', (e) => {
+      if (e.target === el) closeModal(id);
+    });
+  }
+}
+
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = 'none';
+  const state = _modalState.get(id);
+  if (state && state.onClose) {
+    try { state.onClose(); } catch (e) { console.error('[closeModal onClose]', e); }
+  }
+  _modalState.delete(id);
+}
+
+// validateForm: valida inputs por id según un spec declarativo.
+// Devuelve { valid, errors[], firstError, firstInvalidId }.
+// Spec por id:
+//   { required: true, label: 'Operaria' }    // string no vacío
+//   { required: true, min: 1, label: 'Cantidad' }  // número >= min
+//   { email: true, label: 'Email' }          // formato email si tiene valor
+// Uso:
+//   const r = validateForm({ 'asig-operaria': {required:true,label:'Operaria'} });
+//   if (!r.valid) { showToast(r.firstError, 'error');
+//                   const el = document.getElementById(r.firstInvalidId);
+//                   if (el) el.focus(); return; }
+function validateForm(spec) {
+  const errors = [];
+  let firstInvalidId = null;
+  const markInvalid = (id, msg) => {
+    errors.push(msg);
+    if (!firstInvalidId) firstInvalidId = id;
+  };
+  for (const [id, rules] of Object.entries(spec || {})) {
+    const el = document.getElementById(id);
+    if (!el) { console.warn('[validateForm]', id, 'no existe en el DOM'); continue; }
+    const raw = el.value;
+    const val = typeof raw === 'string' ? raw.trim() : raw;
+    const label = rules.label || id;
+    if (rules.required && (val === '' || val === null || val === undefined)) {
+      markInvalid(id, `${label} es obligatorio`);
+      continue;
+    }
+    if (val === '' || val === null || val === undefined) continue;  // opcional vacío
+    if (rules.min !== undefined && Number(val) < rules.min) {
+      markInvalid(id, `${label} debe ser ≥ ${rules.min}`);
+    }
+    if (rules.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+      markInvalid(id, `${label} debe ser un email válido`);
+    }
+    if (rules.pattern && !rules.pattern.test(val)) {
+      markInvalid(id, `${label} tiene formato inválido`);
+    }
+  }
+  return {
+    valid: errors.length === 0,
+    errors,
+    firstError: errors[0] || null,
+    firstInvalidId,
+  };
+}
+
 // tryInit: ejecuta una función init() con error boundary. Si falla
 // (sync o async), loguea + muestra toast — pero NO bloquea la nav.
 // Usar en switchTab/irA para que un init roto no deje UI vacío sin pista.

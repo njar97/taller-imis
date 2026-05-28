@@ -1,10 +1,30 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
+    /* Colores brand (heredados) */
     --azul: #1F4E79; --azul2: #2E75B6; --azul-claro: #D6E4F0;
     --verde: #28A745; --verde-claro: #E8F5E9;
     --rojo: #C00000; --rojo-claro: #F8D7DA;
     --amarillo: #FFF2CC; --ambar: #FFC107; --ambar-claro: #FFF8E1;
     --gris: #F5F5F5; --borde: #CCCCCC; --texto: #222222;
+    /* Sistema de texto: usar en código nuevo en vez de hardcoded #666/#888/etc. */
+    --text-secondary: #666;       /* labels, info secundaria */
+    --text-disabled: #888;        /* texto deshabilitado, hints */
+    --text-light: #aaa;            /* placeholder, separadores */
+    /* Sistema de fondos y borders */
+    --border-light: #EEE;          /* divisores sutiles */
+    --bg-card: #FAFAFA;            /* alternancia de filas */
+    --bg-card2: #F5F7FA;           /* fondo card más sutil (headers) */
+    /* Semánticos para TEXTO coloreado (legibles sobre fondo claro) */
+    --error-text: #C00;
+    --warn-text: #a82;
+    --success-text: #2a8f4a;
+    /* Sistema de spacing y radio */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space: 12px;
+    --space-lg: 16px;
+    --radius: 6px;
+    --radius-lg: 10px;
   }
   body { font-family: Arial, sans-serif; background: #F0F4F8; color: var(--texto); min-height: 100vh; padding-bottom: 60px; }
 

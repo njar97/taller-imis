@@ -220,9 +220,17 @@ function cerrarGradoEdit() {
   }
 }
 async function guardarGradoEdit() {
+  const v = validateForm({
+    'grad-codigo': { required: true, label: 'Código del grado' },
+  });
+  if (!v.valid) {
+    showToast(v.firstError, 'error');
+    const el = document.getElementById(v.firstInvalidId);
+    if (el) el.focus();
+    return;
+  }
   const orig = document.getElementById('grad-orig').value;
   const codigo = document.getElementById('grad-codigo').value.trim();
-  if (!codigo) return alert('El código del grado es obligatorio');
   const payload = {
     grado: codigo,
     nivel: document.getElementById('grad-nivel').value,

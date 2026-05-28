@@ -486,13 +486,20 @@ function cerrarNuevaEscuela() {
 }
 
 async function guardarNuevaEscuela() {
+  const v = validateForm({
+    'nesc-nombre': { required: true, label: 'Nombre' },
+  });
+  if (!v.valid) {
+    showToast(v.firstError, 'error');
+    const el = document.getElementById(v.firstInvalidId);
+    if (el) el.focus();
+    return;
+  }
   const nombre = document.getElementById('nesc-nombre').value.trim();
   const codigo = document.getElementById('nesc-codigo').value.trim() || ('ADHOC-' + Date.now().toString(36));
   const director = document.getElementById('nesc-director').value.trim() || null;
   const telefono = document.getElementById('nesc-telefono').value.trim() || null;
   const grupo = document.getElementById('nesc-grupo').value.trim() || null;
-  
-  if (!nombre) { alert('Falta el nombre'); return; }
   
   try {
     await supaFetch('escuela', 'POST', {

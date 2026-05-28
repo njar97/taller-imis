@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-28 15:07 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-28 15:11 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -24,11 +24,31 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
+    /* Colores brand (heredados) */
     --azul: #1F4E79; --azul2: #2E75B6; --azul-claro: #D6E4F0;
     --verde: #28A745; --verde-claro: #E8F5E9;
     --rojo: #C00000; --rojo-claro: #F8D7DA;
     --amarillo: #FFF2CC; --ambar: #FFC107; --ambar-claro: #FFF8E1;
     --gris: #F5F5F5; --borde: #CCCCCC; --texto: #222222;
+    /* Sistema de texto: usar en código nuevo en vez de hardcoded #666/#888/etc. */
+    --text-secondary: #666;       /* labels, info secundaria */
+    --text-disabled: #888;        /* texto deshabilitado, hints */
+    --text-light: #aaa;            /* placeholder, separadores */
+    /* Sistema de fondos y borders */
+    --border-light: #EEE;          /* divisores sutiles */
+    --bg-card: #FAFAFA;            /* alternancia de filas */
+    --bg-card2: #F5F7FA;           /* fondo card más sutil (headers) */
+    /* Semánticos para TEXTO coloreado (legibles sobre fondo claro) */
+    --error-text: #C00;
+    --warn-text: #a82;
+    --success-text: #2a8f4a;
+    /* Sistema de spacing y radio */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space: 12px;
+    --space-lg: 16px;
+    --radius: 6px;
+    --radius-lg: 10px;
   }
   body { font-family: Arial, sans-serif; background: #F0F4F8; color: var(--texto); min-height: 100vh; padding-bottom: 60px; }
 
@@ -2730,6 +2750,105 @@ function showToast(msg, type = 'info', ms = 5000) {
   toast.onclick = () => toast.remove();
   cont.appendChild(toast);
   setTimeout(() => { if (toast.parentNode) toast.remove(); }, ms);
+}
+
+// Modal helper: centraliza apertura/cierre + manejo de tecla Esc +
+// click-en-backdrop para cerrar. Reemplaza los patrones repetidos
+// `document.getElementById('xxx').style.display = 'flex'/'none'`.
+//
+// Uso:
+//   openModal('mi-modal');            // mostrar
+//   closeModal('mi-modal');           // ocultar
+//   openModal('mi-modal', { onClose: () => limpiarFormulario() });
+//
+// Los modales viejos siguen funcionando — esto es un helper opcional.
+// Migración incremental: cuando toques un modal, podés cambiarlo.
+const _modalState = new Map();  // id → { onClose }
+
+function openModal(id, opts = {}) {
+  const el = document.getElementById(id);
+  if (!el) { console.warn('[openModal] no encontré', id); return; }
+  el.style.display = 'flex';
+  _modalState.set(id, { onClose: opts.onClose || null });
+  // Si es la primera vez, instalar listener global de Esc + backdrop
+  if (!window._modalListeners) {
+    window._modalListeners = true;
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      // Cerrar el último modal abierto (mayor z-index)
+      const abiertos = [..._modalState.keys()].filter(mid => {
+        const m = document.getElementById(mid);
+        return m && m.style.display !== 'none';
+      });
+      if (abiertos.length) closeModal(abiertos[abiertos.length - 1]);
+    });
+  }
+  // Click en backdrop cierra (si el modal lo soporta — chequea si el
+  // click cayó EXACTAMENTE en el contenedor .modal, no en .modal-content)
+  if (!el._backdropListenerAdded) {
+    el._backdropListenerAdded = true;
+    el.addEventListener('click', (e) => {
+      if (e.target === el) closeModal(id);
+    });
+  }
+}
+
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = 'none';
+  const state = _modalState.get(id);
+  if (state && state.onClose) {
+    try { state.onClose(); } catch (e) { console.error('[closeModal onClose]', e); }
+  }
+  _modalState.delete(id);
+}
+
+// validateForm: valida inputs por id según un spec declarativo.
+// Devuelve { valid, errors[], firstError, firstInvalidId }.
+// Spec por id:
+//   { required: true, label: 'Operaria' }    // string no vacío
+//   { required: true, min: 1, label: 'Cantidad' }  // número >= min
+//   { email: true, label: 'Email' }          // formato email si tiene valor
+// Uso:
+//   const r = validateForm({ 'asig-operaria': {required:true,label:'Operaria'} });
+//   if (!r.valid) { showToast(r.firstError, 'error');
+//                   const el = document.getElementById(r.firstInvalidId);
+//                   if (el) el.focus(); return; }
+function validateForm(spec) {
+  const errors = [];
+  let firstInvalidId = null;
+  const markInvalid = (id, msg) => {
+    errors.push(msg);
+    if (!firstInvalidId) firstInvalidId = id;
+  };
+  for (const [id, rules] of Object.entries(spec || {})) {
+    const el = document.getElementById(id);
+    if (!el) { console.warn('[validateForm]', id, 'no existe en el DOM'); continue; }
+    const raw = el.value;
+    const val = typeof raw === 'string' ? raw.trim() : raw;
+    const label = rules.label || id;
+    if (rules.required && (val === '' || val === null || val === undefined)) {
+      markInvalid(id, `${label} es obligatorio`);
+      continue;
+    }
+    if (val === '' || val === null || val === undefined) continue;  // opcional vacío
+    if (rules.min !== undefined && Number(val) < rules.min) {
+      markInvalid(id, `${label} debe ser ≥ ${rules.min}`);
+    }
+    if (rules.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+      markInvalid(id, `${label} debe ser un email válido`);
+    }
+    if (rules.pattern && !rules.pattern.test(val)) {
+      markInvalid(id, `${label} tiene formato inválido`);
+    }
+  }
+  return {
+    valid: errors.length === 0,
+    errors,
+    firstError: errors[0] || null,
+    firstInvalidId,
+  };
 }
 
 // tryInit: ejecuta una función init() con error boundary. Si falla
@@ -10427,13 +10546,20 @@ function cerrarNuevaEscuela() {
 }
 
 async function guardarNuevaEscuela() {
+  const v = validateForm({
+    'nesc-nombre': { required: true, label: 'Nombre' },
+  });
+  if (!v.valid) {
+    showToast(v.firstError, 'error');
+    const el = document.getElementById(v.firstInvalidId);
+    if (el) el.focus();
+    return;
+  }
   const nombre = document.getElementById('nesc-nombre').value.trim();
   const codigo = document.getElementById('nesc-codigo').value.trim() || ('ADHOC-' + Date.now().toString(36));
   const director = document.getElementById('nesc-director').value.trim() || null;
   const telefono = document.getElementById('nesc-telefono').value.trim() || null;
   const grupo = document.getElementById('nesc-grupo').value.trim() || null;
-  
-  if (!nombre) { alert('Falta el nombre'); return; }
   
   try {
     await supaFetch('escuela', 'POST', {
@@ -18276,12 +18402,20 @@ function cerrarGrupoModal() {
 }
 
 async function guardarGrupo() {
+  const v = validateForm({
+    'grp-codigo': { required: true, label: 'Código' },
+    'grp-nombre': { required: true, label: 'Nombre' },
+  });
+  if (!v.valid) {
+    showToast(v.firstError, 'error');
+    const el = document.getElementById(v.firstInvalidId);
+    if (el) el.focus();
+    return;
+  }
   const id = document.getElementById('grp-id').value;
   const codigo = document.getElementById('grp-codigo').value.trim();
   const nombre = document.getElementById('grp-nombre').value.trim();
   const tipo = document.getElementById('grp-tipo').value;
-  
-  if (!codigo || !nombre) { alert('Código y nombre son obligatorios'); return; }
   
   try {
     if (id) {
@@ -19181,9 +19315,17 @@ function cerrarGradoEdit() {
   }
 }
 async function guardarGradoEdit() {
+  const v = validateForm({
+    'grad-codigo': { required: true, label: 'Código del grado' },
+  });
+  if (!v.valid) {
+    showToast(v.firstError, 'error');
+    const el = document.getElementById(v.firstInvalidId);
+    if (el) el.focus();
+    return;
+  }
   const orig = document.getElementById('grad-orig').value;
   const codigo = document.getElementById('grad-codigo').value.trim();
-  if (!codigo) return alert('El código del grado es obligatorio');
   const payload = {
     grado: codigo,
     nivel: document.getElementById('grad-nivel').value,
