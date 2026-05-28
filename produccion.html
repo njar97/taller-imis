@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-28 14:13 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-28 15:07 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -2704,6 +2704,57 @@ function debounce(fn, ms = 300) {
 }
 
 // ══════════════════════════════════════════════════════════════════════
+// TOAST + ERROR BOUNDARIES
+// ══════════════════════════════════════════════════════════════════════
+// showToast: mensaje no bloqueante que aparece bottom-right por N segundos.
+// type: 'error' | 'warn' | 'success' | 'info'. Click para descartar manual.
+function showToast(msg, type = 'info', ms = 5000) {
+  let cont = document.getElementById('toast-container');
+  if (!cont) {
+    cont = document.createElement('div');
+    cont.id = 'toast-container';
+    cont.style.cssText = 'position:fixed;bottom:16px;right:16px;left:16px;z-index:99999;display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none';
+    document.body.appendChild(cont);
+  }
+  const palette = {
+    error:   { bg: '#FEE', border: '#C00',     text: '#7A0000' },
+    warn:    { bg: '#FEF4D6', border: '#C90',  text: '#7A4D00' },
+    success: { bg: '#E8F5E9', border: '#2a8f4a', text: '#1B5E20' },
+    info:    { bg: '#E3F2FD', border: '#1F4E79', text: '#1F4E79' },
+  };
+  const c = palette[type] || palette.info;
+  const toast = document.createElement('div');
+  toast.style.cssText = `pointer-events:auto;background:${c.bg};border-left:4px solid ${c.border};color:${c.text};padding:10px 14px;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-size:13px;max-width:420px;width:auto;cursor:pointer;font-family:Arial,sans-serif;line-height:1.4`;
+  toast.textContent = msg;
+  toast.title = 'Tocá para cerrar';
+  toast.onclick = () => toast.remove();
+  cont.appendChild(toast);
+  setTimeout(() => { if (toast.parentNode) toast.remove(); }, ms);
+}
+
+// tryInit: ejecuta una función init() con error boundary. Si falla
+// (sync o async), loguea + muestra toast — pero NO bloquea la nav.
+// Usar en switchTab/irA para que un init roto no deje UI vacío sin pista.
+function tryInit(name, fn) {
+  if (typeof fn !== 'function') {
+    console.warn('[init]', name, 'no está definida');
+    return;
+  }
+  try {
+    const result = fn();
+    if (result && typeof result.catch === 'function') {
+      result.catch(err => {
+        console.error('[init]', name, 'falló (async):', err);
+        showToast(`No se pudo cargar "${name}": ${err.message || 'error desconocido'}`, 'error', 6000);
+      });
+    }
+  } catch (err) {
+    console.error('[init]', name, 'falló (sync):', err);
+    showToast(`Error al cargar "${name}": ${err.message || 'error desconocido'}`, 'error', 6000);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // NAV
 // ══════════════════════════════════════════════════════════════════════
 function switchTab(tab, el) {
@@ -2712,14 +2763,16 @@ function switchTab(tab, el) {
   const view = document.getElementById('view-' + tab);
   if (view) view.classList.add('active');
   if (el) el.classList.add('active');
-  if (tab === 'corte' && typeof initCorte === 'function') initCorte();
-  if (tab === 'estadistica' && typeof initEstadistica === 'function') initEstadistica();
-  if (tab === 'config') initConfig();
-  if (tab === 'produccion') initProduccion();
-  if (tab === 'registro' && typeof initRegistro === 'function') initRegistro();
-  if (tab === 'bodega' && typeof initBodega === 'function') initBodega();
-  if (tab === 'inicio' && typeof initDashboard === 'function') initDashboard();
-  if (tab === 'auditoria' && typeof initAuditoria === 'function') initAuditoria();
+  // Cada init wrappeado en tryInit — si una falla, las otras tabs siguen
+  // funcionando y el usuario ve un toast en vez de UI vacío silencioso.
+  if (tab === 'corte')       tryInit('Corte',        typeof initCorte === 'function'      ? initCorte      : null);
+  if (tab === 'estadistica') tryInit('Estadística',  typeof initEstadistica === 'function'? initEstadistica: null);
+  if (tab === 'config')      tryInit('Configuración', initConfig);
+  if (tab === 'produccion')  tryInit('Producción',   initProduccion);
+  if (tab === 'registro')    tryInit('Registro',     typeof initRegistro === 'function'   ? initRegistro   : null);
+  if (tab === 'bodega')      tryInit('Bodega',       typeof initBodega === 'function'     ? initBodega     : null);
+  if (tab === 'inicio')      tryInit('Inicio',       typeof initDashboard === 'function'  ? initDashboard  : null);
+  if (tab === 'auditoria')   tryInit('Auditoría',    typeof initAuditoria === 'function'  ? initAuditoria  : null);
   window.scrollTo(0, 0);
 }
 
@@ -2727,9 +2780,9 @@ function irA(seccion) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + seccion).classList.add('active');
   window.scrollTo(0, 0);
-  if (seccion === 'trazo') initTrazo();
-  if (seccion === 'tendido') initTendido();
-  if (seccion === 'bulto') initBulto();
+  if (seccion === 'trazo')   tryInit('Trazo',   typeof initTrazo === 'function'   ? initTrazo   : null);
+  if (seccion === 'tendido') tryInit('Tendido', typeof initTendido === 'function' ? initTendido : null);
+  if (seccion === 'bulto')   tryInit('Bulto',   typeof initBulto === 'function'   ? initBulto   : null);
 }
 
 function volverNuevo() {
@@ -2751,7 +2804,28 @@ async function supaFetch(table, method = 'GET', body = null, params = '') {
   };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(url, opts);
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const errText = await res.text();
+    // 401 = token expirado o inválido. En vez de mostrar "JWT expired"
+    // críptico, hacer logout + toast claro. Solo si había una sesión real
+    // (no estamos en anon mode con SUPA_KEY pública).
+    if (res.status === 401 && authToken()) {
+      console.warn('[supaFetch] 401 — sesión expirada en', table);
+      if (typeof showToast === 'function') {
+        showToast('Tu sesión expiró. Iniciá sesión de nuevo para seguir.', 'warn', 6000);
+      }
+      if (typeof doLogout === 'function') {
+        // Disparar logout async sin esperarlo para no agregar latencia
+        Promise.resolve().then(() => doLogout()).catch(() => {});
+      }
+      throw new Error('Sesión expirada. Iniciá sesión de nuevo.');
+    }
+    // Otros errores: intentar extraer .message del JSON. Si no es JSON,
+    // usar el texto directo (limitado para no inundar al usuario).
+    let msg = errText;
+    try { const j = JSON.parse(errText); msg = j.message || j.error || errText; } catch (_) {}
+    throw new Error(msg.slice(0, 300));
+  }
   return method === 'DELETE' ? null : res.json();
 }
 
