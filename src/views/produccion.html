@@ -92,52 +92,61 @@
           <button class="btn btn-ghost btn-sm" onclick="cerrarNuevaAsignacion()">✕</button>
         </div>
         <div class="modal-body">
-          <div class="row2">
-            <div class="field">
-              <label>Operaria</label>
-              <select id="asig-operaria"></select>
-            </div>
-            <div class="field">
-              <label>Fecha asignación</label>
-              <input type="date" id="asig-fecha">
-            </div>
-          </div>
-
-          <div class="row2">
-            <div class="field">
-              <label>Filtrar por prenda</label>
-              <select id="asig-prenda" onchange="asigRefrescarOps()"></select>
-            </div>
-            <div class="field">
-              <label>Filtrar por corte</label>
-              <select id="asig-corte" onchange="asigRefrescarBultos()">
-                <option value="">— Todos —</option>
-              </select>
+          <!-- Sección 1: Operaria y fecha -->
+          <div class="asig-section" style="padding-bottom:10px;border-bottom:1px solid #EEE;margin-bottom:10px">
+            <div class="asig-section-title" style="font-size:11px;font-weight:700;color:#1F4E79;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">① Quién y cuándo</div>
+            <div class="row2">
+              <div class="field" style="margin-bottom:0">
+                <label>Operaria</label>
+                <select id="asig-operaria"></select>
+              </div>
+              <div class="field" style="margin-bottom:0">
+                <label>Fecha asignación</label>
+                <input type="date" id="asig-fecha">
+              </div>
             </div>
           </div>
 
-          <div class="field">
-            <label>Operación a asignar</label>
-            <select id="asig-operacion" onchange="asigRefrescarBultos()"></select>
+          <!-- Sección 2: Operación + filtros -->
+          <div class="asig-section" style="padding-bottom:10px;border-bottom:1px solid #EEE;margin-bottom:10px">
+            <div class="asig-section-title" style="font-size:11px;font-weight:700;color:#1F4E79;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">② Qué operación</div>
+            <div class="row2" style="margin-bottom:8px">
+              <div class="field" style="margin-bottom:0">
+                <label>Filtrar por prenda</label>
+                <select id="asig-prenda" onchange="asigRefrescarOps()"></select>
+              </div>
+              <div class="field" style="margin-bottom:0">
+                <label>Filtrar por corte</label>
+                <select id="asig-corte" onchange="asigRefrescarBultos()">
+                  <option value="">— Todos —</option>
+                </select>
+              </div>
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label>Operación a asignar</label>
+              <select id="asig-operacion" onchange="asigRefrescarBultos()"></select>
+            </div>
           </div>
 
-          <div class="field">
-            <label>
-              Bultos disponibles 
-              <span id="asig-cuenta" style="color:var(--verde);font-weight:700"></span>
-            </label>
-            <div style="display:flex;gap:4px;margin-bottom:4px">
-              <button class="btn btn-ghost btn-sm" onclick="asigMarcarTodos(true)">Todos</button>
-              <button class="btn btn-ghost btn-sm" onclick="asigMarcarTodos(false)">Ninguno</button>
+          <!-- Sección 3: Bultos -->
+          <div class="asig-section" style="padding-bottom:10px;border-bottom:1px solid #EEE;margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <div class="asig-section-title" style="font-size:11px;font-weight:700;color:#1F4E79;text-transform:uppercase;letter-spacing:0.5px;margin:0">③ Sobre qué bultos</div>
+              <span id="asig-cuenta" style="color:var(--verde);font-weight:700;font-size:12px"></span>
             </div>
-            <div id="asig-bultos-lista" style="max-height:260px;overflow-y:auto;border:1px solid var(--borde);border-radius:6px;padding:6px">
+            <div style="display:flex;gap:4px;margin-bottom:6px">
+              <button class="btn btn-ghost btn-sm" onclick="asigMarcarTodos(true)">✓ Todos</button>
+              <button class="btn btn-ghost btn-sm" onclick="asigMarcarTodos(false)">○ Ninguno</button>
+            </div>
+            <div id="asig-bultos-lista" style="max-height:300px;overflow-y:auto;border:1px solid var(--borde);border-radius:6px;padding:6px;background:#FAFBFC">
               <div class="text-muted" style="font-size:12px">Elegí operación primero...</div>
             </div>
           </div>
 
-          <div class="field">
-            <label>Observaciones</label>
-            <input type="text" id="asig-observaciones" placeholder="(opcional)">
+          <!-- Sección 4: Observaciones -->
+          <div class="asig-section">
+            <div class="asig-section-title" style="font-size:11px;font-weight:700;color:#1F4E79;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">④ Observaciones (opcional)</div>
+            <input type="text" id="asig-observaciones" placeholder="Nota corta para la operaria">
           </div>
         </div>
         <div class="modal-footer">

@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-28 09:41 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-28 11:46 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -361,6 +361,61 @@
   vertical-align: middle;
   min-width: 16px;
   text-align: center;
+}
+
+/* ─── Tabla Conteo Bodega: card-view en móvil ───────────────────────── */
+/* En pantallas chicas (<640px), la tabla con 6 columnas no entra. La
+   transformamos en cards apiladas con labels izq / valor der usando
+   data-label en cada td (ver bodega.js renderConteoTabla). */
+@media (max-width: 640px) {
+  #conteo-tabla-wrap table thead {
+    display: none;
+  }
+  #conteo-tabla-wrap table,
+  #conteo-tabla-wrap tbody,
+  #conteo-tabla-wrap tr.conteo-row,
+  #conteo-tabla-wrap tr.conteo-row td {
+    display: block;
+    width: 100%;
+  }
+  #conteo-tabla-wrap tr.conteo-row {
+    border: 1px solid #DDD !important;
+    border-radius: 8px;
+    padding: 6px 10px;
+    margin-bottom: 10px;
+    background: white;
+  }
+  #conteo-tabla-wrap tr.conteo-row td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0 !important;
+    text-align: left !important;
+    border-bottom: 1px dashed #EEE;
+  }
+  #conteo-tabla-wrap tr.conteo-row td:last-child {
+    border-bottom: none;
+    justify-content: flex-end;
+  }
+  #conteo-tabla-wrap tr.conteo-row td::before {
+    content: attr(data-label);
+    font-size: 11px;
+    font-weight: 600;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+  #conteo-tabla-wrap tr.conteo-row td[data-label=""]::before {
+    display: none;
+  }
+  /* Inputs ocupan el espacio restante a la derecha del label */
+  #conteo-tabla-wrap tr.conteo-row td input[type="text"],
+  #conteo-tabla-wrap tr.conteo-row td input[type="number"] {
+    max-width: 60%;
+    width: 60% !important;
+  }
 }
 
 </style>
@@ -799,52 +854,61 @@
           <button class="btn btn-ghost btn-sm" onclick="cerrarNuevaAsignacion()">✕</button>
         </div>
         <div class="modal-body">
-          <div class="row2">
-            <div class="field">
-              <label>Operaria</label>
-              <select id="asig-operaria"></select>
-            </div>
-            <div class="field">
-              <label>Fecha asignación</label>
-              <input type="date" id="asig-fecha">
-            </div>
-          </div>
-
-          <div class="row2">
-            <div class="field">
-              <label>Filtrar por prenda</label>
-              <select id="asig-prenda" onchange="asigRefrescarOps()"></select>
-            </div>
-            <div class="field">
-              <label>Filtrar por corte</label>
-              <select id="asig-corte" onchange="asigRefrescarBultos()">
-                <option value="">— Todos —</option>
-              </select>
+          <!-- Sección 1: Operaria y fecha -->
+          <div class="asig-section" style="padding-bottom:10px;border-bottom:1px solid #EEE;margin-bottom:10px">
+            <div class="asig-section-title" style="font-size:11px;font-weight:700;color:#1F4E79;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">① Quién y cuándo</div>
+            <div class="row2">
+              <div class="field" style="margin-bottom:0">
+                <label>Operaria</label>
+                <select id="asig-operaria"></select>
+              </div>
+              <div class="field" style="margin-bottom:0">
+                <label>Fecha asignación</label>
+                <input type="date" id="asig-fecha">
+              </div>
             </div>
           </div>
 
-          <div class="field">
-            <label>Operación a asignar</label>
-            <select id="asig-operacion" onchange="asigRefrescarBultos()"></select>
+          <!-- Sección 2: Operación + filtros -->
+          <div class="asig-section" style="padding-bottom:10px;border-bottom:1px solid #EEE;margin-bottom:10px">
+            <div class="asig-section-title" style="font-size:11px;font-weight:700;color:#1F4E79;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">② Qué operación</div>
+            <div class="row2" style="margin-bottom:8px">
+              <div class="field" style="margin-bottom:0">
+                <label>Filtrar por prenda</label>
+                <select id="asig-prenda" onchange="asigRefrescarOps()"></select>
+              </div>
+              <div class="field" style="margin-bottom:0">
+                <label>Filtrar por corte</label>
+                <select id="asig-corte" onchange="asigRefrescarBultos()">
+                  <option value="">— Todos —</option>
+                </select>
+              </div>
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label>Operación a asignar</label>
+              <select id="asig-operacion" onchange="asigRefrescarBultos()"></select>
+            </div>
           </div>
 
-          <div class="field">
-            <label>
-              Bultos disponibles 
-              <span id="asig-cuenta" style="color:var(--verde);font-weight:700"></span>
-            </label>
-            <div style="display:flex;gap:4px;margin-bottom:4px">
-              <button class="btn btn-ghost btn-sm" onclick="asigMarcarTodos(true)">Todos</button>
-              <button class="btn btn-ghost btn-sm" onclick="asigMarcarTodos(false)">Ninguno</button>
+          <!-- Sección 3: Bultos -->
+          <div class="asig-section" style="padding-bottom:10px;border-bottom:1px solid #EEE;margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <div class="asig-section-title" style="font-size:11px;font-weight:700;color:#1F4E79;text-transform:uppercase;letter-spacing:0.5px;margin:0">③ Sobre qué bultos</div>
+              <span id="asig-cuenta" style="color:var(--verde);font-weight:700;font-size:12px"></span>
             </div>
-            <div id="asig-bultos-lista" style="max-height:260px;overflow-y:auto;border:1px solid var(--borde);border-radius:6px;padding:6px">
+            <div style="display:flex;gap:4px;margin-bottom:6px">
+              <button class="btn btn-ghost btn-sm" onclick="asigMarcarTodos(true)">✓ Todos</button>
+              <button class="btn btn-ghost btn-sm" onclick="asigMarcarTodos(false)">○ Ninguno</button>
+            </div>
+            <div id="asig-bultos-lista" style="max-height:300px;overflow-y:auto;border:1px solid var(--borde);border-radius:6px;padding:6px;background:#FAFBFC">
               <div class="text-muted" style="font-size:12px">Elegí operación primero...</div>
             </div>
           </div>
 
-          <div class="field">
-            <label>Observaciones</label>
-            <input type="text" id="asig-observaciones" placeholder="(opcional)">
+          <!-- Sección 4: Observaciones -->
+          <div class="asig-section">
+            <div class="asig-section-title" style="font-size:11px;font-weight:700;color:#1F4E79;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">④ Observaciones (opcional)</div>
+            <input type="text" id="asig-observaciones" placeholder="Nota corta para la operaria">
           </div>
         </div>
         <div class="modal-footer">
@@ -12029,25 +12093,25 @@ function renderConteoTabla() {
         : `<span style="color:${delta>0?'var(--verde)':'var(--rojo)'};font-weight:700">${delta>0?'+':''}${delta}</span>`);
     const disabled = f.nueva ? '' : 'readonly style="background:#f6f8fa;color:#666;border:none;width:100%"';
     return `
-      <tr style="border-top:1px solid #EEE">
-        <td style="padding:4px 8px">
+      <tr class="conteo-row" style="border-top:1px solid #EEE">
+        <td data-label="Prenda" style="padding:4px 8px">
           ${f.nueva
             ? `<input type="text" value="${f.prenda||''}" data-col="prenda" oninput="conteoSetFila(${i},'prenda',this.value)" placeholder="ej: CAMISA" style="width:100%;padding:2px 4px">`
             : `<span>${escapeHtmlAca(f.prenda)}</span>`}
         </td>
-        <td style="padding:4px 8px">
+        <td data-label="Talla" style="padding:4px 8px">
           ${f.nueva
             ? `<input type="text" value="${f.talla||''}" data-col="talla" oninput="conteoSetFila(${i},'talla',this.value)" placeholder="ej: C14" style="width:100%;padding:2px 4px">`
             : `<span style="font-family:monospace">${escapeHtmlAca(f.talla)}</span>`}
         </td>
-        <td style="padding:4px 8px;text-align:right;color:#666">${f.stockApp || 0}</td>
-        <td style="padding:4px 8px;text-align:right">
+        <td data-label="App" style="padding:4px 8px;text-align:right;color:#666">${f.stockApp || 0}</td>
+        <td data-label="Físico *" style="padding:4px 8px;text-align:right">
           <input type="number" value="${f.fisico}" min="0" data-col="fisico"
                  oninput="conteoSetFila(${i},'fisico',this.value)"
                  style="width:70px;padding:2px 4px;text-align:right">
         </td>
-        <td style="padding:4px 8px;text-align:right">${deltaTxt}</td>
-        <td style="padding:4px 8px;text-align:center">
+        <td data-label="Δ" style="padding:4px 8px;text-align:right">${deltaTxt}</td>
+        <td data-label="" style="padding:4px 8px;text-align:center">
           <button class="btn-mini" onclick="conteoQuitarFila(${i})" title="Quitar fila">✕</button>
         </td>
       </tr>

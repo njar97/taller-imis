@@ -614,25 +614,25 @@ function renderConteoTabla() {
         : `<span style="color:${delta>0?'var(--verde)':'var(--rojo)'};font-weight:700">${delta>0?'+':''}${delta}</span>`);
     const disabled = f.nueva ? '' : 'readonly style="background:#f6f8fa;color:#666;border:none;width:100%"';
     return `
-      <tr style="border-top:1px solid #EEE">
-        <td style="padding:4px 8px">
+      <tr class="conteo-row" style="border-top:1px solid #EEE">
+        <td data-label="Prenda" style="padding:4px 8px">
           ${f.nueva
             ? `<input type="text" value="${f.prenda||''}" data-col="prenda" oninput="conteoSetFila(${i},'prenda',this.value)" placeholder="ej: CAMISA" style="width:100%;padding:2px 4px">`
             : `<span>${escapeHtmlAca(f.prenda)}</span>`}
         </td>
-        <td style="padding:4px 8px">
+        <td data-label="Talla" style="padding:4px 8px">
           ${f.nueva
             ? `<input type="text" value="${f.talla||''}" data-col="talla" oninput="conteoSetFila(${i},'talla',this.value)" placeholder="ej: C14" style="width:100%;padding:2px 4px">`
             : `<span style="font-family:monospace">${escapeHtmlAca(f.talla)}</span>`}
         </td>
-        <td style="padding:4px 8px;text-align:right;color:#666">${f.stockApp || 0}</td>
-        <td style="padding:4px 8px;text-align:right">
+        <td data-label="App" style="padding:4px 8px;text-align:right;color:#666">${f.stockApp || 0}</td>
+        <td data-label="Físico *" style="padding:4px 8px;text-align:right">
           <input type="number" value="${f.fisico}" min="0" data-col="fisico"
                  oninput="conteoSetFila(${i},'fisico',this.value)"
                  style="width:70px;padding:2px 4px;text-align:right">
         </td>
-        <td style="padding:4px 8px;text-align:right">${deltaTxt}</td>
-        <td style="padding:4px 8px;text-align:center">
+        <td data-label="Δ" style="padding:4px 8px;text-align:right">${deltaTxt}</td>
+        <td data-label="" style="padding:4px 8px;text-align:center">
           <button class="btn-mini" onclick="conteoQuitarFila(${i})" title="Quitar fila">✕</button>
         </td>
       </tr>

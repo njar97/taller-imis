@@ -338,3 +338,58 @@
   min-width: 16px;
   text-align: center;
 }
+
+/* ─── Tabla Conteo Bodega: card-view en móvil ───────────────────────── */
+/* En pantallas chicas (<640px), la tabla con 6 columnas no entra. La
+   transformamos en cards apiladas con labels izq / valor der usando
+   data-label en cada td (ver bodega.js renderConteoTabla). */
+@media (max-width: 640px) {
+  #conteo-tabla-wrap table thead {
+    display: none;
+  }
+  #conteo-tabla-wrap table,
+  #conteo-tabla-wrap tbody,
+  #conteo-tabla-wrap tr.conteo-row,
+  #conteo-tabla-wrap tr.conteo-row td {
+    display: block;
+    width: 100%;
+  }
+  #conteo-tabla-wrap tr.conteo-row {
+    border: 1px solid #DDD !important;
+    border-radius: 8px;
+    padding: 6px 10px;
+    margin-bottom: 10px;
+    background: white;
+  }
+  #conteo-tabla-wrap tr.conteo-row td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0 !important;
+    text-align: left !important;
+    border-bottom: 1px dashed #EEE;
+  }
+  #conteo-tabla-wrap tr.conteo-row td:last-child {
+    border-bottom: none;
+    justify-content: flex-end;
+  }
+  #conteo-tabla-wrap tr.conteo-row td::before {
+    content: attr(data-label);
+    font-size: 11px;
+    font-weight: 600;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+  #conteo-tabla-wrap tr.conteo-row td[data-label=""]::before {
+    display: none;
+  }
+  /* Inputs ocupan el espacio restante a la derecha del label */
+  #conteo-tabla-wrap tr.conteo-row td input[type="text"],
+  #conteo-tabla-wrap tr.conteo-row td input[type="number"] {
+    max-width: 60%;
+    width: 60% !important;
+  }
+}
