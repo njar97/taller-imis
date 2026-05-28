@@ -180,7 +180,7 @@
         </div>
         <div class="field">
           <label>Fecha</label>
-          <input type="date" id="cap-fecha" onchange="cargarRegistrosHoy()">
+          <input type="date" id="cap-fecha" onchange="cargarRegistrosHoyDeb()">
         </div>
       </div>
 
@@ -237,13 +237,13 @@
       <div class="row2">
         <div class="field">
           <label>Filtrar bultos por corte</label>
-          <select id="lote-corte" onchange="refrescarBultosLote()">
+          <select id="lote-corte" onchange="refrescarBultosLoteDeb()">
             <option value="">— Todos —</option>
           </select>
         </div>
         <div class="field">
           <label>Filtrar por prenda</label>
-          <select id="lote-prenda" onchange="refrescarBultosLote()">
+          <select id="lote-prenda" onchange="refrescarBultosLoteDeb()">
             <option value="">— Todas —</option>
           </select>
         </div>
@@ -251,7 +251,7 @@
 
       <div class="field">
         <label>Operación (etapa)</label>
-        <select id="lote-operacion" onchange="refrescarBultosLote()"></select>
+        <select id="lote-operacion" onchange="refrescarBultosLoteDeb()"></select>
       </div>
 
       <div class="field">

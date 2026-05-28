@@ -163,7 +163,9 @@ async function abrirNuevaAsignacion() {
     });
   }
   if (!produccionData || produccionData.length === 0) {
-    produccionData = await supaFetch('vw_produccion_estado','GET',null,'?limit=2000');
+    produccionData = await supaFetch('vw_produccion_estado','GET',null,
+      // Mismo select que produccion.js — mantener sincronizado.
+      '?select=salida_id,produccion_bulto_id,tendido_id,codigo_corte,letra_corte,fecha_corte,numero_rollo,letra_talla,talla_key_salida,cod_prenda,cantidad_original,cantidad_final,sufijo_division,estado_manual,total_etapas,etapas_hechas,fecha_terminado,codigo_bulto&limit=2000');
   }
 
   // Llenar selects

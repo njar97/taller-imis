@@ -35,43 +35,42 @@ async function cargarDashboardHoy() {
   try {
     // Para pronóstico: SALIDA_EMPAQUE de los últimos 14 días por escuela
     const desde14 = new Date(Date.now() - 14*24*60*60*1000).toISOString().slice(0,10);
-    const [
-      temporadasResumen,
-      topEscuelas,
-      stockResumen,
-      produccionHoy,
-      alumnos,
-      escuelas,
-      pool,
-      empaquesRec,
-    ] = await Promise.all([
-      supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.desc&limit=5').catch(() => []),
-      supaFetch('vw_pedido_escuela', 'GET', null, '?order=piezas_pendientes.desc&limit=5').catch(() => []),
-      supaFetch('vw_bodega_stock', 'GET', null, '?order=stock_actual.desc&limit=10').catch(() => []),
-      cargarProduccionHoy(),
-      cachedFetch('dashboard-alumnos',
+    // Promise.allSettled (no Promise.all): si una query falla, las otras
+    // siguen — el dashboard se renderiza con KPIs parciales en vez de
+    // bloquearse. Cada KPI obtiene su valor o [] como fallback.
+    const tareas = [
+      ['temporadas',  () => supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.desc&limit=5')],
+      ['topEscuelas', () => supaFetch('vw_pedido_escuela', 'GET', null, '?order=piezas_pendientes.desc&limit=5')],
+      ['stockResumen', () => supaFetch('vw_bodega_stock', 'GET', null, '?order=stock_actual.desc&limit=10')],
+      ['produccionHoy', () => cargarProduccionHoy()],
+      ['alumnos', () => cachedFetch('dashboard-alumnos',
         () => supaFetchAll('alumno', '?activo=eq.true&select=escuela_id,estado_top,estado_bottom,talla_top_key,talla_bottom_key'),
-        { ttl: 60_000, group: 'alumnos' }).catch(() => []),
-      cachedFetch('dashboard-escuelas',
+        { ttl: 60_000, group: 'alumnos' })],
+      ['escuelas', () => cachedFetch('dashboard-escuelas',
         () => supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre,codigo_cde&order=alias'),
-        { ttl: 300_000, group: 'escuelas' }).catch(() => []),
-      cachedFetch('dashboard-pool',
+        { ttl: 300_000, group: 'escuelas' })],
+      ['pool', () => cachedFetch('dashboard-pool',
         () => supaFetchAll('escuela_acaparado', '?select=escuela_id,cantidad_acaparada,cantidad_consumida'),
-        { ttl: 30_000, group: 'pool' }).catch(() => []),
-      supaFetchAll('bodega_movimiento',
-        `?tipo=eq.SALIDA_EMPAQUE&fecha=gte.${desde14}&select=escuela_id,cantidad,fecha`).catch(() => []),
-    ]);
+        { ttl: 30_000, group: 'pool' })],
+      ['empaquesRec', () => supaFetchAll('bodega_movimiento',
+        `?tipo=eq.SALIDA_EMPAQUE&fecha=gte.${desde14}&select=escuela_id,cantidad,fecha`)],
+    ];
+    const results = await Promise.allSettled(tareas.map(([, fn]) => fn()));
+    const data = {};
+    const fallidos = [];
+    tareas.forEach(([key], i) => {
+      const r = results[i];
+      if (r.status === 'fulfilled') {
+        data[key] = r.value;
+      } else {
+        data[key] = key === 'produccionHoy' ? { bultos: 0, piezas: 0 } : [];
+        fallidos.push(key);
+        console.warn('[dashboard]', key, 'falló:', r.reason && r.reason.message || r.reason);
+      }
+    });
 
-    dashboardCache.resumen = {
-      temporadas: temporadasResumen,
-      topEscuelas,
-      stockResumen,
-      produccionHoy,
-      alumnos,
-      escuelas,
-      pool,
-      empaquesRec,
-    };
+    dashboardCache.resumen = data;
+    dashboardCache.fallidos = fallidos;  // para que renderDashboard pueda mostrar warning
     renderDashboard();
   } catch(e) {
     sub.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;

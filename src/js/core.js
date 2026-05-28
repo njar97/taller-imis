@@ -107,6 +107,19 @@ const COMPATIBLES = {
   beige:   ['azul'],
 };
 
+// Debounce: agrupa llamadas rápidas y solo ejecuta la última tras `ms` ms
+// de inactividad. Útil para handlers oninput/onchange que disparan fetch
+// (filtros que el usuario cambia varios seguidos).
+//   const refrescarLoteDeb = debounce(refrescarLote, 300);
+//   <select onchange="refrescarLoteDeb()">
+function debounce(fn, ms = 300) {
+  let timer = null;
+  return function debounced(...args) {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => { timer = null; fn.apply(this, args); }, ms);
+  };
+}
+
 // ══════════════════════════════════════════════════════════════════════
 // NAV
 // ══════════════════════════════════════════════════════════════════════

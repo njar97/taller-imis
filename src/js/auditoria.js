@@ -257,3 +257,8 @@ async function initAuditRoleTab() {
     // sin role visible (operador o no encontrado) — el tab queda oculto
   }
 }
+
+// Versión debounced para handlers oninput/onchange de los filtros
+// (auditoria.html). Evita 3 fetches cuando el usuario cambia tabla +
+// fecha desde + fecha hasta seguido.
+const cargarAuditoriaDeb = debounce(cargarAuditoria, 300);

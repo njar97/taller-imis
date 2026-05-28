@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-28 11:46 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-28 13:59 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -942,7 +942,7 @@
         </div>
         <div class="field">
           <label>Fecha</label>
-          <input type="date" id="cap-fecha" onchange="cargarRegistrosHoy()">
+          <input type="date" id="cap-fecha" onchange="cargarRegistrosHoyDeb()">
         </div>
       </div>
 
@@ -999,13 +999,13 @@
       <div class="row2">
         <div class="field">
           <label>Filtrar bultos por corte</label>
-          <select id="lote-corte" onchange="refrescarBultosLote()">
+          <select id="lote-corte" onchange="refrescarBultosLoteDeb()">
             <option value="">— Todos —</option>
           </select>
         </div>
         <div class="field">
           <label>Filtrar por prenda</label>
-          <select id="lote-prenda" onchange="refrescarBultosLote()">
+          <select id="lote-prenda" onchange="refrescarBultosLoteDeb()">
             <option value="">— Todas —</option>
           </select>
         </div>
@@ -1013,7 +1013,7 @@
 
       <div class="field">
         <label>Operación (etapa)</label>
-        <select id="lote-operacion" onchange="refrescarBultosLote()"></select>
+        <select id="lote-operacion" onchange="refrescarBultosLoteDeb()"></select>
       </div>
 
       <div class="field">
@@ -2154,7 +2154,7 @@
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px">
       <div class="field" style="margin:0">
         <label>Tabla</label>
-        <select id="audit-f-tabla" onchange="cargarAuditoria()">
+        <select id="audit-f-tabla" onchange="cargarAuditoriaDeb()">
           <option value="">— Todas —</option>
           <option value="trazo">trazo</option>
           <option value="tendido">tendido</option>
@@ -2168,11 +2168,11 @@
       </div>
       <div class="field" style="margin:0">
         <label>Desde</label>
-        <input id="audit-f-desde" type="date" onchange="cargarAuditoria()">
+        <input id="audit-f-desde" type="date" onchange="cargarAuditoriaDeb()">
       </div>
       <div class="field" style="margin:0">
         <label>Hasta</label>
-        <input id="audit-f-hasta" type="date" onchange="cargarAuditoria()">
+        <input id="audit-f-hasta" type="date" onchange="cargarAuditoriaDeb()">
       </div>
     </div>
 
@@ -2689,6 +2689,19 @@ const COMPATIBLES = {
   azul:    ['beige'],
   beige:   ['azul'],
 };
+
+// Debounce: agrupa llamadas rápidas y solo ejecuta la última tras `ms` ms
+// de inactividad. Útil para handlers oninput/onchange que disparan fetch
+// (filtros que el usuario cambia varios seguidos).
+//   const refrescarLoteDeb = debounce(refrescarLote, 300);
+//   <select onchange="refrescarLoteDeb()">
+function debounce(fn, ms = 300) {
+  let timer = null;
+  return function debounced(...args) {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => { timer = null; fn.apply(this, args); }, ms);
+  };
+}
 
 // ══════════════════════════════════════════════════════════════════════
 // NAV
@@ -3230,43 +3243,42 @@ async function cargarDashboardHoy() {
   try {
     // Para pronóstico: SALIDA_EMPAQUE de los últimos 14 días por escuela
     const desde14 = new Date(Date.now() - 14*24*60*60*1000).toISOString().slice(0,10);
-    const [
-      temporadasResumen,
-      topEscuelas,
-      stockResumen,
-      produccionHoy,
-      alumnos,
-      escuelas,
-      pool,
-      empaquesRec,
-    ] = await Promise.all([
-      supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.desc&limit=5').catch(() => []),
-      supaFetch('vw_pedido_escuela', 'GET', null, '?order=piezas_pendientes.desc&limit=5').catch(() => []),
-      supaFetch('vw_bodega_stock', 'GET', null, '?order=stock_actual.desc&limit=10').catch(() => []),
-      cargarProduccionHoy(),
-      cachedFetch('dashboard-alumnos',
+    // Promise.allSettled (no Promise.all): si una query falla, las otras
+    // siguen — el dashboard se renderiza con KPIs parciales en vez de
+    // bloquearse. Cada KPI obtiene su valor o [] como fallback.
+    const tareas = [
+      ['temporadas',  () => supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.desc&limit=5')],
+      ['topEscuelas', () => supaFetch('vw_pedido_escuela', 'GET', null, '?order=piezas_pendientes.desc&limit=5')],
+      ['stockResumen', () => supaFetch('vw_bodega_stock', 'GET', null, '?order=stock_actual.desc&limit=10')],
+      ['produccionHoy', () => cargarProduccionHoy()],
+      ['alumnos', () => cachedFetch('dashboard-alumnos',
         () => supaFetchAll('alumno', '?activo=eq.true&select=escuela_id,estado_top,estado_bottom,talla_top_key,talla_bottom_key'),
-        { ttl: 60_000, group: 'alumnos' }).catch(() => []),
-      cachedFetch('dashboard-escuelas',
+        { ttl: 60_000, group: 'alumnos' })],
+      ['escuelas', () => cachedFetch('dashboard-escuelas',
         () => supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre,codigo_cde&order=alias'),
-        { ttl: 300_000, group: 'escuelas' }).catch(() => []),
-      cachedFetch('dashboard-pool',
+        { ttl: 300_000, group: 'escuelas' })],
+      ['pool', () => cachedFetch('dashboard-pool',
         () => supaFetchAll('escuela_acaparado', '?select=escuela_id,cantidad_acaparada,cantidad_consumida'),
-        { ttl: 30_000, group: 'pool' }).catch(() => []),
-      supaFetchAll('bodega_movimiento',
-        `?tipo=eq.SALIDA_EMPAQUE&fecha=gte.${desde14}&select=escuela_id,cantidad,fecha`).catch(() => []),
-    ]);
+        { ttl: 30_000, group: 'pool' })],
+      ['empaquesRec', () => supaFetchAll('bodega_movimiento',
+        `?tipo=eq.SALIDA_EMPAQUE&fecha=gte.${desde14}&select=escuela_id,cantidad,fecha`)],
+    ];
+    const results = await Promise.allSettled(tareas.map(([, fn]) => fn()));
+    const data = {};
+    const fallidos = [];
+    tareas.forEach(([key], i) => {
+      const r = results[i];
+      if (r.status === 'fulfilled') {
+        data[key] = r.value;
+      } else {
+        data[key] = key === 'produccionHoy' ? { bultos: 0, piezas: 0 } : [];
+        fallidos.push(key);
+        console.warn('[dashboard]', key, 'falló:', r.reason && r.reason.message || r.reason);
+      }
+    });
 
-    dashboardCache.resumen = {
-      temporadas: temporadasResumen,
-      topEscuelas,
-      stockResumen,
-      produccionHoy,
-      alumnos,
-      escuelas,
-      pool,
-      empaquesRec,
-    };
+    dashboardCache.resumen = data;
+    dashboardCache.fallidos = fallidos;  // para que renderDashboard pueda mostrar warning
     renderDashboard();
   } catch(e) {
     sub.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
@@ -8155,7 +8167,8 @@ async function cargarProduccion() {
     document.getElementById('prod-resumen-hoy').textContent = 'Cargando...';
     document.getElementById('prod-cortes-container').innerHTML = '';
 
-    produccionData = await supaFetch('vw_produccion_estado','GET',null,'?limit=2000');
+    produccionData = await supaFetch('vw_produccion_estado','GET',null,
+      '?select=salida_id,produccion_bulto_id,tendido_id,codigo_corte,letra_corte,fecha_corte,numero_rollo,letra_talla,talla_key_salida,cod_prenda,cantidad_original,cantidad_final,sufijo_division,estado_manual,total_etapas,etapas_hechas,fecha_terminado,codigo_bulto&limit=2000');
 
     // Auto-crear produccion_bulto para salidas sin seguimiento aún
     const sinRegistro = produccionData.filter(b => !b.produccion_bulto_id);
@@ -9118,7 +9131,8 @@ async function initCaptura() {
 
   // Cargar bultos
   if (!produccionData || produccionData.length === 0) {
-    produccionData = await supaFetch('vw_produccion_estado','GET',null,'?limit=2000');
+    produccionData = await supaFetch('vw_produccion_estado','GET',null,
+      '?select=salida_id,produccion_bulto_id,tendido_id,codigo_corte,letra_corte,fecha_corte,numero_rollo,letra_talla,talla_key_salida,cod_prenda,cantidad_original,cantidad_final,sufijo_division,estado_manual,total_etapas,etapas_hechas,fecha_terminado,codigo_bulto&limit=2000');
   }
   const selBulto = document.getElementById('cap-bulto');
   const bultosDisponibles = produccionData.filter(b => b.estado_manual !== 'terminado' && b.produccion_bulto_id);
@@ -9453,6 +9467,11 @@ async function cargarAsignacionesPorBulto() {
 // ══════════════════════════════════════════════════════════════════════
 // CONFIG
 
+// Versiones debounced para handlers oninput/onchange que disparan
+// fetch en cascada (refrescarBultosLote, cargarRegistrosHoy).
+const refrescarBultosLoteDeb = debounce(refrescarBultosLote, 300);
+const cargarRegistrosHoyDeb = debounce(cargarRegistrosHoy, 300);
+
 // +++++++++++++++++++ asignaciones.js +++++++++++++++++++
 // ══════════════════════════════════════════════════════════════════════
 // ASIGNACIONES (v20)
@@ -9619,7 +9638,9 @@ async function abrirNuevaAsignacion() {
     });
   }
   if (!produccionData || produccionData.length === 0) {
-    produccionData = await supaFetch('vw_produccion_estado','GET',null,'?limit=2000');
+    produccionData = await supaFetch('vw_produccion_estado','GET',null,
+      // Mismo select que produccion.js — mantener sincronizado.
+      '?select=salida_id,produccion_bulto_id,tendido_id,codigo_corte,letra_corte,fecha_corte,numero_rollo,letra_talla,talla_key_salida,cod_prenda,cantidad_original,cantidad_final,sufijo_division,estado_manual,total_etapas,etapas_hechas,fecha_terminado,codigo_bulto&limit=2000');
   }
 
   // Llenar selects
@@ -11707,7 +11728,9 @@ async function cargarMovimientos() {
   const cont = document.getElementById('bodega-contenido');
   cont.innerHTML = '<div class="text-muted">Cargando movimientos...</div>';
   try {
-    const movs = await supaFetch('bodega_movimiento', 'GET', null, '?order=creado_en.desc&limit=200');
+    const movs = await supaFetch('bodega_movimiento', 'GET', null,
+      '?select=tipo,nombre_prenda,cod_prenda,talla_key,cantidad,observaciones,creado_en' +
+      '&order=creado_en.desc&limit=200');
     renderMovimientos(movs);
   } catch(e) {
     cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
@@ -18822,6 +18845,11 @@ async function initAuditRoleTab() {
     // sin role visible (operador o no encontrado) — el tab queda oculto
   }
 }
+
+// Versión debounced para handlers oninput/onchange de los filtros
+// (auditoria.html). Evita 3 fetches cuando el usuario cambia tabla +
+// fecha desde + fecha hasta seguido.
+const cargarAuditoriaDeb = debounce(cargarAuditoria, 300);
 
 // +++++++++++++++++++ config.js +++++++++++++++++++
 // ══════════════════════════════════════════════════════════════════════

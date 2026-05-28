@@ -33,7 +33,8 @@ async function cargarProduccion() {
     document.getElementById('prod-resumen-hoy').textContent = 'Cargando...';
     document.getElementById('prod-cortes-container').innerHTML = '';
 
-    produccionData = await supaFetch('vw_produccion_estado','GET',null,'?limit=2000');
+    produccionData = await supaFetch('vw_produccion_estado','GET',null,
+      '?select=salida_id,produccion_bulto_id,tendido_id,codigo_corte,letra_corte,fecha_corte,numero_rollo,letra_talla,talla_key_salida,cod_prenda,cantidad_original,cantidad_final,sufijo_division,estado_manual,total_etapas,etapas_hechas,fecha_terminado,codigo_bulto&limit=2000');
 
     // Auto-crear produccion_bulto para salidas sin seguimiento aún
     const sinRegistro = produccionData.filter(b => !b.produccion_bulto_id);
@@ -996,7 +997,8 @@ async function initCaptura() {
 
   // Cargar bultos
   if (!produccionData || produccionData.length === 0) {
-    produccionData = await supaFetch('vw_produccion_estado','GET',null,'?limit=2000');
+    produccionData = await supaFetch('vw_produccion_estado','GET',null,
+      '?select=salida_id,produccion_bulto_id,tendido_id,codigo_corte,letra_corte,fecha_corte,numero_rollo,letra_talla,talla_key_salida,cod_prenda,cantidad_original,cantidad_final,sufijo_division,estado_manual,total_etapas,etapas_hechas,fecha_terminado,codigo_bulto&limit=2000');
   }
   const selBulto = document.getElementById('cap-bulto');
   const bultosDisponibles = produccionData.filter(b => b.estado_manual !== 'terminado' && b.produccion_bulto_id);
@@ -1330,3 +1332,8 @@ async function cargarAsignacionesPorBulto() {
 
 // ══════════════════════════════════════════════════════════════════════
 // CONFIG
+
+// Versiones debounced para handlers oninput/onchange que disparan
+// fetch en cascada (refrescarBultosLote, cargarRegistrosHoy).
+const refrescarBultosLoteDeb = debounce(refrescarBultosLote, 300);
+const cargarRegistrosHoyDeb = debounce(cargarRegistrosHoy, 300);

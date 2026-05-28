@@ -228,7 +228,9 @@ async function cargarMovimientos() {
   const cont = document.getElementById('bodega-contenido');
   cont.innerHTML = '<div class="text-muted">Cargando movimientos...</div>';
   try {
-    const movs = await supaFetch('bodega_movimiento', 'GET', null, '?order=creado_en.desc&limit=200');
+    const movs = await supaFetch('bodega_movimiento', 'GET', null,
+      '?select=tipo,nombre_prenda,cod_prenda,talla_key,cantidad,observaciones,creado_en' +
+      '&order=creado_en.desc&limit=200');
     renderMovimientos(movs);
   } catch(e) {
     cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;

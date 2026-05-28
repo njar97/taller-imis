@@ -9,7 +9,7 @@
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px">
       <div class="field" style="margin:0">
         <label>Tabla</label>
-        <select id="audit-f-tabla" onchange="cargarAuditoria()">
+        <select id="audit-f-tabla" onchange="cargarAuditoriaDeb()">
           <option value="">— Todas —</option>
           <option value="trazo">trazo</option>
           <option value="tendido">tendido</option>
@@ -23,11 +23,11 @@
       </div>
       <div class="field" style="margin:0">
         <label>Desde</label>
-        <input id="audit-f-desde" type="date" onchange="cargarAuditoria()">
+        <input id="audit-f-desde" type="date" onchange="cargarAuditoriaDeb()">
       </div>
       <div class="field" style="margin:0">
         <label>Hasta</label>
-        <input id="audit-f-hasta" type="date" onchange="cargarAuditoria()">
+        <input id="audit-f-hasta" type="date" onchange="cargarAuditoriaDeb()">
       </div>
     </div>
 
