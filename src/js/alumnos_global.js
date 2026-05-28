@@ -432,7 +432,7 @@ function renderAlumnosGlobal() {
       <!-- Fila 3: buscar + acciones -->
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
         <input type="text" placeholder="🔍 Buscar nombre..." value="${c.busqueda}"
-          oninput="alumnosGlobalCache.busqueda = this.value; scheduleRenderAlumnos()"
+          oninput="alumnosGlobalCache.busqueda = this.value; alumnosGlobalCache.pagina = 1; scheduleRenderAlumnos()"
           style="flex:1;min-width:140px;padding:6px 10px;border:1px solid var(--borde);border-radius:4px">
         <button class="btn btn-success btn-sm" onclick="abrirNuevoAlumno()">+ Nuevo alumno</button>
         <button class="btn btn-primary btn-sm" onclick="generarEtiquetasDirecto()" title="Genera PDF con los filtros y orden actuales">🏷 Imprimir etiquetas</button>
@@ -452,14 +452,14 @@ function renderAlumnosGlobal() {
         <div style="margin-top:8px;padding-top:8px;border-top:1px solid #EEE">
           <div style="font-size:11px;font-weight:600;color:#666;margin-bottom:4px">FILTROS AVANZADOS</div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;margin-bottom:10px">
-          <select onchange="alumnosGlobalCache.filtroNivel = this.value; renderAlumnosGlobal()" style="padding:6px">
+          <select onchange="alumnosGlobalCache.filtroNivel = this.value; alumnosGlobalCache.pagina = 1; renderAlumnosGlobal()" style="padding:6px">
             <option value="">Todo nivel</option>
             <option value="PARV"   ${c.filtroNivel==='PARV'?'selected':''}>PARV</option>
             <option value="BASICA" ${c.filtroNivel==='BASICA'?'selected':''}>BASICA</option>
             <option value="BACH"   ${c.filtroNivel==='BACH'?'selected':''}>BACH</option>
             <option value="OTRO"   ${c.filtroNivel==='OTRO'?'selected':''}>OTRO</option>
           </select>
-          <select onchange="alumnosGlobalCache.filtroEstado = this.value; renderAlumnosGlobal()" style="padding:6px">
+          <select onchange="alumnosGlobalCache.filtroEstado = this.value; alumnosGlobalCache.pagina = 1; renderAlumnosGlobal()" style="padding:6px">
             <option value="">Estado avanzado…</option>
             <option value="pendiente" ${c.filtroEstado==='pendiente'?'selected':''}>❌❌ Pendiente (sin empacar)</option>
             <option value="parcial"   ${c.filtroEstado==='parcial'?'selected':''}>✅❌ Parcial empacado</option>
@@ -495,9 +495,16 @@ function renderAlumnosGlobal() {
     return;
   }
 
-  // Tabla
-  const visible = lista.slice(0, 500); // cap
-  const hayMas = lista.length > 500;
+  // Paginación: 50 alumnos por página. Reduce DOM de 5k+ nodos a ~500
+  // (10x más rápido el render en móvil). pagina vive en el cache global
+  // para sobrevivir re-renders. Reset a 1 cuando cambian filtros.
+  const PAGINA_SIZE = 50;
+  if (typeof c.pagina !== 'number' || c.pagina < 1) c.pagina = 1;
+  const totalPaginas = Math.max(1, Math.ceil(lista.length / PAGINA_SIZE));
+  if (c.pagina > totalPaginas) c.pagina = totalPaginas;
+  const inicioIdx = (c.pagina - 1) * PAGINA_SIZE;
+  const finIdx = Math.min(inicioIdx + PAGINA_SIZE, lista.length);
+  const visible = lista.slice(inicioIdx, finIdx);
 
   const iconEstado = (e) => e === 'empacado' ? '✅' : (e === 'entregado' ? '🚚' : (e === 'reservado' ? '⏳' : '⬜'));
 
@@ -662,9 +669,30 @@ function renderAlumnosGlobal() {
         </thead>
         <tbody>${filas}</tbody>
       </table>
-      ${hayMas ? `<div style="padding:10px;text-align:center;color:#888;font-size:12px">... ${lista.length-500} alumnos más. Usá filtros para reducir.</div>` : ''}
+      ${totalPaginas > 1 ? `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 8px;border-top:1px solid #EEE;background:#F8FAFC;font-size:12px;gap:8px;flex-wrap:wrap">
+          <div style="color:#666">Mostrando <strong>${inicioIdx + 1}–${finIdx}</strong> de <strong>${lista.length}</strong></div>
+          <div style="display:flex;gap:4px;align-items:center">
+            <button class="btn btn-ghost btn-sm" onclick="irPaginaAlumnos(1)" ${c.pagina <= 1 ? 'disabled' : ''} title="Primera página">«</button>
+            <button class="btn btn-ghost btn-sm" onclick="irPaginaAlumnos(${c.pagina - 1})" ${c.pagina <= 1 ? 'disabled' : ''} title="Anterior">◀</button>
+            <span style="padding:0 8px;font-weight:600">${c.pagina} / ${totalPaginas}</span>
+            <button class="btn btn-ghost btn-sm" onclick="irPaginaAlumnos(${c.pagina + 1})" ${c.pagina >= totalPaginas ? 'disabled' : ''} title="Siguiente">▶</button>
+            <button class="btn btn-ghost btn-sm" onclick="irPaginaAlumnos(${totalPaginas})" ${c.pagina >= totalPaginas ? 'disabled' : ''} title="Última página">»</button>
+          </div>
+        </div>
+      ` : ''}
     </div>
   `;
+}
+
+// Cambiar de página en la lista de alumnos del Registro.
+function irPaginaAlumnos(n) {
+  const c = alumnosGlobalCache;
+  c.pagina = Math.max(1, parseInt(n, 10) || 1);
+  renderAlumnosGlobal();
+  // Scroll al inicio de la tabla para que el usuario vea la nueva página
+  const cont = document.getElementById('alumnos-global-contenido');
+  if (cont) cont.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderEmpaqueBanner(listaVisible) {
@@ -1278,18 +1306,21 @@ function limpiarFiltros() {
   alumnosGlobalCache.filtroNivel = '';
   alumnosGlobalCache.filtroTemporada = '';
   alumnosGlobalCache.filtroEstado = '';
+  alumnosGlobalCache.pagina = 1;
   renderAlumnosGlobal();
 }
 
 // Helpers para los chips de filtro rápido
 function aplicarFiltroEstado(estado) {
   alumnosGlobalCache.filtroEstado = (alumnosGlobalCache.filtroEstado === estado) ? '' : estado;
+  alumnosGlobalCache.pagina = 1;
   renderAlumnosGlobal();
 }
 // Compat: setea una sola escuela (limpia las demás)
 function aplicarFiltroEscuela(escuelaId) {
   alumnosGlobalCache.filtroEscuela = '';
   alumnosGlobalCache.filtroEscuelas = escuelaId ? [escuelaId] : [];
+  alumnosGlobalCache.pagina = 1;
   renderAlumnosGlobal();
 }
 // Abre modal de escuela. escuelaId=null para crear nueva.
@@ -1438,10 +1469,12 @@ function agregarFiltroEscuela(escuelaId) {
   if (!arr.includes(escuelaId)) arr.push(escuelaId);
   alumnosGlobalCache.filtroEscuelas = arr;
   alumnosGlobalCache.filtroEscuela = '';
+  alumnosGlobalCache.pagina = 1;
   renderAlumnosGlobal();
 }
 function quitarFiltroEscuela(escuelaId) {
   alumnosGlobalCache.filtroEscuelas = (alumnosGlobalCache.filtroEscuelas || []).filter(id => id !== escuelaId);
+  alumnosGlobalCache.pagina = 1;
   renderAlumnosGlobal();
 }
 
