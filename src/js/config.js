@@ -327,7 +327,9 @@ const FACTORES_TELA_HE = {
   celeste: { 0: { M: 0.75, F: 0.75 }, 1: { M: 1.00, F: 1.00 }, 2: { M: 1.25, F: 1.25 }, 3: { M: 1.50, F: 1.50 }, 4: { M: 1.50, F: 1.50 } },
   blanca:  { 0: { M: 0.75, F: 0.75 }, 1: { M: 1.00, F: 1.00 }, 2: { M: 1.25, F: 1.25 }, 3: { M: 1.50, F: 1.50 }, 4: { M: 1.50, F: 1.50 } },
   azul:    { 0: { M: 0.75, F: 0.60 }, 1: { M: 1.00, F: 0.75 }, 2: { M: 1.25, F: 1.00 }, 3: { M: 1.50, F: 1.25 }, 4: { M: 1.65, F: 1.50 } },
-  // beige: pendiente — el Excel no tiene factor explícito para Beige.
+  // Beige: el Excel no tiene factor explícito; usuario confirmó usar los
+  // mismos factores que Azul (típico de pantalón/falda en otro color).
+  beige:   { 0: { M: 0.75, F: 0.60 }, 1: { M: 1.00, F: 0.75 }, 2: { M: 1.25, F: 1.00 }, 3: { M: 1.50, F: 1.25 }, 4: { M: 1.65, F: 1.50 } },
 };
 
 async function exportarHojaEntregaPDF() {
@@ -482,7 +484,7 @@ async function exportarHojaEntregaPDF() {
         continue;
       }
       alumnosFactorizables++;
-      for (const color of ['celeste', 'blanca', 'azul']) {
+      for (const color of ['celeste', 'blanca', 'azul', 'beige']) {
         usado[color] += FACTORES_TELA_HE[color][ciclo][sexo] || 0;
       }
     }
@@ -503,7 +505,7 @@ async function exportarHojaEntregaPDF() {
             { key: 'celeste', lbl: 'Celeste', contratado: contrato.tela_celeste_yd, usado: usado.celeste, factor: true },
             { key: 'blanca',  lbl: 'Blanca',  contratado: contrato.tela_blanca_yd,  usado: usado.blanca,  factor: true },
             { key: 'azul',    lbl: 'Azul',    contratado: contrato.tela_azul_yd,    usado: usado.azul,    factor: true },
-            { key: 'beige',   lbl: 'Beige',   contratado: contrato.tela_beige_yd,   usado: 0,             factor: false },
+            { key: 'beige',   lbl: 'Beige',   contratado: contrato.tela_beige_yd,   usado: usado.beige,   factor: true },
           ].filter(t => (Number(t.contratado) || 0) > 0 || t.usado > 0).map(t => {
             const c = Number(t.contratado) || 0;
             const diff = c - t.usado;
@@ -525,9 +527,8 @@ async function exportarHojaEntregaPDF() {
         </tbody>
       </table>
       <div style="font-size:9pt;color:#888;margin-top:4px;line-height:1.4">
-        ⓘ Factor por alumno × ciclo × sexo (fuente: <em>BASE_2025_OPTIMIZADA.xlsm</em>, hoja RESUMEN).
+        ⓘ Factor por alumno × ciclo × sexo (fuente: <em>BASE_2025_OPTIMIZADA.xlsm</em>, hoja RESUMEN; Beige usa los mismos factores que Azul).
         ${alumnosSinDato > 0 ? `<strong style="color:#C00"> ${alumnosSinDato} alumno(s)</strong> sin ciclo/sexo definido — no se factorizaron.` : ''}
-        Beige: pendiente factor en el Excel base.
       </div>
     ` : '<div style="font-size:11pt;color:#888;margin-top:10px">⚠ Esta escuela no tiene contrato registrado todavía.</div>';
 
