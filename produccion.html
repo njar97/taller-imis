@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-27 23:18 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-28 09:41 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -744,13 +744,16 @@
       <div class="card-title">🏭 Producción</div>
       <div id="prod-resumen-hoy" class="alert alert-info" style="margin-bottom:10px">Cargando resumen...</div>
 
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-        <button class="btn btn-primary btn-sm" id="prod-filtro-todos" onclick="cambiarFiltroProduccion('todos')">Todos</button>
-        <button class="btn btn-ghost btn-sm" id="prod-filtro-pendientes" onclick="cambiarFiltroProduccion('pendientes')">Pendientes</button>
-        <button class="btn btn-ghost btn-sm" id="prod-filtro-terminados" onclick="cambiarFiltroProduccion('terminados')">Terminados</button>
+      <div class="field" style="margin-bottom:10px">
+        <label>Estado del bulto</label>
+        <div role="group" aria-label="Filtrar por estado del bulto" style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" id="prod-filtro-todos" onclick="cambiarFiltroProduccion('todos')">Todos</button>
+          <button class="btn btn-ghost btn-sm" id="prod-filtro-pendientes" onclick="cambiarFiltroProduccion('pendientes')">Pendientes</button>
+          <button class="btn btn-ghost btn-sm" id="prod-filtro-terminados" onclick="cambiarFiltroProduccion('terminados')">Terminados</button>
+        </div>
       </div>
 
-      <div class="row2" style="margin-top:8px">
+      <div class="row2" style="margin-top:0;padding-top:8px;border-top:1px dashed #E0E0E0">
         <div class="field" style="margin-bottom:0">
           <label>Filtrar por corte</label>
           <select id="prod-filtro-corte" onchange="renderProduccion()">
@@ -1093,17 +1096,21 @@
 <div id="view-estadistica" class="view">
   <div id="alert-estadistica"></div>
 
-  <!-- Subnav -->
-  <div class="card" style="padding:6px;margin-bottom:10px">
-    <div style="display:flex;gap:4px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" id="est-sub-escuela"   onclick="switchSubEst('escuela')"   style="flex:1;min-width:80px">🏫 Por escuela</button>
-      <button class="btn btn-ghost   btn-sm" id="est-sub-tallas"    onclick="switchSubEst('tallas')"    style="flex:1;min-width:80px">📊 Por talla</button>
-      <button class="btn btn-ghost   btn-sm" id="est-sub-heatmap"   onclick="switchSubEst('heatmap')"   style="flex:1;min-width:80px">🔥 Críticas</button>
-      <button class="btn btn-ghost   btn-sm" id="est-sub-historico" onclick="switchSubEst('historico')" style="flex:1;min-width:80px">📈 Histórico</button>
-      <button class="btn btn-ghost   btn-sm" id="est-sub-inventario" onclick="switchSubEst('inventario')" style="flex:1;min-width:80px">📦 Inventario</button>
-      <button class="btn btn-ghost   btn-sm" id="est-sub-costos"    onclick="switchSubEst('costos')"    style="flex:1;min-width:80px">💰 Costos</button>
-      <button class="btn btn-ghost   btn-sm" id="est-sub-yardaje"   onclick="switchSubEst('yardaje')"   style="flex:1;min-width:80px">📐 Yardaje</button>
-      <button class="btn btn-ghost   btn-sm" id="est-sub-contratos" onclick="switchSubEst('contratos')" style="flex:1;min-width:80px">📑 Contratos</button>
+  <!-- Subnav: 2 filas agrupadas para que entren todos en móvil sin solaparse -->
+  <div class="card" style="padding:8px;margin-bottom:10px;display:flex;flex-direction:column;gap:6px">
+    <!-- Reportes operativos (día a día) -->
+    <div role="group" aria-label="Reportes operativos" style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" id="est-sub-escuela"    onclick="switchSubEst('escuela')"    style="flex:1;min-width:72px">🏫 Por escuela</button>
+      <button class="btn btn-ghost   btn-sm" id="est-sub-tallas"     onclick="switchSubEst('tallas')"     style="flex:1;min-width:72px">📊 Por talla</button>
+      <button class="btn btn-ghost   btn-sm" id="est-sub-heatmap"    onclick="switchSubEst('heatmap')"    style="flex:1;min-width:72px">🔥 Críticas</button>
+      <button class="btn btn-ghost   btn-sm" id="est-sub-inventario" onclick="switchSubEst('inventario')" style="flex:1;min-width:72px">📦 Inventario</button>
+    </div>
+    <!-- Análisis y planificación -->
+    <div role="group" aria-label="Análisis y planificación" style="display:flex;gap:4px;flex-wrap:wrap;padding-top:4px;border-top:1px dashed #E0E0E0">
+      <button class="btn btn-ghost btn-sm" id="est-sub-historico" onclick="switchSubEst('historico')" style="flex:1;min-width:72px">📈 Histórico</button>
+      <button class="btn btn-ghost btn-sm" id="est-sub-costos"    onclick="switchSubEst('costos')"    style="flex:1;min-width:72px">💰 Costos</button>
+      <button class="btn btn-ghost btn-sm" id="est-sub-yardaje"   onclick="switchSubEst('yardaje')"   style="flex:1;min-width:72px">📐 Yardaje</button>
+      <button class="btn btn-ghost btn-sm" id="est-sub-contratos" onclick="switchSubEst('contratos')" style="flex:1;min-width:72px">📑 Contratos</button>
     </div>
   </div>
 
@@ -11490,28 +11497,39 @@ function renderStock() {
   }
   
   const prendas = Object.keys(grupos).sort();
+  const hayPool = (bodegaCache.poolTotal || 0) > 0;
   const filtroBar = `
-    <div style="background:white;padding:8px;border-radius:8px;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <label style="font-size:12px">Prenda:</label>
-      <select onchange="bodegaCache.filtroPrenda = this.value || null; renderStock()" style="padding:4px 8px">
-        <option value="">Todas</option>
-        ${prendas.map(p => `<option value="${p}" ${p===bodegaCache.filtroPrenda?'selected':''}>${p}</option>`).join('')}
-      </select>
-      <label style="font-size:12px;display:flex;align-items:center;gap:4px">
-        <input type="checkbox" ${bodegaCache.filtroTallaVacia?'checked':''} 
-               onchange="bodegaCache.filtroTallaVacia = this.checked; renderStock()">
-        Mostrar vacíos
-      </label>
-      <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()">📥 + Entrada</button>
-      <button class="btn btn-ghost btn-sm" onclick="abrirConteoModal()" title="Carga rápida de stock físico (baseline)">📊 Conteo inicial</button>
-      <button class="btn btn-warning btn-sm" onclick="abrirAcapararModal()" title="Bloquear cantidad para una escuela (sin alumnos)">📥 Acaparar</button>
-      <button class="btn btn-primary btn-sm" onclick="abrirEmpacarSelector()">📦 Empacar a alumnos</button>
-      ${(bodegaCache.poolTotal || 0) > 0
-        ? `<button class="btn btn-warning btn-sm" onclick="abrirEmpacarAcaparadosModal()" title="Asignar piezas del pool acaparado a alumnos">📥 Empacar acaparados (${bodegaCache.poolTotal})</button>`
-        : ''}
-      <button class="btn btn-success btn-sm" onclick="abrirEntregaModal()" title="Marcar todos los empacados de una escuela como entregados">🚚 Marcar entrega</button>
-      <button class="btn btn-ghost btn-sm" onclick="abrirSalidaModal()" title="Salida genérica (sin alumnos)">↗ Salida rápida</button>
-      <button class="btn btn-ghost btn-sm" onclick="cargarBodegaStock()">🔄 Refrescar</button>
+    <div style="background:white;padding:8px 10px;border-radius:8px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px">
+      <!-- Filtros de visualización -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding-bottom:8px;border-bottom:1px dashed #E0E0E0">
+        <span style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px">Filtros</span>
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px;margin:0">
+          Prenda
+          <select onchange="bodegaCache.filtroPrenda = this.value || null; renderStock()" style="padding:4px 8px;width:auto">
+            <option value="">Todas</option>
+            ${prendas.map(p => `<option value="${p}" ${p===bodegaCache.filtroPrenda?'selected':''}>${p}</option>`).join('')}
+          </select>
+        </label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px;margin:0">
+          <input type="checkbox" ${bodegaCache.filtroTallaVacia?'checked':''}
+                 onchange="bodegaCache.filtroTallaVacia = this.checked; renderStock()" style="width:auto">
+          Mostrar vacíos
+        </label>
+      </div>
+      <!-- Acciones primarias (más usadas) -->
+      <div role="group" aria-label="Acciones principales" style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()">📥 + Entrada</button>
+        <button class="btn btn-warning btn-sm" onclick="abrirAcapararModal()" title="Bloquear cantidad para una escuela (sin alumnos)">📥 Acaparar</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirEmpacarSelector()">📦 Empacar a alumnos</button>
+        <button class="btn btn-success btn-sm" onclick="abrirEntregaModal()" title="Marcar todos los empacados de una escuela como entregados">🚚 Marcar entrega</button>
+        ${hayPool ? `<button class="btn btn-warning btn-sm" onclick="abrirEmpacarAcaparadosModal()" title="Asignar piezas del pool acaparado a alumnos">📥 Pool (${bodegaCache.poolTotal})</button>` : ''}
+      </div>
+      <!-- Acciones secundarias -->
+      <div role="group" aria-label="Acciones secundarias" style="display:flex;gap:6px;flex-wrap:wrap;padding-top:6px;border-top:1px dashed #E0E0E0">
+        <button class="btn btn-ghost btn-sm" onclick="abrirConteoModal()" title="Carga rápida de stock físico (baseline)">📊 Conteo inicial</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirSalidaModal()" title="Salida genérica (sin alumnos)">↗ Salida rápida</button>
+        <button class="btn btn-ghost btn-sm" onclick="cargarBodegaStock()" style="margin-left:auto">🔄 Refrescar</button>
+      </div>
     </div>
   `;
   

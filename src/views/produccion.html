@@ -37,13 +37,16 @@
       <div class="card-title">🏭 Producción</div>
       <div id="prod-resumen-hoy" class="alert alert-info" style="margin-bottom:10px">Cargando resumen...</div>
 
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-        <button class="btn btn-primary btn-sm" id="prod-filtro-todos" onclick="cambiarFiltroProduccion('todos')">Todos</button>
-        <button class="btn btn-ghost btn-sm" id="prod-filtro-pendientes" onclick="cambiarFiltroProduccion('pendientes')">Pendientes</button>
-        <button class="btn btn-ghost btn-sm" id="prod-filtro-terminados" onclick="cambiarFiltroProduccion('terminados')">Terminados</button>
+      <div class="field" style="margin-bottom:10px">
+        <label>Estado del bulto</label>
+        <div role="group" aria-label="Filtrar por estado del bulto" style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" id="prod-filtro-todos" onclick="cambiarFiltroProduccion('todos')">Todos</button>
+          <button class="btn btn-ghost btn-sm" id="prod-filtro-pendientes" onclick="cambiarFiltroProduccion('pendientes')">Pendientes</button>
+          <button class="btn btn-ghost btn-sm" id="prod-filtro-terminados" onclick="cambiarFiltroProduccion('terminados')">Terminados</button>
+        </div>
       </div>
 
-      <div class="row2" style="margin-top:8px">
+      <div class="row2" style="margin-top:0;padding-top:8px;border-top:1px dashed #E0E0E0">
         <div class="field" style="margin-bottom:0">
           <label>Filtrar por corte</label>
           <select id="prod-filtro-corte" onchange="renderProduccion()">

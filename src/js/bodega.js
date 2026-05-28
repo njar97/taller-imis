@@ -82,28 +82,39 @@ function renderStock() {
   }
   
   const prendas = Object.keys(grupos).sort();
+  const hayPool = (bodegaCache.poolTotal || 0) > 0;
   const filtroBar = `
-    <div style="background:white;padding:8px;border-radius:8px;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <label style="font-size:12px">Prenda:</label>
-      <select onchange="bodegaCache.filtroPrenda = this.value || null; renderStock()" style="padding:4px 8px">
-        <option value="">Todas</option>
-        ${prendas.map(p => `<option value="${p}" ${p===bodegaCache.filtroPrenda?'selected':''}>${p}</option>`).join('')}
-      </select>
-      <label style="font-size:12px;display:flex;align-items:center;gap:4px">
-        <input type="checkbox" ${bodegaCache.filtroTallaVacia?'checked':''} 
-               onchange="bodegaCache.filtroTallaVacia = this.checked; renderStock()">
-        Mostrar vacíos
-      </label>
-      <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()">📥 + Entrada</button>
-      <button class="btn btn-ghost btn-sm" onclick="abrirConteoModal()" title="Carga rápida de stock físico (baseline)">📊 Conteo inicial</button>
-      <button class="btn btn-warning btn-sm" onclick="abrirAcapararModal()" title="Bloquear cantidad para una escuela (sin alumnos)">📥 Acaparar</button>
-      <button class="btn btn-primary btn-sm" onclick="abrirEmpacarSelector()">📦 Empacar a alumnos</button>
-      ${(bodegaCache.poolTotal || 0) > 0
-        ? `<button class="btn btn-warning btn-sm" onclick="abrirEmpacarAcaparadosModal()" title="Asignar piezas del pool acaparado a alumnos">📥 Empacar acaparados (${bodegaCache.poolTotal})</button>`
-        : ''}
-      <button class="btn btn-success btn-sm" onclick="abrirEntregaModal()" title="Marcar todos los empacados de una escuela como entregados">🚚 Marcar entrega</button>
-      <button class="btn btn-ghost btn-sm" onclick="abrirSalidaModal()" title="Salida genérica (sin alumnos)">↗ Salida rápida</button>
-      <button class="btn btn-ghost btn-sm" onclick="cargarBodegaStock()">🔄 Refrescar</button>
+    <div style="background:white;padding:8px 10px;border-radius:8px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px">
+      <!-- Filtros de visualización -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding-bottom:8px;border-bottom:1px dashed #E0E0E0">
+        <span style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px">Filtros</span>
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px;margin:0">
+          Prenda
+          <select onchange="bodegaCache.filtroPrenda = this.value || null; renderStock()" style="padding:4px 8px;width:auto">
+            <option value="">Todas</option>
+            ${prendas.map(p => `<option value="${p}" ${p===bodegaCache.filtroPrenda?'selected':''}>${p}</option>`).join('')}
+          </select>
+        </label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px;margin:0">
+          <input type="checkbox" ${bodegaCache.filtroTallaVacia?'checked':''}
+                 onchange="bodegaCache.filtroTallaVacia = this.checked; renderStock()" style="width:auto">
+          Mostrar vacíos
+        </label>
+      </div>
+      <!-- Acciones primarias (más usadas) -->
+      <div role="group" aria-label="Acciones principales" style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()">📥 + Entrada</button>
+        <button class="btn btn-warning btn-sm" onclick="abrirAcapararModal()" title="Bloquear cantidad para una escuela (sin alumnos)">📥 Acaparar</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirEmpacarSelector()">📦 Empacar a alumnos</button>
+        <button class="btn btn-success btn-sm" onclick="abrirEntregaModal()" title="Marcar todos los empacados de una escuela como entregados">🚚 Marcar entrega</button>
+        ${hayPool ? `<button class="btn btn-warning btn-sm" onclick="abrirEmpacarAcaparadosModal()" title="Asignar piezas del pool acaparado a alumnos">📥 Pool (${bodegaCache.poolTotal})</button>` : ''}
+      </div>
+      <!-- Acciones secundarias -->
+      <div role="group" aria-label="Acciones secundarias" style="display:flex;gap:6px;flex-wrap:wrap;padding-top:6px;border-top:1px dashed #E0E0E0">
+        <button class="btn btn-ghost btn-sm" onclick="abrirConteoModal()" title="Carga rápida de stock físico (baseline)">📊 Conteo inicial</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirSalidaModal()" title="Salida genérica (sin alumnos)">↗ Salida rápida</button>
+        <button class="btn btn-ghost btn-sm" onclick="cargarBodegaStock()" style="margin-left:auto">🔄 Refrescar</button>
+      </div>
     </div>
   `;
   

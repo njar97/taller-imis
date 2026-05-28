@@ -2,17 +2,21 @@
 <div id="view-estadistica" class="view">
   <div id="alert-estadistica"></div>
 
-  <!-- Subnav -->
-  <div class="card" style="padding:6px;margin-bottom:10px">
-    <div style="display:flex;gap:4px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" id="est-sub-escuela"   onclick="switchSubEst('escuela')"   style="flex:1;min-width:80px">🏫 Por escuela</button>
-      <button class="btn btn-ghost   btn-sm" id="est-sub-tallas"    onclick="switchSubEst('tallas')"    style="flex:1;min-width:80px">📊 Por talla</button>
-      <button class="btn btn-ghost   btn-sm" id="est-sub-heatmap"   onclick="switchSubEst('heatmap')"   style="flex:1;min-width:80px">🔥 Críticas</button>
-      <button class="btn btn-ghost   btn-sm" id="est-sub-historico" onclick="switchSubEst('historico')" style="flex:1;min-width:80px">📈 Histórico</button>
-      <button class="btn btn-ghost   btn-sm" id="est-sub-inventario" onclick="switchSubEst('inventario')" style="flex:1;min-width:80px">📦 Inventario</button>
-      <button class="btn btn-ghost   btn-sm" id="est-sub-costos"    onclick="switchSubEst('costos')"    style="flex:1;min-width:80px">💰 Costos</button>
-      <button class="btn btn-ghost   btn-sm" id="est-sub-yardaje"   onclick="switchSubEst('yardaje')"   style="flex:1;min-width:80px">📐 Yardaje</button>
-      <button class="btn btn-ghost   btn-sm" id="est-sub-contratos" onclick="switchSubEst('contratos')" style="flex:1;min-width:80px">📑 Contratos</button>
+  <!-- Subnav: 2 filas agrupadas para que entren todos en móvil sin solaparse -->
+  <div class="card" style="padding:8px;margin-bottom:10px;display:flex;flex-direction:column;gap:6px">
+    <!-- Reportes operativos (día a día) -->
+    <div role="group" aria-label="Reportes operativos" style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" id="est-sub-escuela"    onclick="switchSubEst('escuela')"    style="flex:1;min-width:72px">🏫 Por escuela</button>
+      <button class="btn btn-ghost   btn-sm" id="est-sub-tallas"     onclick="switchSubEst('tallas')"     style="flex:1;min-width:72px">📊 Por talla</button>
+      <button class="btn btn-ghost   btn-sm" id="est-sub-heatmap"    onclick="switchSubEst('heatmap')"    style="flex:1;min-width:72px">🔥 Críticas</button>
+      <button class="btn btn-ghost   btn-sm" id="est-sub-inventario" onclick="switchSubEst('inventario')" style="flex:1;min-width:72px">📦 Inventario</button>
+    </div>
+    <!-- Análisis y planificación -->
+    <div role="group" aria-label="Análisis y planificación" style="display:flex;gap:4px;flex-wrap:wrap;padding-top:4px;border-top:1px dashed #E0E0E0">
+      <button class="btn btn-ghost btn-sm" id="est-sub-historico" onclick="switchSubEst('historico')" style="flex:1;min-width:72px">📈 Histórico</button>
+      <button class="btn btn-ghost btn-sm" id="est-sub-costos"    onclick="switchSubEst('costos')"    style="flex:1;min-width:72px">💰 Costos</button>
+      <button class="btn btn-ghost btn-sm" id="est-sub-yardaje"   onclick="switchSubEst('yardaje')"   style="flex:1;min-width:72px">📐 Yardaje</button>
+      <button class="btn btn-ghost btn-sm" id="est-sub-contratos" onclick="switchSubEst('contratos')" style="flex:1;min-width:72px">📑 Contratos</button>
     </div>
   </div>
 
