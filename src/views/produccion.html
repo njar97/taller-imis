@@ -37,29 +37,34 @@
       <div class="card-title">🏭 Producción</div>
       <div id="prod-resumen-hoy" class="alert alert-info" style="margin-bottom:10px">Cargando resumen...</div>
 
-      <div class="field" style="margin-bottom:10px">
-        <label>Estado del bulto</label>
-        <div role="group" aria-label="Filtrar por estado del bulto" style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" id="prod-filtro-todos" onclick="cambiarFiltroProduccion('todos')">Todos</button>
-          <button class="btn btn-ghost btn-sm" id="prod-filtro-pendientes" onclick="cambiarFiltroProduccion('pendientes')">Pendientes</button>
-          <button class="btn btn-ghost btn-sm" id="prod-filtro-terminados" onclick="cambiarFiltroProduccion('terminados')">Terminados</button>
-        </div>
+      <!-- Visible siempre: chips de estado (los más usados día a día) -->
+      <div role="group" aria-label="Filtrar por estado del bulto" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="btn btn-primary btn-sm" id="prod-filtro-todos" onclick="cambiarFiltroProduccion('todos')">Todos</button>
+        <button class="btn btn-ghost btn-sm" id="prod-filtro-pendientes" onclick="cambiarFiltroProduccion('pendientes')">Pendientes</button>
+        <button class="btn btn-ghost btn-sm" id="prod-filtro-terminados" onclick="cambiarFiltroProduccion('terminados')">Terminados</button>
       </div>
 
-      <div class="row2" style="margin-top:0;padding-top:8px;border-top:1px dashed #E0E0E0">
-        <div class="field" style="margin-bottom:0">
-          <label>Filtrar por corte</label>
-          <select id="prod-filtro-corte" onchange="renderProduccion()">
-            <option value="">Todos los cortes</option>
-          </select>
+      <!-- Filtros secundarios (corte/prenda): colapsados por defecto -->
+      <details id="prod-filtros-extras" ontoggle="window._prodFiltrosExtrasOpen = this.open">
+        <summary style="cursor:pointer;list-style:none;padding:8px 12px;background:#F5F7FA;border-radius:6px;font-size:12px;font-weight:600;color:#555;display:flex;align-items:center;justify-content:space-between;user-select:none">
+          <span id="prod-filtros-extras-label">🎛 Filtrar por corte o prenda</span>
+          <span style="opacity:0.6">▼</span>
+        </summary>
+        <div class="row2" style="padding:10px 4px 0 4px">
+          <div class="field" style="margin-bottom:0">
+            <label>Filtrar por corte</label>
+            <select id="prod-filtro-corte" onchange="renderProduccion(); _prodActualizarLabelExtras()">
+              <option value="">Todos los cortes</option>
+            </select>
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Filtrar por prenda</label>
+            <select id="prod-filtro-prenda" onchange="renderProduccion(); _prodActualizarLabelExtras()">
+              <option value="">Todas las prendas</option>
+            </select>
+          </div>
         </div>
-        <div class="field" style="margin-bottom:0">
-          <label>Filtrar por prenda</label>
-          <select id="prod-filtro-prenda" onchange="renderProduccion()">
-            <option value="">Todas las prendas</option>
-          </select>
-        </div>
-      </div>
+      </details>
       <div style="font-size:12px;color:#666;margin-top:8px">Toca una talla para ver sus bultos.</div>
     </div>
     <div id="prod-cortes-container"></div>

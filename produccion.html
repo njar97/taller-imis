@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-28 16:01 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-28 21:53 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -819,29 +819,34 @@
       <div class="card-title">🏭 Producción</div>
       <div id="prod-resumen-hoy" class="alert alert-info" style="margin-bottom:10px">Cargando resumen...</div>
 
-      <div class="field" style="margin-bottom:10px">
-        <label>Estado del bulto</label>
-        <div role="group" aria-label="Filtrar por estado del bulto" style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" id="prod-filtro-todos" onclick="cambiarFiltroProduccion('todos')">Todos</button>
-          <button class="btn btn-ghost btn-sm" id="prod-filtro-pendientes" onclick="cambiarFiltroProduccion('pendientes')">Pendientes</button>
-          <button class="btn btn-ghost btn-sm" id="prod-filtro-terminados" onclick="cambiarFiltroProduccion('terminados')">Terminados</button>
-        </div>
+      <!-- Visible siempre: chips de estado (los más usados día a día) -->
+      <div role="group" aria-label="Filtrar por estado del bulto" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="btn btn-primary btn-sm" id="prod-filtro-todos" onclick="cambiarFiltroProduccion('todos')">Todos</button>
+        <button class="btn btn-ghost btn-sm" id="prod-filtro-pendientes" onclick="cambiarFiltroProduccion('pendientes')">Pendientes</button>
+        <button class="btn btn-ghost btn-sm" id="prod-filtro-terminados" onclick="cambiarFiltroProduccion('terminados')">Terminados</button>
       </div>
 
-      <div class="row2" style="margin-top:0;padding-top:8px;border-top:1px dashed #E0E0E0">
-        <div class="field" style="margin-bottom:0">
-          <label>Filtrar por corte</label>
-          <select id="prod-filtro-corte" onchange="renderProduccion()">
-            <option value="">Todos los cortes</option>
-          </select>
+      <!-- Filtros secundarios (corte/prenda): colapsados por defecto -->
+      <details id="prod-filtros-extras" ontoggle="window._prodFiltrosExtrasOpen = this.open">
+        <summary style="cursor:pointer;list-style:none;padding:8px 12px;background:#F5F7FA;border-radius:6px;font-size:12px;font-weight:600;color:#555;display:flex;align-items:center;justify-content:space-between;user-select:none">
+          <span id="prod-filtros-extras-label">🎛 Filtrar por corte o prenda</span>
+          <span style="opacity:0.6">▼</span>
+        </summary>
+        <div class="row2" style="padding:10px 4px 0 4px">
+          <div class="field" style="margin-bottom:0">
+            <label>Filtrar por corte</label>
+            <select id="prod-filtro-corte" onchange="renderProduccion(); _prodActualizarLabelExtras()">
+              <option value="">Todos los cortes</option>
+            </select>
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Filtrar por prenda</label>
+            <select id="prod-filtro-prenda" onchange="renderProduccion(); _prodActualizarLabelExtras()">
+              <option value="">Todas las prendas</option>
+            </select>
+          </div>
         </div>
-        <div class="field" style="margin-bottom:0">
-          <label>Filtrar por prenda</label>
-          <select id="prod-filtro-prenda" onchange="renderProduccion()">
-            <option value="">Todas las prendas</option>
-          </select>
-        </div>
-      </div>
+      </details>
       <div style="font-size:12px;color:#666;margin-top:8px">Toca una talla para ver sus bultos.</div>
     </div>
     <div id="prod-cortes-container"></div>
@@ -9716,6 +9721,32 @@ async function cargarAsignacionesPorBulto() {
 // fetch en cascada (refrescarBultosLote, cargarRegistrosHoy).
 const refrescarBultosLoteDeb = debounce(refrescarBultosLote, 300);
 const cargarRegistrosHoyDeb = debounce(cargarRegistrosHoy, 300);
+
+// Actualiza el label del summary <details> de filtros extras según
+// los valores actuales de corte/prenda. Muestra badge con count si hay
+// filtros aplicados. Y mantiene el panel abierto si el usuario tiene
+// algo filtrado, así no se olvida que está restringido.
+function _prodActualizarLabelExtras() {
+  const lbl = document.getElementById('prod-filtros-extras-label');
+  const det = document.getElementById('prod-filtros-extras');
+  if (!lbl || !det) return;
+  const corteEl = document.getElementById('prod-filtro-corte');
+  const prendaEl = document.getElementById('prod-filtro-prenda');
+  const corte = corteEl && corteEl.value;
+  const prenda = prendaEl && prendaEl.value;
+  const partes = [];
+  if (corte) {
+    const opt = corteEl.querySelector(`option[value="${CSS.escape(corte)}"]`);
+    partes.push(`corte ${opt ? opt.textContent.trim() : corte}`);
+  }
+  if (prenda) partes.push(`prenda ${prenda}`);
+  if (partes.length > 0) {
+    lbl.innerHTML = `🎛 Filtros: <strong>${partes.join(' · ')}</strong>`;
+    if (!det.open) det.open = true;
+  } else {
+    lbl.textContent = '🎛 Filtrar por corte o prenda';
+  }
+}
 
 // +++++++++++++++++++ asignaciones.js +++++++++++++++++++
 // ══════════════════════════════════════════════════════════════════════

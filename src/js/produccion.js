@@ -1337,3 +1337,29 @@ async function cargarAsignacionesPorBulto() {
 // fetch en cascada (refrescarBultosLote, cargarRegistrosHoy).
 const refrescarBultosLoteDeb = debounce(refrescarBultosLote, 300);
 const cargarRegistrosHoyDeb = debounce(cargarRegistrosHoy, 300);
+
+// Actualiza el label del summary <details> de filtros extras según
+// los valores actuales de corte/prenda. Muestra badge con count si hay
+// filtros aplicados. Y mantiene el panel abierto si el usuario tiene
+// algo filtrado, así no se olvida que está restringido.
+function _prodActualizarLabelExtras() {
+  const lbl = document.getElementById('prod-filtros-extras-label');
+  const det = document.getElementById('prod-filtros-extras');
+  if (!lbl || !det) return;
+  const corteEl = document.getElementById('prod-filtro-corte');
+  const prendaEl = document.getElementById('prod-filtro-prenda');
+  const corte = corteEl && corteEl.value;
+  const prenda = prendaEl && prendaEl.value;
+  const partes = [];
+  if (corte) {
+    const opt = corteEl.querySelector(`option[value="${CSS.escape(corte)}"]`);
+    partes.push(`corte ${opt ? opt.textContent.trim() : corte}`);
+  }
+  if (prenda) partes.push(`prenda ${prenda}`);
+  if (partes.length > 0) {
+    lbl.innerHTML = `🎛 Filtros: <strong>${partes.join(' · ')}</strong>`;
+    if (!det.open) det.open = true;
+  } else {
+    lbl.textContent = '🎛 Filtrar por corte o prenda';
+  }
+}
