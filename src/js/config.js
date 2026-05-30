@@ -1152,3 +1152,34 @@ async function verificarConexion() {
   }
 }
 
+
+// ─── Índice de reportes: PDFs por escuela desde Config ──────────────────
+// Reutiliza el menú de reportes de Registro (Tallaje/Empaque/Entrega, con
+// selector de grado) pero lo abre directo desde el Índice de reportes, sin
+// pasar por la pestaña Registro. Las funciones de impresión usan registroCache,
+// así que primero nos aseguramos de que esté cargado.
+async function cfgCargarEscuelasPDF() {
+  const sel = document.getElementById('cfg-rep-pdf-escuela');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Cargando…</option>';
+  try {
+    if (typeof registroCache !== 'undefined') {
+      if (!registroCache.temporadaActual && typeof initRegistro === 'function') await initRegistro();
+      if ((!registroCache.escuelas || !registroCache.escuelas.length) && typeof cargarEscuelasTemporada === 'function') await cargarEscuelasTemporada();
+    }
+    const escs = (typeof registroCache !== 'undefined' && Array.isArray(registroCache.escuelas)) ? registroCache.escuelas : [];
+    if (!escs.length) { sel.innerHTML = '<option value="">No hay escuelas cargadas</option>'; return; }
+    sel.innerHTML = '<option value="">Elegí una escuela…</option>' +
+      [...escs].sort((a, b) => (a.escuela_nombre || '').localeCompare(b.escuela_nombre || '', 'es'))
+        .map(e => `<option value="${e.escuela_id}">${(e.escuela_nombre || '').replace(/</g, '&lt;')}${e.codigo_cde ? ' · ' + e.codigo_cde : ''}</option>`).join('');
+  } catch (e) {
+    sel.innerHTML = '<option value="">Error al cargar</option>';
+  }
+}
+
+function cfgAbrirReportesPDF() {
+  const sel = document.getElementById('cfg-rep-pdf-escuela');
+  const id = sel && sel.value;
+  if (!id) { alert('Elegí una escuela primero (tocá 🔄 para cargar la lista).'); return; }
+  if (typeof abrirMenuReportes === 'function') abrirMenuReportes(id);
+}
