@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-30 14:58 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-30 15:00 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -11044,14 +11044,23 @@ function renderStock() {
             <span>✚ Acciones de bodega</span>
             <span style="font-size:12px;opacity:0.9">▼</span>
           </summary>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;padding:8px;margin-top:6px;background:white;border:1px solid var(--borde);border-radius:6px;box-shadow:0 4px 8px rgba(0,0,0,0.05)">
-            <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()" style="text-align:left">📥 + Entrada</button>
-            <button class="btn btn-warning btn-sm" onclick="abrirAcapararModal()" title="Bloquear cantidad para una escuela" style="text-align:left">📥 Acaparar</button>
-            <button class="btn btn-primary btn-sm" onclick="abrirEmpacarSelector()" style="text-align:left">📦 Empacar a alumnos</button>
-            <button class="btn btn-success btn-sm" onclick="abrirEntregaModal()" title="Marcar empacados de una escuela como entregados" style="text-align:left">🚚 Marcar entrega</button>
-            ${hayPool ? `<button class="btn btn-warning btn-sm" onclick="abrirEmpacarAcaparadosModal()" title="Asignar pool acaparado a alumnos" style="text-align:left">📥 Pool acaparado (${bodegaCache.poolTotal})</button>` : ''}
-            <button class="btn btn-ghost btn-sm" onclick="abrirConteoModal()" title="Carga rápida de stock físico" style="text-align:left">📊 Conteo inicial</button>
-            <button class="btn btn-ghost btn-sm" onclick="abrirSalidaModal()" title="Salida sin alumnos" style="text-align:left">↗ Salida rápida</button>
+          <div style="padding:8px;margin-top:6px;background:white;border:1px solid var(--borde);border-radius:6px;box-shadow:0 4px 8px rgba(0,0,0,0.05)">
+            <!-- Acciones principales: acaparar + empacar (lo demás va en "Otras") -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px">
+              <button class="btn btn-warning btn-sm" onclick="abrirAcapararModal()" title="Bloquear cantidad para una escuela" style="text-align:left">📥 Acaparar</button>
+              <button class="btn btn-primary btn-sm" onclick="abrirEmpacarSelector()" style="text-align:left">📦 Empacar a alumnos</button>
+              ${hayPool ? `<button class="btn btn-warning btn-sm" onclick="abrirEmpacarAcaparadosModal()" title="Asignar pool acaparado a alumnos" style="text-align:left">📥 Empacar pool (${bodegaCache.poolTotal})</button>` : ''}
+            </div>
+            <!-- Otras acciones (menos frecuentes): entrada de stock, entregas, conteo, salida -->
+            <details style="margin-top:6px">
+              <summary style="cursor:pointer;list-style:none;font-size:12px;color:#666;padding:4px 2px;user-select:none">⋯ Otras acciones</summary>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;margin-top:4px">
+                <button class="btn btn-ghost btn-sm" onclick="abrirEntradaManual()" style="text-align:left">📥 + Entrada de stock</button>
+                <button class="btn btn-ghost btn-sm" onclick="abrirEntregaModal()" title="Marcar empacados de una escuela como entregados" style="text-align:left">🚚 Marcar entrega</button>
+                <button class="btn btn-ghost btn-sm" onclick="abrirConteoModal()" title="Carga rápida de stock físico" style="text-align:left">📊 Conteo inicial</button>
+                <button class="btn btn-ghost btn-sm" onclick="abrirSalidaModal()" title="Salida sin alumnos" style="text-align:left">↗ Salida rápida</button>
+              </div>
+            </details>
           </div>
         </details>
         <button class="btn btn-ghost btn-sm" onclick="cargarBodegaStock()" title="Refrescar lista" style="padding:10px 12px">🔄</button>
