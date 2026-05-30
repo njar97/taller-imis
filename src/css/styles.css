@@ -299,7 +299,7 @@
 .btn-mini-success:hover { background: #007a33; }
 
 /* ─── Búsqueda global en header ────────────────────────────────────── */
-.buscador-wrap { position: relative; flex: 1; max-width: 320px; margin: 0 8px; }
+.buscador-wrap { position: relative; flex: 1; max-width: 420px; margin: 0 0 0 8px; }
 .buscador-wrap input {
   width: 100%;
   padding: 6px 10px;
@@ -344,7 +344,7 @@
 @media (max-width: 640px) {
   .nav-top { padding: 8px 12px; gap: 8px; }
   .nav-brand-section { font-size: 15px; }
-  .buscador-wrap { max-width: 160px; margin: 0 4px; }
+  .buscador-wrap { max-width: 220px; margin: 0 0 0 4px; }
   .buscador-wrap input { font-size: 12px; padding: 4px 8px; }
   .buscador-wrap input::placeholder { font-size: 11px; }
   .buscador-results { left: -50px; right: -50px; }

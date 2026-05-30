@@ -491,14 +491,16 @@ function showAuthOverlay(show) {
 }
 
 function renderUserChip() {
-  const chip = document.getElementById('user-chip');
-  const emailEl = document.getElementById('user-chip-email');
-  if (!chip || !emailEl) return;
+  // El correo y "cerrar sesión" viven ahora en la tarjeta de Sesión de Config
+  // (el encabezado quedó limpio, solo con el buscador).
+  const card = document.getElementById('cfg-session-card');
+  const emailEl = document.getElementById('cfg-session-email');
+  if (!card || !emailEl) return;
   if (supaSession && supaSession.user) {
     emailEl.textContent = supaSession.user.email || 'logueado';
-    chip.style.display = 'inline-flex';
+    card.style.display = '';
   } else {
-    chip.style.display = 'none';
+    card.style.display = 'none';
   }
 }
 

@@ -1,4 +1,16 @@
 <div id="view-config" class="view">
+  <!-- Sesión: el correo y "cerrar sesión" se movieron acá desde el encabezado
+       (v32) para dejar el header limpio, solo con el buscador. -->
+  <div class="card" id="cfg-session-card" style="display:none">
+    <div class="config-item">
+      <div>
+        <div class="config-label">👤 Sesión</div>
+        <div class="config-sub" id="cfg-session-email">—</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="doLogout()">Cerrar sesión</button>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-title">⚙️ Configuración</div>
     <div class="config-item">

@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-30 15:01 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-30 15:22 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -323,7 +323,7 @@
 .btn-mini-success:hover { background: #007a33; }
 
 /* ─── Búsqueda global en header ────────────────────────────────────── */
-.buscador-wrap { position: relative; flex: 1; max-width: 320px; margin: 0 8px; }
+.buscador-wrap { position: relative; flex: 1; max-width: 420px; margin: 0 0 0 8px; }
 .buscador-wrap input {
   width: 100%;
   padding: 6px 10px;
@@ -368,7 +368,7 @@
 @media (max-width: 640px) {
   .nav-top { padding: 8px 12px; gap: 8px; }
   .nav-brand-section { font-size: 15px; }
-  .buscador-wrap { max-width: 160px; margin: 0 4px; }
+  .buscador-wrap { max-width: 220px; margin: 0 0 0 4px; }
   .buscador-wrap input { font-size: 12px; padding: 4px 8px; }
   .buscador-wrap input::placeholder { font-size: 11px; }
   .buscador-results { left: -50px; right: -50px; }
@@ -464,10 +464,6 @@
              oninput="buscadorOnInput(event)" onfocus="buscadorOnInput(event)"
              autocomplete="off" title="Buscá cualquier alumno o escuela de toda la app y saltá a su ficha · Atajo: Ctrl/⌘ + K">
       <div id="buscador-results" class="buscador-results" style="display:none"></div>
-    </div>
-    <div id="user-chip" class="user-chip" style="display:none">
-      <span id="user-chip-email"></span>
-      <span class="logout-link" onclick="doLogout()">salir</span>
     </div>
   </div>
   <div class="nav-tabs">
@@ -2185,6 +2181,18 @@
 </div>
 
 <div id="view-config" class="view">
+  <!-- Sesión: el correo y "cerrar sesión" se movieron acá desde el encabezado
+       (v32) para dejar el header limpio, solo con el buscador. -->
+  <div class="card" id="cfg-session-card" style="display:none">
+    <div class="config-item">
+      <div>
+        <div class="config-label">👤 Sesión</div>
+        <div class="config-sub" id="cfg-session-email">—</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="doLogout()">Cerrar sesión</button>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-title">⚙️ Configuración</div>
     <div class="config-item">
@@ -3115,14 +3123,16 @@ function showAuthOverlay(show) {
 }
 
 function renderUserChip() {
-  const chip = document.getElementById('user-chip');
-  const emailEl = document.getElementById('user-chip-email');
-  if (!chip || !emailEl) return;
+  // El correo y "cerrar sesión" viven ahora en la tarjeta de Sesión de Config
+  // (el encabezado quedó limpio, solo con el buscador).
+  const card = document.getElementById('cfg-session-card');
+  const emailEl = document.getElementById('cfg-session-email');
+  if (!card || !emailEl) return;
   if (supaSession && supaSession.user) {
     emailEl.textContent = supaSession.user.email || 'logueado';
-    chip.style.display = 'inline-flex';
+    card.style.display = '';
   } else {
-    chip.style.display = 'none';
+    card.style.display = 'none';
   }
 }
 
