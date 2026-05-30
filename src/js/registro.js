@@ -178,7 +178,7 @@ function renderListaEscuelas() {
             </div>
           </div>
           ${e.piezas_solicitadas > 0 ? `<div style="font-size:20px;font-weight:700;color:${colorBar}">${pct}%</div>` : ''}
-          <button class="btn btn-ghost btn-sm" style="margin-left:6px;font-size:11px;padding:4px 8px" onclick="event.stopPropagation(); abrirAsignarGrupo('${e.escuela_id}')" title="Asignar/cambiar el grupo de producción de esta escuela (afecta sub-totales del PDF de tallas)">${grupoBtnLabel}</button>
+          <button class="btn btn-ghost btn-sm" style="margin-left:6px;font-size:11px;padding:4px 8px" onclick="event.stopPropagation(); editarEscuela('${e.escuela_id}')" title="Editar escuela (datos, contrato, tela y grupo de producción)">${grupoBtnLabel}</button>
           <button class="btn btn-ghost btn-sm" style="margin-left:4px" onclick="event.stopPropagation(); abrirDetalleEscuelaRegistro('${e.escuela_id}')" title="Acciones avanzadas (Por talla / Empaque / Pedidos)">⚙️</button>
         </div>
         ${e.piezas_solicitadas > 0 ? `
@@ -190,54 +190,9 @@ function renderListaEscuelas() {
   }).join('');
 }
 
-// ─── Asignar/cambiar grupo de producción de una escuela ─────────────
-function abrirAsignarGrupo(escuelaId) {
-  const e = (registroCache.escuelas || []).find(x => x.escuela_id === escuelaId);
-  if (!e) return;
-  // Datalist con grupos ya existentes (para autocompletar)
-  const gruposExistentes = [...new Set(
-    (registroCache.escuelas || []).map(x => x.grupo_produccion).filter(Boolean)
-  )].sort();
-  const dl = document.getElementById('grupo-prod-datalist');
-  if (dl) dl.innerHTML = gruposExistentes.map(g =>
-    `<option value="${g.replace(/"/g, '&quot;')}">`).join('');
-
-  document.getElementById('agp-titulo').textContent = e.escuela_nombre;
-  document.getElementById('agp-subt').textContent = `CDE ${e.codigo_cde}`;
-  document.getElementById('agp-input').value = e.grupo_produccion || '';
-  document.getElementById('agp-escuela-id').value = escuelaId;
-  document.getElementById('agp-actual').innerHTML = e.grupo_produccion
-    ? `Actualmente en grupo: <strong>${e.grupo_produccion}</strong>`
-    : `<em>Esta escuela no tiene grupo asignado.</em>`;
-  document.getElementById('asignar-grupo-modal').style.display = 'flex';
-  setTimeout(() => document.getElementById('agp-input').focus(), 100);
-}
-
-function cerrarAsignarGrupo() {
-  const m = document.getElementById('asignar-grupo-modal');
-  if (m) m.style.display = 'none';
-}
-
-async function guardarGrupoEscuela() {
-  const id = document.getElementById('agp-escuela-id').value;
-  const grupo = document.getElementById('agp-input').value.trim();
-  if (!id) return;
-  try {
-    await supaUpdate('escuela', id, { grupo_produccion: grupo || null });
-    if (typeof invalidarCache === 'function') invalidarCache('escuelas');
-    if (typeof tiCacheClearAll === 'function') tiCacheClearAll();
-    cerrarAsignarGrupo();
-    await cargarEscuelasTemporada();
-  } catch (e) {
-    alert('Error al guardar grupo: ' + (e && e.message || e));
-  }
-}
-
-async function quitarGrupoEscuela() {
-  if (!confirm('¿Quitar el grupo de esta escuela? Quedará sin grupo asignado.')) return;
-  document.getElementById('agp-input').value = '';
-  await guardarGrupoEscuela();
-}
+// El grupo de producción de una escuela se edita ahora dentro del modal
+// unificado "Editar escuela" (sección 👥 Grupo). El botón 📦 llama a
+// editarEscuela() directamente — ya no hay modal de grupo aparte.
 
 // Clic en una escuela = ir al sub-tab Alumnos con el filtro de escuela aplicado.
 // Reemplaza el modal de detalle (que duplicaba la edición de alumnos).

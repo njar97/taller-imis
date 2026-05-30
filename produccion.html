@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-30 14:45 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-30 14:58 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1331,6 +1331,17 @@
             <input type="number" id="ese-tela-beige" min="0" step="0.5" placeholder="0">
           </div>
         </div>
+
+        <!-- ─── Sección 4: GRUPO DE PRODUCCIÓN ─── -->
+        <div style="background:#F5F7FA;padding:6px 10px;font-weight:600;margin:14px 0 8px 0;border-radius:4px">👥 Grupo de producción</div>
+        <div class="field">
+          <label>Grupo</label>
+          <input type="text" id="ese-grupo" list="ese-grupo-datalist" placeholder="Ej: G1, Norte, Pequeñas-1, A" style="text-transform:uppercase">
+          <datalist id="ese-grupo-datalist"></datalist>
+          <div style="font-size:11px;color:#888;margin-top:2px">
+            Escuelas con el mismo código se agrupan como sub-total en el PDF de tallas. Dejá vacío para quitar el grupo.
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="cerrarEscuelaEdit()">Cancelar</button>
@@ -1504,38 +1515,6 @@
   </div>
 
   <!-- Modal: asignar/cambiar grupo de producción de escuela -->
-  <div id="asignar-grupo-modal" class="modal" style="display:none">
-    <div class="modal-content" style="max-width:440px">
-      <div class="modal-header">
-        <div>
-          <div class="card-title" id="agp-titulo" style="margin:0">Asignar grupo</div>
-          <div id="agp-subt" style="font-size:12px;color:#666;margin-top:2px"></div>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="cerrarAsignarGrupo()">✕</button>
-      </div>
-      <div class="modal-body">
-        <input type="hidden" id="agp-escuela-id">
-        <div id="agp-actual" style="font-size:12px;color:#666;margin-bottom:10px"></div>
-        <div class="field">
-          <label>Grupo de producción</label>
-          <input type="text" id="agp-input" list="grupo-prod-datalist" placeholder="Ej: G1, Norte, Pequeñas-1, A">
-          <datalist id="grupo-prod-datalist"></datalist>
-          <div style="font-size:11px;color:#888;margin-top:4px">
-            Escuelas con el mismo código quedan agrupadas. Si elegís uno de la lista, las escuelas se suman al grupo existente.
-            Dejá vacío para no asignar grupo.
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer" style="display:flex;gap:6px;justify-content:space-between">
-        <button class="btn btn-danger btn-sm" onclick="quitarGrupoEscuela()" title="Dejar sin grupo">🗑️ Quitar</button>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-ghost" onclick="cerrarAsignarGrupo()">Cancelar</button>
-          <button class="btn btn-success" onclick="guardarGrupoEscuela()">✓ Guardar</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- Modal: empaque de alumno (reutilizado de v22) -->
   <div id="bodega-empaque-modal" class="modal" style="display:none">
     <div class="modal-content" style="max-width:550px">
@@ -9539,7 +9518,7 @@ function renderListaEscuelas() {
             </div>
           </div>
           ${e.piezas_solicitadas > 0 ? `<div style="font-size:20px;font-weight:700;color:${colorBar}">${pct}%</div>` : ''}
-          <button class="btn btn-ghost btn-sm" style="margin-left:6px;font-size:11px;padding:4px 8px" onclick="event.stopPropagation(); abrirAsignarGrupo('${e.escuela_id}')" title="Asignar/cambiar el grupo de producción de esta escuela (afecta sub-totales del PDF de tallas)">${grupoBtnLabel}</button>
+          <button class="btn btn-ghost btn-sm" style="margin-left:6px;font-size:11px;padding:4px 8px" onclick="event.stopPropagation(); editarEscuela('${e.escuela_id}')" title="Editar escuela (datos, contrato, tela y grupo de producción)">${grupoBtnLabel}</button>
           <button class="btn btn-ghost btn-sm" style="margin-left:4px" onclick="event.stopPropagation(); abrirDetalleEscuelaRegistro('${e.escuela_id}')" title="Acciones avanzadas (Por talla / Empaque / Pedidos)">⚙️</button>
         </div>
         ${e.piezas_solicitadas > 0 ? `
@@ -9551,54 +9530,9 @@ function renderListaEscuelas() {
   }).join('');
 }
 
-// ─── Asignar/cambiar grupo de producción de una escuela ─────────────
-function abrirAsignarGrupo(escuelaId) {
-  const e = (registroCache.escuelas || []).find(x => x.escuela_id === escuelaId);
-  if (!e) return;
-  // Datalist con grupos ya existentes (para autocompletar)
-  const gruposExistentes = [...new Set(
-    (registroCache.escuelas || []).map(x => x.grupo_produccion).filter(Boolean)
-  )].sort();
-  const dl = document.getElementById('grupo-prod-datalist');
-  if (dl) dl.innerHTML = gruposExistentes.map(g =>
-    `<option value="${g.replace(/"/g, '&quot;')}">`).join('');
-
-  document.getElementById('agp-titulo').textContent = e.escuela_nombre;
-  document.getElementById('agp-subt').textContent = `CDE ${e.codigo_cde}`;
-  document.getElementById('agp-input').value = e.grupo_produccion || '';
-  document.getElementById('agp-escuela-id').value = escuelaId;
-  document.getElementById('agp-actual').innerHTML = e.grupo_produccion
-    ? `Actualmente en grupo: <strong>${e.grupo_produccion}</strong>`
-    : `<em>Esta escuela no tiene grupo asignado.</em>`;
-  document.getElementById('asignar-grupo-modal').style.display = 'flex';
-  setTimeout(() => document.getElementById('agp-input').focus(), 100);
-}
-
-function cerrarAsignarGrupo() {
-  const m = document.getElementById('asignar-grupo-modal');
-  if (m) m.style.display = 'none';
-}
-
-async function guardarGrupoEscuela() {
-  const id = document.getElementById('agp-escuela-id').value;
-  const grupo = document.getElementById('agp-input').value.trim();
-  if (!id) return;
-  try {
-    await supaUpdate('escuela', id, { grupo_produccion: grupo || null });
-    if (typeof invalidarCache === 'function') invalidarCache('escuelas');
-    if (typeof tiCacheClearAll === 'function') tiCacheClearAll();
-    cerrarAsignarGrupo();
-    await cargarEscuelasTemporada();
-  } catch (e) {
-    alert('Error al guardar grupo: ' + (e && e.message || e));
-  }
-}
-
-async function quitarGrupoEscuela() {
-  if (!confirm('¿Quitar el grupo de esta escuela? Quedará sin grupo asignado.')) return;
-  document.getElementById('agp-input').value = '';
-  await guardarGrupoEscuela();
-}
+// El grupo de producción de una escuela se edita ahora dentro del modal
+// unificado "Editar escuela" (sección 👥 Grupo). El botón 📦 llama a
+// editarEscuela() directamente — ya no hay modal de grupo aparte.
 
 // Clic en una escuela = ir al sub-tab Alumnos con el filtro de escuela aplicado.
 // Reemplaza el modal de detalle (que duplicaba la edición de alumnos).
@@ -15701,8 +15635,17 @@ async function editarEscuela(escuelaId) {
   // Resetear todos los campos
   ['ese-alias','ese-nombre','ese-cde','ese-director','ese-distrito','ese-municipio',
    'ese-cod-contrato','ese-persona','ese-pz-l1','ese-mt-l1','ese-pz-l2','ese-mt-l2',
-   'ese-tela-celeste','ese-tela-blanca','ese-tela-azul','ese-tela-beige']
+   'ese-tela-celeste','ese-tela-blanca','ese-tela-azul','ese-tela-beige','ese-grupo']
    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+
+  // Datalist de grupos existentes (autocompletar). Toma de cualquier cache disponible.
+  const dl = document.getElementById('ese-grupo-datalist');
+  if (dl) {
+    const fuente = (typeof registroCache !== 'undefined' && registroCache.escuelas) ? registroCache.escuelas
+      : Object.values((typeof alumnosGlobalCache !== 'undefined' && alumnosGlobalCache.escuelas) || {});
+    const grupos = [...new Set(fuente.map(x => x.grupo_produccion).filter(Boolean))].sort();
+    dl.innerHTML = grupos.map(g => `<option value="${g.replace(/"/g,'&quot;')}">`).join('');
+  }
 
   if (!escuelaId) {
     if (titulo) titulo.textContent = '🏫 Nueva escuela';
@@ -15744,6 +15687,8 @@ async function editarEscuela(escuelaId) {
     document.getElementById('ese-tela-azul').value     = c.tela_azul_yd || '';
     document.getElementById('ese-tela-beige').value    = c.tela_beige_yd || '';
 
+    document.getElementById('ese-grupo').value         = e.grupo_produccion || '';
+
     document.getElementById('escuela-edit-modal').style.display = 'flex';
     setTimeout(() => { const el = document.getElementById('ese-alias'); if (el) { el.focus(); el.select(); } }, 100);
   } catch (err) { alert('Error: ' + err.message); }
@@ -15768,6 +15713,7 @@ async function guardarEscuelaEdit() {
     director:    document.getElementById('ese-director').value.trim() || null,
     distrito:    document.getElementById('ese-distrito').value.trim() || null,
     municipio:   document.getElementById('ese-municipio').value.trim() || null,
+    grupo_produccion: document.getElementById('ese-grupo').value.trim().toUpperCase() || null,
   };
 
   const numOrZero = (id) => parseFloat(document.getElementById(id).value) || 0;
@@ -15822,6 +15768,11 @@ async function guardarEscuelaEdit() {
     }
     cerrarEscuelaEdit();
     renderAlumnosGlobal();
+    // El grupo vive en escuela.grupo_produccion: invalidar caches y refrescar la
+    // lista de escuelas de Registro para que el badge de grupo quede al día.
+    if (typeof invalidarCache === 'function') invalidarCache('escuelas');
+    if (typeof tiCacheClearAll === 'function') tiCacheClearAll();
+    if (typeof cargarEscuelasTemporada === 'function') cargarEscuelasTemporada();
     alert('✓ Guardado correctamente');
   } catch (err) { alert('Error al guardar: ' + err.message); }
 }

@@ -111,6 +111,17 @@
             <input type="number" id="ese-tela-beige" min="0" step="0.5" placeholder="0">
           </div>
         </div>
+
+        <!-- ─── Sección 4: GRUPO DE PRODUCCIÓN ─── -->
+        <div style="background:#F5F7FA;padding:6px 10px;font-weight:600;margin:14px 0 8px 0;border-radius:4px">👥 Grupo de producción</div>
+        <div class="field">
+          <label>Grupo</label>
+          <input type="text" id="ese-grupo" list="ese-grupo-datalist" placeholder="Ej: G1, Norte, Pequeñas-1, A" style="text-transform:uppercase">
+          <datalist id="ese-grupo-datalist"></datalist>
+          <div style="font-size:11px;color:#888;margin-top:2px">
+            Escuelas con el mismo código se agrupan como sub-total en el PDF de tallas. Dejá vacío para quitar el grupo.
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="cerrarEscuelaEdit()">Cancelar</button>
@@ -284,38 +295,6 @@
   </div>
 
   <!-- Modal: asignar/cambiar grupo de producción de escuela -->
-  <div id="asignar-grupo-modal" class="modal" style="display:none">
-    <div class="modal-content" style="max-width:440px">
-      <div class="modal-header">
-        <div>
-          <div class="card-title" id="agp-titulo" style="margin:0">Asignar grupo</div>
-          <div id="agp-subt" style="font-size:12px;color:#666;margin-top:2px"></div>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="cerrarAsignarGrupo()">✕</button>
-      </div>
-      <div class="modal-body">
-        <input type="hidden" id="agp-escuela-id">
-        <div id="agp-actual" style="font-size:12px;color:#666;margin-bottom:10px"></div>
-        <div class="field">
-          <label>Grupo de producción</label>
-          <input type="text" id="agp-input" list="grupo-prod-datalist" placeholder="Ej: G1, Norte, Pequeñas-1, A">
-          <datalist id="grupo-prod-datalist"></datalist>
-          <div style="font-size:11px;color:#888;margin-top:4px">
-            Escuelas con el mismo código quedan agrupadas. Si elegís uno de la lista, las escuelas se suman al grupo existente.
-            Dejá vacío para no asignar grupo.
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer" style="display:flex;gap:6px;justify-content:space-between">
-        <button class="btn btn-danger btn-sm" onclick="quitarGrupoEscuela()" title="Dejar sin grupo">🗑️ Quitar</button>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-ghost" onclick="cerrarAsignarGrupo()">Cancelar</button>
-          <button class="btn btn-success" onclick="guardarGrupoEscuela()">✓ Guardar</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- Modal: empaque de alumno (reutilizado de v22) -->
   <div id="bodega-empaque-modal" class="modal" style="display:none">
     <div class="modal-content" style="max-width:550px">

@@ -1344,8 +1344,17 @@ async function editarEscuela(escuelaId) {
   // Resetear todos los campos
   ['ese-alias','ese-nombre','ese-cde','ese-director','ese-distrito','ese-municipio',
    'ese-cod-contrato','ese-persona','ese-pz-l1','ese-mt-l1','ese-pz-l2','ese-mt-l2',
-   'ese-tela-celeste','ese-tela-blanca','ese-tela-azul','ese-tela-beige']
+   'ese-tela-celeste','ese-tela-blanca','ese-tela-azul','ese-tela-beige','ese-grupo']
    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+
+  // Datalist de grupos existentes (autocompletar). Toma de cualquier cache disponible.
+  const dl = document.getElementById('ese-grupo-datalist');
+  if (dl) {
+    const fuente = (typeof registroCache !== 'undefined' && registroCache.escuelas) ? registroCache.escuelas
+      : Object.values((typeof alumnosGlobalCache !== 'undefined' && alumnosGlobalCache.escuelas) || {});
+    const grupos = [...new Set(fuente.map(x => x.grupo_produccion).filter(Boolean))].sort();
+    dl.innerHTML = grupos.map(g => `<option value="${g.replace(/"/g,'&quot;')}">`).join('');
+  }
 
   if (!escuelaId) {
     if (titulo) titulo.textContent = '🏫 Nueva escuela';
@@ -1387,6 +1396,8 @@ async function editarEscuela(escuelaId) {
     document.getElementById('ese-tela-azul').value     = c.tela_azul_yd || '';
     document.getElementById('ese-tela-beige').value    = c.tela_beige_yd || '';
 
+    document.getElementById('ese-grupo').value         = e.grupo_produccion || '';
+
     document.getElementById('escuela-edit-modal').style.display = 'flex';
     setTimeout(() => { const el = document.getElementById('ese-alias'); if (el) { el.focus(); el.select(); } }, 100);
   } catch (err) { alert('Error: ' + err.message); }
@@ -1411,6 +1422,7 @@ async function guardarEscuelaEdit() {
     director:    document.getElementById('ese-director').value.trim() || null,
     distrito:    document.getElementById('ese-distrito').value.trim() || null,
     municipio:   document.getElementById('ese-municipio').value.trim() || null,
+    grupo_produccion: document.getElementById('ese-grupo').value.trim().toUpperCase() || null,
   };
 
   const numOrZero = (id) => parseFloat(document.getElementById(id).value) || 0;
@@ -1465,6 +1477,11 @@ async function guardarEscuelaEdit() {
     }
     cerrarEscuelaEdit();
     renderAlumnosGlobal();
+    // El grupo vive en escuela.grupo_produccion: invalidar caches y refrescar la
+    // lista de escuelas de Registro para que el badge de grupo quede al día.
+    if (typeof invalidarCache === 'function') invalidarCache('escuelas');
+    if (typeof tiCacheClearAll === 'function') tiCacheClearAll();
+    if (typeof cargarEscuelasTemporada === 'function') cargarEscuelasTemporada();
     alert('✓ Guardado correctamente');
   } catch (err) { alert('Error al guardar: ' + err.message); }
 }
