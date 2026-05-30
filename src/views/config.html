@@ -77,6 +77,26 @@
     </div>
   </div>
 
+  <!-- Reportes administrativos (movidos desde Estadística en v32) -->
+  <div class="card">
+    <div class="card-title">📊 Reportes administrativos</div>
+    <div class="text-muted mb8" style="font-size:12px">Reportes de revisión ocasional que antes vivían en Estadística. Se cargan al abrir cada sección.</div>
+
+    <details style="margin-bottom:8px" ontoggle="if(this.open && typeof initHistorico==='function') initHistorico()">
+      <summary style="cursor:pointer;list-style:none;padding:10px 12px;background:#F5F7FA;border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
+        <span>📈 Histórico <span style="font-weight:400;color:#888;font-size:11px">— comparativo entre temporadas</span></span><span style="opacity:0.6;font-size:11px">▼</span>
+      </summary>
+      <div id="historico-contenido" style="padding-top:10px"><div class="text-muted" style="padding:16px;text-align:center">Abrí esta sección para cargar el histórico…</div></div>
+    </details>
+
+    <details ontoggle="if(this.open && typeof initCostos==='function') initCostos()">
+      <summary style="cursor:pointer;list-style:none;padding:10px 12px;background:#F5F7FA;border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
+        <span>💰 Costos <span style="font-weight:400;color:#888;font-size:11px">— mano de obra por nivel × sexo</span></span><span style="opacity:0.6;font-size:11px">▼</span>
+      </summary>
+      <div id="est-sub-costos-view" style="padding-top:10px"><div class="text-muted" style="padding:16px;text-align:center">Abrí esta sección para cargar los costos…</div></div>
+    </details>
+  </div>
+
   <!-- Hoja de entrega por escuela (PDF para director) -->
   <div class="card">
     <div class="card-title">📄 Hoja de entrega por escuela</div>

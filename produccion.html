@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-30 13:58 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-30 14:32 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1197,23 +1197,14 @@
 <div id="view-estadistica" class="view">
   <div id="alert-estadistica"></div>
 
-  <!-- Sub-nav reingeniada (v32): "Por talla" es el reporte central y abre por
-       defecto. El resto (uso ocasional) vive en un cajón "Más reportes ▾"
-       colapsado. Inventario se eliminó (lo cubre Por talla con su columna de
-       Bodega) y Tallas críticas se fusionó en Por talla como el toggle
-       "🔥 Solo críticas". -->
+  <!-- Sub-nav reingeniada (v32): solo 2 reportes.
+       · 📊 Por talla  — central, abre por defecto (incluye toggle 🔥 Solo críticas).
+       · 📋 Por escuela — fusión de Tallaje + Contrato + Tela/Yardaje en un reporte.
+       Inventario y Tallas críticas se fusionaron en Por talla.
+       Histórico y Costos se movieron a la pestaña Config. -->
   <div class="card" style="padding:8px 10px;margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <button id="est-nav-tallas" class="btn btn-sm btn-primary" onclick="switchSubEst('tallas')">📊 Por talla</button>
-    <details id="est-mas-reportes" style="position:relative;margin:0">
-      <summary id="est-mas-reportes-summary" style="cursor:pointer;list-style:none;padding:6px 12px;border:1px solid var(--borde);border-radius:6px;background:white;font-size:13px;font-weight:600;color:#1F4E79;user-select:none;white-space:nowrap">📂 Más reportes ▾</summary>
-      <div style="position:absolute;top:calc(100% + 4px);left:0;z-index:50;background:white;border:1px solid var(--borde);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.15);padding:6px;display:flex;flex-direction:column;gap:2px;min-width:200px">
-        <button class="btn btn-ghost btn-sm" style="justify-content:flex-start;text-align:left" onclick="switchSubEst('escuela')">🏫 Por escuela</button>
-        <button class="btn btn-ghost btn-sm" style="justify-content:flex-start;text-align:left" onclick="switchSubEst('historico')">📈 Histórico</button>
-        <button class="btn btn-ghost btn-sm" style="justify-content:flex-start;text-align:left" onclick="switchSubEst('costos')">💰 Costos</button>
-        <button class="btn btn-ghost btn-sm" style="justify-content:flex-start;text-align:left" onclick="switchSubEst('yardaje')">📐 Yardaje</button>
-        <button class="btn btn-ghost btn-sm" style="justify-content:flex-start;text-align:left" onclick="switchSubEst('contratos')">📑 Contratos</button>
-      </div>
-    </details>
+    <button id="est-nav-escuela" class="btn btn-sm btn-ghost" onclick="switchSubEst('escuela')">📋 Por escuela</button>
   </div>
 
   <!-- SUB: Por talla — demanda por escuela cruzada con corte/producción/bodega/pool (reporte central) -->
@@ -1221,31 +1212,9 @@
     <div id="est-tallas-contenido"><div class="text-muted" style="padding:20px;text-align:center">Cargando resumen por talla...</div></div>
   </div>
 
-  <!-- SUB: Por escuela (RESUMEN del Excel) -->
+  <!-- SUB: Por escuela — Tallaje + Contrato + Tela/Yardaje (unificado, est_escuela.js) -->
   <div id="est-sub-escuela-view" style="display:none">
-    <div id="resumen-esc-contenido">
-      <div class="text-muted" style="padding:20px;text-align:center">Cargando estadística por escuela...</div>
-    </div>
-  </div>
-
-  <!-- SUB: Histórico -->
-  <div id="est-sub-historico-view" style="display:none">
-    <div id="historico-contenido"><div class="text-muted" style="padding:20px;text-align:center">Cargando datos históricos...</div></div>
-  </div>
-
-  <!-- SUB: Costos — mano de obra por nivel × sexo, precios del RESUMEN del Excel -->
-  <div id="est-sub-costos-view" style="display:none">
-    <div class="text-muted" style="padding:20px;text-align:center">Cargando costos...</div>
-  </div>
-
-  <!-- SUB: Yardaje — tela necesaria por color, factores del RESUMEN del Excel -->
-  <div id="est-sub-yardaje-view" style="display:none">
-    <div class="text-muted" style="padding:20px;text-align:center">Cargando yardaje...</div>
-  </div>
-
-  <!-- SUB: Contratos — cruce contrato (Excel) vs producido/entregado -->
-  <div id="est-sub-contratos-view" style="display:none">
-    <div class="text-muted" style="padding:20px;text-align:center">Cargando contratos...</div>
+    <div class="text-muted" style="padding:20px;text-align:center">Cargando reporte por escuela...</div>
   </div>
 </div>
 
@@ -2313,6 +2282,26 @@
         <div style="font-size:11px;color:#666;margin-top:2px">Historial de cambios (admin)</div>
       </button>
     </div>
+  </div>
+
+  <!-- Reportes administrativos (movidos desde Estadística en v32) -->
+  <div class="card">
+    <div class="card-title">📊 Reportes administrativos</div>
+    <div class="text-muted mb8" style="font-size:12px">Reportes de revisión ocasional que antes vivían en Estadística. Se cargan al abrir cada sección.</div>
+
+    <details style="margin-bottom:8px" ontoggle="if(this.open && typeof initHistorico==='function') initHistorico()">
+      <summary style="cursor:pointer;list-style:none;padding:10px 12px;background:#F5F7FA;border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
+        <span>📈 Histórico <span style="font-weight:400;color:#888;font-size:11px">— comparativo entre temporadas</span></span><span style="opacity:0.6;font-size:11px">▼</span>
+      </summary>
+      <div id="historico-contenido" style="padding-top:10px"><div class="text-muted" style="padding:16px;text-align:center">Abrí esta sección para cargar el histórico…</div></div>
+    </details>
+
+    <details ontoggle="if(this.open && typeof initCostos==='function') initCostos()">
+      <summary style="cursor:pointer;list-style:none;padding:10px 12px;background:#F5F7FA;border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
+        <span>💰 Costos <span style="font-weight:400;color:#888;font-size:11px">— mano de obra por nivel × sexo</span></span><span style="opacity:0.6;font-size:11px">▼</span>
+      </summary>
+      <div id="est-sub-costos-view" style="padding-top:10px"><div class="text-muted" style="padding:16px;text-align:center">Abrí esta sección para cargar los costos…</div></div>
+    </details>
   </div>
 
   <!-- Hoja de entrega por escuela (PDF para director) -->
@@ -3864,227 +3853,6 @@ function _avanceEscIrA(accion, escId) {
   }
 }
 
-// +++++++++++++++++++ resumen_escuela.js +++++++++++++++++++
-// ══════════════════════════════════════════════════════════════════════
-// RESUMEN POR ESCUELA — portado del sheet "RESUMEN" del BASE 2025
-// V1: selector de escuela + tabla conteo alumnos tallados por nivel × sexo
-// ══════════════════════════════════════════════════════════════════════
-
-const RESUMEN_NIVELES = [
-  { key:'PARV',    label:'Parvularia',   match:(a)=> a.nivel === 'PARV' },
-  { key:'1CICLO',  label:'1er Ciclo',    match:(a)=> a.nivel === 'BASICA' && a.ciclo === 1 },
-  { key:'2CICLO',  label:'2do Ciclo',    match:(a)=> a.nivel === 'BASICA' && a.ciclo === 2 },
-  { key:'3CICLO',  label:'3er Ciclo',    match:(a)=> a.nivel === 'BASICA' && a.ciclo === 3 },
-  { key:'BACH',    label:'Bachillerato', match:(a)=> a.nivel === 'BACH' },
-];
-
-let resumenEscuelaCache = {
-  escuelas: null,
-  escuelaSel: null,
-  alumnos: null,
-  temporadaId: null,
-};
-
-async function initResumenEscuela() {
-  const cont = document.getElementById('resumen-esc-contenido');
-  if (!cont) return;
-  cont.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando escuelas...</div>';
-
-  try {
-    if (!resumenEscuelaCache.temporadaId) {
-      const temps = await supaFetch('temporada', 'GET', null,
-        '?estado=eq.activa&select=id,anio,nombre&limit=1');
-      const t = temps[0] || (await supaFetch('temporada', 'GET', null,
-        '?select=id,anio,nombre&order=anio.desc&limit=1'))[0];
-      if (!t) throw new Error('No hay temporada cargada');
-      resumenEscuelaCache.temporadaId = t.id;
-      resumenEscuelaCache.temporadaNombre = t.nombre || t.anio;
-    }
-    if (!resumenEscuelaCache.escuelas) {
-      const all = await supaFetchAll('escuela',
-        '?activa=eq.true&select=id,codigo_cde,nombre,alias,director,distrito,municipio&order=alias.asc');
-      resumenEscuelaCache.escuelas = all;
-    }
-    renderResumenEscuela();
-  } catch (e) {
-    cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
-  }
-}
-
-function renderResumenEscuela() {
-  const cont = document.getElementById('resumen-esc-contenido');
-  if (!cont) return;
-  const escuelas = resumenEscuelaCache.escuelas || [];
-
-  cont.innerHTML = `
-    <div class="card" style="padding:12px;margin-bottom:10px">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <label style="font-weight:600">Escuela:</label>
-        <select id="resumen-esc-sel" onchange="onResumenEscuelaSel(this.value)" style="flex:1;min-width:200px;padding:6px">
-          <option value="">— Seleccioná una escuela —</option>
-          ${escuelas.map(e => `<option value="${e.id}" ${resumenEscuelaCache.escuelaSel === e.id ? 'selected' : ''}>${e.alias || e.nombre}${e.codigo_cde ? ' · ' + e.codigo_cde : ''}</option>`).join('')}
-        </select>
-      </div>
-    </div>
-    <div id="resumen-esc-detalle">
-      <div class="text-muted" style="padding:20px;text-align:center">Elegí una escuela para ver su distribución.</div>
-    </div>
-  `;
-
-  if (resumenEscuelaCache.escuelaSel) cargarResumenEscuela(resumenEscuelaCache.escuelaSel);
-}
-
-async function onResumenEscuelaSel(escuelaId) {
-  resumenEscuelaCache.escuelaSel = escuelaId || null;
-  resumenEscuelaCache.alumnos = null;
-  if (!escuelaId) {
-    const det = document.getElementById('resumen-esc-detalle');
-    if (det) det.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Elegí una escuela para ver su distribución.</div>';
-    return;
-  }
-  await cargarResumenEscuela(escuelaId);
-}
-
-async function cargarResumenEscuela(escuelaId) {
-  const det = document.getElementById('resumen-esc-detalle');
-  if (!det) return;
-  det.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando alumnos...</div>';
-
-  try {
-    const tempId = resumenEscuelaCache.temporadaId;
-    const params = `?escuela_id=eq.${escuelaId}&temporada_id=eq.${tempId}&activo=eq.true` +
-      '&select=nivel,ciclo,sexo,prenda_top,prenda_bottom,grado';
-    const alumnos = await supaFetchAll('alumno', params);
-    resumenEscuelaCache.alumnos = alumnos;
-    renderResumenEscuelaDetalle();
-  } catch (e) {
-    det.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
-  }
-}
-
-function renderResumenEscuelaDetalle() {
-  const det = document.getElementById('resumen-esc-detalle');
-  if (!det) return;
-
-  const escuelas = resumenEscuelaCache.escuelas || [];
-  const esc = escuelas.find(e => e.id === resumenEscuelaCache.escuelaSel);
-  const alumnos = resumenEscuelaCache.alumnos || [];
-
-  // Agrupar por nivel y por sexo. Tallado = ambos prenda_top y prenda_bottom no nulos.
-  // (Excluimos alumnos sin sexo en las columnas M/F pero los contamos en total general.)
-  const stats = RESUMEN_NIVELES.map(n => {
-    const enNivel = alumnos.filter(n.match);
-    const acc = (sexo) => {
-      const grupo = enNivel.filter(a => a.sexo === sexo);
-      const tallados = grupo.filter(a => a.prenda_top && a.prenda_bottom).length;
-      return { total: grupo.length, tallados };
-    };
-    return { ...n, M: acc('M'), F: acc('F'), totalNivel: enNivel.length };
-  });
-
-  const tot = {
-    M: { total:0, tallados:0 },
-    F: { total:0, tallados:0 },
-    cargados: alumnos.length,
-    tallados: alumnos.filter(a => a.prenda_top && a.prenda_bottom).length,
-  };
-  stats.forEach(s => {
-    tot.M.total += s.M.total; tot.M.tallados += s.M.tallados;
-    tot.F.total += s.F.total; tot.F.tallados += s.F.tallados;
-  });
-
-  const pct = (n,d) => d > 0 ? Math.round((n/d)*100) : 0;
-
-  det.innerHTML = `
-    <!-- Cabecera escuela -->
-    <div class="card" style="padding:14px;margin-bottom:10px;background:linear-gradient(135deg,#0065CC,#004999);color:white">
-      <div style="font-size:11px;opacity:0.8">${(resumenEscuelaCache.temporadaNombre || '').toUpperCase()} · ESCUELA</div>
-      <div style="font-size:20px;font-weight:700;margin-top:4px">${esc?.nombre || esc?.alias || '—'}</div>
-      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:12px;opacity:0.95">
-        ${esc?.codigo_cde ? `<div>CDE <strong>${esc.codigo_cde}</strong></div>` : ''}
-        ${esc?.alias ? `<div>Alias <strong>${esc.alias}</strong></div>` : ''}
-        ${esc?.director ? `<div>Director: ${esc.director}</div>` : ''}
-        ${esc?.municipio ? `<div>${esc.municipio}${esc.distrito ? ' / '+esc.distrito : ''}</div>` : ''}
-      </div>
-    </div>
-
-    <!-- KPIs -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px">
-      <div class="card" style="padding:10px;text-align:center">
-        <div style="font-size:10px;color:#666">Cargados</div>
-        <div style="font-size:22px;font-weight:700;color:#333">${tot.cargados.toLocaleString()}</div>
-      </div>
-      <div class="card" style="padding:10px;text-align:center">
-        <div style="font-size:10px;color:#666">Tallados</div>
-        <div style="font-size:22px;font-weight:700;color:var(--verde)">${tot.tallados.toLocaleString()}</div>
-        <div style="font-size:10px;color:#888">${pct(tot.tallados, tot.cargados)}%</div>
-      </div>
-      <div class="card" style="padding:10px;text-align:center">
-        <div style="font-size:10px;color:#666">Masculino</div>
-        <div style="font-size:22px;font-weight:700;color:var(--azul)">${tot.M.tallados.toLocaleString()}</div>
-        <div style="font-size:10px;color:#888">de ${tot.M.total}</div>
-      </div>
-      <div class="card" style="padding:10px;text-align:center">
-        <div style="font-size:10px;color:#666">Femenino</div>
-        <div style="font-size:22px;font-weight:700;color:#c2185b">${tot.F.tallados.toLocaleString()}</div>
-        <div style="font-size:10px;color:#888">de ${tot.F.total}</div>
-      </div>
-    </div>
-
-    <!-- Tabla por nivel × sexo -->
-    <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
-      <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">📊 Tallados por nivel × sexo</div>
-      <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:520px">
-          <thead>
-            <tr style="background:#FAFAFA">
-              <th style="padding:8px;text-align:left">Nivel</th>
-              <th style="padding:8px;text-align:right">M tallado</th>
-              <th style="padding:8px;text-align:right">M total</th>
-              <th style="padding:8px;text-align:right">F tallado</th>
-              <th style="padding:8px;text-align:right">F total</th>
-              <th style="padding:8px;text-align:right">Total tallado</th>
-              <th style="padding:8px;text-align:right">% avance</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${stats.map(s => {
-              const totalNivelTallado = s.M.tallados + s.F.tallados;
-              const totalNivel = s.M.total + s.F.total;
-              return `
-                <tr style="border-top:1px solid #EEE">
-                  <td style="padding:6px 8px;font-weight:600">${s.label}</td>
-                  <td style="padding:6px 8px;text-align:right;color:var(--azul);font-weight:600">${s.M.tallados}</td>
-                  <td style="padding:6px 8px;text-align:right;color:#888">${s.M.total}</td>
-                  <td style="padding:6px 8px;text-align:right;color:#c2185b;font-weight:600">${s.F.tallados}</td>
-                  <td style="padding:6px 8px;text-align:right;color:#888">${s.F.total}</td>
-                  <td style="padding:6px 8px;text-align:right;font-weight:700">${totalNivelTallado}</td>
-                  <td style="padding:6px 8px;text-align:right">${pct(totalNivelTallado, totalNivel)}%</td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-          <tfoot>
-            <tr style="border-top:2px solid #CCC;background:#FAFAFA;font-weight:700">
-              <td style="padding:8px">TOTAL</td>
-              <td style="padding:8px;text-align:right;color:var(--azul)">${tot.M.tallados}</td>
-              <td style="padding:8px;text-align:right">${tot.M.total}</td>
-              <td style="padding:8px;text-align:right;color:#c2185b">${tot.F.tallados}</td>
-              <td style="padding:8px;text-align:right">${tot.F.total}</td>
-              <td style="padding:8px;text-align:right">${tot.tallados}</td>
-              <td style="padding:8px;text-align:right">${pct(tot.tallados, tot.cargados)}%</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </div>
-
-    <div style="text-align:center;margin-top:6px">
-      <button class="btn btn-ghost btn-sm" onclick="cargarResumenEscuela('${resumenEscuelaCache.escuelaSel}')">🔄 Refrescar</button>
-    </div>
-  `;
-}
-
 // +++++++++++++++++++ corte.js +++++++++++++++++++
 // ══════════════════════════════════════════════════════════════════════
 // CORTE — tab unificado de Nuevo (Trazo/Tendido/Bulto) + Historial
@@ -4139,22 +3907,14 @@ function switchSubCorte(sub) {
 // +++++++++++++++++++ estadistica.js +++++++++++++++++++
 // ══════════════════════════════════════════════════════════════════════
 // ESTADÍSTICA — reportes cruzados (porteado del RESUMEN/ESTADISTICA del Excel)
-// Reingeniería v32: "Por talla" es el reporte central (abre por defecto).
-// El resto (Por escuela · Histórico · Costos · Yardaje · Contratos) vive en
-// el cajón "Más reportes ▾". Inventario se eliminó (redundante con Por talla)
-// y Tallas críticas se fusionó en Por talla como el toggle "🔥 Solo críticas".
+// Reingeniería v32: solo 2 reportes.
+//   · 📊 Por talla  — central, abre por defecto (con toggle 🔥 Solo críticas).
+//   · 📋 Por escuela — fusión de Tallaje + Contrato + Tela/Yardaje.
+// Inventario y Tallas críticas se fusionaron en Por talla.
+// Histórico y Costos se movieron a la pestaña Config.
 // ══════════════════════════════════════════════════════════════════════
 
 let estSubActual = 'tallas';
-
-// Etiquetas para el resumen del cajón "Más reportes"
-const EST_SUB_LABELS = {
-  escuela:   '🏫 Por escuela',
-  historico: '📈 Histórico',
-  costos:    '💰 Costos',
-  yardaje:   '📐 Yardaje',
-  contratos: '📑 Contratos',
-};
 
 function initEstadistica() {
   switchSubEst(estSubActual || 'tallas');
@@ -4162,42 +3922,21 @@ function initEstadistica() {
 
 function switchSubEst(sub) {
   estSubActual = sub;
-  const subs = ['tallas', 'escuela', 'historico', 'costos', 'yardaje', 'contratos'];
+  const subs = ['tallas', 'escuela'];
   subs.forEach(s => {
     const view = document.getElementById('est-sub-' + s + '-view');
     if (view) view.style.display = (s === sub) ? '' : 'none';
+    const btn = document.getElementById('est-nav-' + s);
+    if (btn) {
+      btn.classList.toggle('btn-primary', s === sub);
+      btn.classList.toggle('btn-ghost', s !== sub);
+    }
   });
-
-  // El botón "Por talla" se marca activo solo cuando es el reporte visible.
-  const btnTallas = document.getElementById('est-nav-tallas');
-  if (btnTallas) {
-    btnTallas.classList.toggle('btn-primary', sub === 'tallas');
-    btnTallas.classList.toggle('btn-ghost', sub !== 'tallas');
-  }
-
-  // Cajón "Más reportes": cerrar al elegir y reflejar el reporte activo en el
-  // summary (ej. "📂 Histórico ▾") para que se vea qué hay seleccionado.
-  const det = document.getElementById('est-mas-reportes');
-  const sum = document.getElementById('est-mas-reportes-summary');
-  if (det) det.open = false;
-  if (sum) {
-    sum.innerHTML = (sub !== 'tallas' && EST_SUB_LABELS[sub])
-      ? `📂 ${EST_SUB_LABELS[sub]} ▾`
-      : '📂 Más reportes ▾';
-  }
 
   if (sub === 'tallas' && typeof initTallasResumen === 'function') {
     initTallasResumen();
-  } else if (sub === 'escuela' && typeof initResumenEscuela === 'function') {
-    initResumenEscuela();
-  } else if (sub === 'historico' && typeof initHistorico === 'function') {
-    initHistorico();
-  } else if (sub === 'costos' && typeof initCostos === 'function') {
-    initCostos();
-  } else if (sub === 'yardaje' && typeof initYardaje === 'function') {
-    initYardaje();
-  } else if (sub === 'contratos' && typeof initContratos === 'function') {
-    initContratos();
+  } else if (sub === 'escuela' && typeof initEstEscuela === 'function') {
+    initEstEscuela();
   }
 }
 
@@ -5092,6 +4831,327 @@ async function exportarTallasPDF() {
   }
 }
 
+// +++++++++++++++++++ est_escuela.js +++++++++++++++++++
+// ══════════════════════════════════════════════════════════════════════
+// ESTADÍSTICA — POR ESCUELA (unificado v32)
+// Fusiona en un solo reporte (con selector de escuela compartido):
+//   1. Tallaje  — alumnos tallados por nivel × sexo + % avance
+//   2. Contrato — piezas y monto contratado vs entregado (vw_contrato_avance)
+//   3. Tela     — yardaje necesario vs recibido + balance devolver/solicitar
+// Reemplaza a los antiguos resumen_escuela.js, contratos.js y yardaje.js.
+// ══════════════════════════════════════════════════════════════════════
+
+const ESCN_NIVELES = [
+  { key:'PARV',    label:'Parvularia',   match:(a)=> a.nivel === 'PARV' },
+  { key:'1CICLO',  label:'1er Ciclo',    match:(a)=> a.nivel === 'BASICA' && a.ciclo === 1 },
+  { key:'2CICLO',  label:'2do Ciclo',    match:(a)=> a.nivel === 'BASICA' && a.ciclo === 2 },
+  { key:'3CICLO',  label:'3er Ciclo',    match:(a)=> a.nivel === 'BASICA' && a.ciclo === 3 },
+  { key:'BACH',    label:'Bachillerato', match:(a)=> a.nivel === 'BACH' },
+];
+
+// Factores yardas/alumno (RESUMEN del Excel). Top = celeste/blanca, Bot = azul/beige.
+const ESCN_FACTORES = {
+  PARV:    { celeste: { M: 0.75, F: 0.75 }, azul:   { M: 0.75, F: 0.60 } },
+  '1CICLO':{ blanca:  { M: 1.00, F: 1.00 }, azul:   { M: 1.00, F: 0.75 } },
+  '2CICLO':{ blanca:  { M: 1.25, F: 1.25 }, azul:   { M: 1.25, F: 1.00 } },
+  '3CICLO':{ blanca:  { M: 1.50, F: 1.50 }, azul:   { M: 1.50, F: 1.25 } },
+  BACH:    { blanca:  { M: 1.50, F: 1.50 }, beige:  { M: 1.65, F: 1.50 } },
+};
+const ESCN_COLORES = {
+  celeste: { label:'Tela Celeste', border:'#6AA5C8' },
+  blanca:  { label:'Tela Blanca',  border:'#BBB' },
+  azul:    { label:'Tela Azul',    border:'#1F4E79' },
+  beige:   { label:'Tela Beige',   border:'#B0A07A' },
+};
+
+let estEscuelaCache = {
+  temporadaId: null,
+  temporadaAnio: null,
+  temporadaNombre: '',
+  escuelas: null,
+  alumnos: null,
+  tela: null,      // contrato_escuela: [{escuela_id, tela_*_yd}]
+  avance: null,    // vw_contrato_avance: [{codigo_cde, alias, piezas_*, monto_*, porcentaje_avance}]
+  escuelaSel: '',
+};
+
+async function initEstEscuela() {
+  const root = document.getElementById('est-sub-escuela-view');
+  if (!root) return;
+  root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando reporte por escuela...</div>';
+
+  try {
+    if (!estEscuelaCache.temporadaId) {
+      const t = (await supaFetch('temporada', 'GET', null,
+        '?estado=eq.activa&select=id,anio,nombre&order=anio.desc&limit=1'))[0]
+        || (await supaFetch('temporada', 'GET', null, '?select=id,anio,nombre&order=anio.desc&limit=1'))[0];
+      if (!t) throw new Error('No hay temporada cargada');
+      estEscuelaCache.temporadaId = t.id;
+      estEscuelaCache.temporadaAnio = t.anio;
+      estEscuelaCache.temporadaNombre = t.nombre || String(t.anio);
+    }
+    const [escuelas, alumnos, tela, avance] = await Promise.all([
+      estEscuelaCache.escuelas || supaFetchAll('escuela',
+        '?activa=eq.true&select=id,alias,codigo_cde,nombre,director,distrito,municipio&order=alias.asc'),
+      estEscuelaCache.alumnos || supaFetchAll('alumno',
+        `?temporada_id=eq.${estEscuelaCache.temporadaId}&activo=eq.true&select=escuela_id,nivel,ciclo,sexo,prenda_top,prenda_bottom&limit=10000`),
+      estEscuelaCache.tela || supaFetchAll('contrato_escuela',
+        `?anio=eq.${estEscuelaCache.temporadaAnio}&select=escuela_id,tela_celeste_yd,tela_blanca_yd,tela_azul_yd,tela_beige_yd`),
+      estEscuelaCache.avance || supaFetchAll('vw_contrato_avance',
+        `?anio=eq.${estEscuelaCache.temporadaAnio}&order=monto_contratado.desc`),
+    ]);
+    estEscuelaCache.escuelas = escuelas;
+    estEscuelaCache.alumnos = alumnos;
+    estEscuelaCache.tela = tela;
+    estEscuelaCache.avance = avance;
+    renderEstEscuela();
+  } catch (e) {
+    root.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+  }
+}
+
+function onEstEscuelaSel(val) {
+  estEscuelaCache.escuelaSel = val || '';
+  renderEstEscuela();
+}
+function refrescarEstEscuela() {
+  estEscuelaCache.escuelas = null;
+  estEscuelaCache.alumnos = null;
+  estEscuelaCache.tela = null;
+  estEscuelaCache.avance = null;
+  initEstEscuela();
+}
+
+function renderEstEscuela() {
+  const root = document.getElementById('est-sub-escuela-view');
+  if (!root) return;
+  const c = estEscuelaCache;
+  const escuelas = c.escuelas || [];
+  const esc = escuelas.find(e => e.id === c.escuelaSel) || null;
+  const alumnos = (c.alumnos || []).filter(a => !c.escuelaSel || a.escuela_id === c.escuelaSel);
+
+  const fmtN = (n) => Number(n||0).toLocaleString();
+  const fmtUSD = (n) => '$' + Number(n||0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtYd = (n) => n > 0 ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' yd' : '—';
+  const pct = (n,d) => d > 0 ? Math.round((n/d)*100) : 0;
+
+  // ─── Selector compartido + cabecera ────────────────────────────────
+  const selectorHtml = `
+    <div class="card" style="padding:10px;margin-bottom:10px">
+      <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">
+        <div class="field" style="margin:0">
+          <label>Escuela (vacío = todas)</label>
+          <select onchange="onEstEscuelaSel(this.value)">
+            <option value="">Todas las escuelas</option>
+            ${escuelas.map(e => `<option value="${e.id}" ${c.escuelaSel === e.id ? 'selected' : ''}>${e.alias || e.nombre}${e.codigo_cde ? ' · '+e.codigo_cde : ''}</option>`).join('')}
+          </select>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="refrescarEstEscuela()">🔄 Refrescar</button>
+      </div>
+      ${esc ? `
+        <div style="margin-top:10px;padding:10px 12px;border-radius:8px;background:linear-gradient(135deg,#0065CC,#004999);color:white">
+          <div style="font-size:11px;opacity:0.8">${(c.temporadaNombre||'').toUpperCase()} · ESCUELA</div>
+          <div style="font-size:18px;font-weight:700;margin-top:2px">${esc.nombre || esc.alias || '—'}</div>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:12px;opacity:0.95">
+            ${esc.codigo_cde ? `<div>CDE <strong>${esc.codigo_cde}</strong></div>` : ''}
+            ${esc.alias ? `<div>Alias <strong>${esc.alias}</strong></div>` : ''}
+            ${esc.director ? `<div>Director: ${esc.director}</div>` : ''}
+            ${esc.municipio ? `<div>${esc.municipio}${esc.distrito ? ' / '+esc.distrito : ''}</div>` : ''}
+          </div>
+        </div>` : ''}
+    </div>
+  `;
+
+  // ─── SECCIÓN 1: Tallaje (nivel × sexo) ─────────────────────────────
+  const tStats = ESCN_NIVELES.map(n => {
+    const enNivel = alumnos.filter(n.match);
+    const acc = (sexo) => {
+      const grupo = enNivel.filter(a => a.sexo === sexo);
+      const tallados = grupo.filter(a => a.prenda_top && a.prenda_bottom).length;
+      return { total: grupo.length, tallados };
+    };
+    return { ...n, M: acc('M'), F: acc('F') };
+  });
+  const tTot = { M:{total:0,tallados:0}, F:{total:0,tallados:0},
+    cargados: alumnos.length, tallados: alumnos.filter(a => a.prenda_top && a.prenda_bottom).length };
+  tStats.forEach(s => { tTot.M.total+=s.M.total; tTot.M.tallados+=s.M.tallados; tTot.F.total+=s.F.total; tTot.F.tallados+=s.F.tallados; });
+
+  const tallajeHtml = `
+    <details open style="margin-bottom:10px">
+      <summary style="cursor:pointer;list-style:none;padding:10px 14px;background:white;border:1px solid var(--borde);border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
+        <span>📊 Tallaje por nivel × sexo</span><span style="opacity:0.6;font-size:11px">▼</span>
+      </summary>
+      <div style="border:1px solid var(--borde);border-top:none;border-radius:0 0 8px 8px;padding:10px;background:white">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:10px">
+          <div class="card" style="padding:8px;text-align:center"><div style="font-size:10px;color:#666">Cargados</div><div style="font-size:20px;font-weight:700">${fmtN(tTot.cargados)}</div></div>
+          <div class="card" style="padding:8px;text-align:center"><div style="font-size:10px;color:#666">Tallados</div><div style="font-size:20px;font-weight:700;color:var(--verde)">${fmtN(tTot.tallados)}</div><div style="font-size:10px;color:#888">${pct(tTot.tallados,tTot.cargados)}%</div></div>
+          <div class="card" style="padding:8px;text-align:center"><div style="font-size:10px;color:#666">M tallado</div><div style="font-size:20px;font-weight:700;color:var(--azul)">${fmtN(tTot.M.tallados)}</div><div style="font-size:10px;color:#888">de ${tTot.M.total}</div></div>
+          <div class="card" style="padding:8px;text-align:center"><div style="font-size:10px;color:#666">F tallado</div><div style="font-size:20px;font-weight:700;color:#c2185b">${fmtN(tTot.F.tallados)}</div><div style="font-size:10px;color:#888">de ${tTot.F.total}</div></div>
+        </div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:520px">
+            <thead><tr style="background:#FAFAFA">
+              <th style="padding:8px;text-align:left">Nivel</th>
+              <th style="padding:8px;text-align:right">M tallado</th><th style="padding:8px;text-align:right">M total</th>
+              <th style="padding:8px;text-align:right">F tallado</th><th style="padding:8px;text-align:right">F total</th>
+              <th style="padding:8px;text-align:right">Total tallado</th><th style="padding:8px;text-align:right">% avance</th>
+            </tr></thead>
+            <tbody>
+              ${tStats.map(s => {
+                const tt = s.M.tallados + s.F.tallados, tn = s.M.total + s.F.total;
+                return `<tr style="border-top:1px solid #EEE">
+                  <td style="padding:6px 8px;font-weight:600">${s.label}</td>
+                  <td style="padding:6px 8px;text-align:right;color:var(--azul);font-weight:600">${s.M.tallados}</td>
+                  <td style="padding:6px 8px;text-align:right;color:#888">${s.M.total}</td>
+                  <td style="padding:6px 8px;text-align:right;color:#c2185b;font-weight:600">${s.F.tallados}</td>
+                  <td style="padding:6px 8px;text-align:right;color:#888">${s.F.total}</td>
+                  <td style="padding:6px 8px;text-align:right;font-weight:700">${tt}</td>
+                  <td style="padding:6px 8px;text-align:right">${pct(tt,tn)}%</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+            <tfoot><tr style="border-top:2px solid #CCC;background:#FAFAFA;font-weight:700">
+              <td style="padding:8px">TOTAL</td>
+              <td style="padding:8px;text-align:right;color:var(--azul)">${tTot.M.tallados}</td>
+              <td style="padding:8px;text-align:right">${tTot.M.total}</td>
+              <td style="padding:8px;text-align:right;color:#c2185b">${tTot.F.tallados}</td>
+              <td style="padding:8px;text-align:right">${tTot.F.total}</td>
+              <td style="padding:8px;text-align:right">${tTot.tallados}</td>
+              <td style="padding:8px;text-align:right">${pct(tTot.tallados,tTot.cargados)}%</td>
+            </tr></tfoot>
+          </table>
+        </div>
+      </div>
+    </details>
+  `;
+
+  // ─── SECCIÓN 2: Contrato (piezas + monto vs entregado) ─────────────
+  const avance = c.avance || [];
+  const avanceFilt = esc
+    ? avance.filter(r => (esc.codigo_cde && r.codigo_cde === esc.codigo_cde)
+        || (esc.alias && r.alias && r.alias === esc.alias))
+    : avance;
+  const sumA = (k) => avanceFilt.reduce((s,r)=> s + (Number(r[k])||0), 0);
+  const cTot = {
+    contratado: sumA('piezas_contratadas'), solicitadas: sumA('piezas_solicitadas'),
+    entregadas: sumA('piezas_entregadas'), pendientes: sumA('piezas_pendientes'),
+    monto: sumA('monto_contratado'), montoL1: sumA('monto_lote1'), montoL2: sumA('monto_lote2'),
+  };
+  const contratoHtml = `
+    <details ${esc ? 'open' : ''} style="margin-bottom:10px">
+      <summary style="cursor:pointer;list-style:none;padding:10px 14px;background:white;border:1px solid var(--borde);border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
+        <span>📑 Contrato vs entregado <span style="font-weight:400;color:#888;font-size:11px">(${c.temporadaAnio})</span></span><span style="opacity:0.6;font-size:11px">▼</span>
+      </summary>
+      <div style="border:1px solid var(--borde);border-top:none;border-radius:0 0 8px 8px;padding:10px;background:white">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:${esc?'0':'10px'}">
+          <div class="card" style="padding:8px;text-align:center"><div style="font-size:10px;color:#666">Piezas contratadas</div><div style="font-size:20px;font-weight:700">${fmtN(cTot.contratado)}</div></div>
+          <div class="card" style="padding:8px;text-align:center"><div style="font-size:10px;color:#666">Entregadas</div><div style="font-size:20px;font-weight:700;color:var(--verde)">${fmtN(cTot.entregadas)}</div><div style="font-size:10px;color:#888">${fmtN(cTot.solicitadas)} solicitadas</div></div>
+          <div class="card" style="padding:8px;text-align:center"><div style="font-size:10px;color:#666">Pendientes</div><div style="font-size:20px;font-weight:700;color:var(--naranja)">${fmtN(cTot.pendientes)}</div></div>
+          <div class="card" style="padding:8px;text-align:center"><div style="font-size:10px;color:#666">Monto contratado</div><div style="font-size:20px;font-weight:700;color:var(--azul)">${fmtUSD(cTot.monto)}</div><div style="font-size:10px;color:#888">L1 ${fmtUSD(cTot.montoL1)} · L2 ${fmtUSD(cTot.montoL2)}</div></div>
+        </div>
+        ${esc ? (avanceFilt.length === 0
+          ? `<div class="text-muted" style="padding:10px;text-align:center;font-size:12px">Sin contrato cargado para esta escuela en ${c.temporadaAnio}.</div>`
+          : '')
+        : `<div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:760px">
+              <thead><tr style="background:#FAFAFA">
+                <th style="padding:8px;text-align:left">Escuela</th><th style="padding:8px;text-align:left">Proveedor</th>
+                <th style="padding:8px;text-align:right">$ Total</th><th style="padding:8px;text-align:right">Solicit.</th>
+                <th style="padding:8px;text-align:right">Entreg.</th><th style="padding:8px;text-align:right">Pend.</th><th style="padding:8px;text-align:right">% Av.</th>
+              </tr></thead>
+              <tbody>
+                ${avanceFilt.length === 0 ? `<tr><td colspan="7" style="padding:16px;text-align:center;color:#888">Sin contratos para ${c.temporadaAnio}.</td></tr>`
+                : avanceFilt.map(r => {
+                  const p = Number(r.porcentaje_avance)||0;
+                  const cp = p >= 80 ? 'var(--verde)' : (p >= 40 ? 'var(--naranja)' : '#888');
+                  return `<tr style="border-top:1px solid #EEE">
+                    <td style="padding:6px 8px"><div style="font-weight:600">${r.alias || r.escuela_nombre}</div>${r.codigo_cde?`<div style="font-size:10px;color:#888">CDE ${r.codigo_cde}</div>`:''}</td>
+                    <td style="padding:6px 8px;color:#555">${r.persona || '—'}</td>
+                    <td style="padding:6px 8px;text-align:right;color:var(--azul);font-weight:600">${fmtUSD(r.monto_contratado)}</td>
+                    <td style="padding:6px 8px;text-align:right">${fmtN(r.piezas_solicitadas)}</td>
+                    <td style="padding:6px 8px;text-align:right;color:var(--verde);font-weight:600">${fmtN(r.piezas_entregadas)}</td>
+                    <td style="padding:6px 8px;text-align:right;color:${p<100?'var(--naranja)':'#888'}">${fmtN(r.piezas_pendientes)}</td>
+                    <td style="padding:6px 8px;text-align:right;color:${cp};font-weight:700">${p}%</td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>`}
+      </div>
+    </details>
+  `;
+
+  // ─── SECCIÓN 3: Tela / Yardaje (necesaria vs recibida) ─────────────
+  const yardasPorColor = { celeste:0, blanca:0, azul:0, beige:0 };
+  for (const n of ESCN_NIVELES) {
+    const enNivel = alumnos.filter(n.match);
+    const m = enNivel.filter(a => a.sexo === 'M');
+    const f = enNivel.filter(a => a.sexo === 'F');
+    const mTop = m.filter(a=>a.prenda_top).length, fTop = f.filter(a=>a.prenda_top).length;
+    const mBot = m.filter(a=>a.prenda_bottom).length, fBot = f.filter(a=>a.prenda_bottom).length;
+    const fact = ESCN_FACTORES[n.key] || {};
+    for (const [color, factor] of Object.entries(fact)) {
+      const esTop = color === 'celeste' || color === 'blanca';
+      yardasPorColor[color] += (esTop?mTop:mBot)*factor.M + (esTop?fTop:fBot)*factor.F;
+    }
+  }
+  const telaFilt = (c.tela || []).filter(t => !c.escuelaSel || t.escuela_id === c.escuelaSel);
+  const recibida = { celeste:0, blanca:0, azul:0, beige:0 };
+  for (const t of telaFilt) {
+    recibida.celeste += Number(t.tela_celeste_yd)||0;
+    recibida.blanca  += Number(t.tela_blanca_yd)||0;
+    recibida.azul    += Number(t.tela_azul_yd)||0;
+    recibida.beige   += Number(t.tela_beige_yd)||0;
+  }
+  const totalUtil = Object.values(yardasPorColor).reduce((s,v)=>s+v,0);
+  const totalRecib = Object.values(recibida).reduce((s,v)=>s+v,0);
+  const fmtDiff = (n) => Math.abs(n) < 0.01 ? '—' : (n>0?'+':'') + n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' yd';
+  const telaHtml = `
+    <details style="margin-bottom:10px">
+      <summary style="cursor:pointer;list-style:none;padding:10px 14px;background:white;border:1px solid var(--borde);border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
+        <span>📐 Tela / Yardaje — necesaria vs recibida</span><span style="opacity:0.6;font-size:11px">▼</span>
+      </summary>
+      <div style="border:1px solid var(--borde);border-top:none;border-radius:0 0 8px 8px;padding:10px;background:white">
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:520px">
+            <thead><tr style="background:#FAFAFA">
+              <th style="padding:8px;text-align:left">Color</th><th style="padding:8px;text-align:right">Recibida</th>
+              <th style="padding:8px;text-align:right">Utilizada (cálculo)</th><th style="padding:8px;text-align:right">Diferencia</th><th style="padding:8px;text-align:left">Acción</th>
+            </tr></thead>
+            <tbody>
+              ${Object.entries(ESCN_COLORES).map(([k,col]) => {
+                const diff = recibida[k] - yardasPorColor[k];
+                const acc = diff > 0.5 ? '↩ devolver' : (diff < -0.5 ? '➕ solicitar' : '✓');
+                const ac = diff > 0.5 ? 'var(--verde)' : (diff < -0.5 ? 'var(--naranja)' : '#888');
+                return `<tr style="border-top:1px solid #EEE">
+                  <td style="padding:6px 8px;border-left:4px solid ${col.border};font-weight:600">${col.label}</td>
+                  <td style="padding:6px 8px;text-align:right">${fmtYd(recibida[k])}</td>
+                  <td style="padding:6px 8px;text-align:right;color:var(--azul)">${fmtYd(yardasPorColor[k])}</td>
+                  <td style="padding:6px 8px;text-align:right;font-weight:700;color:${ac}">${fmtDiff(diff)}</td>
+                  <td style="padding:6px 8px;color:${ac}">${acc}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+            <tfoot><tr style="border-top:2px solid #CCC;background:#FAFAFA;font-weight:700">
+              <td style="padding:8px">TOTAL</td>
+              <td style="padding:8px;text-align:right">${fmtYd(totalRecib)}</td>
+              <td style="padding:8px;text-align:right;color:var(--azul)">${fmtYd(totalUtil)}</td>
+              <td style="padding:8px;text-align:right;color:${(totalRecib-totalUtil)>0?'var(--verde)':((totalRecib-totalUtil)<0?'var(--naranja)':'#888')}">${fmtDiff(totalRecib-totalUtil)}</td>
+              <td></td>
+            </tr></tfoot>
+          </table>
+        </div>
+        <div style="padding:8px 4px 0;font-size:11px;color:#666">
+          💡 <strong>↩ devolver</strong>: sobra tela · <strong>➕ solicitar</strong>: falta pedir.
+          Si la tela recibida está en 0, cargala en 📋 Registro → ✏️ escuela → "Tela recibida".
+        </div>
+      </div>
+    </details>
+  `;
+
+  root.innerHTML = selectorHtml + tallajeHtml + contratoHtml + telaHtml;
+}
+
 // +++++++++++++++++++ busqueda_global.js +++++++++++++++++++
 // ══════════════════════════════════════════════════════════════════════
 // BÚSQUEDA GLOBAL EN EL HEADER
@@ -5597,466 +5657,6 @@ function renderCostos() {
           </tfoot>
         </table>
       </div>
-    </div>
-  `;
-}
-
-// +++++++++++++++++++ yardaje.js +++++++++++++++++++
-// ══════════════════════════════════════════════════════════════════════
-// YARDAJE — tela necesaria por color (portado del RESUMEN del Excel)
-// Factor de yardaje por nivel × sexo × color de tela. Suma yardas
-// necesarias para cubrir la demanda tallada.
-// ══════════════════════════════════════════════════════════════════════
-
-// Factores yardas/alumno extraídos del RESUMEN del Excel (rows 15-24).
-// Estructura: { nivel: { color: { M: factor, F: factor } } }
-// Top = camisas/blusas (color celeste o blanca según nivel)
-// Bot = pantalones/faldas (color azul o beige según nivel)
-const YARDAJE_FACTORES = {
-  // PARV usa celeste para top y azul para bot
-  PARV:    { celeste: { M: 0.75, F: 0.75 }, azul:   { M: 0.75, F: 0.60 } },
-  '1CICLO':{ blanca:  { M: 1.00, F: 1.00 }, azul:   { M: 1.00, F: 0.75 } },
-  '2CICLO':{ blanca:  { M: 1.25, F: 1.25 }, azul:   { M: 1.25, F: 1.00 } },
-  '3CICLO':{ blanca:  { M: 1.50, F: 1.50 }, azul:   { M: 1.50, F: 1.25 } },
-  BACH:    { blanca:  { M: 1.50, F: 1.50 }, beige:  { M: 1.65, F: 1.50 } },
-};
-
-const YARDAJE_NIVELES = [
-  { key:'PARV',    label:'Parvularia',   match:(a)=> a.nivel === 'PARV' },
-  { key:'1CICLO',  label:'1er Ciclo',    match:(a)=> a.nivel === 'BASICA' && a.ciclo === 1 },
-  { key:'2CICLO',  label:'2do Ciclo',    match:(a)=> a.nivel === 'BASICA' && a.ciclo === 2 },
-  { key:'3CICLO',  label:'3er Ciclo',    match:(a)=> a.nivel === 'BASICA' && a.ciclo === 3 },
-  { key:'BACH',    label:'Bachillerato', match:(a)=> a.nivel === 'BACH' },
-];
-
-const YARDAJE_COLORES = {
-  celeste: { label:'Tela Celeste', hex:'#8EC5E8', border:'#6AA5C8' },
-  blanca:  { label:'Tela Blanca',  hex:'#FFFFFF', border:'#BBB' },
-  azul:    { label:'Tela Azul',    hex:'#1F4E79', border:'#1F4E79', textWhite: true },
-  beige:   { label:'Tela Beige',   hex:'#D4C59E', border:'#B0A07A' },
-};
-
-let yardajeCache = {
-  temporadaId: null,
-  temporadaAnio: null,
-  escuelas: null,
-  alumnos: null,
-  contratos: null,  // [{escuela_id, tela_celeste_yd, tela_blanca_yd, tela_azul_yd, tela_beige_yd}]
-  escuelaSel: '',
-};
-
-async function initYardaje() {
-  const root = document.getElementById('est-sub-yardaje-view');
-  if (!root) return;
-  root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando yardaje...</div>';
-
-  try {
-    if (!yardajeCache.temporadaId) {
-      const t = (await supaFetch('temporada', 'GET', null,
-        '?estado=eq.activa&select=id,anio,nombre&order=anio.desc&limit=1'))[0]
-        || (await supaFetch('temporada', 'GET', null,
-        '?select=id,anio,nombre&order=anio.desc&limit=1'))[0];
-      if (!t) throw new Error('No hay temporada cargada');
-      yardajeCache.temporadaId = t.id;
-      yardajeCache.temporadaAnio = t.anio;
-    }
-    if (!yardajeCache.escuelas) {
-      yardajeCache.escuelas = await supaFetchAll('escuela',
-        '?activa=eq.true&select=id,alias,codigo_cde,nombre&order=alias.asc');
-    }
-    if (!yardajeCache.alumnos) {
-      yardajeCache.alumnos = await supaFetchAll('alumno',
-        `?temporada_id=eq.${yardajeCache.temporadaId}&activo=eq.true` +
-        '&select=escuela_id,nivel,ciclo,sexo,prenda_top,prenda_bottom');
-    }
-    if (!yardajeCache.contratos) {
-      yardajeCache.contratos = await supaFetchAll('contrato_escuela',
-        `?anio=eq.${yardajeCache.temporadaAnio}&select=escuela_id,tela_celeste_yd,tela_blanca_yd,tela_azul_yd,tela_beige_yd`);
-    }
-    renderYardaje();
-  } catch (e) {
-    root.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
-  }
-}
-
-function onYardajeEscuelaSel(val) {
-  yardajeCache.escuelaSel = val || '';
-  renderYardaje();
-}
-
-// Permite que initYardaje refresque todo (incluyendo contratos)
-// Usado por el botón "🔄 Refrescar".
-function refrescarYardaje() {
-  yardajeCache.escuelas = null;
-  yardajeCache.alumnos = null;
-  yardajeCache.contratos = null;
-  initYardaje();
-}
-
-function renderYardaje() {
-  const root = document.getElementById('est-sub-yardaje-view');
-  if (!root) return;
-  const escuelas = yardajeCache.escuelas || [];
-  const alumnos = (yardajeCache.alumnos || []).filter(a =>
-    !yardajeCache.escuelaSel || a.escuela_id === yardajeCache.escuelaSel);
-
-  // ─── Calcular yardaje por nivel × color × sexo ─────────────────────
-  // Para cada nivel agrupamos por sexo, contamos los tallados (top/bot),
-  // y aplicamos el factor por color según las reglas del Excel.
-  const yardasPorColor = { celeste: 0, blanca: 0, azul: 0, beige: 0 };
-  const detalle = [];
-  for (const n of YARDAJE_NIVELES) {
-    const enNivel = alumnos.filter(n.match);
-    const m = enNivel.filter(a => a.sexo === 'M');
-    const f = enNivel.filter(a => a.sexo === 'F');
-    const mTop = m.filter(a => a.prenda_top).length;
-    const fTop = f.filter(a => a.prenda_top).length;
-    const mBot = m.filter(a => a.prenda_bottom).length;
-    const fBot = f.filter(a => a.prenda_bottom).length;
-    const fact = YARDAJE_FACTORES[n.key] || {};
-    const row = { ...n, M: m.length, F: f.length, mTop, fTop, mBot, fBot, yardas: {} };
-    for (const [color, factor] of Object.entries(fact)) {
-      // Top o bottom según el color: celeste/blanca = top, azul/beige = bottom
-      const esTop = color === 'celeste' || color === 'blanca';
-      const cantM = esTop ? mTop : mBot;
-      const cantF = esTop ? fTop : fBot;
-      const yd = cantM * factor.M + cantF * factor.F;
-      row.yardas[color] = { M: cantM * factor.M, F: cantF * factor.F, total: yd, factor };
-      yardasPorColor[color] += yd;
-    }
-    detalle.push(row);
-  }
-
-  const escSel = escuelas.find(e => e.id === yardajeCache.escuelaSel);
-  const fmtYd = (n) => n > 0 ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' yd' : '—';
-  const fmtDiff = (n) => {
-    if (Math.abs(n) < 0.01) return '—';
-    const sign = n > 0 ? '+' : '';
-    return sign + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' yd';
-  };
-  const totalGeneral = Object.values(yardasPorColor).reduce((s, v) => s + v, 0);
-
-  // ─── Tela recibida según contrato — filtrada por escuela si aplica ──
-  const contratos = (yardajeCache.contratos || []).filter(c =>
-    !yardajeCache.escuelaSel || c.escuela_id === yardajeCache.escuelaSel);
-  const telaRecibida = { celeste: 0, blanca: 0, azul: 0, beige: 0 };
-  for (const c of contratos) {
-    telaRecibida.celeste += Number(c.tela_celeste_yd) || 0;
-    telaRecibida.blanca  += Number(c.tela_blanca_yd)  || 0;
-    telaRecibida.azul    += Number(c.tela_azul_yd)    || 0;
-    telaRecibida.beige   += Number(c.tela_beige_yd)   || 0;
-  }
-  const totalRecibida = Object.values(telaRecibida).reduce((s, v) => s + v, 0);
-  const balance = {
-    celeste: telaRecibida.celeste - yardasPorColor.celeste,
-    blanca:  telaRecibida.blanca  - yardasPorColor.blanca,
-    azul:    telaRecibida.azul    - yardasPorColor.azul,
-    beige:   telaRecibida.beige   - yardasPorColor.beige,
-  };
-  const totalBalance = totalRecibida - totalGeneral;
-
-  root.innerHTML = `
-    <!-- Selector escuela -->
-    <div class="card" style="padding:10px;margin-bottom:10px">
-      <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">
-        <div class="field" style="margin:0">
-          <label>Escuela (vacío = todas)</label>
-          <select onchange="onYardajeEscuelaSel(this.value)">
-            <option value="">Todas las escuelas</option>
-            ${escuelas.map(e => `<option value="${e.id}" ${yardajeCache.escuelaSel === e.id ? 'selected' : ''}>${e.alias || e.nombre}${e.codigo_cde ? ' · '+e.codigo_cde : ''}</option>`).join('')}
-          </select>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="refrescarYardaje()">🔄 Refrescar</button>
-      </div>
-    </div>
-
-    <!-- Resumen por color (las KPIs grandes) -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px">
-      ${Object.entries(YARDAJE_COLORES).map(([key, c]) => `
-        <div class="card" style="padding:10px;text-align:center;border-top:4px solid ${c.border}">
-          <div style="font-size:10px;color:#666">${c.label}</div>
-          <div style="font-size:22px;font-weight:700;color:#333">${fmtYd(yardasPorColor[key])}</div>
-        </div>
-      `).join('')}
-    </div>
-
-    <!-- Total y aviso -->
-    <div class="alert alert-info" style="font-size:11px;margin-bottom:10px">
-      <strong>Utilizado total: ${fmtYd(totalGeneral)}</strong> ${escSel ? 'para '+(escSel.alias || escSel.nombre) : 'para todas las escuelas'}.
-      Factores del RESUMEN del Excel (yardas por alumno tallado).
-      Solo considera alumnos con prenda cargada — si subís el % de tallaje, sube el consumo.
-    </div>
-
-    <!-- Balance: Recibida vs Utilizada vs Diferencia -->
-    <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
-      <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">⚖️ Balance: tela recibida vs utilizada</div>
-      <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:520px">
-          <thead>
-            <tr style="background:#FAFAFA">
-              <th style="padding:8px;text-align:left">Color</th>
-              <th style="padding:8px;text-align:right">Recibida</th>
-              <th style="padding:8px;text-align:right">Utilizada (cálculo)</th>
-              <th style="padding:8px;text-align:right">Diferencia</th>
-              <th style="padding:8px;text-align:left">Acción</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${Object.entries(YARDAJE_COLORES).map(([k, c]) => {
-              const diff = balance[k];
-              const acc = diff > 0.5 ? '↩ devolver' : (diff < -0.5 ? '➕ solicitar' : '✓');
-              const accColor = diff > 0.5 ? 'var(--verde)' : (diff < -0.5 ? 'var(--naranja)' : '#888');
-              return `
-                <tr style="border-top:1px solid #EEE">
-                  <td style="padding:6px 8px;border-left:4px solid ${c.border};font-weight:600">${c.label}</td>
-                  <td style="padding:6px 8px;text-align:right">${fmtYd(telaRecibida[k])}</td>
-                  <td style="padding:6px 8px;text-align:right;color:var(--azul)">${fmtYd(yardasPorColor[k])}</td>
-                  <td style="padding:6px 8px;text-align:right;font-weight:700;color:${accColor}">${fmtDiff(diff)}</td>
-                  <td style="padding:6px 8px;color:${accColor}">${acc}</td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-          <tfoot>
-            <tr style="border-top:2px solid #CCC;background:#FAFAFA;font-weight:700">
-              <td style="padding:8px">TOTAL</td>
-              <td style="padding:8px;text-align:right">${fmtYd(totalRecibida)}</td>
-              <td style="padding:8px;text-align:right;color:var(--azul)">${fmtYd(totalGeneral)}</td>
-              <td style="padding:8px;text-align:right;color:${totalBalance>0?'var(--verde)':(totalBalance<0?'var(--naranja)':'#888')}">${fmtDiff(totalBalance)}</td>
-              <td></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-      <div style="padding:8px 12px;font-size:11px;color:#666;background:#FAFAFA">
-        💡 <strong>↩ devolver</strong>: sobra en bodega · <strong>➕ solicitar</strong>: falta pedir.
-        Si no hay datos de tela recibida (todo en 0), cargalos en 📋 Registro → ✏️ escuela → sección "Tela recibida".
-      </div>
-    </div>
-
-    <!-- Tabla detalle por nivel × color -->
-    <div class="card" style="padding:0;overflow:hidden">
-      <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">📐 Yardaje por nivel × color</div>
-      <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:680px">
-          <thead>
-            <tr style="background:#FAFAFA">
-              <th style="padding:8px;text-align:left">Nivel</th>
-              <th style="padding:8px;text-align:right">M</th>
-              <th style="padding:8px;text-align:right">F</th>
-              <th style="padding:8px;text-align:right">Celeste</th>
-              <th style="padding:8px;text-align:right">Blanca</th>
-              <th style="padding:8px;text-align:right">Azul</th>
-              <th style="padding:8px;text-align:right">Beige</th>
-              <th style="padding:8px;text-align:right">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${detalle.map(d => {
-              const yds = d.yardas;
-              const totalNivel = Object.values(yds).reduce((s,y)=>s+y.total,0);
-              return `
-                <tr style="border-top:1px solid #EEE">
-                  <td style="padding:6px 8px;font-weight:600">${d.label}</td>
-                  <td style="padding:6px 8px;text-align:right;color:var(--azul)">${d.M}</td>
-                  <td style="padding:6px 8px;text-align:right;color:#c2185b">${d.F}</td>
-                  <td style="padding:6px 8px;text-align:right">${yds.celeste ? fmtYd(yds.celeste.total) : '—'}</td>
-                  <td style="padding:6px 8px;text-align:right">${yds.blanca ? fmtYd(yds.blanca.total) : '—'}</td>
-                  <td style="padding:6px 8px;text-align:right">${yds.azul ? fmtYd(yds.azul.total) : '—'}</td>
-                  <td style="padding:6px 8px;text-align:right">${yds.beige ? fmtYd(yds.beige.total) : '—'}</td>
-                  <td style="padding:6px 8px;text-align:right;font-weight:700;color:var(--verde)">${fmtYd(totalNivel)}</td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-          <tfoot>
-            <tr style="border-top:2px solid #CCC;background:#FAFAFA;font-weight:700">
-              <td style="padding:8px" colspan="3">TOTAL</td>
-              <td style="padding:8px;text-align:right">${fmtYd(yardasPorColor.celeste)}</td>
-              <td style="padding:8px;text-align:right">${fmtYd(yardasPorColor.blanca)}</td>
-              <td style="padding:8px;text-align:right">${fmtYd(yardasPorColor.azul)}</td>
-              <td style="padding:8px;text-align:right">${fmtYd(yardasPorColor.beige)}</td>
-              <td style="padding:8px;text-align:right;color:var(--verde)">${fmtYd(totalGeneral)}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </div>
-  `;
-}
-
-// +++++++++++++++++++ contratos.js +++++++++++++++++++
-// ══════════════════════════════════════════════════════════════════════
-// CONTRATOS — cruce contrato (Excel CONTRATO sheet) vs producido/entregado
-// Lee vw_contrato_avance: piezas/monto contratados + solicitadas/entregadas
-// ══════════════════════════════════════════════════════════════════════
-
-let contratosCache = {
-  rows: null,
-  anioFiltro: 2025,
-  personaFiltro: '',
-};
-
-async function initContratos() {
-  const root = document.getElementById('est-sub-contratos-view');
-  if (!root) return;
-  root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando contratos...</div>';
-
-  try {
-    contratosCache.rows = await supaFetchAll('vw_contrato_avance',
-      `?anio=eq.${contratosCache.anioFiltro}&order=monto_contratado.desc`);
-    renderContratos();
-  } catch (e) {
-    root.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
-  }
-}
-
-function onContratosPersonaFiltro(val) {
-  contratosCache.personaFiltro = val || '';
-  renderContratos();
-}
-
-function renderContratos() {
-  const root = document.getElementById('est-sub-contratos-view');
-  if (!root) return;
-  const all = contratosCache.rows || [];
-  const rows = contratosCache.personaFiltro
-    ? all.filter(r => r.persona === contratosCache.personaFiltro)
-    : all;
-
-  // KPIs agregados
-  const sum = (k) => rows.reduce((s, r) => s + (Number(r[k]) || 0), 0);
-  const tot = {
-    escuelas: rows.length,
-    contratado: sum('piezas_contratadas'),
-    solicitadas: sum('piezas_solicitadas'),
-    entregadas: sum('piezas_entregadas'),
-    pendientes: sum('piezas_pendientes'),
-    monto: sum('monto_contratado'),
-    montoL1: sum('monto_lote1'),
-    montoL2: sum('monto_lote2'),
-  };
-
-  // Personas únicas para filtro
-  const personas = [...new Set(all.map(r => r.persona).filter(Boolean))].sort();
-
-  const fmtUSD = (n) => '$' + Number(n||0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const fmtN = (n) => Number(n||0).toLocaleString();
-
-  root.innerHTML = `
-    <!-- Filtros -->
-    <div class="card" style="padding:10px;margin-bottom:10px">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;align-items:end">
-        <div class="field" style="margin:0">
-          <label>Año</label>
-          <select onchange="contratosCache.anioFiltro=parseInt(this.value); initContratos()">
-            <option value="2025" ${contratosCache.anioFiltro===2025?'selected':''}>2025</option>
-            <option value="2026" ${contratosCache.anioFiltro===2026?'selected':''}>2026</option>
-          </select>
-        </div>
-        <div class="field" style="margin:0">
-          <label>Proveedor</label>
-          <select onchange="onContratosPersonaFiltro(this.value)">
-            <option value="">Todos</option>
-            ${personas.map(p => `<option value="${p}" ${contratosCache.personaFiltro===p?'selected':''}>${p}</option>`).join('')}
-          </select>
-        </div>
-        <div style="text-align:right">
-          <button class="btn btn-ghost btn-sm" onclick="initContratos()">🔄 Refrescar</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- KPIs -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px">
-      <div class="card" style="padding:10px;text-align:center">
-        <div style="font-size:10px;color:#666">Escuelas con contrato</div>
-        <div style="font-size:22px;font-weight:700;color:#333">${tot.escuelas}</div>
-      </div>
-      <div class="card" style="padding:10px;text-align:center">
-        <div style="font-size:10px;color:#666">Piezas contratadas</div>
-        <div style="font-size:22px;font-weight:700;color:#333">${fmtN(tot.contratado)}</div>
-      </div>
-      <div class="card" style="padding:10px;text-align:center">
-        <div style="font-size:10px;color:#666">Piezas entregadas</div>
-        <div style="font-size:22px;font-weight:700;color:var(--verde)">${fmtN(tot.entregadas)}</div>
-        <div style="font-size:10px;color:#888">${tot.solicitadas} solicitadas</div>
-      </div>
-      <div class="card" style="padding:10px;text-align:center">
-        <div style="font-size:10px;color:#666">Pendientes</div>
-        <div style="font-size:22px;font-weight:700;color:var(--naranja)">${fmtN(tot.pendientes)}</div>
-      </div>
-      <div class="card" style="padding:10px;text-align:center">
-        <div style="font-size:10px;color:#666">Monto contratado</div>
-        <div style="font-size:22px;font-weight:700;color:var(--azul)">${fmtUSD(tot.monto)}</div>
-        <div style="font-size:10px;color:#888">L1 ${fmtUSD(tot.montoL1)} · L2 ${fmtUSD(tot.montoL2)}</div>
-      </div>
-    </div>
-
-    <!-- Tabla por escuela -->
-    <div class="card" style="padding:0;overflow:hidden">
-      <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">📑 Contrato vs avance por escuela (${contratosCache.anioFiltro})</div>
-      <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px">
-          <thead>
-            <tr style="background:#FAFAFA">
-              <th style="padding:8px;text-align:left">Escuela</th>
-              <th style="padding:8px;text-align:left">Proveedor</th>
-              <th style="padding:8px;text-align:right">Pz L1</th>
-              <th style="padding:8px;text-align:right">Pz L2</th>
-              <th style="padding:8px;text-align:right">$ L1</th>
-              <th style="padding:8px;text-align:right">$ L2</th>
-              <th style="padding:8px;text-align:right">$ Total</th>
-              <th style="padding:8px;text-align:right">Solicit.</th>
-              <th style="padding:8px;text-align:right">Entreg.</th>
-              <th style="padding:8px;text-align:right">Pend.</th>
-              <th style="padding:8px;text-align:right">% Avance</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.length === 0 ? `
-              <tr><td colspan="11" style="padding:20px;text-align:center;color:#888">Sin contratos cargados para ${contratosCache.anioFiltro}.</td></tr>
-            ` : rows.map(r => {
-              const pct = Number(r.porcentaje_avance) || 0;
-              const colorPct = pct >= 80 ? 'var(--verde)' : (pct >= 40 ? 'var(--naranja)' : '#888');
-              return `
-                <tr style="border-top:1px solid #EEE">
-                  <td style="padding:6px 8px">
-                    <div style="font-weight:600">${r.alias || r.escuela_nombre}</div>
-                    ${r.codigo_cde ? `<div style="font-size:10px;color:#888">CDE ${r.codigo_cde}</div>` : ''}
-                  </td>
-                  <td style="padding:6px 8px;color:#555">${r.persona || '—'}</td>
-                  <td style="padding:6px 8px;text-align:right">${fmtN(r.piezas_lote1)}</td>
-                  <td style="padding:6px 8px;text-align:right">${fmtN(r.piezas_lote2)}</td>
-                  <td style="padding:6px 8px;text-align:right;color:#888">${fmtUSD(r.monto_lote1)}</td>
-                  <td style="padding:6px 8px;text-align:right;color:#888">${fmtUSD(r.monto_lote2)}</td>
-                  <td style="padding:6px 8px;text-align:right;color:var(--azul);font-weight:600">${fmtUSD(r.monto_contratado)}</td>
-                  <td style="padding:6px 8px;text-align:right">${fmtN(r.piezas_solicitadas)}</td>
-                  <td style="padding:6px 8px;text-align:right;color:var(--verde);font-weight:600">${fmtN(r.piezas_entregadas)}</td>
-                  <td style="padding:6px 8px;text-align:right;color:${pct<100?'var(--naranja)':'#888'}">${fmtN(r.piezas_pendientes)}</td>
-                  <td style="padding:6px 8px;text-align:right;color:${colorPct};font-weight:700">${pct}%</td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-          <tfoot>
-            <tr style="border-top:2px solid #CCC;background:#FAFAFA;font-weight:700">
-              <td style="padding:8px" colspan="6">TOTAL</td>
-              <td style="padding:8px;text-align:right;color:var(--azul)">${fmtUSD(tot.monto)}</td>
-              <td style="padding:8px;text-align:right">${fmtN(tot.solicitadas)}</td>
-              <td style="padding:8px;text-align:right;color:var(--verde)">${fmtN(tot.entregadas)}</td>
-              <td style="padding:8px;text-align:right;color:var(--naranja)">${fmtN(tot.pendientes)}</td>
-              <td style="padding:8px;text-align:right">${tot.solicitadas > 0 ? Math.round(tot.entregadas/tot.solicitadas*100) : 0}%</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </div>
-
-    <div class="alert alert-info" style="font-size:11px;margin-top:10px">
-      <strong>Pz L1/L2:</strong> piezas contratadas por lote (del Excel CONTRATO).
-      <strong>Solicit/Entreg/Pend:</strong> derivado de la tabla <code>pedido</code> y entregas.
-      <strong>% Avance:</strong> entregadas / solicitadas. El Lote 2 está sin piezas explícitas en el Excel — la cantidad real corresponde a los 6,423 alumnos tallados en BASE.
     </div>
   `;
 }

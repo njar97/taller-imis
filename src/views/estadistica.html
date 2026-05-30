@@ -2,23 +2,14 @@
 <div id="view-estadistica" class="view">
   <div id="alert-estadistica"></div>
 
-  <!-- Sub-nav reingeniada (v32): "Por talla" es el reporte central y abre por
-       defecto. El resto (uso ocasional) vive en un cajón "Más reportes ▾"
-       colapsado. Inventario se eliminó (lo cubre Por talla con su columna de
-       Bodega) y Tallas críticas se fusionó en Por talla como el toggle
-       "🔥 Solo críticas". -->
+  <!-- Sub-nav reingeniada (v32): solo 2 reportes.
+       · 📊 Por talla  — central, abre por defecto (incluye toggle 🔥 Solo críticas).
+       · 📋 Por escuela — fusión de Tallaje + Contrato + Tela/Yardaje en un reporte.
+       Inventario y Tallas críticas se fusionaron en Por talla.
+       Histórico y Costos se movieron a la pestaña Config. -->
   <div class="card" style="padding:8px 10px;margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <button id="est-nav-tallas" class="btn btn-sm btn-primary" onclick="switchSubEst('tallas')">📊 Por talla</button>
-    <details id="est-mas-reportes" style="position:relative;margin:0">
-      <summary id="est-mas-reportes-summary" style="cursor:pointer;list-style:none;padding:6px 12px;border:1px solid var(--borde);border-radius:6px;background:white;font-size:13px;font-weight:600;color:#1F4E79;user-select:none;white-space:nowrap">📂 Más reportes ▾</summary>
-      <div style="position:absolute;top:calc(100% + 4px);left:0;z-index:50;background:white;border:1px solid var(--borde);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.15);padding:6px;display:flex;flex-direction:column;gap:2px;min-width:200px">
-        <button class="btn btn-ghost btn-sm" style="justify-content:flex-start;text-align:left" onclick="switchSubEst('escuela')">🏫 Por escuela</button>
-        <button class="btn btn-ghost btn-sm" style="justify-content:flex-start;text-align:left" onclick="switchSubEst('historico')">📈 Histórico</button>
-        <button class="btn btn-ghost btn-sm" style="justify-content:flex-start;text-align:left" onclick="switchSubEst('costos')">💰 Costos</button>
-        <button class="btn btn-ghost btn-sm" style="justify-content:flex-start;text-align:left" onclick="switchSubEst('yardaje')">📐 Yardaje</button>
-        <button class="btn btn-ghost btn-sm" style="justify-content:flex-start;text-align:left" onclick="switchSubEst('contratos')">📑 Contratos</button>
-      </div>
-    </details>
+    <button id="est-nav-escuela" class="btn btn-sm btn-ghost" onclick="switchSubEst('escuela')">📋 Por escuela</button>
   </div>
 
   <!-- SUB: Por talla — demanda por escuela cruzada con corte/producción/bodega/pool (reporte central) -->
@@ -26,30 +17,8 @@
     <div id="est-tallas-contenido"><div class="text-muted" style="padding:20px;text-align:center">Cargando resumen por talla...</div></div>
   </div>
 
-  <!-- SUB: Por escuela (RESUMEN del Excel) -->
+  <!-- SUB: Por escuela — Tallaje + Contrato + Tela/Yardaje (unificado, est_escuela.js) -->
   <div id="est-sub-escuela-view" style="display:none">
-    <div id="resumen-esc-contenido">
-      <div class="text-muted" style="padding:20px;text-align:center">Cargando estadística por escuela...</div>
-    </div>
-  </div>
-
-  <!-- SUB: Histórico -->
-  <div id="est-sub-historico-view" style="display:none">
-    <div id="historico-contenido"><div class="text-muted" style="padding:20px;text-align:center">Cargando datos históricos...</div></div>
-  </div>
-
-  <!-- SUB: Costos — mano de obra por nivel × sexo, precios del RESUMEN del Excel -->
-  <div id="est-sub-costos-view" style="display:none">
-    <div class="text-muted" style="padding:20px;text-align:center">Cargando costos...</div>
-  </div>
-
-  <!-- SUB: Yardaje — tela necesaria por color, factores del RESUMEN del Excel -->
-  <div id="est-sub-yardaje-view" style="display:none">
-    <div class="text-muted" style="padding:20px;text-align:center">Cargando yardaje...</div>
-  </div>
-
-  <!-- SUB: Contratos — cruce contrato (Excel) vs producido/entregado -->
-  <div id="est-sub-contratos-view" style="display:none">
-    <div class="text-muted" style="padding:20px;text-align:center">Cargando contratos...</div>
+    <div class="text-muted" style="padding:20px;text-align:center">Cargando reporte por escuela...</div>
   </div>
 </div>
