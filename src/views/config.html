@@ -121,9 +121,17 @@
         <button class="btn btn-ghost btn-sm" onclick="var d=document.getElementById('cfg-rep-hoja'); if(d){d.scrollIntoView({behavior:'smooth',block:'center'});}">Abrir ↓</button>
       </div>
 
-      <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
-        <div style="flex:1"><div style="font-weight:600;font-size:13px">🧾 Reportes PDF por escuela</div><div style="font-size:11px;color:#666">Tallaje / Empaque / Entrega. En Registro: elegí una escuela → menú de reportes.</div></div>
-        <button class="btn btn-ghost btn-sm" onclick="switchTab('registro')">Ir a Registro →</button>
+      <div style="padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+        <div style="display:flex;gap:10px;align-items:center">
+          <div style="flex:1"><div style="font-weight:600;font-size:13px">🧾 Reportes PDF por escuela</div><div style="font-size:11px;color:#666">Hoja de tallaje, lista de empaque y hoja de entrega.</div></div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:8px">
+          <select id="cfg-rep-pdf-escuela" style="flex:1;min-width:160px;padding:6px 8px">
+            <option value="">Tocá 🔄 para cargar las escuelas…</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="cfgCargarEscuelasPDF()" title="Cargar lista de escuelas">🔄</button>
+          <button class="btn btn-primary btn-sm" onclick="cfgAbrirReportesPDF()">🖨 Generar PDF</button>
+        </div>
       </div>
 
       <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
