@@ -405,7 +405,8 @@ function renderAlumnosGlobal() {
     <div class="card" style="padding:10px 12px;margin-bottom:10px">
       <!-- Visible siempre: búsqueda + nuevo alumno + refrescar -->
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
-        <input type="text" placeholder="🔍 Buscar nombre..." value="${c.busqueda}"
+        <input type="text" placeholder="🔍 Filtrar esta lista por nombre..." value="${c.busqueda}"
+          title="Filtra los alumnos ya cargados en esta lista. Para buscar en TODA la app, usá el buscador del encabezado (Ctrl+K)."
           oninput="alumnosGlobalCache.busqueda = this.value; alumnosGlobalCache.pagina = 1; scheduleRenderAlumnos()"
           style="flex:1;min-width:160px;padding:8px 12px;border:1px solid var(--borde);border-radius:6px;font-size:14px">
         <button class="btn btn-success btn-sm" onclick="abrirNuevoAlumno()">+ Nuevo alumno</button>

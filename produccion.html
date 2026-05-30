@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-30 15:00 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-05-30 15:01 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -460,9 +460,9 @@
       <span class="nav-brand-section">Producción <span class="nav-brand-ver">v32</span></span>
     </h1>
     <div id="buscador-wrap" class="buscador-wrap">
-      <input type="text" id="buscador-input" placeholder="🔍 Buscar... (Ctrl+K)"
+      <input type="text" id="buscador-input" placeholder="🔍 Buscar alumno o escuela (Ctrl+K)"
              oninput="buscadorOnInput(event)" onfocus="buscadorOnInput(event)"
-             autocomplete="off" title="Buscar alumno o escuela · Atajo: Ctrl/⌘ + K">
+             autocomplete="off" title="Buscá cualquier alumno o escuela de toda la app y saltá a su ficha · Atajo: Ctrl/⌘ + K">
       <div id="buscador-results" class="buscador-results" style="display:none"></div>
     </div>
     <div id="user-chip" class="user-chip" style="display:none">
@@ -14705,7 +14705,8 @@ function renderAlumnosGlobal() {
     <div class="card" style="padding:10px 12px;margin-bottom:10px">
       <!-- Visible siempre: búsqueda + nuevo alumno + refrescar -->
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
-        <input type="text" placeholder="🔍 Buscar nombre..." value="${c.busqueda}"
+        <input type="text" placeholder="🔍 Filtrar esta lista por nombre..." value="${c.busqueda}"
+          title="Filtra los alumnos ya cargados en esta lista. Para buscar en TODA la app, usá el buscador del encabezado (Ctrl+K)."
           oninput="alumnosGlobalCache.busqueda = this.value; alumnosGlobalCache.pagina = 1; scheduleRenderAlumnos()"
           style="flex:1;min-width:160px;padding:8px 12px;border:1px solid var(--borde);border-radius:6px;font-size:14px">
         <button class="btn btn-success btn-sm" onclick="abrirNuevoAlumno()">+ Nuevo alumno</button>
