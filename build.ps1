@@ -55,7 +55,6 @@ $jsOrder = @(
 $viewsOrder = @(
     'inicio.html',
     'corte.html',
-    'nuevo.html',
     'trazo.html',
     'tendido.html',
     'bulto.html',

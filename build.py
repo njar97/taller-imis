@@ -48,7 +48,6 @@ JS_ORDER = [
 VIEWS_ORDER = [
     "inicio.html",
     "corte.html",
-    "nuevo.html",
     "trazo.html",
     "tendido.html",
     "bulto.html",

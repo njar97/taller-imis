@@ -302,9 +302,12 @@ function irA(seccion) {
 }
 
 function volverNuevo() {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.getElementById('view-nuevo').classList.add('active');
-  document.querySelectorAll('.nav-tab')[0].classList.add('active');
+  // Vuelve a la pestaña Corte → sub-vista "Nuevo" (antes mostraba el menú
+  // huérfano view-nuevo, duplicado del sub-nav de Corte; ya eliminado).
+  const corteTab = Array.from(document.querySelectorAll('.nav-tab'))
+    .find(t => (t.getAttribute('onclick') || '').includes("switchTab('corte'"));
+  if (typeof switchTab === 'function') switchTab('corte', corteTab);
+  if (typeof switchSubCorte === 'function') switchSubCorte('nuevo');
   window.scrollTo(0, 0);
 }
 
