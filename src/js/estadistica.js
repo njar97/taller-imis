@@ -1,46 +1,34 @@
 // ══════════════════════════════════════════════════════════════════════
 // ESTADÍSTICA — reportes cruzados (porteado del RESUMEN/ESTADISTICA del Excel)
-// Sub-tabs: Por escuela · Histórico · Inventario (pendiente) · Costos (pendiente)
+// Reingeniería v32: solo 2 reportes.
+//   · 📊 Por talla  — central, abre por defecto (con toggle 🔥 Solo críticas).
+//   · 📋 Por escuela — fusión de Tallaje + Contrato + Tela/Yardaje.
+// Inventario y Tallas críticas se fusionaron en Por talla.
+// Histórico y Costos se movieron a la pestaña Config.
 // ══════════════════════════════════════════════════════════════════════
 
-let estSubActual = 'escuela';
+let estSubActual = 'tallas';
 
 function initEstadistica() {
-  switchSubEst(estSubActual || 'escuela');
+  switchSubEst(estSubActual || 'tallas');
 }
 
 function switchSubEst(sub) {
   estSubActual = sub;
-  const subs = ['escuela', 'tallas', 'heatmap', 'historico', 'inventario', 'costos', 'yardaje', 'contratos'];
-  // Sincronizar el select (si fue cambio programático) — los botones
-  // legacy siguen funcionando si todavía existen en el DOM en algún lugar.
-  const sel = document.getElementById('est-sub-select');
-  if (sel && sel.value !== sub) sel.value = sub;
+  const subs = ['tallas', 'escuela'];
   subs.forEach(s => {
-    const btn = document.getElementById('est-sub-' + s);
+    const view = document.getElementById('est-sub-' + s + '-view');
+    if (view) view.style.display = (s === sub) ? '' : 'none';
+    const btn = document.getElementById('est-nav-' + s);
     if (btn) {
       btn.classList.toggle('btn-primary', s === sub);
       btn.classList.toggle('btn-ghost', s !== sub);
     }
-    const view = document.getElementById('est-sub-' + s + '-view');
-    if (view) view.style.display = (s === sub) ? '' : 'none';
   });
 
-  if (sub === 'escuela' && typeof initResumenEscuela === 'function') {
-    initResumenEscuela();
-  } else if (sub === 'tallas' && typeof initTallasResumen === 'function') {
+  if (sub === 'tallas' && typeof initTallasResumen === 'function') {
     initTallasResumen();
-  } else if (sub === 'heatmap' && typeof initHeatmapCritico === 'function') {
-    initHeatmapCritico();
-  } else if (sub === 'historico' && typeof initHistorico === 'function') {
-    initHistorico();
-  } else if (sub === 'inventario' && typeof initInventario === 'function') {
-    initInventario();
-  } else if (sub === 'costos' && typeof initCostos === 'function') {
-    initCostos();
-  } else if (sub === 'yardaje' && typeof initYardaje === 'function') {
-    initYardaje();
-  } else if (sub === 'contratos' && typeof initContratos === 'function') {
-    initContratos();
+  } else if (sub === 'escuela' && typeof initEstEscuela === 'function') {
+    initEstEscuela();
   }
 }

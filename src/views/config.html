@@ -1,4 +1,16 @@
 <div id="view-config" class="view">
+  <!-- Sesión: el correo y "cerrar sesión" se movieron acá desde el encabezado
+       (v32) para dejar el header limpio, solo con el buscador. -->
+  <div class="card" id="cfg-session-card" style="display:none">
+    <div class="config-item">
+      <div>
+        <div class="config-label">👤 Sesión</div>
+        <div class="config-sub" id="cfg-session-email">—</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="doLogout()">Cerrar sesión</button>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-title">⚙️ Configuración</div>
     <div class="config-item">
@@ -77,8 +89,73 @@
     </div>
   </div>
 
-  <!-- Hoja de entrega por escuela (PDF para director) -->
+  <!-- Índice de reportes (v32): lista única que apunta a TODOS los reportes,
+       sin moverlos de su lugar. Botón → navega a donde vive cada uno. -->
   <div class="card">
+    <div class="card-title">🗂️ Índice de reportes</div>
+    <div class="text-muted mb8" style="font-size:12px">Todos los reportes de la app en un solo lugar. El botón te lleva a donde está cada uno (no se mueven de su sitio).</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+
+      <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+        <div style="flex:1"><div style="font-weight:600;font-size:13px">📊 Por talla</div><div style="font-size:11px;color:#666">Demanda por talla cruzada con corte / bodega / pool (incluye 🔥 críticas).</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="switchTab('estadistica'); if(typeof switchSubEst==='function') switchSubEst('tallas')">Abrir →</button>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+        <div style="flex:1"><div style="font-weight:600;font-size:13px">📋 Por escuela</div><div style="font-size:11px;color:#666">Tallaje + Contrato + Tela/Yardaje de una escuela (o todas).</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="switchTab('estadistica'); if(typeof switchSubEst==='function') switchSubEst('escuela')">Abrir →</button>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+        <div style="flex:1"><div style="font-weight:600;font-size:13px">📈 Histórico</div><div style="font-size:11px;color:#666">Comparativo entre temporadas. Está acá abajo, en Config.</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="var d=document.getElementById('cfg-rep-historico'); if(d){d.open=true; d.scrollIntoView({behavior:'smooth',block:'center'});}">Abrir ↓</button>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+        <div style="flex:1"><div style="font-weight:600;font-size:13px">💰 Costos</div><div style="font-size:11px;color:#666">Mano de obra por nivel × sexo. Está acá abajo, en Config.</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="var d=document.getElementById('cfg-rep-costos'); if(d){d.open=true; d.scrollIntoView({behavior:'smooth',block:'center'});}">Abrir ↓</button>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+        <div style="flex:1"><div style="font-weight:600;font-size:13px">📄 Hoja de entrega (PDF director)</div><div style="font-size:11px;color:#666">Reporte imprimible por escuela. Está acá abajo, en Config.</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="var d=document.getElementById('cfg-rep-hoja'); if(d){d.scrollIntoView({behavior:'smooth',block:'center'});}">Abrir ↓</button>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+        <div style="flex:1"><div style="font-weight:600;font-size:13px">🧾 Reportes PDF por escuela</div><div style="font-size:11px;color:#666">Tallaje / Empaque / Entrega. En Registro: elegí una escuela → menú de reportes.</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="switchTab('registro')">Ir a Registro →</button>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+        <div style="flex:1"><div style="font-weight:600;font-size:13px">⬇️ Exportar a CSV/Excel</div><div style="font-size:11px;color:#666">Alumnos, Pedidos, Stock y Movimientos. Desde Registro / Bodega.</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="switchTab('registro')">Ir a Registro →</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Reportes administrativos (movidos desde Estadística en v32) -->
+  <div class="card">
+    <div class="card-title">📊 Reportes administrativos</div>
+    <div class="text-muted mb8" style="font-size:12px">Reportes de revisión ocasional que antes vivían en Estadística. Se cargan al abrir cada sección.</div>
+
+    <details id="cfg-rep-historico" style="margin-bottom:8px" ontoggle="if(this.open && typeof initHistorico==='function') initHistorico()">
+      <summary style="cursor:pointer;list-style:none;padding:10px 12px;background:#F5F7FA;border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
+        <span>📈 Histórico <span style="font-weight:400;color:#888;font-size:11px">— comparativo entre temporadas</span></span><span style="opacity:0.6;font-size:11px">▼</span>
+      </summary>
+      <div id="historico-contenido" style="padding-top:10px"><div class="text-muted" style="padding:16px;text-align:center">Abrí esta sección para cargar el histórico…</div></div>
+    </details>
+
+    <details id="cfg-rep-costos" ontoggle="if(this.open && typeof initCostos==='function') initCostos()">
+      <summary style="cursor:pointer;list-style:none;padding:10px 12px;background:#F5F7FA;border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
+        <span>💰 Costos <span style="font-weight:400;color:#888;font-size:11px">— mano de obra por nivel × sexo</span></span><span style="opacity:0.6;font-size:11px">▼</span>
+      </summary>
+      <div id="est-sub-costos-view" style="padding-top:10px"><div class="text-muted" style="padding:16px;text-align:center">Abrí esta sección para cargar los costos…</div></div>
+    </details>
+  </div>
+
+  <!-- Hoja de entrega por escuela (PDF para director) -->
+  <div class="card" id="cfg-rep-hoja">
     <div class="card-title">📄 Hoja de entrega por escuela</div>
     <div class="text-muted mb8" style="font-size:12px">
       Reporte interno para entregar al director de la institución. Incluye detalle por grado (♀/♂/total), comparación contrato vs entregado por nivel educativo, totales y tela contratada. Carta vertical, listo para imprimir.

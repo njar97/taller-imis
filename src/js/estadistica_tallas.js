@@ -18,6 +18,7 @@ let tallasResumenCache = {
     talla: '',        // string single
     escuelas: [],     // multi
     ocultarCubiertas: false,  // si true, no muestra filas con balance >= 0
+    soloCriticas: false,      // 🔥 fusión del antiguo heatmap: solo filas con balance <= 0 (faltan o al límite), ordenadas por las más críticas
     escuelasEnColumnas: true,   // default ON — pivot por escuela apenas se abre el tab
     incluirCorte: true,
     incluirProd: true,
@@ -181,6 +182,8 @@ function renderTallasResumen() {
                      + (f.incluirPool ? pTotal : 0);
     const balance = suministro - dem.total;
     if (f.ocultarCubiertas && balance >= 0) continue;
+    // 🔥 Solo críticas (ex-heatmap): faltan piezas (balance < 0) o están al límite (== 0)
+    if (f.soloCriticas && balance > 0) continue;
     rows.push({
       key: k, prenda, talla,
       demanda: dem.total, porEsc: dem.porEsc,
@@ -188,9 +191,18 @@ function renderTallasResumen() {
       balance,
     });
   }
-  rows.sort((a, b) =>
-    a.prenda.localeCompare(b.prenda) || a.talla.localeCompare(b.talla, 'es', { numeric: true })
-  );
+  if (f.soloCriticas) {
+    // Las más críticas primero (balance más negativo arriba)
+    rows.sort((a, b) =>
+      a.balance - b.balance
+      || a.prenda.localeCompare(b.prenda)
+      || a.talla.localeCompare(b.talla, 'es', { numeric: true })
+    );
+  } else {
+    rows.sort((a, b) =>
+      a.prenda.localeCompare(b.prenda) || a.talla.localeCompare(b.talla, 'es', { numeric: true })
+    );
+  }
 
   const tot = rows.reduce((s, r) => ({
     demanda: s.demanda + r.demanda,
@@ -257,6 +269,7 @@ function renderTallasResumen() {
   if (f.talla) resumenFiltros.push(`talla ${f.talla}`);
   if ((f.escuelas || []).length > 0) resumenFiltros.push(`${f.escuelas.length} escuela${f.escuelas.length>1?'s':''}`);
   if (f.ocultarCubiertas) resumenFiltros.push('ocultando cubiertas');
+  if (f.soloCriticas) resumenFiltros.push('🔥 solo críticas');
   const resumenStr = resumenFiltros.length > 0
     ? resumenFiltros.join(' · ')
     : 'sin filtros (todo)';
@@ -274,6 +287,7 @@ function renderTallasResumen() {
         <div style="font-size:11px;color:#888">${resumenStr}</div>
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-sm ${f.soloCriticas ? 'btn-primary' : 'btn-ghost'}" onclick="onTallasFiltro('soloCriticas', ${!f.soloCriticas})" title="Mostrar solo las tallas que faltan o están al límite (balance ≤ 0), las más críticas arriba" style="font-weight:${f.soloCriticas ? '700' : '600'}">🔥 Solo críticas</button>
         <select onchange="onTallasFiltro('orientacionPDF', this.value)" title="Orientación del PDF" style="padding:6px 8px;font-size:12px;border:1px solid var(--borde);border-radius:6px;background:white">
           <option value="horizontal" ${(f.orientacionPDF||'horizontal')==='horizontal'?'selected':''}>📄 Horizontal</option>
           <option value="vertical" ${f.orientacionPDF==='vertical'?'selected':''}>📃 Vertical</option>

@@ -2,64 +2,23 @@
 <div id="view-estadistica" class="view">
   <div id="alert-estadistica"></div>
 
-  <!-- Sub-nav reducida a un dropdown: 1 control en lugar de 8 botones -->
-  <div class="card" style="padding:8px 10px;margin-bottom:10px;display:flex;gap:8px;align-items:center">
-    <label for="est-sub-select" style="font-size:12px;font-weight:600;color:#555;margin:0;white-space:nowrap">📊 Ver:</label>
-    <select id="est-sub-select" onchange="switchSubEst(this.value)" style="flex:1;padding:8px 10px;font-size:14px;font-weight:600;border:1px solid var(--borde);border-radius:6px;background:white">
-      <optgroup label="── Reportes operativos ──">
-        <option value="escuela" selected>🏫 Por escuela</option>
-        <option value="tallas">📊 Por talla</option>
-        <option value="heatmap">🔥 Tallas críticas</option>
-        <option value="inventario">📦 Inventario</option>
-      </optgroup>
-      <optgroup label="── Análisis y planificación ──">
-        <option value="historico">📈 Histórico</option>
-        <option value="costos">💰 Costos</option>
-        <option value="yardaje">📐 Yardaje</option>
-        <option value="contratos">📑 Contratos</option>
-      </optgroup>
-    </select>
+  <!-- Sub-nav reingeniada (v32): solo 2 reportes.
+       · 📊 Por talla  — central, abre por defecto (incluye toggle 🔥 Solo críticas).
+       · 📋 Por escuela — fusión de Tallaje + Contrato + Tela/Yardaje en un reporte.
+       Inventario y Tallas críticas se fusionaron en Por talla.
+       Histórico y Costos se movieron a la pestaña Config. -->
+  <div class="card" style="padding:8px 10px;margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <button id="est-nav-tallas" class="btn btn-sm btn-primary" onclick="switchSubEst('tallas')">📊 Por talla</button>
+    <button id="est-nav-escuela" class="btn btn-sm btn-ghost" onclick="switchSubEst('escuela')">📋 Por escuela</button>
   </div>
 
-  <!-- SUB: Por escuela (RESUMEN del Excel) -->
-  <div id="est-sub-escuela-view">
-    <div id="resumen-esc-contenido">
-      <div class="text-muted" style="padding:20px;text-align:center">Cargando estadística por escuela...</div>
-    </div>
-  </div>
-
-  <!-- SUB: Por talla — demanda por escuela cruzada con corte/producción/bodega/pool -->
-  <div id="est-sub-tallas-view" style="display:none">
+  <!-- SUB: Por talla — demanda por escuela cruzada con corte/producción/bodega/pool (reporte central) -->
+  <div id="est-sub-tallas-view">
     <div id="est-tallas-contenido"><div class="text-muted" style="padding:20px;text-align:center">Cargando resumen por talla...</div></div>
   </div>
 
-  <!-- SUB: Heatmap de tallas críticas -->
-  <div id="est-sub-heatmap-view" style="display:none">
-    <div id="est-heatmap-contenido"><div class="text-muted" style="padding:20px;text-align:center">Cargando heatmap...</div></div>
-  </div>
-
-  <!-- SUB: Histórico -->
-  <div id="est-sub-historico-view" style="display:none">
-    <div id="historico-contenido"><div class="text-muted" style="padding:20px;text-align:center">Cargando datos históricos...</div></div>
-  </div>
-
-  <!-- SUB: Inventario — demanda (alumnos) vs stock (bodega) por prenda × talla -->
-  <div id="est-sub-inventario-view" style="display:none">
-    <div class="text-muted" style="padding:20px;text-align:center">Cargando inventario...</div>
-  </div>
-
-  <!-- SUB: Costos — mano de obra por nivel × sexo, precios del RESUMEN del Excel -->
-  <div id="est-sub-costos-view" style="display:none">
-    <div class="text-muted" style="padding:20px;text-align:center">Cargando costos...</div>
-  </div>
-
-  <!-- SUB: Yardaje — tela necesaria por color, factores del RESUMEN del Excel -->
-  <div id="est-sub-yardaje-view" style="display:none">
-    <div class="text-muted" style="padding:20px;text-align:center">Cargando yardaje...</div>
-  </div>
-
-  <!-- SUB: Contratos — cruce contrato (Excel) vs producido/entregado -->
-  <div id="est-sub-contratos-view" style="display:none">
-    <div class="text-muted" style="padding:20px;text-align:center">Cargando contratos...</div>
+  <!-- SUB: Por escuela — Tallaje + Contrato + Tela/Yardaje (unificado, est_escuela.js) -->
+  <div id="est-sub-escuela-view" style="display:none">
+    <div class="text-muted" style="padding:20px;text-align:center">Cargando reporte por escuela...</div>
   </div>
 </div>
