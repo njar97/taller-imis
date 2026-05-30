@@ -29,8 +29,12 @@
   body { font-family: Arial, sans-serif; background: #F0F4F8; color: var(--texto); min-height: 100vh; padding-bottom: 60px; }
 
   nav { background: var(--azul); color: white; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
-  .nav-top { display: flex; align-items: center; padding: 12px 16px; gap: 12px; }
-  .nav-top h1 { font-size: 16px; font-weight: 700; flex: 1; }
+  .nav-top { display: flex; align-items: center; padding: 10px 16px; gap: 10px; }
+  .nav-top h1 { font-size: 16px; font-weight: 700; flex: 1; min-width: 0; }
+  .nav-brand { display: flex; flex-direction: column; line-height: 1.1; gap: 1px; }
+  .nav-brand-app { font-size: 10px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase; opacity: 0.65; white-space: nowrap; }
+  .nav-brand-section { font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nav-brand-ver { font-size: 11px; font-weight: 600; opacity: 0.6; }
   .nav-tabs { display: flex; border-top: 1px solid rgba(255,255,255,0.2); overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
   .nav-tabs::-webkit-scrollbar { height: 2px; }
   .nav-tabs::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); }
@@ -338,10 +342,15 @@
   font-weight: 600;
 }
 @media (max-width: 640px) {
+  .nav-top { padding: 8px 12px; gap: 8px; }
+  .nav-brand-section { font-size: 15px; }
   .buscador-wrap { max-width: 160px; margin: 0 4px; }
   .buscador-wrap input { font-size: 12px; padding: 4px 8px; }
   .buscador-wrap input::placeholder { font-size: 11px; }
   .buscador-results { left: -50px; right: -50px; }
+  /* Recortar email para no robarle ancho al título (evita que se parta en varias líneas) */
+  .user-chip { max-width: 140px; flex-shrink: 0; }
+  .user-chip #user-chip-email { display: inline-block; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
 }
 
 /* ─── Badge en el nav (escuelas esperando empaque, etc) ─────────────── */
