@@ -2,50 +2,40 @@
 <div id="view-estadistica" class="view">
   <div id="alert-estadistica"></div>
 
-  <!-- Sub-nav reducida a un dropdown: 1 control en lugar de 8 botones -->
-  <div class="card" style="padding:8px 10px;margin-bottom:10px;display:flex;gap:8px;align-items:center">
-    <label for="est-sub-select" style="font-size:12px;font-weight:600;color:#555;margin:0;white-space:nowrap">📊 Ver:</label>
-    <select id="est-sub-select" onchange="switchSubEst(this.value)" style="flex:1;padding:8px 10px;font-size:14px;font-weight:600;border:1px solid var(--borde);border-radius:6px;background:white">
-      <optgroup label="── Reportes operativos ──">
-        <option value="escuela" selected>🏫 Por escuela</option>
-        <option value="tallas">📊 Por talla</option>
-        <option value="heatmap">🔥 Tallas críticas</option>
-        <option value="inventario">📦 Inventario</option>
-      </optgroup>
-      <optgroup label="── Análisis y planificación ──">
-        <option value="historico">📈 Histórico</option>
-        <option value="costos">💰 Costos</option>
-        <option value="yardaje">📐 Yardaje</option>
-        <option value="contratos">📑 Contratos</option>
-      </optgroup>
-    </select>
+  <!-- Sub-nav reingeniada (v32): "Por talla" es el reporte central y abre por
+       defecto. El resto (uso ocasional) vive en un cajón "Más reportes ▾"
+       colapsado. Inventario se eliminó (lo cubre Por talla con su columna de
+       Bodega) y Tallas críticas se fusionó en Por talla como el toggle
+       "🔥 Solo críticas". -->
+  <div class="card" style="padding:8px 10px;margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <button id="est-nav-tallas" class="btn btn-sm btn-primary" onclick="switchSubEst('tallas')">📊 Por talla</button>
+    <details id="est-mas-reportes" style="position:relative;margin:0">
+      <summary id="est-mas-reportes-summary" style="cursor:pointer;list-style:none;padding:6px 12px;border:1px solid var(--borde);border-radius:6px;background:white;font-size:13px;font-weight:600;color:#1F4E79;user-select:none;white-space:nowrap">📂 Más reportes ▾</summary>
+      <div style="position:absolute;top:calc(100% + 4px);left:0;z-index:50;background:white;border:1px solid var(--borde);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.15);padding:6px;display:flex;flex-direction:column;gap:2px;min-width:200px">
+        <button class="btn btn-ghost btn-sm" style="justify-content:flex-start;text-align:left" onclick="switchSubEst('escuela')">🏫 Por escuela</button>
+        <button class="btn btn-ghost btn-sm" style="justify-content:flex-start;text-align:left" onclick="switchSubEst('historico')">📈 Histórico</button>
+        <button class="btn btn-ghost btn-sm" style="justify-content:flex-start;text-align:left" onclick="switchSubEst('costos')">💰 Costos</button>
+        <button class="btn btn-ghost btn-sm" style="justify-content:flex-start;text-align:left" onclick="switchSubEst('yardaje')">📐 Yardaje</button>
+        <button class="btn btn-ghost btn-sm" style="justify-content:flex-start;text-align:left" onclick="switchSubEst('contratos')">📑 Contratos</button>
+      </div>
+    </details>
+  </div>
+
+  <!-- SUB: Por talla — demanda por escuela cruzada con corte/producción/bodega/pool (reporte central) -->
+  <div id="est-sub-tallas-view">
+    <div id="est-tallas-contenido"><div class="text-muted" style="padding:20px;text-align:center">Cargando resumen por talla...</div></div>
   </div>
 
   <!-- SUB: Por escuela (RESUMEN del Excel) -->
-  <div id="est-sub-escuela-view">
+  <div id="est-sub-escuela-view" style="display:none">
     <div id="resumen-esc-contenido">
       <div class="text-muted" style="padding:20px;text-align:center">Cargando estadística por escuela...</div>
     </div>
   </div>
 
-  <!-- SUB: Por talla — demanda por escuela cruzada con corte/producción/bodega/pool -->
-  <div id="est-sub-tallas-view" style="display:none">
-    <div id="est-tallas-contenido"><div class="text-muted" style="padding:20px;text-align:center">Cargando resumen por talla...</div></div>
-  </div>
-
-  <!-- SUB: Heatmap de tallas críticas -->
-  <div id="est-sub-heatmap-view" style="display:none">
-    <div id="est-heatmap-contenido"><div class="text-muted" style="padding:20px;text-align:center">Cargando heatmap...</div></div>
-  </div>
-
   <!-- SUB: Histórico -->
   <div id="est-sub-historico-view" style="display:none">
     <div id="historico-contenido"><div class="text-muted" style="padding:20px;text-align:center">Cargando datos históricos...</div></div>
-  </div>
-
-  <!-- SUB: Inventario — demanda (alumnos) vs stock (bodega) por prenda × talla -->
-  <div id="est-sub-inventario-view" style="display:none">
-    <div class="text-muted" style="padding:20px;text-align:center">Cargando inventario...</div>
   </div>
 
   <!-- SUB: Costos — mano de obra por nivel × sexo, precios del RESUMEN del Excel -->

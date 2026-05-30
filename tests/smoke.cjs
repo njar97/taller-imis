@@ -70,7 +70,7 @@ const ESPERADAS = [
   'async function descargarListaEmpaquePDF',
   'async function descargarEtiquetasBolsaPDF',
   // Features recientes
-  'function initTallasResumen', 'function initHeatmapCritico', 'function initHistorico',
+  'function initTallasResumen', 'function initHistorico',
   'function buscadorOnInput', 'function actualizarBadgeEscuelasEsperando',
   'function cachedFetch', 'function invalidarCache',
 ];
