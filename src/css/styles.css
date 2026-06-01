@@ -28,6 +28,11 @@
   }
   body { font-family: Arial, sans-serif; background: #F0F4F8; color: var(--texto); min-height: 100vh; padding-bottom: 60px; }
 
+  /* Modo operario: oculta datos sensibles (contrato, montos, costos) a roles
+     no-admin. Por defecto el <body> arranca con la clase (fail-closed) y se
+     quita solo cuando se confirma rol admin (aplicarModoOperario en core.js). */
+  body.modo-operario .dato-sensible { display: none !important; }
+
   nav { background: var(--azul); color: white; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
   .nav-top { display: flex; align-items: center; padding: 10px 16px; gap: 10px; }
   .nav-top h1 { font-size: 16px; font-weight: 700; flex: 1; min-width: 0; }

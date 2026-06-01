@@ -1,4 +1,4 @@
-<!-- Generado: 2026-05-30 19:33 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-06-01 20:42 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -51,6 +51,11 @@
     --radius-lg: 10px;
   }
   body { font-family: Arial, sans-serif; background: #F0F4F8; color: var(--texto); min-height: 100vh; padding-bottom: 60px; }
+
+  /* Modo operario: oculta datos sensibles (contrato, montos, costos) a roles
+     no-admin. Por defecto el <body> arranca con la clase (fail-closed) y se
+     quita solo cuando se confirma rol admin (aplicarModoOperario en core.js). */
+  body.modo-operario .dato-sensible { display: none !important; }
 
   nav { background: var(--azul); color: white; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
   .nav-top { display: flex; align-items: center; padding: 10px 16px; gap: 10px; }
@@ -450,7 +455,7 @@
 </style>
 </head>
 
-<body>
+<body class="modo-operario">
 
 <nav>
   <div class="nav-top">
@@ -1236,7 +1241,8 @@
           </div>
         </div>
 
-        <!-- ─── Sección 2: CONTRATO ─── -->
+        <!-- ─── Sección 2: CONTRATO (oculta en modo operario) ─── -->
+        <div class="dato-sensible">
         <div style="background:#F5F7FA;padding:6px 10px;font-weight:600;margin:14px 0 8px 0;border-radius:4px">💰 Contrato <span id="ese-anio-label" style="color:#666;font-weight:normal;font-size:12px"></span></div>
         <div class="row2">
           <div class="field">
@@ -1267,6 +1273,7 @@
             <label>Monto Lote 2 (USD)</label>
             <input type="number" id="ese-mt-l2" min="0" step="0.01" placeholder="0.00">
           </div>
+        </div>
         </div>
 
         <!-- ─── Sección 3: TELA RECIBIDA ─── -->
@@ -2152,6 +2159,7 @@
       <div>
         <div class="config-label">👤 Sesión</div>
         <div class="config-sub" id="cfg-session-email">—</div>
+        <div class="config-sub" id="cfg-session-rol" style="margin-top:2px;font-weight:600">—</div>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="doLogout()">Cerrar sesión</button>
     </div>
@@ -2257,7 +2265,7 @@
         <button class="btn btn-ghost btn-sm" onclick="var d=document.getElementById('cfg-rep-historico'); if(d){d.open=true; d.scrollIntoView({behavior:'smooth',block:'center'});}">Abrir ↓</button>
       </div>
 
-      <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+      <div class="dato-sensible" style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
         <div style="flex:1"><div style="font-weight:600;font-size:13px">💰 Costos</div><div style="font-size:11px;color:#666">Mano de obra por nivel × sexo. Está acá abajo, en Config.</div></div>
         <button class="btn btn-ghost btn-sm" onclick="var d=document.getElementById('cfg-rep-costos'); if(d){d.open=true; d.scrollIntoView({behavior:'smooth',block:'center'});}">Abrir ↓</button>
       </div>
@@ -2300,7 +2308,7 @@
       <div id="historico-contenido" style="padding-top:10px"><div class="text-muted" style="padding:16px;text-align:center">Abrí esta sección para cargar el histórico…</div></div>
     </details>
 
-    <details id="cfg-rep-costos" ontoggle="if(this.open && typeof initCostos==='function') initCostos()">
+    <details id="cfg-rep-costos" class="dato-sensible" ontoggle="if(this.open && typeof initCostos==='function') initCostos()">
       <summary style="cursor:pointer;list-style:none;padding:10px 12px;background:#F5F7FA;border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
         <span>💰 Costos <span style="font-weight:400;color:#888;font-size:11px">— mano de obra por nivel × sexo</span></span><span style="opacity:0.6;font-size:11px">▼</span>
       </summary>
@@ -3095,6 +3103,23 @@ function showAuthOverlay(show) {
   const ov = document.getElementById('auth-overlay');
   if (!ov) return;
   ov.classList.toggle('active', !!show);
+}
+
+// Modo operario: si el rol NO es admin (operador, o rol aún no confirmado),
+// se ocultan los datos sensibles (.dato-sensible) agregando la clase al body.
+// Es automático por rol; el admin ve todo. Fail-closed: ante la duda, oculta.
+function aplicarModoOperario() {
+  const rol = (typeof auditCache !== 'undefined' && auditCache.rolDelUser) || null;
+  const esOperario = (rol !== 'admin');
+  document.body.classList.toggle('modo-operario', esOperario);
+  // Reflejar estado en la tarjeta de Sesión de Config (si está presente)
+  const rolEl = document.getElementById('cfg-session-rol');
+  if (rolEl) {
+    rolEl.textContent = esOperario
+      ? '👷 Modo operario — datos sensibles (contrato/costos) ocultos'
+      : '🔓 Admin — ves todos los datos';
+    rolEl.style.color = esOperario ? 'var(--naranja)' : 'var(--verde)';
+  }
 }
 
 function renderUserChip() {
@@ -5047,7 +5072,7 @@ function renderEstEscuela() {
     monto: sumA('monto_contratado'), montoL1: sumA('monto_lote1'), montoL2: sumA('monto_lote2'),
   };
   const contratoHtml = `
-    <details ${esc ? 'open' : ''} style="margin-bottom:10px">
+    <details ${esc ? 'open' : ''} class="dato-sensible" style="margin-bottom:10px">
       <summary style="cursor:pointer;list-style:none;padding:10px 14px;background:white;border:1px solid var(--borde);border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
         <span>📑 Contrato vs entregado <span style="font-weight:400;color:#888;font-size:11px">(${c.temporadaAnio})</span></span><span style="opacity:0.6;font-size:11px">▼</span>
       </summary>
@@ -18345,8 +18370,11 @@ async function initAuditRoleTab() {
       const tab = document.getElementById('nav-tab-audit');
       if (tab) tab.style.display = '';
     }
+    if (typeof aplicarModoOperario === 'function') aplicarModoOperario();
   } catch (e) {
-    // sin role visible (operador o no encontrado) — el tab queda oculto
+    // sin role visible (operador o no encontrado) — el tab queda oculto.
+    // Fail-closed: re-aplicar modo operario (oculta datos sensibles).
+    if (typeof aplicarModoOperario === 'function') aplicarModoOperario();
   }
 }
 
@@ -18381,6 +18409,9 @@ function initConfig() {
     cargarUsuarios();
     cargarListaBackups();
   }
+  // Reaplicar modo operario (actualiza el indicador de rol de la tarjeta Sesión
+  // y oculta/muestra los datos sensibles según el rol confirmado).
+  if (typeof aplicarModoOperario === 'function') aplicarModoOperario();
 }
 
 // ─── Backups automáticos ──────────────────────────────────────────────

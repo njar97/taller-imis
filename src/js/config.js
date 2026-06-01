@@ -23,6 +23,9 @@ function initConfig() {
     cargarUsuarios();
     cargarListaBackups();
   }
+  // Reaplicar modo operario (actualiza el indicador de rol de la tarjeta Sesión
+  // y oculta/muestra los datos sensibles según el rol confirmado).
+  if (typeof aplicarModoOperario === 'function') aplicarModoOperario();
 }
 
 // ─── Backups automáticos ──────────────────────────────────────────────

@@ -6,6 +6,7 @@
       <div>
         <div class="config-label">👤 Sesión</div>
         <div class="config-sub" id="cfg-session-email">—</div>
+        <div class="config-sub" id="cfg-session-rol" style="margin-top:2px;font-weight:600">—</div>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="doLogout()">Cerrar sesión</button>
     </div>
@@ -111,7 +112,7 @@
         <button class="btn btn-ghost btn-sm" onclick="var d=document.getElementById('cfg-rep-historico'); if(d){d.open=true; d.scrollIntoView({behavior:'smooth',block:'center'});}">Abrir ↓</button>
       </div>
 
-      <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+      <div class="dato-sensible" style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
         <div style="flex:1"><div style="font-weight:600;font-size:13px">💰 Costos</div><div style="font-size:11px;color:#666">Mano de obra por nivel × sexo. Está acá abajo, en Config.</div></div>
         <button class="btn btn-ghost btn-sm" onclick="var d=document.getElementById('cfg-rep-costos'); if(d){d.open=true; d.scrollIntoView({behavior:'smooth',block:'center'});}">Abrir ↓</button>
       </div>
@@ -154,7 +155,7 @@
       <div id="historico-contenido" style="padding-top:10px"><div class="text-muted" style="padding:16px;text-align:center">Abrí esta sección para cargar el histórico…</div></div>
     </details>
 
-    <details id="cfg-rep-costos" ontoggle="if(this.open && typeof initCostos==='function') initCostos()">
+    <details id="cfg-rep-costos" class="dato-sensible" ontoggle="if(this.open && typeof initCostos==='function') initCostos()">
       <summary style="cursor:pointer;list-style:none;padding:10px 12px;background:#F5F7FA;border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
         <span>💰 Costos <span style="font-weight:400;color:#888;font-size:11px">— mano de obra por nivel × sexo</span></span><span style="opacity:0.6;font-size:11px">▼</span>
       </summary>
