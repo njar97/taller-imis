@@ -204,7 +204,7 @@ function renderEstEscuela() {
     monto: sumA('monto_contratado'), montoL1: sumA('monto_lote1'), montoL2: sumA('monto_lote2'),
   };
   const contratoHtml = `
-    <details ${esc ? 'open' : ''} style="margin-bottom:10px">
+    <details ${esc ? 'open' : ''} class="dato-sensible" style="margin-bottom:10px">
       <summary style="cursor:pointer;list-style:none;padding:10px 14px;background:white;border:1px solid var(--borde);border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
         <span>📑 Contrato vs entregado <span style="font-weight:400;color:#888;font-size:11px">(${c.temporadaAnio})</span></span><span style="opacity:0.6;font-size:11px">▼</span>
       </summary>

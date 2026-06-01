@@ -253,8 +253,11 @@ async function initAuditRoleTab() {
       const tab = document.getElementById('nav-tab-audit');
       if (tab) tab.style.display = '';
     }
+    if (typeof aplicarModoOperario === 'function') aplicarModoOperario();
   } catch (e) {
-    // sin role visible (operador o no encontrado) — el tab queda oculto
+    // sin role visible (operador o no encontrado) — el tab queda oculto.
+    // Fail-closed: re-aplicar modo operario (oculta datos sensibles).
+    if (typeof aplicarModoOperario === 'function') aplicarModoOperario();
   }
 }
 

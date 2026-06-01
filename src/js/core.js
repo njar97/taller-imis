@@ -493,6 +493,23 @@ function showAuthOverlay(show) {
   ov.classList.toggle('active', !!show);
 }
 
+// Modo operario: si el rol NO es admin (operador, o rol aún no confirmado),
+// se ocultan los datos sensibles (.dato-sensible) agregando la clase al body.
+// Es automático por rol; el admin ve todo. Fail-closed: ante la duda, oculta.
+function aplicarModoOperario() {
+  const rol = (typeof auditCache !== 'undefined' && auditCache.rolDelUser) || null;
+  const esOperario = (rol !== 'admin');
+  document.body.classList.toggle('modo-operario', esOperario);
+  // Reflejar estado en la tarjeta de Sesión de Config (si está presente)
+  const rolEl = document.getElementById('cfg-session-rol');
+  if (rolEl) {
+    rolEl.textContent = esOperario
+      ? '👷 Modo operario — datos sensibles (contrato/costos) ocultos'
+      : '🔓 Admin — ves todos los datos';
+    rolEl.style.color = esOperario ? 'var(--naranja)' : 'var(--verde)';
+  }
+}
+
 function renderUserChip() {
   // El correo y "cerrar sesión" viven ahora en la tarjeta de Sesión de Config
   // (el encabezado quedó limpio, solo con el buscador).
