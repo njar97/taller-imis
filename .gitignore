@@ -1,0 +1,6 @@
+
+# Staging para análisis de Excel — datos sensibles, no commitear
+.import-staging/
+
+# Config local de Claude Code (por maquina)
+.claude/
