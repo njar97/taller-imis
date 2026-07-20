@@ -316,15 +316,50 @@ function renderMovimientos(movs) {
 }
 
 // ─── Modal: entrada manual ─────────────────────────────────────────
+// Prenda→código (mismo mapa canónico que usa el resto de bodega)
+const ENT_PRENDAS = {
+  'CAMISA':'C','BLUSA':'B','CAMISA_CELESTE':'CC','PANTALON':'P','PANTALON_BEIGE':'PB',
+  'FALDA':'F','FALDA_BEIGE':'FB','FALDA_C.E':'FCE','SHORT':'S',
+};
+
 function abrirEntradaManual() {
   const modal = document.getElementById('bodega-entrada-modal');
   if (!modal) return;
-  document.getElementById('ent-prenda').value = '';
-  document.getElementById('ent-talla').value = '';
+  // Poblar select de prendas desde el mapa canónico
+  const selP = document.getElementById('ent-prenda');
+  selP.innerHTML = '<option value="">— Elegí prenda —</option>' +
+    Object.keys(ENT_PRENDAS).map(p => `<option value="${p}">${p}</option>`).join('');
+  document.getElementById('ent-talla').innerHTML = '<option value="">— Elegí prenda primero —</option>';
+  document.getElementById('ent-talla-otra-wrap').style.display = 'none';
+  document.getElementById('ent-talla-otra').value = '';
   document.getElementById('ent-cantidad').value = '';
   document.getElementById('ent-obs').value = '';
   document.getElementById('ent-tipo').value = 'ENTRADA_MANUAL';
   modal.style.display = 'flex';
+}
+
+// Al elegir prenda: llenar tallas válidas = catálogo + tallas ya vistas en
+// el stock de esa prenda (para poder ajustar SKUs existentes no estándar).
+function entPrendaCambio() {
+  const prenda = document.getElementById('ent-prenda').value;
+  const selT = document.getElementById('ent-talla');
+  document.getElementById('ent-talla-otra-wrap').style.display = 'none';
+  if (!prenda) {
+    selT.innerHTML = '<option value="">— Elegí prenda primero —</option>';
+    return;
+  }
+  const cod = ENT_PRENDAS[prenda];
+  const tallas = new Set();
+  const cat = (typeof CATALOGO !== 'undefined' ? CATALOGO : CATALOGO_BASE)[cod];
+  if (cat && cat.keys) for (const k of cat.keys) tallas.add(k);
+  // Tallas ya existentes en stock de esa prenda (aunque no estén en catálogo)
+  for (const s of (bodegaCache.stock || [])) {
+    if ((s.nombre_prenda === prenda || s.cod_prenda === cod) && s.talla_key) tallas.add(s.talla_key);
+  }
+  const lista = [...tallas].sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
+  selT.innerHTML = '<option value="">— Elegí talla —</option>' +
+    lista.map(t => `<option value="${t}">${t}</option>`).join('') +
+    '<option value="__OTRA__">✏️ Otra talla (escribir)…</option>';
 }
 
 function cerrarEntradaManual() {
@@ -332,25 +367,32 @@ function cerrarEntradaManual() {
 }
 
 async function guardarEntradaManual() {
-  const prenda = document.getElementById('ent-prenda').value.trim();
-  const talla = document.getElementById('ent-talla').value.trim();
+  const prenda = document.getElementById('ent-prenda').value;
+  const selT = document.getElementById('ent-talla').value;
+  const talla = selT === '__OTRA__'
+    ? document.getElementById('ent-talla-otra').value.trim().toUpperCase()
+    : selT;
   const cantidad = parseInt(document.getElementById('ent-cantidad').value);
   const obs = document.getElementById('ent-obs').value.trim() || null;
   const tipo = document.getElementById('ent-tipo').value;
-  
+
   if (!prenda || !talla || !cantidad || cantidad <= 0) {
     alert('Completá prenda, talla y cantidad > 0'); return;
   }
-  
-  // Derivar cod_prenda (1ras letras mayus)
-  const codPrenda = ({
-    'CAMISA':'C','BLUSA':'B','CAMISA_CELESTE':'CC','PANTALON':'P','PANTALON_BEIGE':'PB',
-    'FALDA':'F','FALDA_BEIGE':'FB','FALDA_C.E':'FCE','SHORT':'S'
-  })[prenda.toUpperCase()] || prenda.slice(0,3).toUpperCase();
-  
+  const codPrenda = ENT_PRENDAS[prenda];
+
+  // Talla escrita a mano: doble chequeo antes de crear un SKU nuevo.
+  if (selT === '__OTRA__') {
+    if (!talla.startsWith(codPrenda)) {
+      alert(`La KEY debe empezar con el código de la prenda (${codPrenda}). Ej: ${codPrenda}12`);
+      return;
+    }
+    if (!confirm(`"${talla}" NO está en el catálogo de ${prenda}.\n\n¿Seguro que la KEY es correcta? Va a crear un código nuevo en bodega.`)) return;
+  }
+
   try {
     await supaFetch('bodega_movimiento', 'POST', {
-      tipo, cod_prenda: codPrenda, nombre_prenda: prenda.toUpperCase(), talla_key: talla,
+      tipo, cod_prenda: codPrenda, nombre_prenda: prenda, talla_key: talla,
       cantidad, observaciones: obs
     });
     cerrarEntradaManual();

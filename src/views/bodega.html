@@ -23,13 +23,23 @@
             <option value="DEFECTO">✗ Defecto (devolver a producción)</option>
           </select>
         </div>
+        <!-- Prenda y talla VALIDADAS contra catálogo (antes texto libre: un
+             dedazo creaba un SKU fantasma que no cruzaba con nada). -->
         <div class="field">
           <label>Prenda *</label>
-          <input type="text" id="ent-prenda" placeholder="Ej: CAMISA, BLUSA, PANTALON, FALDA, SHORT, CAMISA_CELESTE">
+          <select id="ent-prenda" onchange="entPrendaCambio()">
+            <option value="">— Elegí prenda —</option>
+          </select>
         </div>
         <div class="field">
           <label>Talla (key) *</label>
-          <input type="text" id="ent-talla" placeholder="Ej: C14, B12, P1075, F1050, CC6">
+          <select id="ent-talla" onchange="document.getElementById('ent-talla-otra-wrap').style.display = this.value==='__OTRA__' ? '' : 'none'">
+            <option value="">— Elegí prenda primero —</option>
+          </select>
+          <div id="ent-talla-otra-wrap" style="display:none;margin-top:6px">
+            <input type="text" id="ent-talla-otra" placeholder="Escribí la KEY exacta (ej: P1075)">
+            <div style="font-size:11px;color:#c60;margin-top:2px">⚠️ Talla fuera del catálogo: revisá dos veces — crea un código nuevo en bodega.</div>
+          </div>
         </div>
         <div class="field">
           <label>Cantidad *</label>
