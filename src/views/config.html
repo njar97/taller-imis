@@ -248,6 +248,16 @@
     </div>
     <button class="btn btn-primary btn-sm" onclick="window.PWA && window.PWA.checkUpdate(document.getElementById('pwa-update-status'))">🔄 Buscar actualizaciones</button>
     <div id="pwa-update-status" style="margin-top:8px;font-size:12px;color:#666"></div>
+
+    <div style="margin-top:12px;border-top:1px dashed #E0E0E0;padding-top:10px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+        <input type="checkbox" id="cfg-modulos-avanzados" onchange="toggleModulosAvanzados(this.checked)" style="width:20px;height:20px">
+        🧩 Mostrar módulos avanzados (✂️ Corte y 🏭 Producción)
+      </label>
+      <div class="text-muted" style="font-size:11px;margin-top:4px">
+        Ocultos el menú queda más simple. No se borra nada: al reactivarlos vuelven con todos sus datos.
+      </div>
+    </div>
   </div>
 
   <!-- Catálogo de grados (oculto, se abre por botón) -->

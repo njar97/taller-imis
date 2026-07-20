@@ -14,13 +14,15 @@
       <div id="buscador-results" class="buscador-results" style="display:none"></div>
     </div>
   </div>
+  <!-- Orden por frecuencia de uso real. Corte/Producción son módulos
+       avanzados: ocultos por defecto, se activan en Config → App. -->
   <div class="nav-tabs">
     <div class="nav-tab active" onclick="switchTab('inicio',this)">🏠 Inicio</div>
-    <div class="nav-tab" onclick="switchTab('corte',this)">✂️ Corte</div>
-    <div class="nav-tab" onclick="switchTab('produccion',this)">🏭 Prod.</div>
+    <div class="nav-tab" onclick="switchTab('registro',this)">📋 Registro</div>
     <div class="nav-tab" onclick="switchTab('bodega',this)">📦 Bodega<span id="nav-badge-bodega" class="nav-badge" style="display:none"></span></div>
     <div class="nav-tab" onclick="switchTab('estadistica',this)">📊 Estadística</div>
-    <div class="nav-tab" onclick="switchTab('registro',this)">📋 Registro</div>
+    <div class="nav-tab" id="tab-corte" onclick="switchTab('corte',this)">✂️ Corte</div>
+    <div class="nav-tab" id="tab-produccion" onclick="switchTab('produccion',this)">🏭 Prod.</div>
     <div class="nav-tab" onclick="switchTab('config',this)">⚙️ Config</div>
   </div>
 </nav>

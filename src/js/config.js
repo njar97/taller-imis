@@ -3,6 +3,8 @@ function initConfig() {
   document.getElementById('cfg-url').value = SUPA_URL;
   document.getElementById('cfg-key').value = SUPA_KEY;
   document.getElementById('cfg-url-display').textContent = SUPA_URL;
+  const chkMod = document.getElementById('cfg-modulos-avanzados');
+  if (chkMod && typeof modulosAvanzadosActivos === 'function') chkMod.checked = modulosAvanzadosActivos();
   // Estado de features
   const f2 = document.getElementById('cfg-fase2');
   const f3 = document.getElementById('cfg-fase3');

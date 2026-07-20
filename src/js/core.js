@@ -301,6 +301,32 @@ function irA(seccion) {
   if (seccion === 'bulto')   tryInit('Bulto',   typeof initBulto === 'function'   ? initBulto   : null);
 }
 
+// ── Módulos avanzados (✂️ Corte / 🏭 Producción) ─────────────────────
+// Casi no se usan en el flujo real → ocultos del menú por defecto.
+// Toggle en Config → App. Nada se borra: las vistas siguen existiendo
+// (accesibles desde el buscador Ctrl+K) y los datos quedan intactos.
+function modulosAvanzadosActivos() {
+  return localStorage.getItem('modulos_avanzados') === '1';
+}
+function aplicarModulosAvanzados() {
+  const on = modulosAvanzadosActivos();
+  ['tab-corte', 'tab-produccion'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = on ? '' : 'none';
+  });
+}
+function toggleModulosAvanzados(on) {
+  localStorage.setItem('modulos_avanzados', on ? '1' : '0');
+  aplicarModulosAvanzados();
+  // Si estaba parado en una vista recién ocultada, volver a Inicio
+  if (!on) {
+    const activa = document.querySelector('.view.active');
+    if (activa && ['view-corte', 'view-produccion', 'view-trazo', 'view-tendido', 'view-bulto'].includes(activa.id)) {
+      switchTab('inicio', document.querySelector('.nav-tab'));
+    }
+  }
+}
+
 function volverNuevo() {
   // Vuelve a la pestaña Corte → sub-vista "Nuevo" (antes mostraba el menú
   // huérfano view-nuevo, duplicado del sub-nav de Corte; ya eliminado).
@@ -743,6 +769,7 @@ async function bootApp() {
       sessionStorage.setItem('taller-imis-invite-pending', '1');
     }
   } catch (_e) {}
+  aplicarModulosAvanzados();
   await gateApp();
   if (supaSession && typeof initDashboard === 'function') initDashboard();
   if (supaSession && typeof initAuditRoleTab === 'function') initAuditRoleTab();

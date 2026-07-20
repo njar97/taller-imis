@@ -1,4 +1,4 @@
-<!-- Generado: 2026-07-20 11:00 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-07-20 13:12 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -471,13 +471,15 @@
       <div id="buscador-results" class="buscador-results" style="display:none"></div>
     </div>
   </div>
+  <!-- Orden por frecuencia de uso real. Corte/Producción son módulos
+       avanzados: ocultos por defecto, se activan en Config → App. -->
   <div class="nav-tabs">
     <div class="nav-tab active" onclick="switchTab('inicio',this)">🏠 Inicio</div>
-    <div class="nav-tab" onclick="switchTab('corte',this)">✂️ Corte</div>
-    <div class="nav-tab" onclick="switchTab('produccion',this)">🏭 Prod.</div>
+    <div class="nav-tab" onclick="switchTab('registro',this)">📋 Registro</div>
     <div class="nav-tab" onclick="switchTab('bodega',this)">📦 Bodega<span id="nav-badge-bodega" class="nav-badge" style="display:none"></span></div>
     <div class="nav-tab" onclick="switchTab('estadistica',this)">📊 Estadística</div>
-    <div class="nav-tab" onclick="switchTab('registro',this)">📋 Registro</div>
+    <div class="nav-tab" id="tab-corte" onclick="switchTab('corte',this)">✂️ Corte</div>
+    <div class="nav-tab" id="tab-produccion" onclick="switchTab('produccion',this)">🏭 Prod.</div>
     <div class="nav-tab" onclick="switchTab('config',this)">⚙️ Config</div>
   </div>
 </nav>
@@ -2407,6 +2409,16 @@
     </div>
     <button class="btn btn-primary btn-sm" onclick="window.PWA && window.PWA.checkUpdate(document.getElementById('pwa-update-status'))">🔄 Buscar actualizaciones</button>
     <div id="pwa-update-status" style="margin-top:8px;font-size:12px;color:#666"></div>
+
+    <div style="margin-top:12px;border-top:1px dashed #E0E0E0;padding-top:10px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+        <input type="checkbox" id="cfg-modulos-avanzados" onchange="toggleModulosAvanzados(this.checked)" style="width:20px;height:20px">
+        🧩 Mostrar módulos avanzados (✂️ Corte y 🏭 Producción)
+      </label>
+      <div class="text-muted" style="font-size:11px;margin-top:4px">
+        Ocultos el menú queda más simple. No se borra nada: al reactivarlos vuelven con todos sus datos.
+      </div>
+    </div>
   </div>
 
   <!-- Catálogo de grados (oculto, se abre por botón) -->
@@ -2919,6 +2931,32 @@ function irA(seccion) {
   if (seccion === 'bulto')   tryInit('Bulto',   typeof initBulto === 'function'   ? initBulto   : null);
 }
 
+// ── Módulos avanzados (✂️ Corte / 🏭 Producción) ─────────────────────
+// Casi no se usan en el flujo real → ocultos del menú por defecto.
+// Toggle en Config → App. Nada se borra: las vistas siguen existiendo
+// (accesibles desde el buscador Ctrl+K) y los datos quedan intactos.
+function modulosAvanzadosActivos() {
+  return localStorage.getItem('modulos_avanzados') === '1';
+}
+function aplicarModulosAvanzados() {
+  const on = modulosAvanzadosActivos();
+  ['tab-corte', 'tab-produccion'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = on ? '' : 'none';
+  });
+}
+function toggleModulosAvanzados(on) {
+  localStorage.setItem('modulos_avanzados', on ? '1' : '0');
+  aplicarModulosAvanzados();
+  // Si estaba parado en una vista recién ocultada, volver a Inicio
+  if (!on) {
+    const activa = document.querySelector('.view.active');
+    if (activa && ['view-corte', 'view-produccion', 'view-trazo', 'view-tendido', 'view-bulto'].includes(activa.id)) {
+      switchTab('inicio', document.querySelector('.nav-tab'));
+    }
+  }
+}
+
 function volverNuevo() {
   // Vuelve a la pestaña Corte → sub-vista "Nuevo" (antes mostraba el menú
   // huérfano view-nuevo, duplicado del sub-nav de Corte; ya eliminado).
@@ -3361,6 +3399,7 @@ async function bootApp() {
       sessionStorage.setItem('taller-imis-invite-pending', '1');
     }
   } catch (_e) {}
+  aplicarModulosAvanzados();
   await gateApp();
   if (supaSession && typeof initDashboard === 'function') initDashboard();
   if (supaSession && typeof initAuditRoleTab === 'function') initAuditRoleTab();
@@ -5519,6 +5558,85 @@ async function pronPDF() {
 
 let buscadorCache = { alumnos: null, escuelas: null, debounce: null };
 
+// ── Índice de herramientas ───────────────────────────────────────────
+// Además de alumnos/escuelas, Ctrl+K encuentra las funciones de la app.
+// `kw` = palabras con las que el usuario podría buscarla. `ir()` navega
+// (no ejecuta acciones destructivas — solo lleva al lugar).
+const HERRAMIENTAS = [
+  { icono:'⚡', nombre:'Grilla del padrón (edición tipo Excel)', kw:'grilla excel editar tallas rapido masivo pegar columnas',
+    ir: () => { if (typeof alumnosGlobalCache !== 'undefined') alumnosGlobalCache.vistaGrilla = true; _herrTab('registro'); } },
+  { icono:'👤', nombre:'Alumnos / tallaje (Registro)', kw:'alumnos registro tallar tallas padron capturar lista',
+    ir: () => _herrTab('registro') },
+  { icono:'🏷', nombre:'Etiquetas de alumnos (PDF)', kw:'etiquetas imprimir pdf pegatinas',
+    ir: () => _herrTab('registro') },
+  { icono:'📥', nombre:'Importar alumnos (pegar lista)', kw:'importar pegar lista excel subir alumnos nuevos',
+    ir: () => _herrTab('registro') },
+  { icono:'📊', nombre:'Resumen por talla (demanda vs corte/prod/bodega)', kw:'resumen talla demanda faltantes criticas balance existencia',
+    ir: () => { _herrTab('estadistica'); _herrLuego(() => switchSubEst('tallas')); } },
+  { icono:'📋', nombre:'Reporte por escuela (tallaje + contrato + tela)', kw:'escuela contrato avance tela yardas yardaje devolver',
+    ir: () => { _herrTab('estadistica'); _herrLuego(() => switchSubEst('escuela')); } },
+  { icono:'🔮', nombre:'Pronóstico de tallas', kw:'pronostico distribucion historica proxima temporada proyeccion',
+    ir: () => { _herrTab('estadistica'); _herrLuego(() => switchSubEst('pronostico')); } },
+  { icono:'📦', nombre:'Stock de bodega / entradas y salidas', kw:'bodega stock inventario entrada salida movimientos kardex',
+    ir: () => _herrTab('bodega') },
+  { icono:'📄', nombre:'Hoja de entrega para director (PDF)', kw:'hoja entrega director firma pdf recibido',
+    ir: () => _herrConfig('Hoja de entrega') },
+  { icono:'💰', nombre:'Costos de mano de obra', kw:'costos mano obra precios monto dinero',
+    ir: () => _herrConfig('Costos') },
+  { icono:'📜', nombre:'Histórico de temporadas', kw:'historico temporadas anteriores archivo años',
+    ir: () => _herrConfig('Histórico') },
+  { icono:'🗂', nombre:'Reportes administrativos / exportar', kw:'reportes exportar excel csv descargar datos',
+    ir: () => _herrConfig('Reportes') },
+  { icono:'🎓', nombre:'Catálogo de grados (nivel/ciclo)', kw:'grados nivel ciclo catalogo parvularia basica bachillerato',
+    ir: () => _herrConfig('Grados') },
+  { icono:'🏫', nombre:'Grupos de escuelas', kw:'grupos escuelas produccion lpt agrupar',
+    ir: () => _herrConfig('Grupos de escuelas') },
+  { icono:'👥', nombre:'Usuarios e invitaciones', kw:'usuarios invitar acceso operario admin permisos',
+    ir: () => _herrConfig('Usuarios') },
+  { icono:'🔄', nombre:'Buscar actualizaciones de la app', kw:'actualizar version nueva pwa update refrescar',
+    ir: () => _herrConfig('App (PWA)') },
+  { icono:'🧩', nombre:'Módulos avanzados (mostrar/ocultar Corte y Producción)', kw:'modulos avanzados ocultar mostrar menu corte produccion activar',
+    ir: () => _herrConfig('App (PWA)') },
+  { icono:'🕵️', nombre:'Auditoría de cambios', kw:'auditoria cambios quien hizo log historial modificaciones',
+    ir: () => _herrTab('auditoria') },
+  { icono:'✂️', nombre:'Corte: trazos, tendidos y bultos (módulo avanzado)', kw:'corte trazo tendido bulto lienzos capas rollos',
+    ir: () => _herrTab('corte') },
+  { icono:'🏭', nombre:'Producción: captura y operarias (módulo avanzado)', kw:'produccion operarias captura operaciones destajo asignaciones',
+    ir: () => _herrTab('produccion') },
+];
+
+function _herrTab(tab) {
+  const btn = Array.from(document.querySelectorAll('.nav-tab'))
+    .find(t => (t.getAttribute('onclick') || '').includes(`switchTab('${tab}'`));
+  if (typeof switchTab === 'function') switchTab(tab, btn || null);
+}
+function _herrLuego(fn) { setTimeout(() => { try { fn(); } catch (_) {} }, 250); }
+
+// Navega a Config y resalta la card cuyo título contiene el texto
+function _herrConfig(titulo) {
+  _herrTab('config');
+  _herrLuego(() => {
+    const el = Array.from(document.querySelectorAll('#view-config .card-title, #view-config summary'))
+      .find(x => (x.textContent || '').includes(titulo));
+    if (!el) return;
+    const card = el.closest('.card') || el.closest('details') || el;
+    if (card.style && card.style.display === 'none') card.style.display = '';
+    if (card.tagName === 'DETAILS') card.open = true;
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    card.style.outline = '3px solid var(--azul)';
+    setTimeout(() => { card.style.outline = ''; }, 2000);
+  });
+}
+
+function buscarHerramientas(q) {
+  const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!tokens.length) return [];
+  return HERRAMIENTAS.filter(h => {
+    const txt = (h.nombre + ' ' + h.kw).toLowerCase();
+    return tokens.every(t => txt.includes(t));
+  }).slice(0, 6);
+}
+
 async function buscadorOnInput(ev) {
   const inp = ev?.target || document.getElementById('buscador-input');
   if (!inp) return;
@@ -5552,8 +5670,9 @@ async function buscadorRun(q) {
       }
     }
   } catch(e) {
+    // Sin datos no hay alumnos/escuelas, pero las herramientas (estáticas)
+    // se pueden buscar igual — no abortar.
     console.warn('Buscador init:', e.message);
-    return;
   }
 
   const lq = q.toLowerCase();
@@ -5569,14 +5688,25 @@ async function buscadorRun(q) {
     .filter(a => (a.nombre || '').toLowerCase().includes(lq))
     .slice(0, 20);
 
+  const herr = buscarHerramientas(q);
+
   const cont = document.getElementById('buscador-results');
   if (!cont) return;
-  if (escs.length === 0 && als.length === 0) {
+  if (escs.length === 0 && als.length === 0 && herr.length === 0) {
     cont.innerHTML = '<div style="padding:12px;color:#888;font-size:12px">Sin resultados para "'+_buscEsc(q)+'"</div>';
     cont.style.display = 'block';
     return;
   }
   let html = '';
+  if (herr.length > 0) {
+    html += '<div class="search-section">🧭 Herramientas</div>';
+    for (const h of herr) {
+      const idx = HERRAMIENTAS.indexOf(h);
+      html += `<div class="search-result" onclick="buscadorIrHerramienta(${idx})">
+        ${h.icono} <strong>${_buscEsc(h.nombre)}</strong>
+      </div>`;
+    }
+  }
   if (escs.length > 0) {
     html += '<div class="search-section">Escuelas</div>';
     for (const e of escs) {
@@ -5599,6 +5729,12 @@ async function buscadorRun(q) {
   }
   cont.innerHTML = html;
   cont.style.display = 'block';
+}
+
+function buscadorIrHerramienta(idx) {
+  const h = HERRAMIENTAS[idx];
+  buscadorCerrar();
+  if (h) { try { h.ir(); } catch (e) { console.warn('[buscador] herramienta:', e); } }
 }
 
 function buscadorIrEscuela(escId) {
@@ -19178,6 +19314,8 @@ function initConfig() {
   document.getElementById('cfg-url').value = SUPA_URL;
   document.getElementById('cfg-key').value = SUPA_KEY;
   document.getElementById('cfg-url-display').textContent = SUPA_URL;
+  const chkMod = document.getElementById('cfg-modulos-avanzados');
+  if (chkMod && typeof modulosAvanzadosActivos === 'function') chkMod.checked = modulosAvanzadosActivos();
   // Estado de features
   const f2 = document.getElementById('cfg-fase2');
   const f3 = document.getElementById('cfg-fase3');
