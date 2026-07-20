@@ -31,9 +31,14 @@ El usuario nunca elige entre pool y stock: el motor lo resuelve (como siempre lo
     de Empacar-selector, Empacar-pool y Asignar (código vivo pero sin UI,
     se borra en Fase 3). "Acaparar por cantidad" demotado a Otras acciones.
   · Badge de Producción → sesión (antes selector con hint de prenda).
-  · "🔒 Reservar" en la barra de la sesión: aparta el stock de las piezas
-    marcadas SIN empacar (misma mecánica que acaparar: SALIDA_EMPAQUE sin
-    alumno + fila escuela_acaparado; lo respaldado por pool se salta).
+  · "🔒 Reservar tallas" (rediseñado mismo día por feedback del usuario:
+    reservar es por TALLA y CANTIDAD, no por alumno — marcar niño por niño
+    duplicaba el flujo de empacar). Botón arriba junto a "Marcar todos":
+    tabla necesidad-vs-bodega por prenda-talla (pendientes / ya reservado /
+    stock libre) con cantidad pre-llenada en lo que falta, topada al stock
+    fresco (validado al abrir Y al confirmar, todo-o-nada). Mecánica de
+    escritura igual que acaparar: SALIDA_EMPAQUE sin alumno + escuela_acaparado.
+    La barra inferior queda solo para 📦 Empacar.
   · Entrega integrada en el paso 3 (fecha+receptor inline → _bulkPatchAlumno
     empacado→entregado + registro en entrega_escuela). Sin saltar a Bodega.
 - **Fase 3**: borrar UI muerta (~1,200-1,500 líneas: modo empaque de
