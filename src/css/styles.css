@@ -45,6 +45,7 @@
   .nav-tabs::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); }
   .nav-tab { flex: 1 0 auto; padding: 10px 10px; text-align: center; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.7); cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap; }
   .nav-tab.active { color: white; border-bottom-color: #FFD700; }
+  .nav-tab-ico { margin-right: 4px; }
 
   .container { max-width: 800px; margin: 0 auto; padding: 16px; }
   .view { display: none; }
@@ -347,15 +348,43 @@
   font-weight: 600;
 }
 @media (max-width: 640px) {
-  .nav-top { padding: 8px 12px; gap: 8px; }
+  .nav-top { padding: 6px 10px; gap: 8px; }
+  .nav-brand-app { display: none; }               /* "TALLER IMIS" chico: fuera en móvil */
   .nav-brand-section { font-size: 15px; }
-  .buscador-wrap { max-width: 220px; margin: 0 0 0 4px; }
-  .buscador-wrap input { font-size: 12px; padding: 4px 8px; }
+  .buscador-wrap { max-width: none; flex: 1; margin: 0 0 0 4px; }
+  .buscador-wrap input { font-size: 12px; padding: 6px 10px; }
   .buscador-wrap input::placeholder { font-size: 11px; }
   .buscador-results { left: -50px; right: -50px; }
   /* Recortar email para no robarle ancho al título (evita que se parta en varias líneas) */
   .user-chip { max-width: 140px; flex-shrink: 0; }
   .user-chip #user-chip-email { display: inline-block; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+
+  /* ── Bottom nav: la misma .nav-tabs se fija abajo, ícono sobre label ──
+     Al alcance del pulgar (mismo patrón que la app de pedidos). */
+  .nav-tabs {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
+    background: var(--azul);
+    border-top: none;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.35);
+    padding: 4px 2px calc(4px + env(safe-area-inset-bottom));
+  }
+  .nav-tab {
+    flex: 1 1 0; min-width: 0; position: relative;
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+    padding: 5px 2px; font-size: 10px;
+    border-bottom: none; border-radius: 10px;
+  }
+  .nav-tab.active { background: rgba(255,255,255,0.16); color: white; border-bottom: none; }
+  .nav-tab-ico { font-size: 21px; margin: 0; line-height: 1.1; }
+  .nav-tab-lbl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .nav-badge { position: absolute; top: 0; right: 10%; margin-left: 0; }
+
+  /* Dejar aire abajo para que el contenido no quede tapado por el nav */
+  body { padding-bottom: calc(66px + env(safe-area-inset-bottom)); }
+
+  /* Banner de update y toasts: por ENCIMA del bottom nav */
+  #pwa-update-banner { bottom: calc(76px + env(safe-area-inset-bottom)) !important; }
+  #toast-container { bottom: calc(76px + env(safe-area-inset-bottom)) !important; }
 }
 
 /* ─── Badge en el nav (escuelas esperando empaque, etc) ─────────────── */
