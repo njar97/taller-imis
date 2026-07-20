@@ -41,9 +41,15 @@ El usuario nunca elige entre pool y stock: el motor lo resuelve (como siempre lo
     La barra inferior queda solo para 📦 Empacar.
   · Entrega integrada en el paso 3 (fecha+receptor inline → _bulkPatchAlumno
     empacado→entregado + registro en entrega_escuela). Sin saltar a Bodega.
-- **Fase 3**: borrar UI muerta (~1,200-1,500 líneas: modo empaque de
-  alumnos_global.js, selector de combos, empacarAcaparados*, asignar modal).
-  Registro vuelve a ser solo padrón.
+- **Fase 3 (HECHA 2026-07-20, mismo día, aprobada por el usuario)**: ~2,200 líneas
+  eliminadas — bodega.js −1,108 (selector de combos, empacarAcaparados manual/auto,
+  acaparar modal, asignar modal: 32 bloques), alumnos_global.js −895 (todo el modo
+  empaque: supply/marcados/banner/talla-alt/bulk: 19 bloques), bodega.html −192
+  (4 modales). Registro volvió a ser solo padrón (la celda Top/Bot conserva la
+  vista de talla alterna persistida). El smoke test se actualizó (funciones
+  críticas: fuera las muertas, entran initEmpaque/emqAbrirReserva/emqEmpacar/
+  emqEntregar). Motor intacto: empacarAlumnosDesdeRegistro, desempacarPieza,
+  _consumePoolBatch, _bulkPatchAlumno, _codPrenda.
 
 ## Plan del pool/acaparado (decisión abierta)
 

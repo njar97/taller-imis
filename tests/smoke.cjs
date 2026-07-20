@@ -63,9 +63,10 @@ const ESPERADAS = [
   // Funciones de negocio críticas
   'async function empacarAlumnosDesdeRegistro',
   'async function desempacarPieza',
-  'async function abrirAcapararModal',
-  'async function abrirEmpacarSelector',
-  'async function abrirEmpacarAcaparadosModal',
+  'async function initEmpaque',
+  'async function emqAbrirReserva',
+  'async function emqEmpacar',
+  'async function emqEntregar',
   'async function descargarResumenEjecutivoPDF',
   'async function descargarListaEmpaquePDF',
   'async function descargarEtiquetasBolsaPDF',
