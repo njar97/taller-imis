@@ -36,6 +36,7 @@ JS_ORDER = [
     "importacion.js",
     "alumnos.js",
     "bodega.js",
+    "empaque.js",
     "reportes.js",
     "matcher.js",
     "alumnos_global.js",
@@ -58,6 +59,7 @@ VIEWS_ORDER = [
     "estadistica.html",
     "registro.html",
     "bodega.html",
+    "empaque.html",
     "auditoria.html",
     "config.html",
 ]

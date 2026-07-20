@@ -112,6 +112,7 @@ function renderStock() {
           <div style="padding:8px;margin-top:6px;background:white;border:1px solid var(--borde);border-radius:6px;box-shadow:0 4px 8px rgba(0,0,0,0.05)">
             <!-- Acciones principales: acaparar + empacar (lo demás va en "Otras") -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px">
+              <button class="btn btn-success btn-sm" onclick="switchTab('empaque')" title="Flujo nuevo unificado: escuela → marcar piezas → empacar (reemplazará a los de abajo)" style="text-align:left">🧺 Sesión de empaque <span style="font-size:9px;background:#FFD700;color:#1F4E79;border-radius:6px;padding:0 4px">BETA</span></button>
               <button class="btn btn-warning btn-sm" onclick="abrirAcapararModal()" title="Bloquear cantidad para una escuela" style="text-align:left">📥 Acaparar</button>
               <button class="btn btn-primary btn-sm" onclick="abrirEmpacarSelector()" style="text-align:left">📦 Empacar a alumnos</button>
               ${hayPool ? `<button class="btn btn-warning btn-sm" onclick="abrirEmpacarAcaparadosModal()" title="Asignar pool acaparado a alumnos" style="text-align:left">📥 Empacar pool (${bodegaCache.poolTotal})</button>` : ''}

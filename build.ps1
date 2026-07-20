@@ -43,6 +43,7 @@ $jsOrder = @(
     'importacion.js',
     'alumnos.js',
     'bodega.js',
+    'empaque.js',
     'reportes.js',
     'matcher.js',
     'alumnos_global.js',
@@ -65,6 +66,7 @@ $viewsOrder = @(
     'estadistica.html',
     'registro.html',
     'bodega.html',
+    'empaque.html',
     'auditoria.html',
     'config.html'
 )

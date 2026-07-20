@@ -305,6 +305,7 @@ function switchTab(tab, el) {
   if (tab === 'bodega')      tryInit('Bodega',       typeof initBodega === 'function'     ? initBodega     : null);
   if (tab === 'inicio')      tryInit('Inicio',       typeof initDashboard === 'function'  ? initDashboard  : null);
   if (tab === 'auditoria')   tryInit('Auditoría',    typeof initAuditoria === 'function'  ? initAuditoria  : null);
+  if (tab === 'empaque')     tryInit('Empaque',      typeof initEmpaque === 'function'    ? initEmpaque    : null);
   window.scrollTo(0, 0);
 }
 
