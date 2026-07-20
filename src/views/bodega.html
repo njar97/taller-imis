@@ -33,13 +33,15 @@
         </div>
         <div class="field">
           <label>Talla (key) *</label>
-          <select id="ent-talla" onchange="document.getElementById('ent-talla-otra-wrap').style.display = this.value==='__OTRA__' ? '' : 'none'">
+          <select id="ent-talla" onchange="entTallaCambio(this)">
             <option value="">— Elegí prenda primero —</option>
           </select>
           <div id="ent-talla-otra-wrap" style="display:none;margin-top:6px">
             <input type="text" id="ent-talla-otra" placeholder="Escribí la KEY exacta (ej: P1075)">
             <div style="font-size:11px;color:#c60;margin-top:2px">⚠️ Talla fuera del catálogo: revisá dos veces — crea un código nuevo en bodega.</div>
           </div>
+          <!-- Visor: cruce con corte/producción para no registrar a ciegas -->
+          <div id="ent-info" style="display:none;margin-top:6px;padding:6px 10px;background:#F0F7F0;border:1px solid #CDE5CD;border-radius:6px;font-size:12px"></div>
         </div>
         <div class="field">
           <label>Cantidad *</label>

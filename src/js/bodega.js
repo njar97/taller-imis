@@ -322,6 +322,8 @@ const ENT_PRENDAS = {
   'FALDA':'F','FALDA_BEIGE':'FB','FALDA_C.E':'FCE','SHORT':'S',
 };
 
+let entProdMap = null;  // "prenda|talla" → piezas en bultos NO terminados (visor)
+
 function abrirEntradaManual() {
   const modal = document.getElementById('bodega-entrada-modal');
   if (!modal) return;
@@ -335,7 +337,51 @@ function abrirEntradaManual() {
   document.getElementById('ent-cantidad').value = '';
   document.getElementById('ent-obs').value = '';
   document.getElementById('ent-tipo').value = 'ENTRADA_MANUAL';
+  document.getElementById('ent-info').style.display = 'none';
   modal.style.display = 'flex';
+  // Visor corte/producción: qué viene en camino (bultos sin terminar).
+  // Se carga en background; si falla, el visor simplemente no aparece.
+  entProdMap = null;
+  supaFetchAll('vw_produccion_estado',
+    '?estado_manual=neq.terminado&select=cod_prenda,talla_key_salida,cantidad_original')
+    .then(rows => {
+      entProdMap = new Map();
+      for (const b of rows) {
+        if (!b.cod_prenda || !b.talla_key_salida) continue;
+        const nombre = (typeof prendaCanon === 'function') ? prendaCanon(b.cod_prenda) : b.cod_prenda;
+        const k = nombre + '|' + b.talla_key_salida;
+        entProdMap.set(k, (entProdMap.get(k) || 0) + (Number(b.cantidad_original) || 0));
+      }
+      entActualizarInfo();
+    })
+    .catch(() => {});
+}
+
+// Cambio de talla: manejar "otra" + refrescar el visor
+function entTallaCambio(sel) {
+  document.getElementById('ent-talla-otra-wrap').style.display = sel.value === '__OTRA__' ? '' : 'none';
+  entActualizarInfo();
+}
+
+// Visor: "📦 stock actual · 🏭 en producción" de la prenda+talla elegida —
+// para saber qué se supone que estás recibiendo antes de sumar a ciegas.
+function entActualizarInfo() {
+  const info = document.getElementById('ent-info');
+  if (!info) return;
+  const prenda = document.getElementById('ent-prenda').value;
+  const selT = document.getElementById('ent-talla').value;
+  const talla = selT === '__OTRA__' ? '' : selT;
+  if (!prenda || !talla) { info.style.display = 'none'; return; }
+  const cod = ENT_PRENDAS[prenda];
+  const row = (bodegaCache.stock || []).find(s =>
+    (s.nombre_prenda === prenda || s.cod_prenda === cod) && s.talla_key === talla);
+  const stockAct = row ? (Number(row.stock_actual) || 0) : 0;
+  const enProd = entProdMap ? (entProdMap.get(prenda + '|' + talla) || 0) : null;
+  info.style.display = '';
+  info.innerHTML = `📦 Stock actual de <strong>${cod}${talla}</strong>: <strong>${stockAct}</strong>`
+    + (enProd === null ? ' · 🏭 producción: cargando…'
+      : enProd > 0 ? ` · 🏭 en producción: <strong style="color:#2a7a2a">${enProd}</strong> pieza(s) en camino`
+      : ' · 🏭 nada en producción de esta talla');
 }
 
 // Al elegir prenda: llenar tallas válidas = catálogo + tallas ya vistas en
@@ -360,6 +406,7 @@ function entPrendaCambio() {
   selT.innerHTML = '<option value="">— Elegí talla —</option>' +
     lista.map(t => `<option value="${t}">${t}</option>`).join('') +
     '<option value="__OTRA__">✏️ Otra talla (escribir)…</option>';
+  entActualizarInfo();
 }
 
 function cerrarEntradaManual() {

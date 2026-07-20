@@ -36,12 +36,16 @@ async function initEmpaque(escuelaId) {
   root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando datos de empaque...</div>';
   try {
     // Datos frescos siempre (una sesión arranca con la foto real, sin SWR)
-    const [escuelas, alumnos, stock, pool] = await Promise.all([
+    const [escuelas, alumnos, stock, pool, prodPend] = await Promise.all([
       supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre&order=alias'),
       supaFetchAll('alumno',
         '?activo=eq.true&select=id,nombre,grado,sexo,escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&order=nombre&limit=10000'),
       supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
       supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+      // 🏭 Lo que viene en camino desde corte/producción (bultos no terminados)
+      supaFetchAll('vw_produccion_estado',
+        '?estado_manual=neq.terminado&select=cod_prenda,talla_key_salida,cantidad_original')
+        .catch(() => []),
     ]);
     emqState.escuelas = escuelas;
     emqState.alumnos = alumnos;
@@ -56,6 +60,14 @@ async function initEmpaque(escuelaId) {
       if (d <= 0) continue;
       const k = p.escuela_id + '|' + p.nombre_prenda + '|' + p.talla_key;
       emqState.poolMap.set(k, (emqState.poolMap.get(k) || 0) + d);
+    }
+    // "prenda|talla" → piezas en camino (bultos de corte/producción sin terminar)
+    emqState.prodMap = new Map();
+    for (const b of prodPend) {
+      if (!b.cod_prenda || !b.talla_key_salida) continue;
+      const nombre = (typeof prendaCanon === 'function') ? prendaCanon(b.cod_prenda) : b.cod_prenda;
+      const k = nombre + '|' + b.talla_key_salida;
+      emqState.prodMap.set(k, (emqState.prodMap.get(k) || 0) + (Number(b.cantidad_original) || 0));
     }
     emqState.cargado = true;
     emqState.marcados = new Map();
@@ -228,9 +240,14 @@ function emqAbrirAlt(alumnoId, pieza) {
   const lista = [...tallas.entries()].sort((x, y) => x[0].localeCompare(y[0], 'es', { numeric: true }));
   const modal = document.getElementById('emq-alt-modal');
   document.getElementById('emq-alt-titulo').textContent = `${prenda} — sin stock de ${pedida}`;
-  document.getElementById('emq-alt-sub').textContent = lista.length
-    ? `Para ${a.nombre}. Elegí una talla alterna disponible:`
-    : `No hay NINGUNA talla de ${prenda} disponible (ni reservada ni en stock). Esta pieza queda pendiente.`;
+  const enProd = emqState.prodMap ? (emqState.prodMap.get(prenda + '|' + pedida) || 0) : 0;
+  document.getElementById('emq-alt-sub').innerHTML =
+    (enProd > 0
+      ? `<div style="background:#F0F7F0;border:1px solid #CDE5CD;border-radius:6px;padding:6px 8px;margin-bottom:6px">🏭 <strong>Vienen ${enProd} pieza(s) de ${pedida} en producción</strong> — si podés esperar, quizás no haga falta talla alterna.</div>`
+      : '') +
+    (lista.length
+      ? `Para ${a.nombre}. Elegí una talla alterna disponible:`
+      : `No hay NINGUNA talla de ${prenda} disponible (ni reservada ni en stock). Esta pieza queda pendiente.`);
   document.getElementById('emq-alt-lista').innerHTML = lista.map(([t, q]) => `
     <button class="btn btn-sm btn-ghost" style="min-width:56px"
       onclick="emqElegirAlt('${alumnoId}','${pieza}','${t.replace(/'/g, "\\'")}')">${t} <span style="opacity:.6">×${q}</span></button>
@@ -336,21 +353,31 @@ async function emqAbrirReserva(escuelaId) {
     // Escuelas y alumnos: reusar la sesión si está cargada, sino traer.
     // Stock y reservas: SIEMPRE frescos (mismo estándar que empacar).
     const usarSesion = emqState.cargado;
-    const [escuelas, alumnos, stock, pool] = await Promise.all([
+    const [escuelas, alumnos, stock, pool, prodPend] = await Promise.all([
       usarSesion ? Promise.resolve(emqState.escuelas)
         : supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre&order=alias'),
       usarSesion ? Promise.resolve(emqState.alumnos)
         : supaFetchAll('alumno', '?activo=eq.true&select=id,escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000'),
       supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
       supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+      supaFetchAll('vw_produccion_estado',
+        '?estado_manual=neq.terminado&select=cod_prenda,talla_key_salida,cantidad_original')
+        .catch(() => []),
     ]);
     const stockFresco = new Map();
     for (const s of stock) {
       const p = s.nombre_prenda || (typeof prendaCanon === 'function' ? prendaCanon(s.cod_prenda) : s.cod_prenda);
       if (p && s.talla_key) stockFresco.set(p + '|' + s.talla_key, Number(s.stock_actual) || 0);
     }
+    const prodMap = new Map();
+    for (const b of prodPend) {
+      if (!b.cod_prenda || !b.talla_key_salida) continue;
+      const nombre = (typeof prendaCanon === 'function') ? prendaCanon(b.cod_prenda) : b.cod_prenda;
+      const k = nombre + '|' + b.talla_key_salida;
+      prodMap.set(k, (prodMap.get(k) || 0) + (Number(b.cantidad_original) || 0));
+    }
     emqState._resv = {
-      escuelas, alumnos, stockFresco, poolRows: pool,
+      escuelas, alumnos, stockFresco, prodMap, poolRows: pool,
       escuelaId: escuelaId || '',
       prendaSel: null,
       cant: new Map(),   // k → cantidad elegida
@@ -394,9 +421,10 @@ function emqResvBuild() {
       const [prenda, talla] = k.split('|');
       const reservado = poolEscuela.get(k) || 0;
       const stockLibre = r.stockFresco.get(k) || 0;
+      const enProd = (r.prodMap && r.prodMap.get(k)) || 0;
       const falta = Math.max(0, pend - reservado);
       const sugerido = Math.min(falta, stockLibre);
-      return { k, prenda, talla, pend, reservado, stockLibre, falta, sugerido };
+      return { k, prenda, talla, pend, reservado, stockLibre, enProd, falta, sugerido };
     })
     .sort((a, b) => a.prenda.localeCompare(b.prenda) || a.talla.localeCompare(b.talla, 'es', { numeric: true }));
   const prendas = [...new Set(r.filas.map(f => f.prenda))];
@@ -466,7 +494,7 @@ function emqResvRender() {
           ${sinStock ? 'disabled' : ''}>${f.talla}</button>
         <div style="flex:1;font-size:11px;color:#666;line-height:1.5">
           Pendientes: <strong>${f.pend}</strong>${f.reservado ? ` · 🔒 ya reservadas: <strong style="color:#a82">${f.reservado}</strong>` : ''}<br>
-          📦 En bodega: <strong style="color:${f.stockLibre > 0 ? 'var(--azul)' : '#c44'}">${f.stockLibre}</strong>${f.falta === 0 ? ' · <span style="color:var(--verde)">cubierta ✓</span>' : ''}
+          📦 En bodega: <strong style="color:${f.stockLibre > 0 ? 'var(--azul)' : '#c44'}">${f.stockLibre}</strong>${f.enProd > 0 ? ` · 🏭 vienen: <strong style="color:#6a5">${f.enProd}</strong>` : ''}${f.falta === 0 ? ' · <span style="color:var(--verde)">cubierta ✓</span>' : ''}
         </div>
         <div style="display:flex;align-items:center;gap:2px">
           <button class="btn btn-ghost btn-sm" style="min-width:36px;padding:6px" onclick="emqResvSet('${f.k.replace(/'/g, "\\'")}',-1)" ${n === 0 ? 'disabled' : ''}>−</button>
@@ -700,8 +728,10 @@ function emqListaHtml() {
       return `<button style="${base}background:white;color:var(--azul);border-color:var(--azul)"
         onclick="emqToggle('${a.id}','${pieza}')" title="${cod(prenda)}${talla} disponible — tocá para marcar">${talla}</button>`;
     }
-    return `<button style="${base}background:#F5F5F5;color:#999;border-color:#DDD;border-style:dashed"
-      onclick="emqToggle('${a.id}','${pieza}')" title="Sin stock de ${cod(prenda)}${talla} — tocá para elegir talla alterna">⚠ ${talla}</button>`;
+    const enProd = emqState.prodMap ? (emqState.prodMap.get(prenda + '|' + talla) || 0) : 0;
+    return `<button style="${base}background:#F5F5F5;color:#999;border-color:#DDD;border-style:dashed;${enProd > 0 ? 'color:#6a5;border-color:#9c8' : ''}"
+      onclick="emqToggle('${a.id}','${pieza}')"
+      title="Sin stock de ${cod(prenda)}${talla}${enProd > 0 ? ` — 🏭 vienen ${enProd} en producción` : ''} — tocá para elegir talla alterna">${enProd > 0 ? '🏭' : '⚠'} ${talla}</button>`;
   };
 
   let html = '', gradoAct = null;
