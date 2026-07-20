@@ -10,6 +10,7 @@
   <div class="card" style="padding:8px 10px;margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <button id="est-nav-tallas" class="btn btn-sm btn-primary" onclick="switchSubEst('tallas')">📊 Por talla</button>
     <button id="est-nav-escuela" class="btn btn-sm btn-ghost" onclick="switchSubEst('escuela')">📋 Por escuela</button>
+    <button id="est-nav-pronostico" class="btn btn-sm btn-ghost" onclick="switchSubEst('pronostico')">🔮 Pronóstico</button>
   </div>
 
   <!-- SUB: Por talla — demanda por escuela cruzada con corte/producción/bodega/pool (reporte central) -->
@@ -20,5 +21,10 @@
   <!-- SUB: Por escuela — Tallaje + Contrato + Tela/Yardaje (unificado, est_escuela.js) -->
   <div id="est-sub-escuela-view" style="display:none">
     <div class="text-muted" style="padding:20px;text-align:center">Cargando reporte por escuela...</div>
+  </div>
+
+  <!-- SUB: Pronóstico — distribución histórica × cantidad nueva (pronostico.js) -->
+  <div id="est-sub-pronostico-view" style="display:none">
+    <div class="text-muted" style="padding:20px;text-align:center">Cargando pronóstico...</div>
   </div>
 </div>

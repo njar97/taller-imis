@@ -15,7 +15,7 @@ function initEstadistica() {
 
 function switchSubEst(sub) {
   estSubActual = sub;
-  const subs = ['tallas', 'escuela'];
+  const subs = ['tallas', 'escuela', 'pronostico'];
   subs.forEach(s => {
     const view = document.getElementById('est-sub-' + s + '-view');
     if (view) view.style.display = (s === sub) ? '' : 'none';
@@ -30,5 +30,7 @@ function switchSubEst(sub) {
     initTallasResumen();
   } else if (sub === 'escuela' && typeof initEstEscuela === 'function') {
     initEstEscuela();
+  } else if (sub === 'pronostico' && typeof initPronostico === 'function') {
+    initPronostico();
   }
 }

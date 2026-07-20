@@ -54,6 +54,24 @@ dashboard tiene "Top escuelas con pendientes" (parcial); falta prioridad
 Las BASEs generaban etiquetas de bulto/alumno. La app menciona "etiqueta" en
 registro/reportes; falta confirmar si las **imprime**.
 
+## Cierre de la migración de los libros vivos (2026-07-20)
+
+Extracción completa de fórmulas de `BASE 2026.xlsm` y `2026 PRONOSTICO.xlsm`
+en `docs/migracion-excel-spec.md`. Conclusiones:
+
+1. **No hay LAMBDAs de usuario** en los .xlsm — los `_xleta.*`/`_xlpm.*` que
+   asustaban son marcadores internos de LET. Toda la lógica eran columnas
+   calculadas + LET/FILTER/UNIQUE, ya cubierta por la app.
+2. **`BASE 2026.xlsm` = el mismo padrón que la temporada activa de la app**
+   (mismas 16 escuelas; la app va incluso adelante: SALOMON 1,156 vs 1,110
+   del Excel, sin tocar desde marzo). No hubo nada que importar.
+3. **`2026 PRONOSTICO.xlsm`** era el único gap real: distribución histórica
+   de tallas × cantidad contratada. Portado como sub-reporte
+   **Estadística → 🔮 Pronóstico** (`src/js/pronostico.js`), con reparto por
+   resto mayor y PDF.
+4. Los 3 .xlsm quedan como **respaldo histórico** en OneDrive (solo-lectura
+   tras el 4-sep cuando venza M365); la app es la fuente de verdad.
+
 ## Notas de arqueología
 
 - Los `.xlsm` arrastran una hoja `GPT cache` oculta (veryHidden) de 1M filas ×

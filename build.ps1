@@ -27,6 +27,7 @@ $jsOrder = @(
     'estadistica.js',
     'estadistica_tallas.js',
     'est_escuela.js',
+    'pronostico.js',
     'busqueda_global.js',
     'nav_badges.js',
     'atajos_teclado.js',
