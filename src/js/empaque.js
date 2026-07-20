@@ -25,6 +25,12 @@ let emqState = {
 };
 
 async function initEmpaque(escuelaId) {
+  // Hint desde otros módulos (dashboard, producción): abre directo en esa
+  // escuela sin cadenas de setTimeout.
+  if (!escuelaId && window._emqHintEscuela) {
+    escuelaId = window._emqHintEscuela;
+    window._emqHintEscuela = null;
+  }
   const root = document.getElementById('empaque-contenido');
   if (!root) return;
   root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando datos de empaque...</div>';
@@ -311,18 +317,112 @@ async function emqDeshacer() {
   await initEmpaque(emqState.escuelaId);
 }
 
-function emqIrAEntrega() {
-  // La modal de entrega vive en la vista Bodega (Fase 2: se integra acá).
-  switchTab('bodega');
-  setTimeout(() => {
-    if (typeof abrirEntregaModal === 'function') {
-      abrirEntregaModal();
-      setTimeout(() => {
-        const sel = document.getElementById('ent-escuela');
-        if (sel && emqState.escuelaId) { sel.value = emqState.escuelaId; sel.dispatchEvent(new Event('change')); }
-      }, 400);
+// ── 🔒 Reservar (reemplaza al "Acaparar" para el caso normal) ────────
+// Aparta el stock que necesitan las piezas marcadas SIN empacar: los
+// alumnos siguen pendientes, pero ese stock queda bloqueado para la
+// escuela (misma mecánica que acaparar: SALIDA_EMPAQUE sin alumno +
+// fila en escuela_acaparado). Las piezas que ya estaban respaldadas por
+// una reserva previa se saltan (ya están apartadas).
+async function emqReservar() {
+  const escId = emqState.escuelaId;
+  const byId = new Map();
+  for (const a of emqState.alumnos) byId.set(a.id, a);
+
+  // Simular consumo pool→stock: solo lo que saldría de STOCK LIBRE se reserva
+  const poolRest = new Map(emqState.poolMap);
+  const deStock = new Map();  // "prenda|talla" → n
+  let yaReservadas = 0;
+  for (const [id, m] of emqState.marcados) {
+    const a = byId.get(id);
+    if (!a) continue;
+    for (const pieza of ['top', 'bottom']) {
+      if (!m[pieza]) continue;
+      const prenda = emqPrenda(a, pieza);
+      const talla = emqTalla(a, pieza);
+      const kP = escId + '|' + prenda + '|' + talla;
+      if ((poolRest.get(kP) || 0) > 0) { poolRest.set(kP, poolRest.get(kP) - 1); yaReservadas++; continue; }
+      const kS = prenda + '|' + talla;
+      deStock.set(kS, (deStock.get(kS) || 0) + 1);
     }
-  }, 300);
+  }
+  if (deStock.size === 0) {
+    alert(yaReservadas > 0
+      ? 'Todas las piezas marcadas ya están respaldadas por reservas de esta escuela.'
+      : 'No hay piezas marcadas.');
+    return;
+  }
+  const total = [...deStock.values()].reduce((s, n) => s + n, 0);
+  const detalle = [...deStock.entries()].map(([k, n]) => {
+    const [p, t] = k.split('|');
+    return `· ${p} ${t} × ${n}`;
+  }).join('\n');
+  if (!confirm(`¿Reservar ${total} pieza(s) para esta escuela?\n\n${detalle}\n\nEl stock queda apartado; los alumnos siguen PENDIENTES (los empacás cuando quieras y la reserva se consume sola).`)) return;
+
+  try {
+    const hoy = new Date().toISOString().slice(0, 10);
+    for (const [k, n] of deStock) {
+      const [prenda, talla] = k.split('|');
+      const cod = (typeof _codPrenda === 'function') ? _codPrenda(prenda) : prenda;
+      const movs = await supaFetch('bodega_movimiento', 'POST', {
+        tipo: 'SALIDA_EMPAQUE',
+        cod_prenda: cod, nombre_prenda: prenda, talla_key: talla,
+        cantidad: n, escuela_id: escId, fecha: hoy,
+        observaciones: 'Reservado desde sesión de empaque',
+      });
+      const movId = Array.isArray(movs) ? movs[0]?.id : movs?.id;
+      await supaFetch('escuela_acaparado', 'POST', {
+        escuela_id: escId,
+        cod_prenda: cod, nombre_prenda: prenda, talla_key: talla,
+        cantidad_acaparada: n, cantidad_consumida: 0,
+        movimiento_bodega_id: movId,
+        observaciones: 'Reserva desde sesión de empaque',
+      });
+    }
+    alert(`✓ ${total} pieza(s) reservadas para la escuela. Los alumnos siguen pendientes; al empacarlos, la reserva se consume sola.`);
+    await initEmpaque(escId);
+  } catch (e) {
+    alert('Error al reservar: ' + e.message);
+  }
+}
+
+// ── 🚚 Entrega integrada (paso 3) ────────────────────────────────────
+// Marca TODOS los empacados de la escuela como entregados (misma
+// semántica que el flujo de Bodega) + crea el registro en entrega_escuela.
+async function emqEntregar() {
+  const escId = emqState.escuelaId;
+  const fecha = document.getElementById('emq-ent-fecha').value;
+  const receptor = document.getElementById('emq-ent-receptor').value.trim() || null;
+  if (!fecha) { alert('Elegí la fecha'); return; }
+  const btn = document.getElementById('emq-btn-entregar');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Registrando…'; }
+  try {
+    const empacados = await supaFetch('alumno', 'GET', null,
+      `?escuela_id=eq.${escId}&or=(estado_top.eq.empacado,estado_bottom.eq.empacado)&select=id,estado_top,estado_bottom&limit=10000`);
+    let n = 0;
+    for (const a of empacados) {
+      if (a.estado_top === 'empacado') n++;
+      if (a.estado_bottom === 'empacado') n++;
+    }
+    if (n === 0) { alert('No hay piezas empacadas pendientes de entrega.'); return; }
+    if (!confirm(`Se van a marcar como ENTREGADAS ${n} pieza(s) empacadas de esta escuela (todas, no solo las de esta sesión). ¿Confirmar?`)) return;
+
+    const nowIso = new Date().toISOString();
+    await _bulkPatchAlumno(`?escuela_id=eq.${escId}&estado_top=eq.empacado`,
+      { estado_top: 'entregado', actualizado_en: nowIso });
+    await _bulkPatchAlumno(`?escuela_id=eq.${escId}&estado_bottom=eq.empacado`,
+      { estado_bottom: 'entregado', actualizado_en: nowIso });
+    await supaFetch('entrega_escuela', 'POST', {
+      escuela_id: escId, fecha, cantidad_piezas: n, receptor,
+      observaciones: 'Registrada desde sesión de empaque',
+    });
+    emqState.ultimoEmpaque = null;  // ya entregado: el deshacer de sesión no aplica
+    alert(`✓ Entrega registrada: ${n} pieza(s) el ${fecha}${receptor ? ' · recibió ' + receptor : ''}.`);
+    await initEmpaque(escId);
+  } catch (e) {
+    alert('Error al registrar la entrega: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🚚 Confirmar entrega'; }
+  }
 }
 
 // ── Render ───────────────────────────────────────────────────────────
@@ -355,7 +455,7 @@ function emqPaso1Html() {
   }).join('');
   return `
     <div class="card" style="padding:10px 12px;margin-bottom:10px">
-      <div style="font-weight:700">🧺 Sesión de empaque <span style="font-size:10px;background:#FFD700;color:#1F4E79;border-radius:8px;padding:1px 6px;vertical-align:middle">BETA</span></div>
+      <div style="font-weight:700">🧺 Sesión de empaque</div>
       <div style="font-size:12px;color:#666;margin-top:2px">Elegí la escuela. "Empacables ya" = piezas pendientes que se pueden empacar con lo que hay ahora (reservas de la escuela + stock libre).</div>
     </div>
     ${cards || '<div class="alert alert-info">🎉 No hay piezas pendientes en ninguna escuela.</div>'}
@@ -454,8 +554,10 @@ function emqPaso2Html() {
       <div id="emq-lista">${emqListaHtml()}</div>
     </div>
     <div style="position:fixed;bottom:calc(66px + env(safe-area-inset-bottom));left:0;right:0;z-index:900;display:flex;justify-content:center;pointer-events:none">
-      <div style="pointer-events:auto;background:white;border:1px solid var(--borde);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.2);padding:8px 12px;display:flex;gap:10px;align-items:center;margin:0 12px">
+      <div style="pointer-events:auto;background:white;border:1px solid var(--borde);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.2);padding:8px 12px;display:flex;gap:8px;align-items:center;margin:0 12px">
         <div style="font-size:13px"><strong>${nPiezas}</strong> pieza(s) · <strong>${nAlumnos}</strong> alumno(s)</div>
+        <button class="btn btn-ghost btn-sm" ${nPiezas === 0 ? 'disabled' : ''} onclick="emqReservar()"
+          title="Apartar el stock de estas piezas para la escuela SIN empacar todavía (los alumnos siguen pendientes)">🔒 Reservar</button>
         <button id="emq-btn-empacar" class="btn btn-success" ${nPiezas === 0 ? 'disabled' : ''} onclick="emqEmpacar()">📦 Empacar</button>
       </div>
     </div>`;
@@ -470,8 +572,25 @@ function emqPaso3Html() {
       <div style="font-weight:700;font-size:16px;margin:6px 0">Empaque registrado</div>
       <div style="font-size:13px;color:#666">${esc.alias || esc.nombre || ''} · ${u ? u.resumen : ''}</div>
       <div id="emq-undo-status" style="font-size:12px;color:#888;margin-top:4px"></div>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
-        <button class="btn btn-primary" onclick="emqIrAEntrega()">🚚 Registrar entrega a la escuela</button>
+
+      <!-- Entrega integrada: fecha + receptor acá mismo, sin saltar de vista -->
+      <div style="margin-top:16px;padding:12px;background:#F5F9F5;border:1px solid #CDE5CD;border-radius:8px;text-align:left">
+        <div style="font-weight:700;font-size:13px;margin-bottom:8px">🚚 ¿Entregar a la escuela ahora?</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
+          <div class="field" style="margin:0">
+            <label>Fecha</label>
+            <input type="date" id="emq-ent-fecha" value="${new Date().toISOString().slice(0, 10)}" style="width:150px">
+          </div>
+          <div class="field" style="margin:0;flex:1;min-width:140px">
+            <label>Recibió (opcional)</label>
+            <input type="text" id="emq-ent-receptor" placeholder="Nombre de quien recibe">
+          </div>
+          <button id="emq-btn-entregar" class="btn btn-primary btn-sm" onclick="emqEntregar()">🚚 Confirmar entrega</button>
+        </div>
+        <div style="font-size:11px;color:#888;margin-top:6px">Marca como entregadas TODAS las piezas empacadas de la escuela y deja el registro con fecha y receptor.</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
         <button class="btn btn-ghost" onclick="emqState.paso=2;renderEmpaque()">📋 Seguir en esta escuela</button>
         <button class="btn btn-ghost" onclick="emqVolverEscuelas();renderEmpaque()">🧺 Otra escuela</button>
         ${u ? '<button class="btn btn-ghost" style="color:var(--rojo)" onclick="emqDeshacer()">↩️ Deshacer este empaque</button>' : ''}

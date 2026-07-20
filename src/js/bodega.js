@@ -110,19 +110,20 @@ function renderStock() {
             <span style="font-size:12px;opacity:0.9">▼</span>
           </summary>
           <div style="padding:8px;margin-top:6px;background:white;border:1px solid var(--borde);border-radius:6px;box-shadow:0 4px 8px rgba(0,0,0,0.05)">
-            <!-- Acciones principales: acaparar + empacar (lo demás va en "Otras") -->
+            <!-- Fase 2 empaque unificado: la SESIÓN es la acción principal.
+                 Empacar-selector, empacar-pool y asignar quedaron sin botón
+                 (el código se elimina en Fase 3). Acaparar por cantidad se
+                 demota a "Otras" (el caso normal es 🔒 Reservar en la sesión). -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px">
-              <button class="btn btn-success btn-sm" onclick="switchTab('empaque')" title="Flujo nuevo unificado: escuela → marcar piezas → empacar (reemplazará a los de abajo)" style="text-align:left">🧺 Sesión de empaque <span style="font-size:9px;background:#FFD700;color:#1F4E79;border-radius:6px;padding:0 4px">BETA</span></button>
-              <button class="btn btn-warning btn-sm" onclick="abrirAcapararModal()" title="Bloquear cantidad para una escuela" style="text-align:left">📥 Acaparar</button>
-              <button class="btn btn-primary btn-sm" onclick="abrirEmpacarSelector()" style="text-align:left">📦 Empacar a alumnos</button>
-              ${hayPool ? `<button class="btn btn-warning btn-sm" onclick="abrirEmpacarAcaparadosModal()" title="Asignar pool acaparado a alumnos" style="text-align:left">📥 Empacar pool (${bodegaCache.poolTotal})</button>` : ''}
+              <button class="btn btn-success btn-sm" onclick="switchTab('empaque')" title="Escuela → marcar piezas → reservar o empacar → entrega" style="text-align:left">🧺 Sesión de empaque</button>
+              <button class="btn btn-ghost btn-sm" onclick="abrirEntradaManual()" style="text-align:left">📥 + Entrada de stock</button>
             </div>
-            <!-- Otras acciones (menos frecuentes): entrada de stock, entregas, conteo, salida -->
+            <!-- Otras acciones (menos frecuentes) -->
             <details style="margin-top:6px">
               <summary style="cursor:pointer;list-style:none;font-size:12px;color:#666;padding:4px 2px;user-select:none">⋯ Otras acciones</summary>
               <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;margin-top:4px">
-                <button class="btn btn-ghost btn-sm" onclick="abrirEntradaManual()" style="text-align:left">📥 + Entrada de stock</button>
                 <button class="btn btn-ghost btn-sm" onclick="abrirEntregaModal()" title="Marcar empacados de una escuela como entregados" style="text-align:left">🚚 Marcar entrega</button>
+                <button class="btn btn-ghost btn-sm" onclick="abrirAcapararModal()" title="Reservar una CANTIDAD arbitraria de una talla para una escuela (el caso normal es 🔒 Reservar dentro de la sesión de empaque)" style="text-align:left">📥 Acaparar por cantidad</button>
                 <button class="btn btn-ghost btn-sm" onclick="abrirConteoModal()" title="Carga rápida de stock físico" style="text-align:left">📊 Conteo inicial</button>
                 <button class="btn btn-ghost btn-sm" onclick="abrirSalidaModal()" title="Salida sin alumnos" style="text-align:left">↗ Salida rápida</button>
               </div>
@@ -259,7 +260,7 @@ function renderMovimientos(movs) {
     cont.innerHTML = `
       <div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()">📥 + Entrada</button>
-        <button class="btn btn-primary btn-sm" onclick="abrirAsignarModal()">🎯 Asignar / Empacar / Entregar</button>
+        <button class="btn btn-success btn-sm" onclick="switchTab('empaque')" title="Escuela → marcar piezas → reservar o empacar → entrega">🧺 Sesión de empaque</button>
         <button class="btn btn-ghost btn-sm" onclick="abrirSalidaModal()" title="Salida genérica (sin alumnos)">🚚 Salida rápida</button>
       </div>
       <div class="alert alert-info">Sin movimientos registrados.</div>`;

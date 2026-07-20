@@ -25,7 +25,7 @@ const HERRAMIENTAS = [
     ir: () => { _herrTab('estadistica'); _herrLuego(() => switchSubEst('escuela')); } },
   { icono:'🔮', nombre:'Pronóstico de tallas', kw:'pronostico distribucion historica proxima temporada proyeccion',
     ir: () => { _herrTab('estadistica'); _herrLuego(() => switchSubEst('pronostico')); } },
-  { icono:'🧺', nombre:'Sesión de empaque (beta)', kw:'empacar empaque sesion piezas alumnos marcar bolsas',
+  { icono:'🧺', nombre:'Sesión de empaque', kw:'empacar empaque sesion piezas alumnos marcar bolsas reservar acaparar entregar',
     ir: () => _herrTab('empaque') },
   { icono:'📦', nombre:'Stock de bodega / entradas y salidas', kw:'bodega stock inventario entrada salida movimientos kardex',
     ir: () => _herrTab('bodega') },

@@ -23,10 +23,19 @@ El usuario nunca elige entre pool y stock: el motor lo resuelve (como siempre lo
 
 - **Fase 1 (HECHA 2026-07-20)**: sesión nueva en paralelo, sin borrar nada.
   Accesos: Bodega → Acciones → "🧺 Sesión de empaque BETA", y Ctrl+K "empaque".
-- **Fase 2** (tras validar en uso real): todos los botones viejos (dashboard,
-  selector de combos, empacar acaparados, asignar-a-alumnos empacar) apuntan a la
-  sesión; "Acaparar" se convierte en "🔒 Reservar" dentro de la sesión; la entrega
-  se integra como paso 4 nativo (sin saltar a Bodega).
+- **Fase 2 (HECHA 2026-07-20, mismo día tras validación del usuario)**:
+  · Dashboard: botones Acaparar+Empacar por escuela → un solo "🧺 Empacar" que
+    abre la sesión con la escuela preseleccionada (`window._emqHintEscuela`,
+    sin cadenas de setTimeout).
+  · Bodega→Acciones: la sesión es la acción principal; se quitaron los botones
+    de Empacar-selector, Empacar-pool y Asignar (código vivo pero sin UI,
+    se borra en Fase 3). "Acaparar por cantidad" demotado a Otras acciones.
+  · Badge de Producción → sesión (antes selector con hint de prenda).
+  · "🔒 Reservar" en la barra de la sesión: aparta el stock de las piezas
+    marcadas SIN empacar (misma mecánica que acaparar: SALIDA_EMPAQUE sin
+    alumno + fila escuela_acaparado; lo respaldado por pool se salta).
+  · Entrega integrada en el paso 3 (fecha+receptor inline → _bulkPatchAlumno
+    empacado→entregado + registro en entrega_escuela). Sin saltar a Bodega.
 - **Fase 3**: borrar UI muerta (~1,200-1,500 líneas: modo empaque de
   alumnos_global.js, selector de combos, empacarAcaparados*, asignar modal).
   Registro vuelve a ser solo padrón.

@@ -156,17 +156,11 @@ function _badgeDemandaProd(cod_prenda, talla_key) {
   `;
 }
 
-// Click en el badge → abre el modal de empacar a alumnos prefijando la prenda
-// y la talla (filtro extra). El modal listará combinaciones que matchean.
+// Click en el badge → abre la SESIÓN DE EMPAQUE unificada (Fase 2). La
+// sesión muestra disponibilidad por pieza; el filtro por prenda puntual
+// ya no hace falta (el usuario ve qué escuelas tienen empacables).
 function abrirEmpacarPrendaTalla(prenda, talla) {
-  if (typeof abrirEmpacarSelector !== 'function') {
-    alert('Función no disponible');
-    return;
-  }
-  // Setear hint para que el selector arranque con esa prenda marcada
-  // (lo procesa abrirEmpacarSelector si encuentra este hint global).
-  window._empSelHint = { prenda, talla };
-  abrirEmpacarSelector();
+  if (typeof switchTab === 'function') switchTab('empaque');
 }
 
 function renderProduccion() {

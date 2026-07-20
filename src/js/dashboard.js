@@ -348,8 +348,7 @@ function _renderAvancePorEscuela(r) {
         <!-- Atajos -->
         <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px">
           <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('registro','${e.id}')" style="font-size:11px;padding:4px 8px">📋 Registro</button>
-          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('acaparar','${e.id}')" style="font-size:11px;padding:4px 8px">📥 Acaparar</button>
-          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('empacar','${e.id}')" style="font-size:11px;padding:4px 8px">📦 Empacar</button>
+          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('empacar','${e.id}')" style="font-size:11px;padding:4px 8px" title="Sesión de empaque: marcar piezas, reservar o empacar">🧺 Empacar</button>
           <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('entrega','${e.id}')" style="font-size:11px;padding:4px 8px">🚚 Entrega</button>
           <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('lista','${e.id}')" style="font-size:11px;padding:4px 8px" title="Descargar PDF de la lista de empaque">🖨 Lista</button>
           <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('resumen','${e.id}')" style="font-size:11px;padding:4px 8px" title="Descargar resumen ejecutivo PDF (2 hojas)">📑 Resumen</button>
@@ -390,30 +389,11 @@ function _avanceEscIrA(accion, escId) {
     }, 50);
     return;
   }
-  if (accion === 'acaparar') {
-    if (typeof switchTab === 'function') switchTab('bodega');
-    setTimeout(() => {
-      if (typeof abrirAcapararModal === 'function') {
-        abrirAcapararModal();
-        setTimeout(() => {
-          const sel = document.getElementById('aca-escuela');
-          if (sel) { sel.value = escId; if (typeof onAcapararTallaCambio === 'function') onAcapararTallaCambio(); }
-        }, 400);
-      }
-    }, 100);
-    return;
-  }
-  if (accion === 'empacar') {
-    if (typeof switchTab === 'function') switchTab('bodega');
-    setTimeout(() => {
-      if (typeof abrirEmpacarSelector === 'function') {
-        abrirEmpacarSelector();
-        setTimeout(() => {
-          const sel = document.getElementById('emp-sel-escuela');
-          if (sel) { sel.value = escId; if (typeof renderEmpSelCombos === 'function') renderEmpSelCombos(); }
-        }, 400);
-      }
-    }, 100);
+  // Fase 2 empaque unificado: acaparar y empacar van a la SESIÓN DE EMPAQUE
+  // con la escuela ya elegida (reservar vive adentro como 🔒 Reservar).
+  if (accion === 'acaparar' || accion === 'empacar') {
+    window._emqHintEscuela = escId;
+    if (typeof switchTab === 'function') switchTab('empaque');
     return;
   }
   if (accion === 'lista') {
