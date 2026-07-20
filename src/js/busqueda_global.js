@@ -36,7 +36,7 @@ const HERRAMIENTAS = [
   { icono:'🗂', nombre:'Reportes administrativos / exportar', kw:'reportes exportar excel csv descargar datos',
     ir: () => _herrConfig('Reportes') },
   { icono:'🎓', nombre:'Catálogo de grados (nivel/ciclo)', kw:'grados nivel ciclo catalogo parvularia basica bachillerato',
-    ir: () => _herrConfig('Grados') },
+    ir: () => { _herrTab('config'); _herrLuego(() => { if (typeof abrirCatalogoGrados === 'function') abrirCatalogoGrados(); }); } },
   { icono:'🏫', nombre:'Grupos de escuelas', kw:'grupos escuelas produccion lpt agrupar',
     ir: () => _herrConfig('Grupos de escuelas') },
   { icono:'👥', nombre:'Usuarios e invitaciones', kw:'usuarios invitar acceso operario admin permisos',
@@ -67,6 +67,12 @@ function _herrConfig(titulo) {
     const el = Array.from(document.querySelectorAll('#view-config .card-title, #view-config summary'))
       .find(x => (x.textContent || '').includes(titulo));
     if (!el) return;
+    // Config tiene sub-grupos (Reportes/Catálogos/Usuarios/Sistema):
+    // activar el grupo donde vive la card antes de scrollear.
+    const grupo = el.closest('[id^="cfg-sub-"]');
+    if (grupo && typeof switchSubConfig === 'function') {
+      switchSubConfig(grupo.id.replace('cfg-sub-', ''));
+    }
     const card = el.closest('.card') || el.closest('details') || el;
     if (card.style && card.style.display === 'none') card.style.display = '';
     if (card.tagName === 'DETAILS') card.open = true;

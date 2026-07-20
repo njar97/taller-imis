@@ -1,5 +1,23 @@
 // ══════════════════════════════════════════════════════════════════════
+// Sub-navegación de Config (v33): 📊 Reportes / 📚 Catálogos / 👥 Usuarios / 🛠 Sistema.
+// Mismo patrón que switchSubEst en Estadística.
+let cfgSubActual = 'reportes';
+
+function switchSubConfig(sub) {
+  cfgSubActual = sub;
+  ['reportes', 'catalogos', 'usuarios', 'sistema'].forEach(s => {
+    const view = document.getElementById('cfg-sub-' + s);
+    if (view) view.style.display = (s === sub) ? '' : 'none';
+    const btn = document.getElementById('cfg-nav-' + s);
+    if (btn) {
+      btn.classList.toggle('btn-primary', s === sub);
+      btn.classList.toggle('btn-ghost', s !== sub);
+    }
+  });
+}
+
 function initConfig() {
+  switchSubConfig(cfgSubActual || 'reportes');
   document.getElementById('cfg-url').value = SUPA_URL;
   document.getElementById('cfg-key').value = SUPA_KEY;
   document.getElementById('cfg-url-display').textContent = SUPA_URL;
@@ -160,6 +178,7 @@ function abrirCatalogoGrupos() {
 // ─── Catálogo de grados ────────────────────────────────────────────
 let gradosCatalogoCache = [];
 function abrirCatalogoGrados() {
+  switchSubConfig('catalogos');
   document.getElementById('cfg-grados-card').style.display = '';
   cargarGradosCatalogo();
 }

@@ -1,4 +1,4 @@
-<!-- Generado: 2026-07-20 13:42 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-07-20 13:52 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -2191,204 +2191,350 @@
 </div>
 
 <div id="view-config" class="view">
-  <!-- Sesión: el correo y "cerrar sesión" se movieron acá desde el encabezado
-       (v32) para dejar el header limpio, solo con el buscador. -->
-  <div class="card" id="cfg-session-card" style="display:none">
-    <div class="config-item">
-      <div>
-        <div class="config-label">👤 Sesión</div>
-        <div class="config-sub" id="cfg-session-email">—</div>
-        <div class="config-sub" id="cfg-session-rol" style="margin-top:2px;font-weight:600">—</div>
-      </div>
-      <button class="btn btn-ghost btn-sm" onclick="doLogout()">Cerrar sesión</button>
-    </div>
+  <!-- ═══ CONFIG reorganizada (v33): 4 grupos con sub-nav (mismo patrón
+       que Estadística). Antes era un scroll de 12 tarjetas mezcladas.
+       · 📊 Reportes  — lo que se consulta seguido (índice + histórico + costos + hoja entrega)
+       · 📚 Catálogos — datos maestros (grados, grupos de escuelas, operarias)
+       · 👥 Usuarios  — sesión, invitar, administrar (admin)
+       · 🛠 Sistema   — PWA, backups, conexión, fases, auditoría (rara vez) -->
+  <div class="card" style="padding:8px 10px;margin-bottom:10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+    <button id="cfg-nav-reportes" class="btn btn-sm btn-primary" onclick="switchSubConfig('reportes')">📊 Reportes</button>
+    <button id="cfg-nav-catalogos" class="btn btn-sm btn-ghost" onclick="switchSubConfig('catalogos')">📚 Catálogos</button>
+    <button id="cfg-nav-usuarios" class="btn btn-sm btn-ghost" onclick="switchSubConfig('usuarios')">👥 Usuarios</button>
+    <button id="cfg-nav-sistema" class="btn btn-sm btn-ghost" onclick="switchSubConfig('sistema')">🛠 Sistema</button>
   </div>
 
-  <div class="card">
-    <div class="card-title">⚙️ Configuración</div>
-    <div class="config-item">
-      <div>
-        <div class="config-label">Supabase URL</div>
-        <div class="config-sub" id="cfg-url-display">—</div>
-      </div>
-    </div>
-    <div class="config-item">
-      <div><div class="config-label">Estado</div><div><span id="cfg-estado" class="badge badge-err">Sin verificar</span></div></div>
-      <button class="btn btn-ghost btn-sm" onclick="verificarConexion()">Verificar</button>
-    </div>
-    <div class="divider"></div>
-    <div class="field"><label>URL</label><input type="text" id="cfg-url"></div>
-    <div class="field"><label>Anon Key</label><input type="text" id="cfg-key"></div>
-    <button class="btn btn-primary btn-block" onclick="guardarConfig()">Guardar configuración</button>
-  </div>
+  <!-- ════════════ SUB: 📊 REPORTES ════════════ -->
+  <div id="cfg-sub-reportes">
 
-  <div class="card">
-    <div class="card-title">🚀 Funciones de producción (por etapas)</div>
-    <div class="text-muted mb8" style="font-size:12px">Activá las funciones avanzadas solo cuando la Fase 1 esté funcionando bien. Si hay problemas, podés volver a desactivarlas.</div>
+    <!-- Índice de reportes: lista única que apunta a TODOS los reportes -->
+    <div class="card">
+      <div class="card-title">🗂️ Índice de reportes</div>
+      <div class="text-muted mb8" style="font-size:12px">Todos los reportes de la app en un solo lugar. El botón te lleva a donde está cada uno.</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
 
-    <div class="config-item">
-      <div style="flex:1">
-        <div class="config-label">Fase 1 · Seguimiento básico de bultos</div>
-        <div class="config-sub">Siempre activa. Marcar pendiente/terminado, dividir, unir.</div>
-      </div>
-      <span class="badge badge-ok">Activa</span>
-    </div>
-
-    <div class="config-item">
-      <div style="flex:1">
-        <div class="config-label">Fase 2 · Captura por operación y operaria</div>
-        <div class="config-sub">Registrar qué operaria hizo qué operación cada día. Requiere que tengas alguien designado para capturar.</div>
-      </div>
-      <label class="switch-toggle">
-        <input type="checkbox" id="cfg-fase2" onchange="toggleFase(2, this.checked)">
-        <span class="switch-slider"></span>
-      </label>
-    </div>
-
-    <div class="config-item">
-      <div style="flex:1">
-        <div class="config-label">Fase 3 · Reportes y destajo</div>
-        <div class="config-sub">Productividad por operaria, tarifas por pieza, liquidación por destajo. Requiere Fase 2 + 1-2 meses de datos.</div>
-      </div>
-      <label class="switch-toggle">
-        <input type="checkbox" id="cfg-fase3" onchange="toggleFase(3, this.checked)" disabled>
-        <span class="switch-slider"></span>
-      </label>
-    </div>
-    <div class="text-muted" style="font-size:11px;margin-top:8px">💡 Si desactivás una fase, los datos quedan guardados y se pueden volver a usar al reactivarla.</div>
-  </div>
-
-  <!-- Catálogos y accesos administrativos -->
-  <div class="card">
-    <div class="card-title">📚 Catálogos y otros accesos</div>
-    <div class="text-muted mb8" style="font-size:12px">Funciones de catálogo y herramientas que antes vivían en otros tabs.</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px">
-      <button class="btn btn-ghost" onclick="abrirCatalogoGrados()" style="padding:10px;text-align:left">
-        <div style="font-weight:600">🎓 Grados → Nivel/Ciclo</div>
-        <div style="font-size:11px;color:#666;margin-top:2px">Catálogo editable de grados</div>
-      </button>
-      <button class="btn btn-ghost" onclick="abrirCatalogoOperarias()" style="padding:10px;text-align:left">
-        <div style="font-weight:600">👷 Operarias</div>
-        <div style="font-size:11px;color:#666;margin-top:2px">Listado y alta de operarias</div>
-      </button>
-      <button class="btn btn-ghost" onclick="abrirCatalogoGrupos()" style="padding:10px;text-align:left">
-        <div style="font-weight:600">👥 Grupos de producción</div>
-        <div style="font-size:11px;color:#666;margin-top:2px">Definir grupos para asignación</div>
-      </button>
-      <button id="cfg-acceso-audit" class="btn btn-ghost" onclick="switchTab('auditoria')" style="padding:10px;text-align:left;display:none">
-        <div style="font-weight:600">🔍 Audit log</div>
-        <div style="font-size:11px;color:#666;margin-top:2px">Historial de cambios (admin)</div>
-      </button>
-    </div>
-  </div>
-
-  <!-- Índice de reportes (v32): lista única que apunta a TODOS los reportes,
-       sin moverlos de su lugar. Botón → navega a donde vive cada uno. -->
-  <div class="card">
-    <div class="card-title">🗂️ Índice de reportes</div>
-    <div class="text-muted mb8" style="font-size:12px">Todos los reportes de la app en un solo lugar. El botón te lleva a donde está cada uno (no se mueven de su sitio).</div>
-    <div style="display:flex;flex-direction:column;gap:6px">
-
-      <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
-        <div style="flex:1"><div style="font-weight:600;font-size:13px">📊 Por talla</div><div style="font-size:11px;color:#666">Demanda por talla cruzada con corte / bodega / pool (incluye 🔥 críticas).</div></div>
-        <button class="btn btn-ghost btn-sm" onclick="switchTab('estadistica'); if(typeof switchSubEst==='function') switchSubEst('tallas')">Abrir →</button>
-      </div>
-
-      <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
-        <div style="flex:1"><div style="font-weight:600;font-size:13px">📋 Por escuela</div><div style="font-size:11px;color:#666">Tallaje + Contrato + Tela/Yardaje de una escuela (o todas).</div></div>
-        <button class="btn btn-ghost btn-sm" onclick="switchTab('estadistica'); if(typeof switchSubEst==='function') switchSubEst('escuela')">Abrir →</button>
-      </div>
-
-      <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
-        <div style="flex:1"><div style="font-weight:600;font-size:13px">📈 Histórico</div><div style="font-size:11px;color:#666">Comparativo entre temporadas. Está acá abajo, en Config.</div></div>
-        <button class="btn btn-ghost btn-sm" onclick="var d=document.getElementById('cfg-rep-historico'); if(d){d.open=true; d.scrollIntoView({behavior:'smooth',block:'center'});}">Abrir ↓</button>
-      </div>
-
-      <div class="dato-sensible" style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
-        <div style="flex:1"><div style="font-weight:600;font-size:13px">💰 Costos</div><div style="font-size:11px;color:#666">Mano de obra por nivel × sexo. Está acá abajo, en Config.</div></div>
-        <button class="btn btn-ghost btn-sm" onclick="var d=document.getElementById('cfg-rep-costos'); if(d){d.open=true; d.scrollIntoView({behavior:'smooth',block:'center'});}">Abrir ↓</button>
-      </div>
-
-      <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
-        <div style="flex:1"><div style="font-weight:600;font-size:13px">📄 Hoja de entrega (PDF director)</div><div style="font-size:11px;color:#666">Reporte imprimible por escuela. Está acá abajo, en Config.</div></div>
-        <button class="btn btn-ghost btn-sm" onclick="var d=document.getElementById('cfg-rep-hoja'); if(d){d.scrollIntoView({behavior:'smooth',block:'center'});}">Abrir ↓</button>
-      </div>
-
-      <div style="padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
-        <div style="display:flex;gap:10px;align-items:center">
-          <div style="flex:1"><div style="font-weight:600;font-size:13px">🧾 Reportes PDF por escuela</div><div style="font-size:11px;color:#666">Hoja de tallaje, lista de empaque y hoja de entrega.</div></div>
+        <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+          <div style="flex:1"><div style="font-weight:600;font-size:13px">📊 Por talla</div><div style="font-size:11px;color:#666">Demanda por talla cruzada con corte / bodega / pool (incluye 🔥 críticas).</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="switchTab('estadistica'); if(typeof switchSubEst==='function') switchSubEst('tallas')">Abrir →</button>
         </div>
-        <div style="display:flex;gap:6px;align-items:center;margin-top:8px">
-          <select id="cfg-rep-pdf-escuela" style="flex:1;min-width:160px;padding:6px 8px">
-            <option value="">Tocá 🔄 para cargar las escuelas…</option>
+
+        <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+          <div style="flex:1"><div style="font-weight:600;font-size:13px">📋 Por escuela</div><div style="font-size:11px;color:#666">Tallaje + Contrato + Tela/Yardaje de una escuela (o todas).</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="switchTab('estadistica'); if(typeof switchSubEst==='function') switchSubEst('escuela')">Abrir →</button>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+          <div style="flex:1"><div style="font-weight:600;font-size:13px">🔮 Pronóstico de tallas</div><div style="font-size:11px;color:#666">Distribución histórica aplicada a una cantidad nueva a producir.</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="switchTab('estadistica'); if(typeof switchSubEst==='function') switchSubEst('pronostico')">Abrir →</button>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+          <div style="flex:1"><div style="font-weight:600;font-size:13px">📈 Histórico</div><div style="font-size:11px;color:#666">Comparativo entre temporadas. Acá abajo, en este mismo grupo.</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="var d=document.getElementById('cfg-rep-historico'); if(d){d.open=true; d.scrollIntoView({behavior:'smooth',block:'center'});}">Abrir ↓</button>
+        </div>
+
+        <div class="dato-sensible" style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+          <div style="flex:1"><div style="font-weight:600;font-size:13px">💰 Costos</div><div style="font-size:11px;color:#666">Mano de obra por nivel × sexo. Acá abajo, en este mismo grupo.</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="var d=document.getElementById('cfg-rep-costos'); if(d){d.open=true; d.scrollIntoView({behavior:'smooth',block:'center'});}">Abrir ↓</button>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+          <div style="flex:1"><div style="font-weight:600;font-size:13px">📄 Hoja de entrega (PDF director)</div><div style="font-size:11px;color:#666">Reporte imprimible por escuela. Acá abajo, en este mismo grupo.</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="var d=document.getElementById('cfg-rep-hoja'); if(d){d.scrollIntoView({behavior:'smooth',block:'center'});}">Abrir ↓</button>
+        </div>
+
+        <div style="padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+          <div style="display:flex;gap:10px;align-items:center">
+            <div style="flex:1"><div style="font-weight:600;font-size:13px">🧾 Reportes PDF por escuela</div><div style="font-size:11px;color:#666">Hoja de tallaje, lista de empaque y hoja de entrega.</div></div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;margin-top:8px">
+            <select id="cfg-rep-pdf-escuela" style="flex:1;min-width:160px;padding:6px 8px">
+              <option value="">Tocá 🔄 para cargar las escuelas…</option>
+            </select>
+            <button class="btn btn-ghost btn-sm" onclick="cfgCargarEscuelasPDF()" title="Cargar lista de escuelas">🔄</button>
+            <button class="btn btn-primary btn-sm" onclick="cfgAbrirReportesPDF()">🖨 Generar PDF</button>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+          <div style="flex:1"><div style="font-weight:600;font-size:13px">⬇️ Exportar a CSV/Excel</div><div style="font-size:11px;color:#666">Alumnos, Pedidos, Stock y Movimientos. Desde Registro / Bodega.</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="switchTab('registro')">Ir a Registro →</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Histórico y Costos (se cargan al abrir cada sección) -->
+    <div class="card">
+      <div class="card-title">📊 Reportes administrativos</div>
+      <div class="text-muted mb8" style="font-size:12px">De revisión ocasional. Se cargan al abrir cada sección.</div>
+
+      <details id="cfg-rep-historico" style="margin-bottom:8px" ontoggle="if(this.open && typeof initHistorico==='function') initHistorico()">
+        <summary style="cursor:pointer;list-style:none;padding:10px 12px;background:#F5F7FA;border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
+          <span>📈 Histórico <span style="font-weight:400;color:#888;font-size:11px">— comparativo entre temporadas</span></span><span style="opacity:0.6;font-size:11px">▼</span>
+        </summary>
+        <div id="historico-contenido" style="padding-top:10px"><div class="text-muted" style="padding:16px;text-align:center">Abrí esta sección para cargar el histórico…</div></div>
+      </details>
+
+      <details id="cfg-rep-costos" class="dato-sensible" ontoggle="if(this.open && typeof initCostos==='function') initCostos()">
+        <summary style="cursor:pointer;list-style:none;padding:10px 12px;background:#F5F7FA;border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
+          <span>💰 Costos <span style="font-weight:400;color:#888;font-size:11px">— mano de obra por nivel × sexo</span></span><span style="opacity:0.6;font-size:11px">▼</span>
+        </summary>
+        <div id="est-sub-costos-view" style="padding-top:10px"><div class="text-muted" style="padding:16px;text-align:center">Abrí esta sección para cargar los costos…</div></div>
+      </details>
+    </div>
+
+    <!-- Hoja de entrega por escuela (PDF para director) -->
+    <div class="card" id="cfg-rep-hoja">
+      <div class="card-title">📄 Hoja de entrega por escuela</div>
+      <div class="text-muted mb8" style="font-size:12px">
+        Reporte interno para entregar al director de la institución. Incluye detalle por grado (♀/♂/total), comparación contrato vs entregado por nivel educativo, totales y tela contratada. Carta vertical, listo para imprimir.
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
+        <div class="field" style="margin:0;flex:1;min-width:200px">
+          <label>Escuela</label>
+          <select id="he-escuela-sel" style="padding:6px 8px;width:100%">
+            <option value="">Cargá la lista primero…</option>
           </select>
-          <button class="btn btn-ghost btn-sm" onclick="cfgCargarEscuelasPDF()" title="Cargar lista de escuelas">🔄</button>
-          <button class="btn btn-primary btn-sm" onclick="cfgAbrirReportesPDF()">🖨 Generar PDF</button>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cargarEscuelasHE()" title="Cargar lista de escuelas">🔄 Cargar</button>
+        <button class="btn btn-primary btn-sm" onclick="exportarHojaEntregaPDF()" id="he-pdf-btn" disabled>📥 Generar PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ SUB: 📚 CATÁLOGOS ════════════ -->
+  <div id="cfg-sub-catalogos" style="display:none">
+
+    <div class="card">
+      <div class="card-title">📚 Catálogos</div>
+      <div class="text-muted mb8" style="font-size:12px">Datos maestros que la app usa para todo lo demás. Se editan de vez en cuando.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px">
+        <button class="btn btn-ghost" onclick="abrirCatalogoGrados()" style="padding:10px;text-align:left">
+          <div style="font-weight:600">🎓 Grados → Nivel/Ciclo</div>
+          <div style="font-size:11px;color:#666;margin-top:2px">Qué nivel y ciclo corresponde a cada grado</div>
+        </button>
+        <button class="btn btn-ghost" onclick="abrirCatalogoOperarias()" style="padding:10px;text-align:left">
+          <div style="font-weight:600">👷 Operarias</div>
+          <div style="font-size:11px;color:#666;margin-top:2px">Listado y alta de operarias (módulo Producción)</div>
+        </button>
+        <button class="btn btn-ghost" onclick="abrirCatalogoGrupos()" style="padding:10px;text-align:left">
+          <div style="font-weight:600">👥 Grupos de producción</div>
+          <div style="font-size:11px;color:#666;margin-top:2px">Equipos de trabajo (módulo Producción)</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Grupos de escuelas (asignación masiva) -->
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>🏫 Grupos de escuelas</span>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-success btn-sm" onclick="abrirAutoGrupos()" title="Repartir escuelas en N grupos equilibrados por cantidad de alumnos">🪄 Agrupar auto</button>
+          <button class="btn btn-ghost btn-sm" onclick="cargarGruposEscuelas()" title="Refrescar lista">🔄</button>
+        </div>
+      </div>
+      <div class="text-muted mb8" style="font-size:12px">
+        Asigná un código a cada escuela en el campo "Grupo". Escuelas con el mismo código se agrupan como sub-total en el PDF de <strong>Estadística → Tallas</strong> cuando activás <em>Σ Sub-total grupos</em>. Dejá vacío para no asignar grupo.
+      </div>
+      <div id="cfg-grupos-escuelas-lista">
+        <div class="text-muted" style="font-size:12px;padding:6px">Tocá 🔄 para cargar las escuelas.</div>
+      </div>
+    </div>
+
+    <!-- Catálogo de grados (oculto, se abre por botón) -->
+    <div id="cfg-grados-card" class="card" style="display:none">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>🎓 Catálogo de grados</span>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-success btn-sm" onclick="nuevoGrado()">+ Nuevo</button>
+          <button class="btn btn-ghost btn-sm" onclick="cargarGradosCatalogo()">🔄</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('cfg-grados-card').style.display='none'">✕</button>
+        </div>
+      </div>
+      <div class="text-muted mb8" style="font-size:12px">
+        Editá nivel/ciclo de cada grado. Al guardar, el cambio aplica al cargar/editar alumnos.
+        Para corregir alumnos ya cargados con un nivel/ciclo viejo, usar el botón "Aplicar a alumnos existentes" arriba.
+      </div>
+      <div style="margin-bottom:10px">
+        <button class="btn btn-primary btn-sm" onclick="aplicarCatalogoAExistentes()" title="Corre un UPDATE en alumno para alinear nivel/ciclo con el catálogo actual">⚡ Aplicar catálogo a alumnos existentes</button>
+      </div>
+      <div id="cfg-grados-lista"><div class="loading">Cargando...</div></div>
+    </div>
+  </div>
+
+  <!-- ════════════ SUB: 👥 USUARIOS ════════════ -->
+  <div id="cfg-sub-usuarios" style="display:none">
+
+    <!-- Sesión propia -->
+    <div class="card" id="cfg-session-card" style="display:none">
+      <div class="config-item">
+        <div>
+          <div class="config-label">👤 Sesión</div>
+          <div class="config-sub" id="cfg-session-email">—</div>
+          <div class="config-sub" id="cfg-session-rol" style="margin-top:2px;font-weight:600">—</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="doLogout()">Cerrar sesión</button>
+      </div>
+    </div>
+
+    <!-- Invitar usuario (solo admin) -->
+    <div id="cfg-invitar-card" class="card" style="display:none">
+      <div class="card-title">👥 Invitar usuario</div>
+      <div class="text-muted mb8" style="font-size:12px">
+        Le mandamos un email al invitado con un link para que defina su contraseña inicial. El link expira en 24 horas.
+      </div>
+
+      <div class="row2" style="margin-bottom:10px">
+        <div class="field" style="margin:0">
+          <label>Email</label>
+          <input type="email" id="cfg-inv-email" placeholder="nuevo@correo.com" autocomplete="email">
+        </div>
+        <div class="field" style="margin:0">
+          <label>Rol</label>
+          <select id="cfg-inv-role">
+            <option value="operador" selected>Operador</option>
+            <option value="admin">Admin</option>
+          </select>
         </div>
       </div>
 
-      <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
-        <div style="flex:1"><div style="font-weight:600;font-size:13px">⬇️ Exportar a CSV/Excel</div><div style="font-size:11px;color:#666">Alumnos, Pedidos, Stock y Movimientos. Desde Registro / Bodega.</div></div>
-        <button class="btn btn-ghost btn-sm" onclick="switchTab('registro')">Ir a Registro →</button>
+      <button class="btn btn-primary btn-block" onclick="invitarUsuario()">Enviar invitación</button>
+      <div id="cfg-inv-alert" style="margin-top:10px"></div>
+    </div>
+
+    <!-- Lista de usuarios (solo admin) -->
+    <div id="cfg-usuarios-card" class="card" style="display:none">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>👤 Usuarios</span>
+        <button class="btn btn-ghost btn-sm" onclick="cargarUsuarios()">🔄</button>
       </div>
-
-    </div>
-  </div>
-
-  <!-- Reportes administrativos (movidos desde Estadística en v32) -->
-  <div class="card">
-    <div class="card-title">📊 Reportes administrativos</div>
-    <div class="text-muted mb8" style="font-size:12px">Reportes de revisión ocasional que antes vivían en Estadística. Se cargan al abrir cada sección.</div>
-
-    <details id="cfg-rep-historico" style="margin-bottom:8px" ontoggle="if(this.open && typeof initHistorico==='function') initHistorico()">
-      <summary style="cursor:pointer;list-style:none;padding:10px 12px;background:#F5F7FA;border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
-        <span>📈 Histórico <span style="font-weight:400;color:#888;font-size:11px">— comparativo entre temporadas</span></span><span style="opacity:0.6;font-size:11px">▼</span>
-      </summary>
-      <div id="historico-contenido" style="padding-top:10px"><div class="text-muted" style="padding:16px;text-align:center">Abrí esta sección para cargar el histórico…</div></div>
-    </details>
-
-    <details id="cfg-rep-costos" class="dato-sensible" ontoggle="if(this.open && typeof initCostos==='function') initCostos()">
-      <summary style="cursor:pointer;list-style:none;padding:10px 12px;background:#F5F7FA;border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
-        <span>💰 Costos <span style="font-weight:400;color:#888;font-size:11px">— mano de obra por nivel × sexo</span></span><span style="opacity:0.6;font-size:11px">▼</span>
-      </summary>
-      <div id="est-sub-costos-view" style="padding-top:10px"><div class="text-muted" style="padding:16px;text-align:center">Abrí esta sección para cargar los costos…</div></div>
-    </details>
-  </div>
-
-  <!-- Hoja de entrega por escuela (PDF para director) -->
-  <div class="card" id="cfg-rep-hoja">
-    <div class="card-title">📄 Hoja de entrega por escuela</div>
-    <div class="text-muted mb8" style="font-size:12px">
-      Reporte interno para entregar al director de la institución. Incluye detalle por grado (♀/♂/total), comparación contrato vs entregado por nivel educativo, totales y tela contratada. Carta vertical, listo para imprimir.
-    </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
-      <div class="field" style="margin:0;flex:1;min-width:200px">
-        <label>Escuela</label>
-        <select id="he-escuela-sel" style="padding:6px 8px;width:100%">
-          <option value="">Cargá la lista primero…</option>
-        </select>
+      <div class="text-muted mb8" style="font-size:12px">
+        Cambiá el rol con el select, o tocá 🗑 para eliminar el usuario. No te podés eliminar a vos mismo ni dejar al sistema sin admins.
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="cargarEscuelasHE()" title="Cargar lista de escuelas">🔄 Cargar</button>
-      <button class="btn btn-primary btn-sm" onclick="exportarHojaEntregaPDF()" id="he-pdf-btn" disabled>📥 Generar PDF</button>
+      <div id="cfg-usuarios-lista">
+        <div class="text-muted" style="padding:6px">Tocá 🔄 para cargar.</div>
+      </div>
+      <div id="cfg-usuarios-alert" style="margin-top:10px"></div>
     </div>
   </div>
 
-  <!-- Grupos de escuelas (asignación masiva) -->
-  <div class="card">
-    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
-      <span>🏫 Grupos de escuelas</span>
-      <div style="display:flex;gap:6px">
-        <button class="btn btn-success btn-sm" onclick="abrirAutoGrupos()" title="Repartir escuelas en N grupos equilibrados por cantidad de alumnos">🪄 Agrupar auto</button>
-        <button class="btn btn-ghost btn-sm" onclick="cargarGruposEscuelas()" title="Refrescar lista">🔄</button>
+  <!-- ════════════ SUB: 🛠 SISTEMA ════════════ -->
+  <div id="cfg-sub-sistema" style="display:none">
+
+    <!-- App / PWA -->
+    <div class="card">
+      <div class="card-title">📱 App (PWA)</div>
+      <div class="text-muted mb8" style="font-size:12px">
+        Esta app funciona como PWA — se puede instalar desde el menú del navegador. Cuando hay una versión nueva normalmente aparece un banner azul; si querés forzar la búsqueda ahora, tocá el botón.
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="window.PWA && window.PWA.checkUpdate(document.getElementById('pwa-update-status'))">🔄 Buscar actualizaciones</button>
+      <div id="pwa-update-status" style="margin-top:8px;font-size:12px;color:#666"></div>
+
+      <div style="margin-top:12px;border-top:1px dashed #E0E0E0;padding-top:10px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="cfg-modulos-avanzados" onchange="toggleModulosAvanzados(this.checked)" style="width:20px;height:20px">
+          🧩 Mostrar módulos avanzados (✂️ Corte y 🏭 Producción)
+        </label>
+        <div class="text-muted" style="font-size:11px;margin-top:4px">
+          Ocultos el menú queda más simple. No se borra nada: al reactivarlos vuelven con todos sus datos.
+        </div>
       </div>
     </div>
-    <div class="text-muted mb8" style="font-size:12px">
-      Asigná un código a cada escuela en el campo "Grupo". Escuelas con el mismo código se agrupan como sub-total en el PDF de <strong>Estadística → Tallas</strong> cuando activás <em>Σ Sub-total grupos</em>. Dejá vacío para no asignar grupo.
+
+    <!-- Backup manual -->
+    <div class="card">
+      <div class="card-title">💾 Backup y exportar</div>
+      <div class="text-muted mb8" style="font-size:12px">Bajar todas las tablas de la app a un archivo Excel. Útil como respaldo manual o para compartir info con terceros.</div>
+      <button class="btn btn-primary" onclick="descargarBackupExcel()" id="btn-backup-excel">📥 Descargar respaldo (Excel)</button>
+      <div id="backup-status" style="margin-top:8px;font-size:12px;color:#666"></div>
     </div>
-    <div id="cfg-grupos-escuelas-lista">
-      <div class="text-muted" style="font-size:12px;padding:6px">Tocá 🔄 para cargar las escuelas.</div>
+
+    <!-- Backups automáticos (solo admin) -->
+    <div id="cfg-backups-card" class="card" style="display:none">
+      <div class="card-title">💾 Backups automáticos</div>
+      <div class="text-muted mb8" style="font-size:12px">
+        Cada semana (domingo 3am UTC) se hace un backup automático con las tablas clave. Se guarda comprimido en el bucket privado <code>backups</code>. Solo admins pueden listar y descargar.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="btn btn-primary btn-sm" onclick="ejecutarBackupAhora()">▶ Ejecutar backup ahora</button>
+        <button class="btn btn-ghost btn-sm" onclick="cargarListaBackups()">🔄 Refrescar lista</button>
+      </div>
+      <div id="cfg-backups-lista">
+        <div class="text-muted" style="font-size:12px">Tocá refrescar para cargar.</div>
+      </div>
+    </div>
+
+    <!-- Fases del módulo Producción -->
+    <div class="card">
+      <div class="card-title">🚀 Funciones de producción (por etapas)</div>
+      <div class="text-muted mb8" style="font-size:12px">Del módulo avanzado 🏭 Producción. Activá las funciones solo cuando la Fase 1 esté funcionando bien. Si hay problemas, podés volver a desactivarlas.</div>
+
+      <div class="config-item">
+        <div style="flex:1">
+          <div class="config-label">Fase 1 · Seguimiento básico de bultos</div>
+          <div class="config-sub">Siempre activa. Marcar pendiente/terminado, dividir, unir.</div>
+        </div>
+        <span class="badge badge-ok">Activa</span>
+      </div>
+
+      <div class="config-item">
+        <div style="flex:1">
+          <div class="config-label">Fase 2 · Captura por operación y operaria</div>
+          <div class="config-sub">Registrar qué operaria hizo qué operación cada día. Requiere que tengas alguien designado para capturar.</div>
+        </div>
+        <label class="switch-toggle">
+          <input type="checkbox" id="cfg-fase2" onchange="toggleFase(2, this.checked)">
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+
+      <div class="config-item">
+        <div style="flex:1">
+          <div class="config-label">Fase 3 · Reportes y destajo</div>
+          <div class="config-sub">Productividad por operaria, tarifas por pieza, liquidación por destajo. Requiere Fase 2 + 1-2 meses de datos.</div>
+        </div>
+        <label class="switch-toggle">
+          <input type="checkbox" id="cfg-fase3" onchange="toggleFase(3, this.checked)" disabled>
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+      <div class="text-muted" style="font-size:11px;margin-top:8px">💡 Si desactivás una fase, los datos quedan guardados y se pueden volver a usar al reactivarla.</div>
+    </div>
+
+    <!-- Auditoría (solo admin) -->
+    <div class="card" id="cfg-audit-acceso-card">
+      <div class="card-title">🕵️ Auditoría</div>
+      <div class="text-muted mb8" style="font-size:12px">Historial de quién cambió qué y cuándo, con opción de deshacer cambios puntuales.</div>
+      <button id="cfg-acceso-audit" class="btn btn-ghost btn-sm" onclick="switchTab('auditoria')" style="display:none">🔍 Abrir audit log →</button>
+    </div>
+
+    <!-- Conexión (técnico, casi nunca se toca) -->
+    <div class="card">
+      <div class="card-title">🔌 Conexión a la base de datos</div>
+      <div class="text-muted mb8" style="font-size:12px">Datos técnicos de Supabase. Solo tocar si se migra el proyecto — con valores incorrectos la app deja de cargar datos.</div>
+      <div class="config-item">
+        <div>
+          <div class="config-label">Supabase URL</div>
+          <div class="config-sub" id="cfg-url-display">—</div>
+        </div>
+      </div>
+      <div class="config-item">
+        <div><div class="config-label">Estado</div><div><span id="cfg-estado" class="badge badge-err">Sin verificar</span></div></div>
+        <button class="btn btn-ghost btn-sm" onclick="verificarConexion()">Verificar</button>
+      </div>
+      <details style="margin-top:8px">
+        <summary style="cursor:pointer;font-size:12px;color:#888;user-select:none">Editar URL / Anon Key…</summary>
+        <div style="padding-top:8px">
+          <div class="field"><label>URL</label><input type="text" id="cfg-url"></div>
+          <div class="field"><label>Anon Key</label><input type="text" id="cfg-key"></div>
+          <button class="btn btn-primary btn-block" onclick="guardarConfig()">Guardar configuración</button>
+        </div>
+      </details>
     </div>
   </div>
+
+  <!-- ════════════ Modales (viven fuera de los grupos) ════════════ -->
 
   <!-- Modal: agrupar automáticamente (LPT por carga) -->
   <div id="auto-grupos-modal" class="modal" style="display:none">
@@ -2422,54 +2568,6 @@
         <button class="btn btn-success" id="ag-aplicar-btn" onclick="aplicarAutoGrupos()" style="display:none">✓ Aplicar (sobrescribe los grupos actuales)</button>
       </div>
     </div>
-  </div>
-
-  <!-- Backup / Exportar -->
-  <div class="card">
-    <div class="card-title">💾 Backup y exportar</div>
-    <div class="text-muted mb8" style="font-size:12px">Bajar todas las tablas de la app a un archivo Excel. Útil como respaldo manual o para compartir info con terceros.</div>
-    <button class="btn btn-primary" onclick="descargarBackupExcel()" id="btn-backup-excel">📥 Descargar respaldo (Excel)</button>
-    <div id="backup-status" style="margin-top:8px;font-size:12px;color:#666"></div>
-  </div>
-
-  <!-- App / PWA -->
-  <div class="card">
-    <div class="card-title">📱 App (PWA)</div>
-    <div class="text-muted mb8" style="font-size:12px">
-      Esta app funciona como PWA — se puede instalar desde el menú del navegador. Cuando hay una versión nueva normalmente aparece un banner azul abajo; si querés forzar la búsqueda ahora, tocá el botón.
-    </div>
-    <button class="btn btn-primary btn-sm" onclick="window.PWA && window.PWA.checkUpdate(document.getElementById('pwa-update-status'))">🔄 Buscar actualizaciones</button>
-    <div id="pwa-update-status" style="margin-top:8px;font-size:12px;color:#666"></div>
-
-    <div style="margin-top:12px;border-top:1px dashed #E0E0E0;padding-top:10px">
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-        <input type="checkbox" id="cfg-modulos-avanzados" onchange="toggleModulosAvanzados(this.checked)" style="width:20px;height:20px">
-        🧩 Mostrar módulos avanzados (✂️ Corte y 🏭 Producción)
-      </label>
-      <div class="text-muted" style="font-size:11px;margin-top:4px">
-        Ocultos el menú queda más simple. No se borra nada: al reactivarlos vuelven con todos sus datos.
-      </div>
-    </div>
-  </div>
-
-  <!-- Catálogo de grados (oculto, se abre por botón) -->
-  <div id="cfg-grados-card" class="card" style="display:none">
-    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
-      <span>🎓 Catálogo de grados</span>
-      <div style="display:flex;gap:6px">
-        <button class="btn btn-success btn-sm" onclick="nuevoGrado()">+ Nuevo</button>
-        <button class="btn btn-ghost btn-sm" onclick="cargarGradosCatalogo()">🔄</button>
-        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('cfg-grados-card').style.display='none'">✕</button>
-      </div>
-    </div>
-    <div class="text-muted mb8" style="font-size:12px">
-      Editá nivel/ciclo de cada grado. Al guardar, el cambio aplica al cargar/editar alumnos.
-      Para corregir alumnos ya cargados con un nivel/ciclo viejo, usar el botón "Aplicar a alumnos existentes" arriba.
-    </div>
-    <div style="margin-bottom:10px">
-      <button class="btn btn-primary btn-sm" onclick="aplicarCatalogoAExistentes()" title="Corre un UPDATE en alumno para alinear nivel/ciclo con el catálogo actual">⚡ Aplicar catálogo a alumnos existentes</button>
-    </div>
-    <div id="cfg-grados-lista"><div class="loading">Cargando...</div></div>
   </div>
 
   <!-- Modal: editar grado -->
@@ -2519,63 +2617,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Backups automáticos (solo admin) -->
-  <div id="cfg-backups-card" class="card" style="display:none">
-    <div class="card-title">💾 Backups automáticos</div>
-    <div class="text-muted mb8" style="font-size:12px">
-      Cada semana (domingo 3am UTC) se hace un backup automático con las tablas clave. Se guarda comprimido en el bucket privado <code>backups</code>. Solo admins pueden listar y descargar.
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      <button class="btn btn-primary btn-sm" onclick="ejecutarBackupAhora()">▶ Ejecutar backup ahora</button>
-      <button class="btn btn-ghost btn-sm" onclick="cargarListaBackups()">🔄 Refrescar lista</button>
-    </div>
-    <div id="cfg-backups-lista">
-      <div class="text-muted" style="font-size:12px">Tocá refrescar para cargar.</div>
-    </div>
-  </div>
-
-  <!-- Invitar usuario (solo admin) -->
-  <div id="cfg-invitar-card" class="card" style="display:none">
-    <div class="card-title">👥 Invitar usuario</div>
-    <div class="text-muted mb8" style="font-size:12px">
-      Le mandamos un email al invitado con un link para que defina su contraseña inicial. El link expira en 24 horas.
-    </div>
-
-    <div class="row2" style="margin-bottom:10px">
-      <div class="field" style="margin:0">
-        <label>Email</label>
-        <input type="email" id="cfg-inv-email" placeholder="nuevo@correo.com" autocomplete="email">
-      </div>
-      <div class="field" style="margin:0">
-        <label>Rol</label>
-        <select id="cfg-inv-role">
-          <option value="operador" selected>Operador</option>
-          <option value="admin">Admin</option>
-        </select>
-      </div>
-    </div>
-
-    <button class="btn btn-primary btn-block" onclick="invitarUsuario()">Enviar invitación</button>
-    <div id="cfg-inv-alert" style="margin-top:10px"></div>
-  </div>
-
-  <!-- Lista de usuarios (solo admin) -->
-  <div id="cfg-usuarios-card" class="card" style="display:none">
-    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
-      <span>👤 Usuarios</span>
-      <button class="btn btn-ghost btn-sm" onclick="cargarUsuarios()">🔄</button>
-    </div>
-    <div class="text-muted mb8" style="font-size:12px">
-      Cambiá el rol con el select, o tocá 🗑 para eliminar el usuario. No te podés eliminar a vos mismo ni dejar al sistema sin admins.
-    </div>
-    <div id="cfg-usuarios-lista">
-      <div class="text-muted" style="padding:6px">Tocá 🔄 para cargar.</div>
-    </div>
-    <div id="cfg-usuarios-alert" style="margin-top:10px"></div>
-  </div>
-</div>
-
 </div>
 
 </div>
@@ -5635,7 +5676,7 @@ const HERRAMIENTAS = [
   { icono:'🗂', nombre:'Reportes administrativos / exportar', kw:'reportes exportar excel csv descargar datos',
     ir: () => _herrConfig('Reportes') },
   { icono:'🎓', nombre:'Catálogo de grados (nivel/ciclo)', kw:'grados nivel ciclo catalogo parvularia basica bachillerato',
-    ir: () => _herrConfig('Grados') },
+    ir: () => { _herrTab('config'); _herrLuego(() => { if (typeof abrirCatalogoGrados === 'function') abrirCatalogoGrados(); }); } },
   { icono:'🏫', nombre:'Grupos de escuelas', kw:'grupos escuelas produccion lpt agrupar',
     ir: () => _herrConfig('Grupos de escuelas') },
   { icono:'👥', nombre:'Usuarios e invitaciones', kw:'usuarios invitar acceso operario admin permisos',
@@ -5666,6 +5707,12 @@ function _herrConfig(titulo) {
     const el = Array.from(document.querySelectorAll('#view-config .card-title, #view-config summary'))
       .find(x => (x.textContent || '').includes(titulo));
     if (!el) return;
+    // Config tiene sub-grupos (Reportes/Catálogos/Usuarios/Sistema):
+    // activar el grupo donde vive la card antes de scrollear.
+    const grupo = el.closest('[id^="cfg-sub-"]');
+    if (grupo && typeof switchSubConfig === 'function') {
+      switchSubConfig(grupo.id.replace('cfg-sub-', ''));
+    }
     const card = el.closest('.card') || el.closest('details') || el;
     if (card.style && card.style.display === 'none') card.style.display = '';
     if (card.tagName === 'DETAILS') card.open = true;
@@ -19358,7 +19405,25 @@ const cargarAuditoriaDeb = debounce(cargarAuditoria, 300);
 
 // +++++++++++++++++++ config.js +++++++++++++++++++
 // ══════════════════════════════════════════════════════════════════════
+// Sub-navegación de Config (v33): 📊 Reportes / 📚 Catálogos / 👥 Usuarios / 🛠 Sistema.
+// Mismo patrón que switchSubEst en Estadística.
+let cfgSubActual = 'reportes';
+
+function switchSubConfig(sub) {
+  cfgSubActual = sub;
+  ['reportes', 'catalogos', 'usuarios', 'sistema'].forEach(s => {
+    const view = document.getElementById('cfg-sub-' + s);
+    if (view) view.style.display = (s === sub) ? '' : 'none';
+    const btn = document.getElementById('cfg-nav-' + s);
+    if (btn) {
+      btn.classList.toggle('btn-primary', s === sub);
+      btn.classList.toggle('btn-ghost', s !== sub);
+    }
+  });
+}
+
 function initConfig() {
+  switchSubConfig(cfgSubActual || 'reportes');
   document.getElementById('cfg-url').value = SUPA_URL;
   document.getElementById('cfg-key').value = SUPA_KEY;
   document.getElementById('cfg-url-display').textContent = SUPA_URL;
@@ -19519,6 +19584,7 @@ function abrirCatalogoGrupos() {
 // ─── Catálogo de grados ────────────────────────────────────────────
 let gradosCatalogoCache = [];
 function abrirCatalogoGrados() {
+  switchSubConfig('catalogos');
   document.getElementById('cfg-grados-card').style.display = '';
   cargarGradosCatalogo();
 }
