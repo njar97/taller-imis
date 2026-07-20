@@ -410,6 +410,8 @@ function renderAlumnosGlobal() {
           oninput="alumnosGlobalCache.busqueda = this.value; alumnosGlobalCache.pagina = 1; scheduleRenderAlumnos()"
           style="flex:1;min-width:160px;padding:8px 12px;border:1px solid var(--borde);border-radius:6px;font-size:14px">
         <button class="btn btn-success btn-sm" onclick="abrirNuevoAlumno()">+ Nuevo alumno</button>
+        <button class="btn btn-sm ${c.vistaGrilla ? 'btn-primary' : 'btn-ghost'}" onclick="toggleVistaGrilla()"
+          title="Grilla tipo Excel: edición inline con teclado y pegado de columnas">${c.vistaGrilla ? '⚡ Grilla' : '⚡ Grilla'}</button>
         <button class="btn btn-ghost btn-sm" onclick="initAlumnosGlobal()" title="Refrescar">🔄</button>
       </div>
 
@@ -500,6 +502,13 @@ function renderAlumnosGlobal() {
   
   // Banner modo empaque (entre header y tabla)
   const empaqueBanner = c.modoEmpaque ? renderEmpaqueBanner(lista) : '';
+
+  // Vista grilla tipo Excel (grilla_padron.js): reusa header/filtros/orden,
+  // reemplaza solo el cuerpo. En modo empaque siempre tarjetas.
+  if (c.vistaGrilla && !c.modoEmpaque && typeof renderGrillaPadron === 'function') {
+    renderGrillaPadron(cont, header, lista);
+    return;
+  }
 
   if (lista.length === 0) {
     cont.innerHTML = header + empaqueBanner + '<div class="alert alert-info">Sin resultados.</div>';

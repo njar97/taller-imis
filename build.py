@@ -39,6 +39,7 @@ JS_ORDER = [
     "reportes.js",
     "matcher.js",
     "alumnos_global.js",
+    "grilla_padron.js",
     "historico.js",
     "exportar.js",
     "grupos.js",
