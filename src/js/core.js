@@ -46,6 +46,22 @@ function authToken() {
   return supaSession && supaSession.access_token ? supaSession.access_token : null;
 }
 
+// Token del usuario garantizado VIGENTE: consulta al SDK, que refresca si
+// expiró. Usar en llamadas que exigen JWT válido (Edge Functions, Storage) —
+// la variable supaSession puede quedar vencida si la PWA estuvo en background.
+async function authTokenFresh() {
+  try {
+    if (supaClient) {
+      const { data } = await supaClient.auth.getSession();
+      if (data && data.session) {
+        supaSession = data.session;
+        return data.session.access_token;
+      }
+    }
+  } catch (_e) { /* cae al token cacheado */ }
+  return authToken();
+}
+
 // Catálogo base de KEYs por prenda (extraído del BASE_2025)
 // Se puede extender con la tabla catalogo_key de Supabase
 const CATALOGO_BASE = {

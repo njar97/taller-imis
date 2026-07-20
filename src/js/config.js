@@ -34,12 +34,13 @@ function initConfig() {
 async function ejecutarBackupAhora() {
   if (!confirm('¿Ejecutar backup ahora?\n\nVa a tomar un snapshot de todas las tablas y subirlo al bucket.')) return;
   try {
+    const tok = await authTokenFresh() || SUPA_KEY;
     const res = await fetch(`${SUPA_URL}/rest/v1/rpc/trigger_backup`, {
       method: 'POST',
       headers: {
         'Content-Type':'application/json',
         'apikey': SUPA_KEY,
-        'Authorization': `Bearer ${supaSession?.access_token || SUPA_KEY}`,
+        'Authorization': `Bearer ${tok}`,
       },
       body: '{}',
     });
@@ -58,8 +59,9 @@ async function cargarListaBackups() {
   if (!cont) return;
   cont.innerHTML = '<div class="text-muted" style="font-size:12px">Cargando...</div>';
   try {
-    const tok = supaSession?.access_token || SUPA_KEY;
-    // Listar via storage API (POST /list)
+    const tok = await authTokenFresh() || SUPA_KEY;
+    // Listar via storage API (POST /list). `prefix` es obligatorio en el
+    // body ("" = raíz del bucket) — sin él la API devuelve 400.
     const res = await fetch(`${SUPA_URL}/storage/v1/object/list/backups`, {
       method: 'POST',
       headers: {
@@ -67,7 +69,7 @@ async function cargarListaBackups() {
         'apikey': SUPA_KEY,
         'Authorization': `Bearer ${tok}`,
       },
-      body: JSON.stringify({ limit: 20, sortBy: { column: 'created_at', order: 'desc' } }),
+      body: JSON.stringify({ prefix: '', limit: 20, sortBy: { column: 'created_at', order: 'desc' } }),
     });
     if (!res.ok) throw new Error(await res.text());
     const files = await res.json();
@@ -114,7 +116,7 @@ async function cargarListaBackups() {
 
 async function descargarBackup(name) {
   try {
-    const tok = supaSession?.access_token || SUPA_KEY;
+    const tok = await authTokenFresh() || SUPA_KEY;
     const res = await fetch(`${SUPA_URL}/storage/v1/object/backups/${encodeURIComponent(name)}`, {
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}` },
     });
@@ -132,7 +134,7 @@ async function descargarBackup(name) {
 async function borrarBackup(name) {
   if (!confirm(`¿Borrar "${name}"?\n\nNo se puede deshacer.`)) return;
   try {
-    const tok = supaSession?.access_token || SUPA_KEY;
+    const tok = await authTokenFresh() || SUPA_KEY;
     const res = await fetch(`${SUPA_URL}/storage/v1/object/backups/${encodeURIComponent(name)}`, {
       method: 'DELETE',
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}` },
@@ -959,7 +961,8 @@ async function aplicarCatalogoAExistentes() {
 
 // ── Gestión de usuarios ────────────────────────────────────────────
 async function callUsersAdmin(body) {
-  if (!supaSession || !supaSession.access_token) {
+  const tok = await authTokenFresh();
+  if (!tok) {
     throw new Error('Sin sesión válida. Volvé a loguearte.');
   }
   const res = await fetch(`${SUPA_URL}/functions/v1/users-admin`, {
@@ -967,7 +970,7 @@ async function callUsersAdmin(body) {
     headers: {
       'Content-Type': 'application/json',
       'apikey': SUPA_KEY,
-      'Authorization': `Bearer ${supaSession.access_token}`,
+      'Authorization': `Bearer ${tok}`,
     },
     body: JSON.stringify(body),
   });
@@ -1075,7 +1078,8 @@ async function invitarUsuario() {
     alertEl.innerHTML = '<div class="alert alert-error">Ingresá un email.</div>';
     return;
   }
-  if (!supaSession || !supaSession.access_token) {
+  const tokInv = await authTokenFresh();
+  if (!tokInv) {
     alertEl.innerHTML = '<div class="alert alert-error">Sin sesión válida. Volvé a loguearte.</div>';
     return;
   }
@@ -1088,7 +1092,7 @@ async function invitarUsuario() {
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPA_KEY,
-        'Authorization': `Bearer ${supaSession.access_token}`,
+        'Authorization': `Bearer ${tokInv}`,
       },
       body: JSON.stringify({ email, role, redirectTo }),
     });

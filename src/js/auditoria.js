@@ -217,14 +217,15 @@ async function revertirAudit(id) {
   if (!confirm(`¿Deshacer este cambio?\n\nVa a ${desc}.\n\nQueda registrado en el audit log como un cambio nuevo.`)) return;
 
   try {
-    if (!supaSession || !supaSession.access_token) throw new Error('Sin sesión válida');
+    const tok = await authTokenFresh();
+    if (!tok) throw new Error('Sin sesión válida');
     const url = `${SUPA_URL}/rest/v1/rpc/revert_audit_entry`;
     const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPA_KEY,
-        'Authorization': `Bearer ${supaSession.access_token}`,
+        'Authorization': `Bearer ${tok}`,
       },
       body: JSON.stringify({ p_audit_id: id }),
     });

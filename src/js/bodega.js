@@ -1223,7 +1223,7 @@ async function desempacarPieza(alumnoId, pieza /* 'top' | 'bottom' */) {
 // (SECURITY DEFINER, callable por operador). Reemplaza el uso de exec_sql.
 async function _consumePoolBatch(poolDelta) {
   const consumos = Object.entries(poolDelta).map(([id, delta]) => ({ id, delta }));
-  const tok = (supaSession && supaSession.access_token) || SUPA_KEY;
+  const tok = await authTokenFresh() || SUPA_KEY;
   const res = await fetch(`${SUPA_URL}/rest/v1/rpc/consume_pool_batch`, {
     method: 'POST',
     headers: { 'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':`Bearer ${tok}` },
