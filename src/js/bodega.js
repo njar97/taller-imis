@@ -115,7 +115,8 @@ function renderStock() {
                  (el código se elimina en Fase 3). Acaparar por cantidad se
                  demota a "Otras" (el caso normal es 🔒 Reservar en la sesión). -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px">
-              <button class="btn btn-success btn-sm" onclick="switchTab('empaque')" title="Escuela → marcar piezas → reservar o empacar → entrega" style="text-align:left">🧺 Sesión de empaque</button>
+              <button class="btn btn-success btn-sm" onclick="switchTab('empaque')" title="Escuela → marcar piezas → empacar → entrega" style="text-align:left">🧺 Sesión de empaque</button>
+              <button class="btn btn-warning btn-sm" onclick="emqAbrirReserva()" title="Apartar stock por talla y cantidad para una escuela (elegís escuela y prenda en el modal)" style="text-align:left">🔒 Reservar tallas</button>
               <button class="btn btn-ghost btn-sm" onclick="abrirEntradaManual()" style="text-align:left">📥 + Entrada de stock</button>
             </div>
             <!-- Otras acciones (menos frecuentes) -->
@@ -123,7 +124,6 @@ function renderStock() {
               <summary style="cursor:pointer;list-style:none;font-size:12px;color:#666;padding:4px 2px;user-select:none">⋯ Otras acciones</summary>
               <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;margin-top:4px">
                 <button class="btn btn-ghost btn-sm" onclick="abrirEntregaModal()" title="Marcar empacados de una escuela como entregados" style="text-align:left">🚚 Marcar entrega</button>
-                <button class="btn btn-ghost btn-sm" onclick="abrirAcapararModal()" title="Reservar una CANTIDAD arbitraria de una talla para una escuela (el caso normal es 🔒 Reservar dentro de la sesión de empaque)" style="text-align:left">📥 Acaparar por cantidad</button>
                 <button class="btn btn-ghost btn-sm" onclick="abrirConteoModal()" title="Carga rápida de stock físico" style="text-align:left">📊 Conteo inicial</button>
                 <button class="btn btn-ghost btn-sm" onclick="abrirSalidaModal()" title="Salida sin alumnos" style="text-align:left">↗ Salida rápida</button>
               </div>

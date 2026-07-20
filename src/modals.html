@@ -67,3 +67,18 @@
     <div id="talla-alt-lista" style="padding:8px 16px 16px"></div>
   </div>
 </div>
+
+<!-- Modal GLOBAL: 🔒 Reservar tallas — se abre desde Bodega (elige escuela
+     en el modal) o desde la sesión de empaque (escuela ya elegida).
+     Lógica en empaque.js (emqAbrirReserva / emqResvRender). -->
+<div id="emq-reserva-modal" class="modal" style="display:none">
+  <div class="modal-content" style="max-width:520px">
+    <div class="modal-header">
+      <div class="card-title" style="margin:0">🔒 Reservar tallas</div>
+      <button class="btn btn-ghost btn-sm" onclick="emqCerrarReserva()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="emq-reserva-contenido"></div>
+    </div>
+  </div>
+</div>

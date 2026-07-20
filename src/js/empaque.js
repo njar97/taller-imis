@@ -323,70 +323,92 @@ async function emqDeshacer() {
 // prenda-talla: pendientes / ya reservado / stock libre — con la cantidad
 // pre-llenada en lo que falta (topada al stock real). Los niños se eligen
 // recién al empacar; el motor consume la reserva primero, solo.
-async function emqAbrirReserva() {
-  const escId = emqState.escuelaId;
+// Acción GLOBAL: funciona desde la sesión (escuela ya elegida) o desde
+// Bodega (se elige la escuela dentro del modal). Carga sus propios datos.
+async function emqAbrirReserva(escuelaId) {
   const cont = document.getElementById('emq-reserva-contenido');
   const modal = document.getElementById('emq-reserva-modal');
   if (!cont || !modal) return;
   cont.innerHTML = '<div class="text-muted" style="padding:16px;text-align:center">Cruzando necesidad vs bodega…</div>';
   modal.style.display = 'flex';
 
-  // Datos frescos SIEMPRE (mismo estándar que empacar)
-  let stockFresco, poolFresco;
   try {
-    const [stock, pool] = await Promise.all([
+    // Escuelas y alumnos: reusar la sesión si está cargada, sino traer.
+    // Stock y reservas: SIEMPRE frescos (mismo estándar que empacar).
+    const usarSesion = emqState.cargado;
+    const [escuelas, alumnos, stock, pool] = await Promise.all([
+      usarSesion ? Promise.resolve(emqState.escuelas)
+        : supaFetchAll('escuela', '?activa=eq.true&select=id,alias,nombre&order=alias'),
+      usarSesion ? Promise.resolve(emqState.alumnos)
+        : supaFetchAll('alumno', '?activo=eq.true&select=id,escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom&limit=10000'),
       supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
       supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
     ]);
-    stockFresco = new Map();
+    const stockFresco = new Map();
     for (const s of stock) {
       const p = s.nombre_prenda || (typeof prendaCanon === 'function' ? prendaCanon(s.cod_prenda) : s.cod_prenda);
       if (p && s.talla_key) stockFresco.set(p + '|' + s.talla_key, Number(s.stock_actual) || 0);
     }
-    poolFresco = new Map();
-    for (const p of pool) {
-      if (p.escuela_id !== escId) continue;
-      const d = Math.max(0, (Number(p.cantidad_acaparada) || 0) - (Number(p.cantidad_consumida) || 0));
-      if (d > 0) {
-        const k = p.nombre_prenda + '|' + p.talla_key;
-        poolFresco.set(k, (poolFresco.get(k) || 0) + d);
-      }
-    }
+    emqState._resv = {
+      escuelas, alumnos, stockFresco, poolRows: pool,
+      escuelaId: escuelaId || '',
+      prendaSel: null,
+      cant: new Map(),   // k → cantidad elegida
+      filas: [],
+    };
+    emqResvBuild();
+    emqResvRender();
   } catch (e) {
     cont.innerHTML = `<div class="alert alert-error">No se pudo leer bodega: ${e.message}</div>`;
-    return;
   }
+}
 
+// Recalcula las filas (necesidad vs bodega) para la escuela elegida.
+function emqResvBuild() {
+  const r = emqState._resv;
+  r.filas = [];
+  r.prendaSel = null;
+  if (!r.escuelaId) return;
+
+  const poolEscuela = new Map();
+  for (const p of r.poolRows) {
+    if (p.escuela_id !== r.escuelaId) continue;
+    const d = Math.max(0, (Number(p.cantidad_acaparada) || 0) - (Number(p.cantidad_consumida) || 0));
+    if (d > 0) {
+      const k = p.nombre_prenda + '|' + p.talla_key;
+      poolEscuela.set(k, (poolEscuela.get(k) || 0) + d);
+    }
+  }
   // Necesidad de la escuela por prenda|talla (tallas PEDIDAS, piezas pendientes)
   const necesidad = new Map();
-  for (const a of emqState.alumnos) {
-    if (a.escuela_id !== escId) continue;
+  for (const a of r.alumnos) {
+    if (a.escuela_id !== r.escuelaId) continue;
     for (const pieza of ['top', 'bottom']) {
       if (!emqPend(a, pieza)) continue;
       const k = emqPrenda(a, pieza) + '|' + (pieza === 'top' ? a.talla_top_key : a.talla_bottom_key);
       necesidad.set(k, (necesidad.get(k) || 0) + 1);
     }
   }
-
-  const filas = [...necesidad.entries()]
+  r.filas = [...necesidad.entries()]
     .map(([k, pend]) => {
       const [prenda, talla] = k.split('|');
-      const reservado = poolFresco.get(k) || 0;
-      const stockLibre = stockFresco.get(k) || 0;
+      const reservado = poolEscuela.get(k) || 0;
+      const stockLibre = r.stockFresco.get(k) || 0;
       const falta = Math.max(0, pend - reservado);
       const sugerido = Math.min(falta, stockLibre);
       return { k, prenda, talla, pend, reservado, stockLibre, falta, sugerido };
     })
     .sort((a, b) => a.prenda.localeCompare(b.prenda) || a.talla.localeCompare(b.talla, 'es', { numeric: true }));
+  const prendas = [...new Set(r.filas.map(f => f.prenda))];
+  r.prendaSel = prendas.find(p => r.filas.some(f => f.prenda === p && f.falta > 0)) || prendas[0] || null;
+}
 
-  // Estado del modal: prenda seleccionada + carrito de cantidades por talla
-  // (se acumula al pasar de prenda en prenda; un solo Reservar al final)
-  const prendas = [...new Set(filas.map(f => f.prenda))];
-  emqState._resv = {
-    filas,
-    prendaSel: prendas.find(p => filas.some(f => f.prenda === p && f.falta > 0)) || prendas[0] || null,
-    cant: new Map(),   // k → cantidad elegida
-  };
+function emqResvCambiarEscuela(id) {
+  const r = emqState._resv;
+  if (!r) return;
+  r.escuelaId = id;
+  r.cant = new Map();  // carrito nuevo: es otra escuela
+  emqResvBuild();
   emqResvRender();
 }
 
@@ -396,8 +418,25 @@ function emqResvRender() {
   if (!cont || !r) return;
   const filas = r.filas;
 
+  // Selector de escuela (siempre visible: se puede cambiar sobre la marcha)
+  const selEscuela = `
+    <div class="field" style="margin-bottom:10px">
+      <label>Escuela</label>
+      <select onchange="emqResvCambiarEscuela(this.value)">
+        <option value="">— Elegí escuela —</option>
+        ${r.escuelas.map(e => `<option value="${e.id}" ${e.id === r.escuelaId ? 'selected' : ''}>${e.alias || e.nombre}</option>`).join('')}
+      </select>
+    </div>`;
+
+  if (!r.escuelaId) {
+    cont.innerHTML = selEscuela + `
+      <div class="text-muted" style="padding:12px;text-align:center;font-size:12px">Elegí la escuela para ver qué necesita y qué hay en bodega.</div>
+      <div style="text-align:right"><button class="btn btn-ghost btn-sm" onclick="emqCerrarReserva()">Cerrar</button></div>`;
+    return;
+  }
+
   if (filas.length === 0) {
-    cont.innerHTML = `
+    cont.innerHTML = selEscuela + `
       <div class="alert alert-info">Esta escuela no tiene piezas pendientes — no hay nada que reservar.</div>
       <div style="text-align:right;margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="emqCerrarReserva()">Cerrar</button></div>`;
     return;
@@ -441,7 +480,7 @@ function emqResvRender() {
   const resumen = filas.filter(f => (r.cant.get(f.k) || 0) > 0)
     .map(f => `${f.talla}×${r.cant.get(f.k)}`).join(' · ');
 
-  cont.innerHTML = `
+  cont.innerHTML = selEscuela + `
     <div class="text-muted mb8" style="font-size:12px">
       Elegí prenda → tocá la talla para reservar lo que falta, o ajustá con − / +.
       Podés pasar de prenda en prenda: todo se junta en una sola reserva.
@@ -485,9 +524,9 @@ function emqCerrarReserva() {
 }
 
 async function emqConfirmarReserva() {
-  const escId = emqState.escuelaId;
   const r = emqState._resv;
-  if (!r) return;
+  if (!r || !r.escuelaId) return;
+  const escId = r.escuelaId;
   const pedidos = r.filas
     .filter(f => (r.cant.get(f.k) || 0) > 0)
     .map(f => ({ ...f, n: r.cant.get(f.k) }));
@@ -511,7 +550,7 @@ async function emqConfirmarReserva() {
     .map(p => `· ${p.prenda} ${p.talla}: querés ${p.n} pero hay ${stockFresco.get(p.k) || 0}`);
   if (faltantes.length > 0) {
     alert('No se reservó NADA — el stock cambió:\n\n' + faltantes.join('\n'));
-    await emqAbrirReserva();
+    await emqAbrirReserva(escId);
     return;
   }
 
@@ -539,7 +578,12 @@ async function emqConfirmarReserva() {
     }
     emqCerrarReserva();
     alert(`✓ ${total} pieza(s) reservadas. Al empacar a los alumnos, la reserva se usa primero, sola.`);
-    await initEmpaque(escId);
+    // Refrescar lo que esté a la vista: sesión (si está abierta) y/o Bodega
+    const enBodega = document.getElementById('view-bodega')?.classList.contains('active');
+    if (emqState.cargado && document.getElementById('view-empaque')?.classList.contains('active')) {
+      await initEmpaque(emqState.escuelaId || escId);
+    }
+    if (enBodega && typeof cargarBodegaStock === 'function') cargarBodegaStock();
   } catch (e) {
     alert('Error al reservar: ' + e.message);
   }
@@ -697,7 +741,7 @@ function emqPaso2Html() {
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px">
         <button class="btn btn-primary btn-sm" onclick="emqMarcarTodos()">☑️ Marcar todos los empacables</button>
-        <button class="btn btn-warning btn-sm" onclick="emqAbrirReserva()"
+        <button class="btn btn-warning btn-sm" onclick="emqAbrirReserva(emqState.escuelaId)"
           title="Apartar stock por TALLA y CANTIDAD para esta escuela, sin empacar. Los niños se eligen al empacar; la reserva se consume sola.">🔒 Reservar tallas</button>
         ${nPiezas > 0 ? '<button class="btn btn-ghost btn-sm" onclick="emqLimpiar()">✕ Limpiar</button>' : ''}
         <label style="display:flex;gap:5px;align-items:center;font-size:12px;cursor:pointer;margin-left:auto" title="Al marcar una pieza, la otra del mismo alumno se marca sola si hay stock">
