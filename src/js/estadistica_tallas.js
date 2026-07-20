@@ -24,6 +24,9 @@ let tallasResumenCache = {
     incluirProd: true,
     incluirBodega: true,
     incluirPool: true,
+    modoTotal: false,     // false = "Necesidad" (pendientes); true = "Σ Total temporada" (incluye empacado/entregado, como el TOTAL del Excel)
+    ordenCol: '',         // '' = orden default (prenda+talla, o críticas). Click en encabezado: prenda|talla|demanda|balance
+    ordenDir: 'asc',
     orientacionPDF: 'horizontal',  // 'horizontal' (landscape) | 'vertical' (portrait)
     subtotalGrupos: false,         // sumar sub-total por escuela.grupo_produccion (solo afecta PDF)
   },
@@ -106,13 +109,14 @@ function renderTallasResumen() {
     d.total++;
     d.porEsc.set(escId, (d.porEsc.get(escId) || 0) + 1);
   };
+  const modoTotal = !!f.modoTotal;
   for (const a of c.alumnos) {
     if (a.prenda_top && a.talla_top_key
-        && a.estado_top !== 'empacado' && a.estado_top !== 'entregado') {
+        && (modoTotal || (a.estado_top !== 'empacado' && a.estado_top !== 'entregado'))) {
       bump(a.prenda_top, a.talla_top_key, a.escuela_id);
     }
     if (a.prenda_bottom && a.talla_bottom_key
-        && a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado') {
+        && (modoTotal || (a.estado_bottom !== 'empacado' && a.estado_bottom !== 'entregado'))) {
       bump(a.prenda_bottom, a.talla_bottom_key, a.escuela_id);
     }
   }
@@ -191,7 +195,19 @@ function renderTallasResumen() {
       balance,
     });
   }
-  if (f.soloCriticas) {
+  // Orden: click en encabezado manda; si no, críticas o prenda+talla.
+  const cmpPorCol = {
+    prenda:  (a, b) => a.prenda.localeCompare(b.prenda),
+    talla:   (a, b) => a.talla.localeCompare(b.talla, 'es', { numeric: true }),
+    demanda: (a, b) => a.demanda - b.demanda,
+    balance: (a, b) => a.balance - b.balance,
+  }[f.ordenCol];
+  if (cmpPorCol) {
+    const mul = f.ordenDir === 'desc' ? -1 : 1;
+    rows.sort((a, b) => mul * cmpPorCol(a, b)
+      || a.prenda.localeCompare(b.prenda)
+      || a.talla.localeCompare(b.talla, 'es', { numeric: true }));
+  } else if (f.soloCriticas) {
     // Las más críticas primero (balance más negativo arriba)
     rows.sort((a, b) =>
       a.balance - b.balance
@@ -213,9 +229,21 @@ function renderTallasResumen() {
     balance: s.balance + r.balance,
   }), { demanda: 0, corte: 0, prod: 0, stockLibre: 0, pool: 0, balance: 0 });
 
-  // Persistir último cómputo para exportar PDF sin recomputar (se actualiza
-  // en cada render). exportarTallasPDF() lo lee.
-  c._ultimoReporte = { rows, tot, escuelasCols: null, generadoEn: new Date() };
+  // Columnas de etapa: el toggle manda, pero si NO hay ni una pieza en esa
+  // etapa la columna solo mete ruido (p. ej. módulos Corte/Prod sin uso) →
+  // auto-ocultar. Bodega se muestra siempre que esté incluida.
+  const ver = {
+    corte:  f.incluirCorte  && rows.some(r => r.corte > 0),
+    prod:   f.incluirProd   && rows.some(r => r.prod > 0),
+    bodega: f.incluirBodega,
+    pool:   f.incluirPool   && rows.some(r => r.pool > 0),
+  };
+  c._ver = ver;
+  const etiquetaDem = modoTotal ? 'Total' : 'Necesidad';
+
+  // Persistir último cómputo para exportar PDF/CSV sin recomputar (se
+  // actualiza en cada render). exportarTallasPDF() y el CSV lo leen.
+  c._ultimoReporte = { rows, tot, escuelasCols: null, generadoEn: new Date(), ver, modoTotal };
 
   // Escuelas a mostrar como columnas:
   // - Si hay filtro de escuelas activo, usar esas.
@@ -288,6 +316,9 @@ function renderTallasResumen() {
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-sm ${f.soloCriticas ? 'btn-primary' : 'btn-ghost'}" onclick="onTallasFiltro('soloCriticas', ${!f.soloCriticas})" title="Mostrar solo las tallas que faltan o están al límite (balance ≤ 0), las más críticas arriba" style="font-weight:${f.soloCriticas ? '700' : '600'}">🔥 Solo críticas</button>
+        <button class="btn btn-sm ${f.modoTotal ? 'btn-primary' : 'btn-ghost'}" onclick="onTallasFiltro('modoTotal', ${!f.modoTotal})" title="Σ Total temporada: cuenta TODAS las piezas (incluye empacadas/entregadas), como el TOTAL del Excel. Apagado = solo lo pendiente.">Σ Total</button>
+        <button class="btn btn-ghost btn-sm" onclick="copiarTallasTabla()" title="Copiar la tabla al portapapeles — pegala directo en Excel o WhatsApp">📋 Copiar</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportarTallasCSV()" title="Descargar la tabla como CSV (abre en Excel)">⬇️ CSV</button>
         <select onchange="onTallasFiltro('orientacionPDF', this.value)" title="Orientación del PDF" style="padding:6px 8px;font-size:12px;border:1px solid var(--borde);border-radius:6px;background:white">
           <option value="horizontal" ${(f.orientacionPDF||'horizontal')==='horizontal'?'selected':''}>📄 Horizontal</option>
           <option value="vertical" ${f.orientacionPDF==='vertical'?'selected':''}>📃 Vertical</option>
@@ -385,24 +416,28 @@ function renderTallasResumen() {
       </div>
     </details>
 
-    <!-- KPIs totales -->
+    <!-- KPIs totales (etapas sin datos no muestran card: menos ruido) -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px;margin-bottom:10px">
       <div class="card" style="padding:8px;text-align:center">
-        <div style="font-size:10px;color:#666">Demanda total</div>
+        <div style="font-size:10px;color:#666">${modoTotal ? 'Total temporada' : 'Demanda total'}</div>
         <div style="font-size:20px;font-weight:700">${tot.demanda.toLocaleString()}</div>
       </div>
-      <div class="card" style="padding:8px;text-align:center">
+      ${ver.corte ? `<div class="card" style="padding:8px;text-align:center">
+        <div style="font-size:10px;color:#666">En corte</div>
+        <div style="font-size:20px;font-weight:700;color:#888">${tot.corte.toLocaleString()}</div>
+      </div>` : ''}
+      ${ver.prod ? `<div class="card" style="padding:8px;text-align:center">
         <div style="font-size:10px;color:#666">En producción</div>
         <div style="font-size:20px;font-weight:700;color:#4a8">${tot.prod.toLocaleString()}</div>
-      </div>
+      </div>` : ''}
       <div class="card" style="padding:8px;text-align:center">
         <div style="font-size:10px;color:#666">En bodega</div>
         <div style="font-size:20px;font-weight:700;color:var(--azul)">${tot.stockLibre.toLocaleString()}</div>
       </div>
-      <div class="card" style="padding:8px;text-align:center">
+      ${ver.pool ? `<div class="card" style="padding:8px;text-align:center">
         <div style="font-size:10px;color:#666">Pool</div>
         <div style="font-size:20px;font-weight:700;color:#a82">${tot.pool.toLocaleString()}</div>
-      </div>
+      </div>` : ''}
       <div class="card" style="padding:8px;text-align:center">
         <div style="font-size:10px;color:#666">Balance</div>
         <div style="font-size:20px;font-weight:700;color:${tot.balance<0?'var(--rojo)':'var(--verde)'}">${tot.balance>=0?'+':''}${tot.balance.toLocaleString()}</div>
@@ -420,20 +455,31 @@ function renderTallasResumen() {
           <thead>
             <tr style="background:#FAFAFA">
               <th style="padding:6px 8px;text-align:left;width:32px"></th>
-              <th style="padding:6px 8px;text-align:left">Prenda</th>
-              <th style="padding:6px 8px;text-align:left">Talla</th>
-              <th style="padding:6px 8px;text-align:right">Necesidad</th>
+              ${(() => {
+                // Encabezados ordenables (click alterna asc → desc → default)
+                const thSort = (col, label, align) => {
+                  const act = f.ordenCol === col;
+                  const flecha = act ? (f.ordenDir === 'asc' ? ' ▲' : ' ▼') : '';
+                  return `<th style="padding:6px 8px;text-align:${align};cursor:pointer;user-select:none;white-space:nowrap;${act?'color:var(--azul)':''}"
+                    onclick="ordenarTallasPor('${col}')" title="Ordenar por ${label} (click de nuevo invierte)">${label}${flecha}</th>`;
+                };
+                return thSort('prenda','Prenda','left') + thSort('talla','Talla','left') + thSort('demanda', modoTotal?'Total':'Necesidad','right');
+              })()}
               ${escuelasCols.map(e => `<th style="padding:6px 8px;text-align:right;font-size:11px" title="${e.nombre||''}">🏫 ${e.alias || e.nombre}</th>`).join('')}
-              ${f.incluirCorte ? `<th style="padding:6px 8px;text-align:right" title="Bultos cortados sin etapas iniciadas">✂️ Corte</th>` : ''}
-              ${f.incluirProd ? `<th style="padding:6px 8px;text-align:right">🏭 Producción</th>` : ''}
-              ${f.incluirBodega ? `<th style="padding:6px 8px;text-align:right">📦 Bodega</th>` : ''}
-              ${f.incluirPool ? `<th style="padding:6px 8px;text-align:right">📥 Pool</th>` : ''}
-              <th style="padding:6px 8px;text-align:right">Balance</th>
+              ${ver.corte ? `<th style="padding:6px 8px;text-align:right" title="Bultos cortados sin etapas iniciadas">✂️ Corte</th>` : ''}
+              ${ver.prod ? `<th style="padding:6px 8px;text-align:right">🏭 Producción</th>` : ''}
+              ${ver.bodega ? `<th style="padding:6px 8px;text-align:right">📦 Bodega</th>` : ''}
+              ${ver.pool ? `<th style="padding:6px 8px;text-align:right">📥 Pool</th>` : ''}
+              ${(() => {
+                const act = f.ordenCol === 'balance';
+                const flecha = act ? (f.ordenDir === 'asc' ? ' ▲' : ' ▼') : '';
+                return `<th style="padding:6px 8px;text-align:right;cursor:pointer;user-select:none;${act?'color:var(--azul)':''}" onclick="ordenarTallasPor('balance')" title="Ordenar por balance">Balance${flecha}</th>`;
+              })()}
             </tr>
           </thead>
           <tbody>
             ${rows.length === 0 ? `
-              <tr><td colspan="${9 + escuelasCols.length}" style="padding:20px;text-align:center;color:#888">Sin resultados con los filtros aplicados.</td></tr>
+              <tr><td colspan="${5 + escuelasCols.length + (ver.corte?1:0) + (ver.prod?1:0) + (ver.bodega?1:0) + (ver.pool?1:0)}" style="padding:20px;text-align:center;color:#888">Sin resultados con los filtros aplicados.</td></tr>
             ` : rows.map(r => {
               const exp = c.expandidos.has(r.key);
               const balanceColor = r.balance < 0 ? 'var(--rojo)' : 'var(--verde)';
@@ -447,10 +493,10 @@ function renderTallasResumen() {
                     const n = r.porEsc.get(e.id) || 0;
                     return `<td style="padding:5px 8px;text-align:right;color:${n>0?'#444':'#ccc'}">${n||'·'}</td>`;
                   }).join('')}
-                  ${f.incluirCorte ? `<td style="padding:5px 8px;text-align:right;color:#888">${r.corte || '—'}</td>` : ''}
-                  ${f.incluirProd ? `<td style="padding:5px 8px;text-align:right;color:#4a8">${r.prod || 0}</td>` : ''}
-                  ${f.incluirBodega ? `<td style="padding:5px 8px;text-align:right;color:var(--azul)">${r.stockLibre || 0}</td>` : ''}
-                  ${f.incluirPool ? `<td style="padding:5px 8px;text-align:right;color:#a82">${r.pool || 0}</td>` : ''}
+                  ${ver.corte ? `<td style="padding:5px 8px;text-align:right;color:#888">${r.corte || '—'}</td>` : ''}
+                  ${ver.prod ? `<td style="padding:5px 8px;text-align:right;color:#4a8">${r.prod || 0}</td>` : ''}
+                  ${ver.bodega ? `<td style="padding:5px 8px;text-align:right;color:var(--azul)">${r.stockLibre || 0}</td>` : ''}
+                  ${ver.pool ? `<td style="padding:5px 8px;text-align:right;color:#a82">${r.pool || 0}</td>` : ''}
                   <td style="padding:5px 8px;text-align:right;font-weight:700;color:${balanceColor}">${r.balance>=0?'+':''}${r.balance}</td>
                 </tr>
               `;
@@ -470,10 +516,10 @@ function renderTallasResumen() {
                         🏫 ${e.alias || e.nombre}
                       </td>
                       <td style="padding:4px 8px;text-align:right;font-size:11px">${n}</td>
-                      ${f.incluirCorte ? `<td></td>` : ''}
-                      ${f.incluirProd ? `<td></td>` : ''}
-                      ${f.incluirBodega ? `<td></td>` : ''}
-                      ${f.incluirPool ? `<td style="padding:4px 8px;text-align:right;font-size:11px;color:#a82">${poolEsc || ''}</td>` : ''}
+                      ${ver.corte ? `<td></td>` : ''}
+                      ${ver.prod ? `<td></td>` : ''}
+                      ${ver.bodega ? `<td></td>` : ''}
+                      ${ver.pool ? `<td style="padding:4px 8px;text-align:right;font-size:11px;color:#a82">${poolEsc || ''}</td>` : ''}
                       <td style="padding:4px 8px;text-align:right;font-size:11px;color:${poolEsc>=n?'var(--verde)':'#888'}">${poolEsc>=n?'cubierto':''}</td>
                     </tr>
                   `;
@@ -523,6 +569,11 @@ async function exportarTallasPDF() {
     if (!c._ultimoReporte) { alert('No hay datos para exportar.'); return; }
   }
   const { rows, tot, escuelasCols, generadoEn } = c._ultimoReporte;
+  // Flags efectivos de columnas (toggle + auto-ocultar vacías) — los computa
+  // renderTallasResumen y acá se reutilizan para que PDF = pantalla.
+  const ver = c._ultimoReporte.ver
+    || { corte: f.incluirCorte, prod: f.incluirProd, bodega: f.incluirBodega, pool: f.incluirPool };
+  const etiquetaDem = c._ultimoReporte.modoTotal ? 'Total' : 'Necesidad';
   if (rows.length === 0) {
     alert('Sin filas para exportar con los filtros actuales. Ajustá los filtros y volvé a intentar.');
     return;
@@ -548,10 +599,10 @@ async function exportarTallasPDF() {
   }
   if (f.ocultarCubiertas) filtroPartes.push('<em>(ocultando cubiertas)</em>');
   const incluyendo = [
-    f.incluirCorte  ? 'Corte'      : null,
-    f.incluirProd   ? 'Producción' : null,
-    f.incluirBodega ? 'Bodega'     : null,
-    f.incluirPool   ? 'Pool'       : null,
+    ver.corte  ? 'Corte'      : null,
+    ver.prod   ? 'Producción' : null,
+    ver.bodega ? 'Bodega'     : null,
+    ver.pool   ? 'Pool'       : null,
   ].filter(Boolean).join(' + ');
   filtroPartes.push(`Incluye: <strong>${incluyendo || '(ninguno)'}</strong>`);
 
@@ -565,11 +616,11 @@ async function exportarTallasPDF() {
   const kpisRow = `
     <table style="width:100%;border-collapse:collapse;margin:8px 0 12px 0">
       <tr>
-        ${kpi('Demanda total', tot.demanda.toLocaleString(), '#222')}
-        ${f.incluirCorte  ? kpi('En corte',      (tot.corte||0).toLocaleString(),       '#888') : ''}
-        ${f.incluirProd   ? kpi('En producción', tot.prod.toLocaleString(),              '#2a8f4a') : ''}
-        ${f.incluirBodega ? kpi('En bodega',     tot.stockLibre.toLocaleString(),        '#1F4E79') : ''}
-        ${f.incluirPool   ? kpi('Pool acaparado',tot.pool.toLocaleString(),              '#a82') : ''}
+        ${kpi(c._ultimoReporte.modoTotal ? 'Total temporada' : 'Demanda total', tot.demanda.toLocaleString(), '#222')}
+        ${ver.corte  ? kpi('En corte',      (tot.corte||0).toLocaleString(),       '#888') : ''}
+        ${ver.prod   ? kpi('En producción', tot.prod.toLocaleString(),              '#2a8f4a') : ''}
+        ${ver.bodega ? kpi('En bodega',     tot.stockLibre.toLocaleString(),        '#1F4E79') : ''}
+        ${ver.pool   ? kpi('Pool acaparado',tot.pool.toLocaleString(),              '#a82') : ''}
         ${kpi('Balance', (tot.balance >= 0 ? '+' : '') + tot.balance.toLocaleString(), tot.balance < 0 ? '#C00' : '#2a8f4a')}
       </tr>
     </table>`;
@@ -577,7 +628,7 @@ async function exportarTallasPDF() {
   // Agrupar rows por prenda (cada prenda en una página separada).
   // Excepción: FALDA y FALDA C.E van JUNTAS en una misma página, mezcladas
   // y ordenadas por talla + largo, con la columna Prenda visible.
-  const numSuministro = (f.incluirCorte?1:0) + (f.incluirProd?1:0) + (f.incluirBodega?1:0) + (f.incluirPool?1:0);
+  const numSuministro = (ver.corte?1:0) + (ver.prod?1:0) + (ver.bodega?1:0) + (ver.pool?1:0);
   // Normaliza: upper + trim + underscore/hyphen → espacio + colapsar espacios.
   // Cualquier variante de FALDA (con/sin elástico, con o sin puntos, con
   // underscore como en FALDA_C.E) entra al mismo grupo combinado para que
@@ -682,16 +733,16 @@ async function exportarTallasPDF() {
       <col style="width:${wTalla}%">
       <col style="width:${wNec}%">
       ${colsExt.map(() => `<col style="width:${escW.toFixed(3)}%">`).join('')}
-      ${f.incluirCorte  ? `<col style="width:${wSum}%">` : ''}
-      ${f.incluirProd   ? `<col style="width:${wSum}%">` : ''}
-      ${f.incluirBodega ? `<col style="width:${wSum}%">` : ''}
-      ${f.incluirPool   ? `<col style="width:${wSum}%">` : ''}
+      ${ver.corte  ? `<col style="width:${wSum}%">` : ''}
+      ${ver.prod   ? `<col style="width:${wSum}%">` : ''}
+      ${ver.bodega ? `<col style="width:${wSum}%">` : ''}
+      ${ver.pool   ? `<col style="width:${wSum}%">` : ''}
       <col style="width:${wBal}%">
     </colgroup>`;
 
     const hdr = `
       <th style="${thVert}"><div style="${thVertInner}">Talla</div></th>
-      <th style="${thVert}"><div style="${thVertInner}">Necesidad</div></th>
+      <th style="${thVert}"><div style="${thVertInner}">${etiquetaDem}</div></th>
       ${colsExt.map(c => {
         if (c.tipo === 'esc') {
           const e = c.escuela;
@@ -700,10 +751,10 @@ async function exportarTallasPDF() {
         // subtotal
         return `<th style="${thSubVert}" title="Sub-total grupo ${c.grupo} (${c.escuelas.length} escuelas)"><div style="${thEscInner}">Σ ${c.grupo}</div></th>`;
       }).join('')}
-      ${f.incluirCorte  ? `<th style="${thVert}"><div style="${thVertInner}">✂️ Corte</div></th>` : ''}
-      ${f.incluirProd   ? `<th style="${thVert}"><div style="${thVertInner}">🏭 Prod.</div></th>` : ''}
-      ${f.incluirBodega ? `<th style="${thVert}"><div style="${thVertInner}">📦 Bodega</div></th>` : ''}
-      ${f.incluirPool   ? `<th style="${thVert}"><div style="${thVertInner}">📥 Pool</div></th>` : ''}
+      ${ver.corte  ? `<th style="${thVert}"><div style="${thVertInner}">✂️ Corte</div></th>` : ''}
+      ${ver.prod   ? `<th style="${thVert}"><div style="${thVertInner}">🏭 Prod.</div></th>` : ''}
+      ${ver.bodega ? `<th style="${thVert}"><div style="${thVertInner}">📦 Bodega</div></th>` : ''}
+      ${ver.pool   ? `<th style="${thVert}"><div style="${thVertInner}">📥 Pool</div></th>` : ''}
       <th style="${thVert}"><div style="${thVertInner}">Balance</div></th>`;
 
     // En el grupo combinado las tallas FALDA C.E vienen con prefijo "FCE"
@@ -724,10 +775,10 @@ async function exportarTallasPDF() {
           const sumGrp = c.escuelas.reduce((s, e) => s + (r.porEsc.get(e.id) || 0), 0);
           return `<td style="${tdSub}">${sumGrp||'·'}</td>`;
         }).join('')}
-        ${f.incluirCorte  ? `<td style="${tdS};color:#888">${r.corte || '—'}</td>` : ''}
-        ${f.incluirProd   ? `<td style="${tdS};color:#2a8f4a">${r.prod || 0}</td>` : ''}
-        ${f.incluirBodega ? `<td style="${tdS};color:#1F4E79">${r.stockLibre || 0}</td>` : ''}
-        ${f.incluirPool   ? `<td style="${tdS};color:#a82">${r.pool || 0}</td>` : ''}
+        ${ver.corte  ? `<td style="${tdS};color:#888">${r.corte || '—'}</td>` : ''}
+        ${ver.prod   ? `<td style="${tdS};color:#2a8f4a">${r.prod || 0}</td>` : ''}
+        ${ver.bodega ? `<td style="${tdS};color:#1F4E79">${r.stockLibre || 0}</td>` : ''}
+        ${ver.pool   ? `<td style="${tdS};color:#a82">${r.pool || 0}</td>` : ''}
         <td style="${tdS};font-weight:700;color:${balColor}">${r.balance>=0?'+':''}${r.balance}</td>
       </tr>`;
     }).join('');
@@ -750,10 +801,10 @@ async function exportarTallasPDF() {
           s + c.escuelas.reduce((s2, e) => s2 + (r.porEsc.get(e.id) || 0), 0), 0);
         return `<td style="${tdSub}">${sumGrp||'·'}</td>`;
       }).join('')}
-      ${f.incluirCorte  ? `<td style="${tdS};font-weight:700">${gTot.corte}</td>` : ''}
-      ${f.incluirProd   ? `<td style="${tdS};font-weight:700">${gTot.prod}</td>` : ''}
-      ${f.incluirBodega ? `<td style="${tdS};font-weight:700">${gTot.stockLibre}</td>` : ''}
-      ${f.incluirPool   ? `<td style="${tdS};font-weight:700">${gTot.pool}</td>` : ''}
+      ${ver.corte  ? `<td style="${tdS};font-weight:700">${gTot.corte}</td>` : ''}
+      ${ver.prod   ? `<td style="${tdS};font-weight:700">${gTot.prod}</td>` : ''}
+      ${ver.bodega ? `<td style="${tdS};font-weight:700">${gTot.stockLibre}</td>` : ''}
+      ${ver.pool   ? `<td style="${tdS};font-weight:700">${gTot.pool}</td>` : ''}
       <td style="${tdS};font-weight:700;color:${gTot.balance<0?'#C00':'#2a8f4a'}">${gTot.balance>=0?'+':''}${gTot.balance}</td>
     </tr>`;
 
@@ -791,7 +842,9 @@ async function exportarTallasPDF() {
       ${kpisRow}
       ${tablasHtml}
       <div style="margin-top:10px;font-size:9px;color:#888;text-align:center">
-        Generado desde Taller IMIS · <strong>Necesidad</strong> = piezas pendientes (no empacadas/entregadas) ·
+        Generado desde Taller IMIS · ${c._ultimoReporte.modoTotal
+          ? '<strong>Total</strong> = todas las piezas de la temporada (incluye empacadas/entregadas)'
+          : '<strong>Necesidad</strong> = piezas pendientes (no empacadas/entregadas)'} ·
         <strong>Balance</strong> = (corte + producción + bodega + pool) − necesidad
       </div>
     </div>`;
@@ -885,5 +938,78 @@ async function exportarTallasPDF() {
     setTimeout(() => {
       if (iframe && iframe.parentNode) iframe.parentNode.removeChild(iframe);
     }, 30000);
+  }
+}
+
+// ── Orden por columna (click en encabezado: asc → desc → default) ────
+function ordenarTallasPor(col) {
+  const f = tallasResumenCache.filtros;
+  if (f.ordenCol === col) {
+    if (f.ordenDir === 'asc') f.ordenDir = 'desc';
+    else { f.ordenCol = ''; f.ordenDir = 'asc'; }
+  } else {
+    f.ordenCol = col;
+    f.ordenDir = 'asc';
+  }
+  renderTallasResumen();
+}
+
+// ── Exportar la matriz como datos (CSV / portapapeles) ───────────────
+// Misma tabla que está en pantalla (filtros y columnas efectivas incluidos),
+// con fila TOTAL al final — para pegarla en Excel/WhatsApp o archivarla.
+function _tallasMatrizDatos() {
+  const c = tallasResumenCache;
+  const r = c._ultimoReporte;
+  if (!r || !Array.isArray(r.rows) || r.rows.length === 0) return null;
+  const esc = r.escuelasCols || [];
+  const ver = r.ver || { corte: true, prod: true, bodega: true, pool: true };
+  const head = ['Prenda', 'Talla', r.modoTotal ? 'Total' : 'Necesidad',
+    ...esc.map(e => e.alias || e.nombre),
+    ...(ver.corte ? ['Corte'] : []), ...(ver.prod ? ['Produccion'] : []),
+    ...(ver.bodega ? ['Bodega'] : []), ...(ver.pool ? ['Pool'] : []),
+    'Balance'];
+  const fila = (x) => [x.prenda, x.talla, x.demanda,
+    ...esc.map(e => x.porEsc.get(e.id) || 0),
+    ...(ver.corte ? [x.corte] : []), ...(ver.prod ? [x.prod] : []),
+    ...(ver.bodega ? [x.stockLibre] : []), ...(ver.pool ? [x.pool] : []),
+    x.balance];
+  const filas = r.rows.map(fila);
+  const t = r.tot;
+  filas.push(['TOTAL', '', t.demanda,
+    ...esc.map(e => r.rows.reduce((s, x) => s + (x.porEsc.get(e.id) || 0), 0)),
+    ...(ver.corte ? [t.corte] : []), ...(ver.prod ? [t.prod] : []),
+    ...(ver.bodega ? [t.stockLibre] : []), ...(ver.pool ? [t.pool] : []),
+    t.balance]);
+  return { head, filas };
+}
+
+function exportarTallasCSV() {
+  const d = _tallasMatrizDatos();
+  if (!d) { alert('No hay datos para exportar con los filtros actuales.'); return; }
+  const escapa = (v) => {
+    const s = String(v == null ? '' : v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const csv = [d.head, ...d.filas].map(row => row.map(escapa).join(',')).join('\r\n');
+  // BOM para que Excel abra los acentos bien
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'tallas-' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+
+async function copiarTallasTabla() {
+  const d = _tallasMatrizDatos();
+  if (!d) { alert('No hay datos para copiar con los filtros actuales.'); return; }
+  const tsv = [d.head, ...d.filas].map(r => r.join('\t')).join('\n');
+  try {
+    await navigator.clipboard.writeText(tsv);
+    if (typeof showToast === 'function') showToast('✓ Tabla copiada — pegala en Excel, Sheets o WhatsApp', 'success');
+    else alert('✓ Tabla copiada al portapapeles');
+  } catch (e) {
+    alert('No se pudo copiar: ' + e.message);
   }
 }
