@@ -8,6 +8,20 @@
     <div class="text-muted" style="padding:20px;text-align:center">Cargando sesión de empaque...</div>
   </div>
 
+  <!-- Modal: 🔒 Reservar tallas — necesidad de la escuela vs bodega, por
+       prenda-talla con cantidad editable (pre-llenada con lo que falta) -->
+  <div id="emq-reserva-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:520px">
+      <div class="modal-header">
+        <div class="card-title" style="margin:0">🔒 Reservar tallas para la escuela</div>
+        <button class="btn btn-ghost btn-sm" onclick="emqCerrarReserva()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="emq-reserva-contenido"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Mini-modal: elegir talla alterna para una pieza sin stock de la pedida -->
   <div id="emq-alt-modal" class="modal" style="display:none">
     <div class="modal-content" style="max-width:380px">

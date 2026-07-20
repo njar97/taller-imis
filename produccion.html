@@ -1,4 +1,4 @@
-<!-- Generado: 2026-07-20 15:57 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-07-20 16:09 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -2143,6 +2143,20 @@
 <div id="view-empaque" class="view">
   <div id="empaque-contenido">
     <div class="text-muted" style="padding:20px;text-align:center">Cargando sesión de empaque...</div>
+  </div>
+
+  <!-- Modal: 🔒 Reservar tallas — necesidad de la escuela vs bodega, por
+       prenda-talla con cantidad editable (pre-llenada con lo que falta) -->
+  <div id="emq-reserva-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:520px">
+      <div class="modal-header">
+        <div class="card-title" style="margin:0">🔒 Reservar tallas para la escuela</div>
+        <button class="btn btn-ghost btn-sm" onclick="emqCerrarReserva()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="emq-reserva-contenido"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Mini-modal: elegir talla alterna para una pieza sin stock de la pedida -->
@@ -14286,19 +14300,21 @@ async function emqDeshacer() {
   await initEmpaque(emqState.escuelaId);
 }
 
-// ── 🔒 Reservar (reemplaza al "Acaparar" para el caso normal) ────────
-// Aparta el stock que necesitan las piezas marcadas SIN empacar: los
-// alumnos siguen pendientes, pero ese stock queda bloqueado para la
-// escuela (misma mecánica que acaparar: SALIDA_EMPAQUE sin alumno +
-// fila en escuela_acaparado). Las piezas que ya estaban respaldadas por
-// una reserva previa se saltan (ya están apartadas).
-async function emqReservar() {
+// ── 🔒 Reservar tallas (reemplaza al "Acaparar") ─────────────────────
+// Reservar NO es por alumno (eso es empacar): es por TALLA y CANTIDAD.
+// Muestra lo que la escuela necesita cruzado con bodega — por cada
+// prenda-talla: pendientes / ya reservado / stock libre — con la cantidad
+// pre-llenada en lo que falta (topada al stock real). Los niños se eligen
+// recién al empacar; el motor consume la reserva primero, solo.
+async function emqAbrirReserva() {
   const escId = emqState.escuelaId;
-  const byId = new Map();
-  for (const a of emqState.alumnos) byId.set(a.id, a);
+  const cont = document.getElementById('emq-reserva-contenido');
+  const modal = document.getElementById('emq-reserva-modal');
+  if (!cont || !modal) return;
+  cont.innerHTML = '<div class="text-muted" style="padding:16px;text-align:center">Cruzando necesidad vs bodega…</div>';
+  modal.style.display = 'flex';
 
-  // Igual que el motor de empacar: NO confiar en la foto de la sesión.
-  // Recargar stock y reservas FRESCOS de la base antes de validar/escribir.
+  // Datos frescos SIEMPRE (mismo estándar que empacar)
   let stockFresco, poolFresco;
   try {
     const [stock, pool] = await Promise.all([
@@ -14312,85 +14328,144 @@ async function emqReservar() {
     }
     poolFresco = new Map();
     for (const p of pool) {
+      if (p.escuela_id !== escId) continue;
       const d = Math.max(0, (Number(p.cantidad_acaparada) || 0) - (Number(p.cantidad_consumida) || 0));
       if (d > 0) {
-        const k = p.escuela_id + '|' + p.nombre_prenda + '|' + p.talla_key;
+        const k = p.nombre_prenda + '|' + p.talla_key;
         poolFresco.set(k, (poolFresco.get(k) || 0) + d);
       }
     }
   } catch (e) {
-    alert('No se pudo verificar el stock actual: ' + e.message + '\nIntentá de nuevo.');
+    cont.innerHTML = `<div class="alert alert-error">No se pudo leer bodega: ${e.message}</div>`;
     return;
   }
 
-  // Simular consumo pool→stock CONTRA LOS DATOS FRESCOS: lo respaldado por
-  // reservas previas se salta; solo lo que saldría de stock libre se reserva.
-  const deStock = new Map();  // "prenda|talla" → n
-  let yaReservadas = 0;
-  for (const [id, m] of emqState.marcados) {
-    const a = byId.get(id);
-    if (!a) continue;
+  // Necesidad de la escuela por prenda|talla (tallas PEDIDAS, piezas pendientes)
+  const necesidad = new Map();
+  for (const a of emqState.alumnos) {
+    if (a.escuela_id !== escId) continue;
     for (const pieza of ['top', 'bottom']) {
-      if (!m[pieza]) continue;
-      const prenda = emqPrenda(a, pieza);
-      const talla = emqTalla(a, pieza);
-      const kP = escId + '|' + prenda + '|' + talla;
-      if ((poolFresco.get(kP) || 0) > 0) { poolFresco.set(kP, poolFresco.get(kP) - 1); yaReservadas++; continue; }
-      const kS = prenda + '|' + talla;
-      deStock.set(kS, (deStock.get(kS) || 0) + 1);
+      if (!emqPend(a, pieza)) continue;
+      const k = emqPrenda(a, pieza) + '|' + (pieza === 'top' ? a.talla_top_key : a.talla_bottom_key);
+      necesidad.set(k, (necesidad.get(k) || 0) + 1);
     }
-  }
-  if (deStock.size === 0) {
-    alert(yaReservadas > 0
-      ? 'Todas las piezas marcadas ya están respaldadas por reservas de esta escuela.'
-      : 'No hay piezas marcadas.');
-    return;
   }
 
-  // Validación dura: nunca reservar más de lo que EXISTE en stock libre.
-  const faltantes = [];
-  for (const [k, n] of deStock) {
-    const disp = stockFresco.get(k) || 0;
-    if (n > disp) {
-      const [p, t] = k.split('|');
-      faltantes.push(`· ${p} ${t}: querés reservar ${n} pero hay ${disp} en stock`);
-    }
+  const filas = [...necesidad.entries()]
+    .map(([k, pend]) => {
+      const [prenda, talla] = k.split('|');
+      const reservado = poolFresco.get(k) || 0;
+      const stockLibre = stockFresco.get(k) || 0;
+      const falta = Math.max(0, pend - reservado);
+      const sugerido = Math.min(falta, stockLibre);
+      return { k, prenda, talla, pend, reservado, stockLibre, falta, sugerido };
+    })
+    .sort((a, b) => a.prenda.localeCompare(b.prenda) || a.talla.localeCompare(b.talla, 'es', { numeric: true }));
+
+  emqState._reservaFilas = filas;
+  const conAlgo = filas.filter(f => f.falta > 0);
+  const totSugerido = filas.reduce((s, f) => s + f.sugerido, 0);
+
+  cont.innerHTML = `
+    <div class="text-muted mb8" style="font-size:12px">
+      Lo que esta escuela todavía necesita, cruzado con bodega. La cantidad viene
+      pre-llenada con lo que falta (nunca más de lo que hay en stock). Ajustá y confirmá.
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:420px">
+        <thead><tr style="background:#F5F7FA">
+          <th style="padding:5px 8px;text-align:left">Prenda</th>
+          <th style="padding:5px 8px;text-align:left">Talla</th>
+          <th style="padding:5px 8px;text-align:right" title="Piezas pendientes de esta escuela con esa talla">Pend.</th>
+          <th style="padding:5px 8px;text-align:right" title="Ya reservado para esta escuela">🔒 Ya</th>
+          <th style="padding:5px 8px;text-align:right" title="Stock libre en bodega ahora">📦 Libre</th>
+          <th style="padding:5px 8px;text-align:right">Reservar</th>
+        </tr></thead>
+        <tbody>
+          ${filas.map((f, i) => `
+            <tr style="border-top:1px solid #EEE;${f.falta === 0 ? 'opacity:.5' : ''}">
+              <td style="padding:5px 8px;font-weight:600">${f.prenda}</td>
+              <td style="padding:5px 8px;font-family:monospace;font-weight:600">${f.talla}</td>
+              <td style="padding:5px 8px;text-align:right">${f.pend}</td>
+              <td style="padding:5px 8px;text-align:right;color:#a82">${f.reservado || '·'}</td>
+              <td style="padding:5px 8px;text-align:right;color:${f.stockLibre > 0 ? 'var(--azul)' : '#c44'}">${f.stockLibre}</td>
+              <td style="padding:5px 8px;text-align:right">
+                <input type="number" id="emq-res-${i}" min="0" max="${f.stockLibre}" value="${f.sugerido}"
+                  inputmode="numeric" style="width:64px;text-align:right;padding:4px 6px" ${f.stockLibre === 0 ? 'disabled' : ''}>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    ${conAlgo.length === 0 ? '<div class="alert alert-info" style="margin-top:8px">🎉 Todo lo pendiente ya está cubierto por reservas (o no hay pendientes).</div>' : ''}
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-ghost btn-sm" onclick="emqCerrarReserva()">Cancelar</button>
+      <button class="btn btn-success btn-sm" onclick="emqConfirmarReserva()" ${totSugerido === 0 && conAlgo.length === 0 ? '' : ''}>🔒 Reservar</button>
+    </div>`;
+}
+
+function emqCerrarReserva() {
+  document.getElementById('emq-reserva-modal').style.display = 'none';
+  emqState._reservaFilas = null;
+}
+
+async function emqConfirmarReserva() {
+  const escId = emqState.escuelaId;
+  const filas = emqState._reservaFilas || [];
+  const pedidos = [];
+  for (let i = 0; i < filas.length; i++) {
+    const inp = document.getElementById('emq-res-' + i);
+    const n = inp ? parseInt(inp.value, 10) || 0 : 0;
+    if (n > 0) pedidos.push({ ...filas[i], n });
   }
+  if (pedidos.length === 0) { alert('Poné cantidad en al menos una talla.'); return; }
+
+  // Re-validar contra stock FRESCO al momento de confirmar (todo o nada)
+  let stockFresco;
+  try {
+    const stock = await supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual');
+    stockFresco = new Map();
+    for (const s of stock) {
+      const p = s.nombre_prenda || (typeof prendaCanon === 'function' ? prendaCanon(s.cod_prenda) : s.cod_prenda);
+      if (p && s.talla_key) stockFresco.set(p + '|' + s.talla_key, Number(s.stock_actual) || 0);
+    }
+  } catch (e) {
+    alert('No se pudo verificar el stock: ' + e.message);
+    return;
+  }
+  const faltantes = pedidos
+    .filter(p => p.n > (stockFresco.get(p.k) || 0))
+    .map(p => `· ${p.prenda} ${p.talla}: querés ${p.n} pero hay ${stockFresco.get(p.k) || 0}`);
   if (faltantes.length > 0) {
-    alert('No se reservó NADA — el stock cambió desde que se cargó la sesión:\n\n'
-      + faltantes.join('\n') + '\n\nSe va a refrescar la sesión con los números reales.');
-    await initEmpaque(escId);
+    alert('No se reservó NADA — el stock cambió:\n\n' + faltantes.join('\n'));
+    await emqAbrirReserva();
     return;
   }
 
-  const total = [...deStock.values()].reduce((s, n) => s + n, 0);
-  const detalle = [...deStock.entries()].map(([k, n]) => {
-    const [p, t] = k.split('|');
-    return `· ${p} ${t} × ${n}`;
-  }).join('\n');
-  if (!confirm(`¿Reservar ${total} pieza(s) para esta escuela?\n\n${detalle}\n\nEl stock queda apartado; los alumnos siguen PENDIENTES (los empacás cuando quieras y la reserva se consume sola).`)) return;
+  const total = pedidos.reduce((s, p) => s + p.n, 0);
+  if (!confirm(`¿Reservar ${total} pieza(s) para esta escuela?\n\n${pedidos.map(p => `· ${p.prenda} ${p.talla} × ${p.n}`).join('\n')}\n\nLos alumnos siguen PENDIENTES; al empacarlos, la reserva se consume sola.`)) return;
 
   try {
     const hoy = new Date().toISOString().slice(0, 10);
-    for (const [k, n] of deStock) {
-      const [prenda, talla] = k.split('|');
-      const cod = (typeof _codPrenda === 'function') ? _codPrenda(prenda) : prenda;
+    for (const p of pedidos) {
+      const cod = (typeof _codPrenda === 'function') ? _codPrenda(p.prenda) : p.prenda;
       const movs = await supaFetch('bodega_movimiento', 'POST', {
         tipo: 'SALIDA_EMPAQUE',
-        cod_prenda: cod, nombre_prenda: prenda, talla_key: talla,
-        cantidad: n, escuela_id: escId, fecha: hoy,
+        cod_prenda: cod, nombre_prenda: p.prenda, talla_key: p.talla,
+        cantidad: p.n, escuela_id: escId, fecha: hoy,
         observaciones: 'Reservado desde sesión de empaque',
       });
       const movId = Array.isArray(movs) ? movs[0]?.id : movs?.id;
       await supaFetch('escuela_acaparado', 'POST', {
         escuela_id: escId,
-        cod_prenda: cod, nombre_prenda: prenda, talla_key: talla,
-        cantidad_acaparada: n, cantidad_consumida: 0,
+        cod_prenda: cod, nombre_prenda: p.prenda, talla_key: p.talla,
+        cantidad_acaparada: p.n, cantidad_consumida: 0,
         movimiento_bodega_id: movId,
         observaciones: 'Reserva desde sesión de empaque',
       });
     }
-    alert(`✓ ${total} pieza(s) reservadas para la escuela. Los alumnos siguen pendientes; al empacarlos, la reserva se consume sola.`);
+    emqCerrarReserva();
+    alert(`✓ ${total} pieza(s) reservadas. Al empacar a los alumnos, la reserva se usa primero, sola.`);
     await initEmpaque(escId);
   } catch (e) {
     alert('Error al reservar: ' + e.message);
@@ -14549,6 +14624,8 @@ function emqPaso2Html() {
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px">
         <button class="btn btn-primary btn-sm" onclick="emqMarcarTodos()">☑️ Marcar todos los empacables</button>
+        <button class="btn btn-warning btn-sm" onclick="emqAbrirReserva()"
+          title="Apartar stock por TALLA y CANTIDAD para esta escuela, sin empacar. Los niños se eligen al empacar; la reserva se consume sola.">🔒 Reservar tallas</button>
         ${nPiezas > 0 ? '<button class="btn btn-ghost btn-sm" onclick="emqLimpiar()">✕ Limpiar</button>' : ''}
         <label style="display:flex;gap:5px;align-items:center;font-size:12px;cursor:pointer;margin-left:auto" title="Al marcar una pieza, la otra del mismo alumno se marca sola si hay stock">
           <input type="checkbox" ${emqState.parejas ? 'checked' : ''} onchange="emqSetParejas(this.checked)" style="width:18px;height:18px">
@@ -14568,8 +14645,6 @@ function emqPaso2Html() {
     <div style="position:fixed;bottom:calc(66px + env(safe-area-inset-bottom));left:0;right:0;z-index:900;display:flex;justify-content:center;pointer-events:none">
       <div style="pointer-events:auto;background:white;border:1px solid var(--borde);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.2);padding:8px 12px;display:flex;gap:8px;align-items:center;margin:0 12px">
         <div style="font-size:13px"><strong>${nPiezas}</strong> pieza(s) · <strong>${nAlumnos}</strong> alumno(s)</div>
-        <button class="btn btn-ghost btn-sm" ${nPiezas === 0 ? 'disabled' : ''} onclick="emqReservar()"
-          title="Apartar el stock de estas piezas para la escuela SIN empacar todavía (los alumnos siguen pendientes)">🔒 Reservar</button>
         <button id="emq-btn-empacar" class="btn btn-success" ${nPiezas === 0 ? 'disabled' : ''} onclick="emqEmpacar()">📦 Empacar</button>
       </div>
     </div>`;
