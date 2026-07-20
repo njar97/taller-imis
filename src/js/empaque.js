@@ -379,63 +379,119 @@ async function emqAbrirReserva() {
     })
     .sort((a, b) => a.prenda.localeCompare(b.prenda) || a.talla.localeCompare(b.talla, 'es', { numeric: true }));
 
-  emqState._reservaFilas = filas;
-  const conAlgo = filas.filter(f => f.falta > 0);
-  const totSugerido = filas.reduce((s, f) => s + f.sugerido, 0);
+  // Estado del modal: prenda seleccionada + carrito de cantidades por talla
+  // (se acumula al pasar de prenda en prenda; un solo Reservar al final)
+  const prendas = [...new Set(filas.map(f => f.prenda))];
+  emqState._resv = {
+    filas,
+    prendaSel: prendas.find(p => filas.some(f => f.prenda === p && f.falta > 0)) || prendas[0] || null,
+    cant: new Map(),   // k → cantidad elegida
+  };
+  emqResvRender();
+}
+
+function emqResvRender() {
+  const cont = document.getElementById('emq-reserva-contenido');
+  const r = emqState._resv;
+  if (!cont || !r) return;
+  const filas = r.filas;
+
+  if (filas.length === 0) {
+    cont.innerHTML = `
+      <div class="alert alert-info">Esta escuela no tiene piezas pendientes — no hay nada que reservar.</div>
+      <div style="text-align:right;margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="emqCerrarReserva()">Cerrar</button></div>`;
+    return;
+  }
+
+  // Chips de prendas (badge = piezas que aún faltan reservar de esa prenda)
+  const prendas = [...new Set(filas.map(f => f.prenda))];
+  const chips = prendas.map(p => {
+    const falta = filas.filter(f => f.prenda === p).reduce((s, f) => s + f.falta, 0);
+    const enCarrito = filas.filter(f => f.prenda === p).reduce((s, f) => s + (r.cant.get(f.k) || 0), 0);
+    const sel = p === r.prendaSel;
+    return `<button class="btn btn-sm ${sel ? 'btn-primary' : 'btn-ghost'}" style="font-weight:${sel ? 700 : 600}"
+      onclick="emqState._resv.prendaSel='${p.replace(/'/g, "\\'")}';emqResvRender()">
+      ${p} <span style="opacity:.65;font-size:10px">${enCarrito > 0 ? '🔒' + enCarrito : (falta > 0 ? 'faltan ' + falta : '✓')}</span></button>`;
+  }).join(' ');
+
+  // Tallas de la prenda elegida en ESTA escuela
+  const delSel = filas.filter(f => f.prenda === r.prendaSel);
+  const filasHtml = delSel.map(f => {
+    const n = r.cant.get(f.k) || 0;
+    const sinStock = f.stockLibre === 0;
+    return `
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 4px;border-top:1px solid #F0F0F0;${sinStock ? 'opacity:.55' : ''}">
+        <button style="min-width:64px;padding:8px 6px;border-radius:8px;font-weight:700;border:2px solid ${n > 0 ? 'var(--verde)' : 'var(--borde)'};background:${n > 0 ? '#E0F4E5' : 'white'};font-family:monospace"
+          onclick="emqResvTapTalla('${f.k.replace(/'/g, "\\'")}')"
+          title="${sinStock ? 'Sin stock libre' : 'Tap: reservar lo que falta (' + f.sugerido + ')'}"
+          ${sinStock ? 'disabled' : ''}>${f.talla}</button>
+        <div style="flex:1;font-size:11px;color:#666;line-height:1.5">
+          Pendientes: <strong>${f.pend}</strong>${f.reservado ? ` · 🔒 ya reservadas: <strong style="color:#a82">${f.reservado}</strong>` : ''}<br>
+          📦 En bodega: <strong style="color:${f.stockLibre > 0 ? 'var(--azul)' : '#c44'}">${f.stockLibre}</strong>${f.falta === 0 ? ' · <span style="color:var(--verde)">cubierta ✓</span>' : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:2px">
+          <button class="btn btn-ghost btn-sm" style="min-width:36px;padding:6px" onclick="emqResvSet('${f.k.replace(/'/g, "\\'")}',-1)" ${n === 0 ? 'disabled' : ''}>−</button>
+          <span style="min-width:28px;text-align:center;font-weight:700;font-size:15px">${n}</span>
+          <button class="btn btn-ghost btn-sm" style="min-width:36px;padding:6px" onclick="emqResvSet('${f.k.replace(/'/g, "\\'")}',1)" ${n >= f.stockLibre ? 'disabled' : ''}>+</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  const total = [...r.cant.values()].reduce((s, n) => s + n, 0);
+  const resumen = filas.filter(f => (r.cant.get(f.k) || 0) > 0)
+    .map(f => `${f.talla}×${r.cant.get(f.k)}`).join(' · ');
 
   cont.innerHTML = `
     <div class="text-muted mb8" style="font-size:12px">
-      Lo que esta escuela todavía necesita, cruzado con bodega. La cantidad viene
-      pre-llenada con lo que falta (nunca más de lo que hay en stock). Ajustá y confirmá.
+      Elegí prenda → tocá la talla para reservar lo que falta, o ajustá con − / +.
+      Podés pasar de prenda en prenda: todo se junta en una sola reserva.
     </div>
-    <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:420px">
-        <thead><tr style="background:#F5F7FA">
-          <th style="padding:5px 8px;text-align:left">Prenda</th>
-          <th style="padding:5px 8px;text-align:left">Talla</th>
-          <th style="padding:5px 8px;text-align:right" title="Piezas pendientes de esta escuela con esa talla">Pend.</th>
-          <th style="padding:5px 8px;text-align:right" title="Ya reservado para esta escuela">🔒 Ya</th>
-          <th style="padding:5px 8px;text-align:right" title="Stock libre en bodega ahora">📦 Libre</th>
-          <th style="padding:5px 8px;text-align:right">Reservar</th>
-        </tr></thead>
-        <tbody>
-          ${filas.map((f, i) => `
-            <tr style="border-top:1px solid #EEE;${f.falta === 0 ? 'opacity:.5' : ''}">
-              <td style="padding:5px 8px;font-weight:600">${f.prenda}</td>
-              <td style="padding:5px 8px;font-family:monospace;font-weight:600">${f.talla}</td>
-              <td style="padding:5px 8px;text-align:right">${f.pend}</td>
-              <td style="padding:5px 8px;text-align:right;color:#a82">${f.reservado || '·'}</td>
-              <td style="padding:5px 8px;text-align:right;color:${f.stockLibre > 0 ? 'var(--azul)' : '#c44'}">${f.stockLibre}</td>
-              <td style="padding:5px 8px;text-align:right">
-                <input type="number" id="emq-res-${i}" min="0" max="${f.stockLibre}" value="${f.sugerido}"
-                  inputmode="numeric" style="width:64px;text-align:right;padding:4px 6px" ${f.stockLibre === 0 ? 'disabled' : ''}>
-              </td>
-            </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>
-    ${conAlgo.length === 0 ? '<div class="alert alert-info" style="margin-top:8px">🎉 Todo lo pendiente ya está cubierto por reservas (o no hay pendientes).</div>' : ''}
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">${chips}</div>
+    <div>${filasHtml || '<div class="text-muted" style="padding:12px;text-align:center">Esta prenda no tiene tallas pendientes acá.</div>'}</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:12px;border-top:2px solid var(--borde);padding-top:10px">
+      <div style="flex:1;font-size:12px">
+        <strong>${total}</strong> pieza(s)${resumen ? `<br><span style="color:#888;font-size:11px">${resumen}</span>` : ''}
+      </div>
       <button class="btn btn-ghost btn-sm" onclick="emqCerrarReserva()">Cancelar</button>
-      <button class="btn btn-success btn-sm" onclick="emqConfirmarReserva()" ${totSugerido === 0 && conAlgo.length === 0 ? '' : ''}>🔒 Reservar</button>
+      <button class="btn btn-success btn-sm" onclick="emqConfirmarReserva()" ${total === 0 ? 'disabled' : ''}>🔒 Reservar ${total || ''}</button>
     </div>`;
+}
+
+// Tap en la talla: alterna entre 0 y "lo que falta" (topado al stock)
+function emqResvTapTalla(k) {
+  const r = emqState._resv;
+  const f = r.filas.find(x => x.k === k);
+  if (!f) return;
+  const actual = r.cant.get(k) || 0;
+  const objetivo = actual > 0 ? 0 : Math.max(1, f.sugerido);
+  if (objetivo === 0) r.cant.delete(k);
+  else r.cant.set(k, Math.min(objetivo, f.stockLibre));
+  emqResvRender();
+}
+
+function emqResvSet(k, delta) {
+  const r = emqState._resv;
+  const f = r.filas.find(x => x.k === k);
+  if (!f) return;
+  const n = Math.max(0, Math.min(f.stockLibre, (r.cant.get(k) || 0) + delta));
+  if (n === 0) r.cant.delete(k);
+  else r.cant.set(k, n);
+  emqResvRender();
 }
 
 function emqCerrarReserva() {
   document.getElementById('emq-reserva-modal').style.display = 'none';
-  emqState._reservaFilas = null;
+  emqState._resv = null;
 }
 
 async function emqConfirmarReserva() {
   const escId = emqState.escuelaId;
-  const filas = emqState._reservaFilas || [];
-  const pedidos = [];
-  for (let i = 0; i < filas.length; i++) {
-    const inp = document.getElementById('emq-res-' + i);
-    const n = inp ? parseInt(inp.value, 10) || 0 : 0;
-    if (n > 0) pedidos.push({ ...filas[i], n });
-  }
-  if (pedidos.length === 0) { alert('Poné cantidad en al menos una talla.'); return; }
+  const r = emqState._resv;
+  if (!r) return;
+  const pedidos = r.filas
+    .filter(f => (r.cant.get(f.k) || 0) > 0)
+    .map(f => ({ ...f, n: r.cant.get(f.k) }));
+  if (pedidos.length === 0) { alert('Elegí al menos una talla (tocá la talla o usá +).'); return; }
 
   // Re-validar contra stock FRESCO al momento de confirmar (todo o nada)
   let stockFresco;
