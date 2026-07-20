@@ -1,4 +1,4 @@
-<!-- Generado: 2026-07-20 15:47 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-07-20 15:57 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -14297,8 +14297,34 @@ async function emqReservar() {
   const byId = new Map();
   for (const a of emqState.alumnos) byId.set(a.id, a);
 
-  // Simular consumo pool→stock: solo lo que saldría de STOCK LIBRE se reserva
-  const poolRest = new Map(emqState.poolMap);
+  // Igual que el motor de empacar: NO confiar en la foto de la sesión.
+  // Recargar stock y reservas FRESCOS de la base antes de validar/escribir.
+  let stockFresco, poolFresco;
+  try {
+    const [stock, pool] = await Promise.all([
+      supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
+      supaFetchAll('escuela_acaparado', '?select=escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida'),
+    ]);
+    stockFresco = new Map();
+    for (const s of stock) {
+      const p = s.nombre_prenda || (typeof prendaCanon === 'function' ? prendaCanon(s.cod_prenda) : s.cod_prenda);
+      if (p && s.talla_key) stockFresco.set(p + '|' + s.talla_key, Number(s.stock_actual) || 0);
+    }
+    poolFresco = new Map();
+    for (const p of pool) {
+      const d = Math.max(0, (Number(p.cantidad_acaparada) || 0) - (Number(p.cantidad_consumida) || 0));
+      if (d > 0) {
+        const k = p.escuela_id + '|' + p.nombre_prenda + '|' + p.talla_key;
+        poolFresco.set(k, (poolFresco.get(k) || 0) + d);
+      }
+    }
+  } catch (e) {
+    alert('No se pudo verificar el stock actual: ' + e.message + '\nIntentá de nuevo.');
+    return;
+  }
+
+  // Simular consumo pool→stock CONTRA LOS DATOS FRESCOS: lo respaldado por
+  // reservas previas se salta; solo lo que saldría de stock libre se reserva.
   const deStock = new Map();  // "prenda|talla" → n
   let yaReservadas = 0;
   for (const [id, m] of emqState.marcados) {
@@ -14309,7 +14335,7 @@ async function emqReservar() {
       const prenda = emqPrenda(a, pieza);
       const talla = emqTalla(a, pieza);
       const kP = escId + '|' + prenda + '|' + talla;
-      if ((poolRest.get(kP) || 0) > 0) { poolRest.set(kP, poolRest.get(kP) - 1); yaReservadas++; continue; }
+      if ((poolFresco.get(kP) || 0) > 0) { poolFresco.set(kP, poolFresco.get(kP) - 1); yaReservadas++; continue; }
       const kS = prenda + '|' + talla;
       deStock.set(kS, (deStock.get(kS) || 0) + 1);
     }
@@ -14320,6 +14346,23 @@ async function emqReservar() {
       : 'No hay piezas marcadas.');
     return;
   }
+
+  // Validación dura: nunca reservar más de lo que EXISTE en stock libre.
+  const faltantes = [];
+  for (const [k, n] of deStock) {
+    const disp = stockFresco.get(k) || 0;
+    if (n > disp) {
+      const [p, t] = k.split('|');
+      faltantes.push(`· ${p} ${t}: querés reservar ${n} pero hay ${disp} en stock`);
+    }
+  }
+  if (faltantes.length > 0) {
+    alert('No se reservó NADA — el stock cambió desde que se cargó la sesión:\n\n'
+      + faltantes.join('\n') + '\n\nSe va a refrescar la sesión con los números reales.');
+    await initEmpaque(escId);
+    return;
+  }
+
   const total = [...deStock.values()].reduce((s, n) => s + n, 0);
   const detalle = [...deStock.entries()].map(([k, n]) => {
     const [p, t] = k.split('|');
