@@ -1,4 +1,4 @@
-<!-- Generado: 2026-07-20 19:55 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-07-20 20:13 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -16030,6 +16030,11 @@ function renderGrillaPadron(cont, header, lista) {
   if (!window._gradoCatalogoCache && typeof _cargarCatalogoGradosCache === 'function') {
     _cargarCatalogoGradosCache().catch(() => {});
   }
+  // Tallas custom registradas en catalogo_key → que salgan en los plegables
+  if (!window._gpCatCustomOk && typeof cargarCatalogoCustom === 'function') {
+    window._gpCatCustomOk = true;
+    Promise.resolve(cargarCatalogoCustom()).catch(() => {});
+  }
 
   if (typeof c.pagina !== 'number' || c.pagina < 1) c.pagina = 1;
   const totalPaginas = Math.max(1, Math.ceil(lista.length / GP_PAGINA));
@@ -16173,10 +16178,90 @@ function gpAbrirEditor(td, valorInicial) {
   if (valorInicial == null) input.select();
   input.addEventListener('keydown', e => gpTeclado(e, td));
   input.addEventListener('paste', e => gpPegar(e, td));
+  input.addEventListener('input', () => { if (_gpPicker) _gpPicker.render(input.value.trim()); });
   input.addEventListener('blur', () => {
+    gpPickerCerrar();
     // blur sin tecla (tap fuera en móvil) = commit sin mover
     if (td.querySelector('input')) gpCommitCelda(td, 0, 0);
   });
+  // Plegable de tallas/largos válidos para la prenda del alumno
+  const col = td.dataset.col;
+  if (col === 'talla_top' || col === 'talla_bot' || col === 'largo_bot') {
+    const a = gpAlumno(td.closest('tr').dataset.id);
+    if (a) gpPickerAbrir(td, col, a, input);
+  }
+}
+
+// ── Plegable de tallas (tap en celda de talla → chips del catálogo) ──
+// Lo que se escriba a mano y no esté, se guarda igual (celda 🟡) y se
+// REGISTRA en catalogo_key → aparece en las listas desde ese momento.
+let _gpPicker = null;
+
+function gpPickerCerrar() {
+  if (_gpPicker) { _gpPicker.el.remove(); _gpPicker = null; }
+}
+
+function gpPickerAbrir(td, col, a, input) {
+  gpPickerCerrar();
+  const prenda = col === 'talla_top' ? a.prenda_top : a.prenda_bottom;
+  if (!prenda) return;  // sin prenda no hay catálogo (el commit ya avisa)
+  const opts = aeOpcionesParaPrenda(prenda);
+  const lista = col === 'largo_bot' ? opts.largos : opts.tallas;
+  if (!lista || lista.length === 0) return;
+
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;z-index:3000;background:white;border:1px solid var(--borde);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.25);padding:8px;width:264px';
+  document.body.appendChild(el);
+  const rect = td.getBoundingClientRect();
+  const left = Math.max(8, Math.min(rect.left, window.innerWidth - 280));
+  el.style.left = left + 'px';
+  // Debajo de la celda; si no cabe, arriba
+  if (rect.bottom + 230 < window.innerHeight) el.style.top = (rect.bottom + 4) + 'px';
+  else el.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+
+  const render = (filtro) => {
+    const fil = filtro ? lista.filter(t => String(t).startsWith(filtro)) : lista;
+    el.innerHTML = `
+      <div style="display:flex;flex-wrap:wrap;gap:4px;max-height:170px;overflow-y:auto">
+        ${fil.map(t => `<button data-val="${gpEsc(t)}" style="min-width:46px;padding:7px 8px;border:1px solid var(--borde);border-radius:8px;background:${String(t) === (td.dataset.prev || '').trim() ? '#E8F0FE' : '#F8FAFC'};font-weight:600;font-size:13px;font-family:monospace">${gpEsc(t)}</button>`).join('')
+          || '<span style="color:#aaa;font-size:12px;padding:4px">Ninguna empieza con eso…</span>'}
+      </div>
+      <div style="font-size:10px;color:#888;border-top:1px dashed var(--borde);margin-top:6px;padding-top:5px">
+        ¿No está? Escribila igual y Enter — se guarda 🟡 y <strong>se agrega al catálogo</strong> para la próxima.
+      </div>`;
+  };
+  // mousedown (no click): evita robarle el foco al input
+  el.addEventListener('mousedown', ev => {
+    ev.preventDefault();
+    const b = ev.target.closest('button[data-val]');
+    if (!b) return;
+    input.value = b.dataset.val;
+    gpPickerCerrar();
+    gpCommitCelda(td, 1, 0);  // igual que Enter: guarda y baja a la siguiente fila
+  });
+  render((input.value || '').trim() && valorInicialDistinto(td, input) ? input.value.trim() : '');
+  _gpPicker = { el, render };
+}
+
+// Si el editor abrió con el valor existente (seleccionado), no filtrar de entrada
+function valorInicialDistinto(td, input) {
+  return (td.dataset.prev || '').trim() !== input.value.trim();
+}
+
+// Registrar una talla/KEY nueva en el catálogo compartido (tabla catalogo_key,
+// la misma que usa Trazo) — desde entonces sale en todos los plegables.
+async function gpRegistrarTallaNueva(prenda, key) {
+  const cod = AE_PRENDA_PREFIX[prenda];
+  if (!cod || !key) return;
+  const cat = (typeof CATALOGO !== 'undefined' ? CATALOGO : CATALOGO_BASE)[cod];
+  if (!cat || cat.keys.includes(key)) return;
+  cat.keys.push(key);
+  try {
+    await supaFetch('catalogo_key', 'POST', { cod_prenda: cod, key });
+    console.log('[grilla] talla nueva registrada en catálogo:', key);
+  } catch (e) {
+    console.warn('[grilla] catalogo_key:', e.message);
+  }
 }
 
 function gpTeclado(e, td) {
@@ -16186,12 +16271,14 @@ function gpTeclado(e, td) {
   else if (e.key === 'ArrowUp')   { e.preventDefault(); gpCommitCelda(td, -1, 0); }
   else if (e.key === 'Escape') {
     e.preventDefault();
+    gpPickerCerrar();
     td.innerHTML = gpEsc(td.dataset.prev || '');
   }
 }
 
 // Commit del valor de la celda + mover el cursor (dr filas, dc columnas)
 function gpCommitCelda(td, dr, dc) {
+  gpPickerCerrar();
   const input = td.querySelector('input');
   if (!input) return;
   const valor = input.value.trim();
@@ -16357,6 +16444,13 @@ async function gpGuardar(id, col, valor, td) {
     await supaUpdate('alumno', id, r.payload);
     Object.assign(a, r.payload);
     if (typeof _persistAlumnosCache === 'function') _persistAlumnosCache();
+    // Talla fuera de catálogo guardada → registrarla para que salga en los
+    // plegables de toda la app (grilla, trazo, entrada de bodega) desde ya
+    if (r.warn) {
+      const prendaKey = (col === 'talla_top') ? a.prenda_top : a.prenda_bottom;
+      const keyNueva = (col === 'talla_top') ? r.payload.talla_top_key : r.payload.talla_bottom_key;
+      if (prendaKey && keyNueva) gpRegistrarTallaNueva(prendaKey, keyNueva);
+    }
     td.style.background = r.warn ? '#FFF7D6' : '#E7F6EA';
     td.title = r.warn ? 'Talla fuera del catálogo (guardada igual)' : '';
     setTimeout(() => { if (!r.warn) td.style.background = ''; }, 900);
