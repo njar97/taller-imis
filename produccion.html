@@ -1,4 +1,4 @@
-<!-- Generado: 2026-07-20 18:03 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-07-20 19:55 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -14362,9 +14362,16 @@ function renderAlumnosGlobal() {
   const filtrosActivos = (escuelasSel.length > 0 ? 1 : 0) +
     (c.filtroNivel ? 1 : 0) + (c.filtroTemporada ? 1 : 0);
 
+  // Conteo de alumnos por escuela (para los chips)
+  const alumnosPorEscuela = {};
+  for (const a of c.alumnos) {
+    if (a.escuela_id) alumnosPorEscuela[a.escuela_id] = (alumnosPorEscuela[a.escuela_id] || 0) + 1;
+  }
+  const unaEscuela = escuelasSel.length === 1 ? escuelasSel[0] : null;
+
   const header = `
     <div class="card" style="padding:10px 12px;margin-bottom:10px">
-      <!-- Visible siempre: búsqueda + nuevo alumno + refrescar -->
+      <!-- Fila 1: buscar + acciones principales -->
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
         <input type="text" placeholder="🔍 Filtrar esta lista por nombre..." value="${c.busqueda}"
           title="Filtra los alumnos ya cargados en esta lista. Para buscar en TODA la app, usá el buscador del encabezado (Ctrl+K)."
@@ -14372,11 +14379,31 @@ function renderAlumnosGlobal() {
           style="flex:1;min-width:160px;padding:8px 12px;border:1px solid var(--borde);border-radius:6px;font-size:14px">
         <button class="btn btn-success btn-sm" onclick="abrirNuevoAlumno()">+ Nuevo alumno</button>
         <button class="btn btn-sm ${c.vistaGrilla ? 'btn-primary' : 'btn-ghost'}" onclick="toggleVistaGrilla()"
-          title="Grilla tipo Excel: edición inline con teclado y pegado de columnas">${c.vistaGrilla ? '⚡ Grilla' : '⚡ Grilla'}</button>
+          title="Grilla tipo Excel: edición inline con teclado y pegado de columnas">⚡ Grilla</button>
         <button class="btn btn-ghost btn-sm" onclick="initAlumnosGlobal()" title="Refrescar">🔄</button>
       </div>
 
-      <!-- Visible siempre: chips de estado (los más usados) + contador -->
+      <!-- Fila 2: ESCUELAS como chips deslizables (el filtro más usado, siempre a la vista) -->
+      <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:2px;-webkit-overflow-scrolling:touch;scrollbar-width:thin">
+        <button class="btn btn-sm ${escuelasSel.length === 0 ? 'btn-primary' : 'btn-ghost'}" style="white-space:nowrap;flex-shrink:0"
+          onclick="alumnosGlobalCache.filtroEscuelas=[];alumnosGlobalCache.pagina=1;renderAlumnosGlobal()">🏫 Todas</button>
+        ${escuelasOpts.map(e => {
+          const sel = escuelasSel.includes(e.id);
+          const n = alumnosPorEscuela[e.id] || 0;
+          return `<button class="btn btn-sm ${sel ? 'btn-primary' : 'btn-ghost'}" style="white-space:nowrap;flex-shrink:0"
+            onclick="${sel ? `quitarFiltroEscuela('${e.id}')` : `agregarFiltroEscuela('${e.id}')`}"
+            title="${(e.nombre || '').replace(/"/g, '&quot;')} · ${n} alumnos">${e.alias || e.nombre}${e.alias ? '' : ' ⚠️'} <span style="opacity:.55;font-size:10px">${n}</span></button>`;
+        }).join('')}
+      </div>
+      ${unaEscuela ? `
+      <!-- Acciones de la escuela elegida -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;font-size:12px">
+        <button class="btn btn-ghost btn-sm" onclick="verEstadisticaEscuela('${unaEscuela}')" title="Tallaje, contrato y tela de esta escuela">📊 Su estadística</button>
+        <button class="btn btn-ghost btn-sm" onclick="window._emqHintEscuela='${unaEscuela}';switchTab('empaque')" title="Sesión de empaque de esta escuela">🧺 Empacarla</button>
+        <button class="btn btn-ghost btn-sm" onclick="editarEscuela('${unaEscuela}')" title="Alias y datos de la escuela">✏️ Editar escuela</button>
+      </div>` : '<div style="margin-bottom:6px"></div>'}
+
+      <!-- Fila 3: chips de estado + contador -->
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
         <button class="btn btn-sm ${!c.filtroEstado && escuelasSel.length===0 && !c.busqueda?'btn-primary':'btn-ghost'}"
           onclick="limpiarFiltros()">👥 Todos (${tot.toLocaleString()})</button>
@@ -14385,41 +14412,28 @@ function renderAlumnosGlobal() {
         <button class="btn btn-sm ${c.filtroEstado==='completo'?'btn-primary':'btn-ghost'}"
           onclick="aplicarFiltroEstado('completo')">✅ Completos (${completos})</button>
         ${c.filtroTalla ? `<span class="btn btn-sm btn-primary" style="cursor:default" title="Filtro por talla (vino de Estadística)">📐 ${c.filtroTalla} <span style="margin-left:4px;cursor:pointer" onclick="alumnosGlobalCache.filtroTalla='';alumnosGlobalCache.pagina=1;renderAlumnosGlobal()">✕</span></span>` : ''}
+        ${algunFiltro ? `<button class="btn btn-ghost btn-sm" onclick="limpiarFiltros()" title="Quitar todos los filtros">✗</button>` : ''}
         <span style="margin-left:auto;color:#888;font-size:11px;align-self:center">${totMostrando.toLocaleString()} mostrando</span>
       </div>
 
-      <!-- Colapsado por defecto: filtros avanzados + escuelas + acciones secundarias -->
+      <!-- Colapsado: acciones + filtros avanzados + orden -->
       <details ${masFiltrosAbierto ? 'open' : ''} ontoggle="alumnosGlobalCache.masFiltrosAbierto = this.open">
         <summary style="cursor:pointer;list-style:none;padding:8px 12px;background:#F5F7FA;border-radius:6px;font-size:13px;font-weight:600;color:#555;display:flex;align-items:center;justify-content:space-between;user-select:none">
           <span>🎛 Más opciones${filtrosActivos > 0 ? ` <span style="background:var(--azul);color:white;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px">${filtrosActivos} filtro${filtrosActivos>1?'s':''}</span>` : ''}</span>
           <span style="opacity:0.6">▼</span>
         </summary>
         <div style="padding:10px 4px 0 4px;display:flex;flex-direction:column;gap:8px">
-          <!-- Escuelas seleccionadas + agregar -->
-          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-            ${escuelasSel.length === 0 ? `<span style="color:#888;font-size:12px">🏫 Todas las escuelas</span>` : ''}
-            ${escuelasSel.map(eid => {
-              const e = c.escuelas[eid];
-              if (!e) return '';
-              const label = e.alias || e.nombre;
-              const sinAlias = !e.alias;
-              return `<span class="btn btn-sm btn-primary" style="cursor:default">🏫 ${label}${sinAlias ? ' ⚠️' : ''} <span style="margin-left:4px;cursor:pointer;opacity:0.85" onclick="verEstadisticaEscuela('${eid}')" title="Ver estadística de esta escuela (tallaje, contrato, tela)">📊</span> <span style="margin-left:2px;cursor:pointer;opacity:0.85" onclick="editarEscuela('${eid}')" title="Editar escuela (alias, datos)">✏️</span> <span style="margin-left:2px;cursor:pointer" onclick="quitarFiltroEscuela('${eid}')" title="Quitar filtro">✕</span></span>`;
-            }).join('')}
-            ${escuelasDisponibles.length > 0 ? `
-              <select onchange="if(this.value){agregarFiltroEscuela(this.value); this.value='';}" style="padding:4px 6px;font-size:12px;border:1px solid var(--borde);border-radius:4px">
-                <option value="">+ Filtrar por escuela…</option>
-                ${escuelasDisponibles.map(e => `<option value="${e.id}">${e.alias ? e.alias + ' · ' : ''}${e.nombre}</option>`).join('')}
-              </select>
-            ` : ''}
-            <button class="btn btn-ghost btn-sm" onclick="nuevaEscuela()" title="Crear escuela nueva">🏫 + Nueva</button>
-          </div>
-          <!-- Acciones secundarias y limpiar -->
-          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding-top:6px;border-top:1px dashed #E0E0E0">
-            <button class="btn btn-primary btn-sm" onclick="generarEtiquetasDirecto()" title="Genera PDF con los filtros y orden actuales">🏷 Imprimir etiquetas</button>
-            ${algunFiltro ? `<button class="btn btn-ghost btn-sm" onclick="limpiarFiltros()" style="margin-left:auto">✗ Limpiar filtros</button>` : ''}
+          <!-- Acciones -->
+          <div>
+            <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Acciones</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <button class="btn btn-primary btn-sm" onclick="generarEtiquetasDirecto()" title="PDF de etiquetas con los filtros y orden actuales">🏷 Imprimir etiquetas</button>
+              ${typeof abrirModalExport === 'function' ? '<button class="btn btn-ghost btn-sm" onclick="abrirModalExport()" title="Descargar alumnos/pedidos/stock en CSV">💾 Exportar datos</button>' : ''}
+              <button class="btn btn-ghost btn-sm" onclick="nuevaEscuela()" title="Crear escuela nueva">🏫 + Nueva escuela</button>
+            </div>
           </div>
 
-          <!-- Filtros avanzados: nivel + estado avanzado -->
+          <!-- Filtros avanzados: nivel + estado + temporada -->
           <div style="padding-top:6px;border-top:1px dashed #E0E0E0">
             <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Filtros avanzados</div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px">
@@ -14436,6 +14450,11 @@ function renderAlumnosGlobal() {
                 <option value="parcial"   ${c.filtroEstado==='parcial'?'selected':''}>✅❌ Parcial empacado</option>
                 <option value="entregado" ${c.filtroEstado==='entregado'?'selected':''}>🚚 Entregado</option>
               </select>
+              ${temporadasOpts.length > 1 ? `
+              <select onchange="alumnosGlobalCache.filtroTemporada = this.value; alumnosGlobalCache.pagina = 1; renderAlumnosGlobal()" style="padding:6px">
+                <option value="">Toda temporada</option>
+                ${temporadasOpts.map(t => `<option value="${t.id}" ${c.filtroTemporada===t.id?'selected':''}>${t.codigo || t.anio}</option>`).join('')}
+              </select>` : ''}
             </div>
           </div>
           <!-- Orden de la lista -->
