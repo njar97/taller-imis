@@ -109,7 +109,12 @@ function gpColsActivas() {
 function gpTallaEnCatalogo(prenda, talla) {
   if (!prenda || !talla) return true;
   const opts = aeOpcionesParaPrenda(prenda);
-  return opts.tallas.length === 0 || opts.tallas.includes(String(talla));
+  if (opts.tallas.length === 0 || opts.tallas.includes(String(talla))) return true;
+  // Especiales registradas (B20-5L, F1050CINT.8…): matchear la KEY completa
+  // contra el catálogo (base + catalogo_key ya mergeado en CATALOGO)
+  const pref = AE_PRENDA_PREFIX[prenda] || '';
+  const cat = (typeof CATALOGO !== 'undefined' ? CATALOGO : CATALOGO_BASE)[pref];
+  return !!(cat && cat.keys && cat.keys.includes(pref + String(talla)));
 }
 
 function gpCeldaEstilo(a, col) {
@@ -319,7 +324,20 @@ function gpPickerAbrir(td, col, a, input) {
   const prenda = col === 'talla_top' ? a.prenda_top : a.prenda_bottom;
   if (!prenda) return;  // sin prenda no hay catálogo (el commit ya avisa)
   const opts = aeOpcionesParaPrenda(prenda);
-  const lista = col === 'largo_bot' ? opts.largos : opts.tallas;
+  let lista = col === 'largo_bot' ? opts.largos : opts.tallas;
+  // En talla de prendas con largo, ofrecer también las KEYS especiales
+  // completas (F1050CINT.8, FB2055CINT.18…) que el desglose talla+largo
+  // no captura — se eligen y guardan verbatim.
+  if (col === 'talla_bot' && typeof aeUsaLargo === 'function' && aeUsaLargo(prenda)) {
+    const pref = AE_PRENDA_PREFIX[prenda] || '';
+    const cat = (typeof CATALOGO !== 'undefined' ? CATALOGO : CATALOGO_BASE)[pref];
+    if (cat && cat.keys) {
+      const especiales = cat.keys
+        .map(k => (k.startsWith(pref) ? k.slice(pref.length) : k))
+        .filter(rest => rest && !/^\d{3,}$/.test(rest));  // lo no-estándar (talla+largo puros son solo dígitos)
+      lista = [...lista, ...new Set(especiales)];
+    }
+  }
   if (!lista || lista.length === 0) return;
 
   const el = document.createElement('div');
