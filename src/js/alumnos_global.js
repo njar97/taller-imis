@@ -238,6 +238,8 @@ function renderAlumnosGlobal() {
       return 0;
     });
   }
+  // Orden visible compartido: lo usan la navegación ◀ ▶ de la ficha y 🎯
+  c._listaOrdenada = lista;
 
   // Opciones
   const escuelasUnicas = {};
@@ -1061,6 +1063,13 @@ async function editarAlumnoRapido(alumnoId) {
     document.getElementById('ae-grado').value   = a.grado || '';
     document.getElementById('ae-obs').value     = a.observaciones || '';
     document.getElementById('ae-subt').textContent = esc ? (esc.alias || esc.nombre) : '';
+    // Posición dentro del filtro actual (para la navegación ◀ ▶)
+    const navPos = document.getElementById('ae-nav-pos');
+    if (navPos) {
+      const listaNav = alumnosGlobalCache._listaOrdenada || [];
+      const iNav = listaNav.findIndex(x => x.id === a.id);
+      navPos.textContent = iNav >= 0 ? `${iNav + 1} / ${listaNav.length}` : '';
+    }
 
     aeRender();
     _renderEstadoEmpaqueAlumno(a);
@@ -1082,6 +1091,8 @@ async function editarAlumnoRapido(alumnoId) {
 
 function cerrarAlumnoEdit() {
   document.getElementById('alumno-edit-modal').style.display = 'none';
+  // Refrescar la lista: pudo navegarse/guardarse varios alumnos en la ficha
+  renderAlumnosGlobal();
 }
 
 // Muestra el estado de empaque del alumno en el modal de edición.
@@ -1140,10 +1151,13 @@ async function desempacarPiezaAlumno(alumnoId, pieza) {
   }
 }
 
-async function guardarAlumnoEdit(continuar) {
+// Núcleo del guardado de la ficha, SIN cerrar el modal. Devuelve el id
+// si guardó, null si falló (con el alert ya mostrado). Lo usan Guardar,
+// "Guardar y siguiente" y la navegación ◀ ▶.
+async function aeGuardarCore() {
   const id = document.getElementById('ae-id').value;
   const nombre = document.getElementById('ae-nombre').value.trim();
-  if (!nombre) { alert('El nombre es obligatorio'); return; }
+  if (!nombre) { alert('El nombre es obligatorio'); return null; }
   const grado = document.getElementById('ae-grado').value.trim() || null;
   const nivel = grado && typeof nivelDesdeGrado === 'function' ? nivelDesdeGrado(grado) : null;
   const payload = {
@@ -1173,21 +1187,42 @@ async function guardarAlumnoEdit(continuar) {
         if (idx >= 0) Object.assign(alumnosGlobalCache.alumnos[idx], updPayload);
       }
     }
-
-    if (continuar) {
-      const siguiente = alumnosGlobalCache.alumnos.find(a => a.id !== id && (!a.talla_top_key || !a.talla_bottom_key));
-      if (siguiente) {
-        cerrarAlumnoEdit();
-        setTimeout(() => editarAlumnoRapido(siguiente.id), 50);
-        renderAlumnosGlobal();
-        return;
-      }
-    }
-    cerrarAlumnoEdit();
-    renderAlumnosGlobal();
+    return id;
   } catch(e) {
     alert('Error al guardar: ' + e.message);
+    return null;
   }
+}
+
+async function guardarAlumnoEdit(continuar) {
+  const id = await aeGuardarCore();
+  if (!id) return;
+
+  if (continuar) {
+    const siguiente = alumnosGlobalCache.alumnos.find(a => a.id !== id && (!a.talla_top_key || !a.talla_bottom_key));
+    if (siguiente) {
+      await editarAlumnoRapido(siguiente.id);  // sin cerrar: la ficha navega
+      return;
+    }
+  }
+  cerrarAlumnoEdit();
+  renderAlumnosGlobal();
+}
+
+// ◀ ▶ dentro de la ficha: guarda y abre el alumno vecino en el MISMO
+// orden de la lista filtrada — recorrés el grupo sin salirte del modal.
+async function aeNavegar(delta) {
+  const lista = alumnosGlobalCache._listaOrdenada || [];
+  const idActual = document.getElementById('ae-id').value;
+  const idx = lista.findIndex(x => x.id === idActual);
+  const destino = idx >= 0 ? lista[idx + delta] : null;
+  if (!destino) {
+    alert(delta > 0 ? 'Es el último del filtro actual.' : 'Es el primero del filtro actual.');
+    return;
+  }
+  const ok = await aeGuardarCore();
+  if (!ok) return;
+  await editarAlumnoRapido(destino.id);
 }
 
 // Cache compartido del catálogo de grados (lazy)
