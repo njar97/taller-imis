@@ -1,4 +1,4 @@
-<!-- Generado: 2026-07-20 22:11 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-07-20 22:25 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -13899,9 +13899,10 @@ let alumnosGlobalCache = {
   filtroTalla: '',             // KEY exacta (ej. 'C14') — puente desde Estadística→Por talla
   masFiltrosAbierto: false,
   cargado: false,
-  // Fase B unificación: la GRILLA es la vista default; la preferencia del
-  // usuario (si vuelve a tarjetas) se recuerda entre sesiones.
-  vistaGrilla: localStorage.getItem('registro_vista') !== 'tarjetas',
+  // El ACORDEÓN plegable es la vista default (decisión del usuario tras
+  // probar ambos); la grilla queda tras el toggle para edición masiva en
+  // PC (pegado de columnas, teclado). Preferencia recordada entre sesiones.
+  vistaGrilla: localStorage.getItem('registro_vista') === 'grilla',
 };
 
 // ── Puentes Registro ↔ Estadística (integración v33) ─────────────────
@@ -14289,6 +14290,11 @@ function renderAlumnosGlobal() {
   // por escuela·grado (solo grado si hay una escuela filtrada), colapsados
   // con render perezoso al abrir — todo el padrón navegable en una
   // pantalla. Para editar en masa está la ⚡ Grilla; acá tap = ficha.
+  // Tallas custom del catálogo para el selector inline (una vez por sesión)
+  if (!window._gpCatCustomOk && typeof cargarCatalogoCustom === 'function') {
+    window._gpCatCustomOk = true;
+    Promise.resolve(cargarCatalogoCustom()).catch(() => {});
+  }
   const multiEscuela = escuelasSel.length !== 1;
   const grupos = new Map();   // etiqueta de grupo → alumnos[]
   for (const a of lista) {
@@ -14322,7 +14328,8 @@ function renderAlumnosGlobal() {
   cont.innerHTML = header + `
     <div class="card" style="padding:0;overflow:hidden">
       <div style="display:flex;gap:6px;align-items:center;padding:8px 12px;font-size:11px;color:#888;flex-wrap:wrap">
-        <span style="flex:1;min-width:150px">${grupos.size} grupo(s) · ${lista.length.toLocaleString()} alumno(s) · tap grupo = abrir · tap alumno = ficha</span>
+        <span style="flex:1;min-width:150px">${grupos.size} grupo(s) · ${lista.length.toLocaleString()} alumno(s) · tap nombre = ficha · <strong>tap talla = cambiarla</strong></span>
+        <button class="btn btn-primary btn-sm" onclick="agProximoSinTallar()" style="font-size:10px;padding:2px 8px" title="Salta al primer alumno con talla faltante y abre el selector">🎯 Sin tallar</button>
         <button class="btn btn-ghost btn-sm" onclick="agAbrirTodos(true)" style="font-size:10px;padding:2px 8px">▼ Abrir todo</button>
         <button class="btn btn-ghost btn-sm" onclick="agAbrirTodos(false)" style="font-size:10px;padding:2px 8px">▲ Cerrar</button>
       </div>
@@ -14331,25 +14338,145 @@ function renderAlumnosGlobal() {
   `;
 }
 
-// Filas ultra-compactas de un grupo plegable (tap = ficha completa)
+// Filas ultra-compactas de un grupo plegable.
+// Tap en el NOMBRE = ficha completa · tap en una TALLA = selector de tallas
+// que guarda directo (trasplantado de la grilla) — editar sin abrir nada.
 function agFilasGrupo(arr) {
   const talla = (a, esTop) => {
+    const pieza = esTop ? 'top' : 'bottom';
     const pedida = esTop ? a.talla_top_key : a.talla_bottom_key;
     const alt = esTop ? a.talla_empacada_top : a.talla_empacada_bot;
     const show = alt || pedida;
     const esAlt = !!alt && show !== pedida;
-    if (!pedida) return '<span style="color:#c44;min-width:40px;text-align:center">⚠</span>';
-    return `<span style="font-family:monospace;font-weight:600;color:var(--azul);min-width:40px;text-align:center;${esAlt ? 'background:#FFF4CC;outline:1px dashed #C90;outline-offset:-1px;border-radius:3px;padding:0 3px' : ''}">${show}${esAlt ? `<s style="font-size:9px;color:#888;margin-left:2px">${pedida}</s>` : ''}</span>`;
+    const click = `event.stopPropagation();agEditarTalla(this,'${a.id}','${pieza}')`;
+    if (!pedida) return `<button onclick="${click}" title="Asignar talla" style="min-width:44px;padding:5px 4px;border:1px dashed #c44;border-radius:6px;background:#FFF5F2;color:#c44;font-weight:700">⚠ +</button>`;
+    return `<button onclick="${click}" title="Cambiar talla"
+      style="min-width:44px;padding:5px 4px;border:1px solid transparent;border-radius:6px;background:${esAlt ? '#FFF4CC' : 'transparent'};font-family:monospace;font-weight:600;color:var(--azul);${esAlt ? 'outline:1px dashed #C90;outline-offset:-1px' : ''}">${show}${esAlt ? `<s style="font-size:9px;color:#888;margin-left:2px">${pedida}</s>` : ''}</button>`;
   };
   const ic = (e) => e === 'empacado' ? '✅' : (e === 'entregado' ? '🚚' : '⬜');
   return arr.map(a => `
-    <div onclick="editarAlumnoRapido('${a.id}')" title="Abrir ficha"
-      style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid #F0F0F0;cursor:pointer;${alumnoSinTallas(a) ? 'background:#FFF9F7' : ''}">
+    <div data-aid="${a.id}" onclick="editarAlumnoRapido('${a.id}')" title="Abrir ficha"
+      style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-top:1px solid #F0F0F0;cursor:pointer;${alumnoSinTallas(a) ? 'background:#FFF9F7' : ''}">
       <span style="flex:1;min-width:0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.nombre || ''} <span style="color:#aaa;font-weight:400;font-size:11px">${a.sexo === 'F' ? '♀' : (a.sexo === 'M' ? '♂' : '')}</span></span>
       ${talla(a, true)}
       ${talla(a, false)}
       <span style="font-size:12px">${ic(a.estado_top)}${ic(a.estado_bottom)}</span>
     </div>`).join('');
+}
+
+// ── Selector de tallas inline del acordeón (trasplante de la grilla) ─
+// Chips con las KEYS completas del catálogo de la prenda (base + custom),
+// filtro al escribir, "otra" con registro automático en catalogo_key.
+let _agPicker = null;
+
+function agCerrarPicker() {
+  if (_agPicker) { _agPicker.remove(); _agPicker = null; }
+  document.removeEventListener('mousedown', _agPickerFuera, true);
+}
+function _agPickerFuera(ev) {
+  if (_agPicker && !_agPicker.contains(ev.target)) agCerrarPicker();
+}
+
+function agEditarTalla(btn, alumnoId, pieza) {
+  agCerrarPicker();
+  const a = alumnosGlobalCache.alumnos.find(x => x.id === alumnoId);
+  if (!a) return;
+  const prenda = pieza === 'top' ? a.prenda_top : a.prenda_bottom;
+  if (!prenda) {
+    alert('Este alumno no tiene prenda ' + (pieza === 'top' ? 'de arriba' : 'de abajo') + ' definida — abrí su ficha y asignale sexo y grado primero.');
+    return;
+  }
+  const pref = AE_PRENDA_PREFIX[prenda] || '';
+  const cat = (typeof CATALOGO !== 'undefined' ? CATALOGO : CATALOGO_BASE)[pref];
+  const keys = (cat && cat.keys ? [...cat.keys] : [])
+    .sort((x, y) => x.localeCompare(y, 'es', { numeric: true }));
+  const actual = pieza === 'top' ? a.talla_top_key : a.talla_bottom_key;
+
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;z-index:3000;background:white;border:1px solid var(--borde);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.25);padding:8px;width:272px';
+  document.body.appendChild(el);
+  const rect = btn.getBoundingClientRect();
+  el.style.left = Math.max(8, Math.min(rect.left - 100, window.innerWidth - 288)) + 'px';
+  if (rect.bottom + 250 < window.innerHeight) el.style.top = (rect.bottom + 4) + 'px';
+  else el.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+
+  const render = (filtro) => {
+    const f = (filtro || '').toUpperCase();
+    const fil = f ? keys.filter(k => k.startsWith(pref + f) || k.startsWith(f)) : keys;
+    el.querySelector('.ag-picker-chips').innerHTML =
+      fil.map(k => `<button data-k="${k}" style="min-width:52px;padding:7px 6px;border:1px solid var(--borde);border-radius:8px;background:${k === actual ? '#E8F0FE' : '#F8FAFC'};font-weight:600;font-size:12px;font-family:monospace">${k}</button>`).join('')
+      || '<span style="color:#aaa;font-size:12px;padding:4px">Ninguna empieza así…</span>';
+  };
+
+  el.innerHTML = `
+    <div style="font-size:11px;color:#666;margin-bottom:6px"><strong>${prenda}</strong> · ${a.nombre || ''}</div>
+    <input type="text" placeholder="Filtrar o escribir talla nueva…" inputmode="text"
+      style="width:100%;padding:6px 8px;border:1px solid var(--borde);border-radius:6px;font-size:13px;margin-bottom:6px">
+    <div class="ag-picker-chips" style="display:flex;flex-wrap:wrap;gap:4px;max-height:180px;overflow-y:auto"></div>
+    <div style="display:flex;gap:6px;align-items:center;font-size:10px;color:#888;border-top:1px dashed var(--borde);margin-top:6px;padding-top:5px">
+      <span style="flex:1">¿No está? Escribila completa (ej. ${pref}12-3L) y</span>
+      <button class="ag-picker-otra btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px">Usar ✓</button>
+    </div>`;
+  const input = el.querySelector('input');
+  input.addEventListener('input', () => render(input.value.trim()));
+  el.addEventListener('mousedown', ev => {
+    const b = ev.target.closest('button[data-k]');
+    if (b) { ev.preventDefault(); agGuardarTalla(alumnoId, pieza, b.dataset.k); }
+  });
+  el.querySelector('.ag-picker-otra').addEventListener('click', () => {
+    let v = input.value.trim().toUpperCase();
+    if (!v) return;
+    if (!v.startsWith(pref)) v = pref + v;
+    if (!keys.includes(v) && !confirm(`"${v}" no está en el catálogo de ${prenda}.\n\n¿Usarla igual? Se registra en el catálogo para la próxima.`)) return;
+    agGuardarTalla(alumnoId, pieza, v, !keys.includes(v));
+  });
+  render('');
+  _agPicker = el;
+  setTimeout(() => document.addEventListener('mousedown', _agPickerFuera, true), 0);
+  input.focus();
+}
+
+async function agGuardarTalla(alumnoId, pieza, key, esNueva) {
+  agCerrarPicker();
+  const a = alumnosGlobalCache.alumnos.find(x => x.id === alumnoId);
+  if (!a) return;
+  const patch = { actualizado_en: new Date().toISOString() };
+  if (pieza === 'top') patch.talla_top_key = key; else patch.talla_bottom_key = key;
+  try {
+    await supaUpdate('alumno', alumnoId, patch);
+    Object.assign(a, patch);
+    _persistAlumnosCache();
+    if (esNueva && typeof gpRegistrarTallaNueva === 'function') {
+      gpRegistrarTallaNueva(pieza === 'top' ? a.prenda_top : a.prenda_bottom, key);
+    }
+    renderAlumnosGlobal();  // agAbiertos persiste; refresca fila y contadores
+  } catch (e) {
+    alert('Error al guardar la talla: ' + e.message);
+  }
+}
+
+// 🎯 Salta al primer alumno sin talla: abre su grupo, hace scroll y abre
+// el selector en la pieza faltante — captura en cadena en el acordeón.
+function agProximoSinTallar() {
+  const c = alumnosGlobalCache;
+  const grupos = c._agGrupos;
+  if (!grupos) return;
+  for (const [gkey, arr] of grupos) {
+    const a = arr.find(alumnoSinTallas);
+    if (!a) continue;
+    c.agAbiertos.add(gkey);
+    const det = document.querySelector(`#alumnos-global-contenido details.ag-grupo[data-gkey="${gkey.replace(/"/g, '\\"')}"]`);
+    if (det && !det.open) det.open = true;  // ontoggle rellena
+    setTimeout(() => {
+      const fila = document.querySelector(`#alumnos-global-contenido div[data-aid="${a.id}"]`);
+      if (!fila) return;
+      fila.scrollIntoView({ block: 'center' });
+      const btnTalla = fila.querySelectorAll('button')[!a.talla_top_key ? 0 : 1];
+      if (btnTalla) agEditarTalla(btnTalla, a.id, !a.talla_top_key ? 'top' : 'bottom');
+    }, 80);
+    return;
+  }
+  alert('🎉 Todos los alumnos del filtro tienen sus tallas.');
 }
 
 function agToggleGrupo(det) {
