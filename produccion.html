@@ -1,4 +1,4 @@
-<!-- Generado: 2026-07-20 20:13 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-07-20 21:13 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -15932,7 +15932,8 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
 //   · Panel lateral con resumen vivo de tallas del filtro actual.
 // ══════════════════════════════════════════════════════════════════════
 
-const GP_PAGINA = 200;
+// Página adaptativa: en el celular menos filas (DOM 4× más liviano)
+function gpPageSize() { return window.innerWidth <= 640 ? 50 : 200; }
 
 let gpState = {
   pendientes: 0,     // guardados en vuelo
@@ -15984,15 +15985,23 @@ function gpLargoBot(a) {
   return gpBotDescompuesta(a).largo;
 }
 
-const GP_COLS = [
-  { k: 'nombre',     label: 'Nombre',  edit: true,  min: '160px', get: a => a.nombre || '' },
-  { k: 'grado',      label: 'Grado',   edit: true,  min: '64px',  get: a => a.grado || '' },
-  { k: 'sexo',       label: 'Sexo',    edit: true,  min: '44px',  get: a => a.sexo || '' },
-  { k: 'escuela',    label: 'Escuela', edit: false, min: '80px',
+// El nombre NO se edita inline: tap en el nombre abre la FICHA COMPLETA
+// (modal con observaciones, prenda manual, estado de empaque y desempacar
+// — todo lo que la vista de tarjetas daba). Columna congelada a la izquierda.
+const GP_COLS_DEF = [
+  { k: 'nombre',     label: 'Nombre',  edit: false, ficha: true, sticky: true, min: '130px',
+    get: a => a.nombre || '' },
+  { k: 'grado',      label: 'Grado',   edit: true,  min: '58px',  get: a => a.grado || '' },
+  { k: 'sexo',       label: 'Sexo',    edit: true,  min: '44px',  soloPC: true, get: a => a.sexo || '' },
+  { k: 'escuela',    label: 'Escuela', edit: false, min: '80px',  soloPC: true,
     get: a => { const e = alumnosGlobalCache.escuelas[a.escuela_id]; return e ? (e.alias || e.nombre) : ''; } },
-  { k: 'prenda_top', label: 'Prenda top', edit: false, min: '96px', get: a => a.prenda_top || '' },
+  { k: 'prenda_top', label: 'Prenda top', labelMovil: 'P.', edit: false, min: '96px', minMovil: '34px',
+    get: a => a.prenda_top || '',
+    getMovil: a => (a.prenda_top && typeof _codPrenda === 'function') ? _codPrenda(a.prenda_top) : (a.prenda_top || '') },
   { k: 'talla_top',  label: 'T. top',  edit: true,  min: '52px',  get: gpTallaTop },
-  { k: 'prenda_bot', label: 'Prenda bot', edit: false, min: '96px', get: a => a.prenda_bottom || '' },
+  { k: 'prenda_bot', label: 'Prenda bot', labelMovil: 'P.', edit: false, min: '96px', minMovil: '34px',
+    get: a => a.prenda_bottom || '',
+    getMovil: a => (a.prenda_bottom && typeof _codPrenda === 'function') ? _codPrenda(a.prenda_bottom) : (a.prenda_bottom || '') },
   { k: 'talla_bot',  label: 'T. bot',  edit: true,  min: '52px',  get: gpTallaBot },
   { k: 'largo_bot',  label: 'Largo',   edit: true,  min: '52px',  get: gpLargoBot },
   { k: 'estados',    label: '📦',      edit: false, min: '52px',
@@ -16001,6 +16010,19 @@ const GP_COLS = [
       return ic(a.estado_top) + ic(a.estado_bottom);
     } },
 ];
+
+// Columnas activas según pantalla (en móvil: sin sexo/escuela, prendas abreviadas)
+function gpColsActivas() {
+  const movil = window.innerWidth <= 640;
+  return GP_COLS_DEF
+    .filter(c => !(movil && c.soloPC))
+    .map(c => movil ? {
+      ...c,
+      label: c.labelMovil || c.label,
+      min: c.minMovil || c.min,
+      get: c.getMovil || c.get,
+    } : c);
+}
 
 // ── Validación visual: ¿la talla está en el catálogo de la prenda? ───
 
@@ -16037,10 +16059,13 @@ function renderGrillaPadron(cont, header, lista) {
   }
 
   if (typeof c.pagina !== 'number' || c.pagina < 1) c.pagina = 1;
-  const totalPaginas = Math.max(1, Math.ceil(lista.length / GP_PAGINA));
+  const PAG = gpPageSize();
+  gpState._lista = lista;          // para "🎯 próximo sin tallar"
+  gpState._cols = gpColsActivas(); // columnas según pantalla
+  const totalPaginas = Math.max(1, Math.ceil(lista.length / PAG));
   if (c.pagina > totalPaginas) c.pagina = totalPaginas;
-  const inicio = (c.pagina - 1) * GP_PAGINA;
-  const visible = lista.slice(inicio, inicio + GP_PAGINA);
+  const inicio = (c.pagina - 1) * PAG;
+  const visible = lista.slice(inicio, inicio + PAG);
 
   const filas = visible.map(a => `<tr data-id="${a.id}">${gpRowCeldas(a)}</tr>`).join('');
 
@@ -16054,18 +16079,19 @@ function renderGrillaPadron(cont, header, lista) {
   cont.innerHTML = header + `
     <div class="card" style="padding:8px 10px;margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <button class="btn btn-sm btn-ghost" onclick="toggleVistaGrilla()">📇 Volver a tarjetas</button>
+      <button class="btn btn-sm btn-primary" onclick="gpIrProximoSinTallar()" title="Salta al primer alumno del filtro al que le falta alguna talla y abre el editor ahí">🎯 Próximo sin tallar</button>
       <span id="gp-status" style="font-size:12px;color:#888">${gpStatusTxt()}</span>
       <button class="btn btn-sm btn-ghost" style="margin-left:auto" onclick="gpToggleResumen()">
         ${gpState.resumenAbierto ? '▤ Ocultar resumen' : '▤ Resumen de tallas'}</button>
       <span style="font-size:11px;color:#aaa;flex-basis:100%">
-        ✏️ Click en una celda para editar · Enter ↓ · Tab → · pegá una columna de Excel y rellena hacia abajo</span>
+        ✏️ Celda = editar (Enter ↓ · Tab →) · <strong>tap en el nombre = ficha completa</strong> (observaciones, empaque) · pegá columnas de Excel</span>
     </div>
     <div style="display:flex;gap:10px;align-items:flex-start">
       <div style="flex:1;min-width:0">
         <div class="card" style="padding:0;overflow-x:auto">
           <table id="gp-tabla" style="border-collapse:collapse;width:100%;font-size:13px">
             <thead><tr>
-              ${GP_COLS.map(col => `<th style="position:sticky;top:0;background:#F5F7FA;border-bottom:2px solid var(--borde);padding:6px 8px;text-align:left;min-width:${col.min};white-space:nowrap">${col.label}</th>`).join('')}
+              ${gpState._cols.map(col => `<th style="position:sticky;top:0;${col.sticky ? 'left:0;z-index:3;' : 'z-index:1;'}background:#F5F7FA;border-bottom:2px solid var(--borde);padding:6px 8px;text-align:left;min-width:${col.min};white-space:nowrap">${col.label}</th>`).join('')}
             </tr></thead>
             <tbody>${filas}</tbody>
           </table>
@@ -16084,9 +16110,16 @@ function renderGrillaPadron(cont, header, lista) {
 const GP_TD_BASE = 'border-bottom:1px solid #EEE;padding:4px 8px;white-space:nowrap;';
 
 function gpRowCeldas(a) {
-  return GP_COLS.map(col => {
+  const cols = gpState._cols || gpColsActivas();
+  return cols.map(col => {
     const v = col.get(a);
     const st = gpCeldaEstilo(a, col);
+    if (col.ficha) {
+      // Nombre: congelado a la izquierda; tap = ficha completa del alumno
+      return `<td style="${GP_TD_BASE}position:sticky;left:0;background:white;z-index:1;cursor:pointer;font-weight:600;max-width:150px;overflow:hidden;text-overflow:ellipsis"
+        onclick="editarAlumnoRapido('${a.id}')"
+        title="Abrir ficha completa (observaciones, empaque, prenda manual)">${gpEsc(v)}</td>`;
+    }
     return col.edit
       ? `<td data-col="${col.k}" style="${GP_TD_BASE}cursor:text;${st}" title="Click para editar">${gpEsc(v)}</td>`
       : `<td style="${GP_TD_BASE}color:#888;${st}">${gpEsc(v)}</td>`;
@@ -16466,6 +16499,31 @@ async function gpGuardar(id, col, valor, td) {
     gpState.pendientes--;
     gpRefreshStatus();
   }
+}
+
+// 🎯 Salta al primer alumno del filtro con alguna talla faltante y abre el
+// editor en esa celda — captura en cadena sin buscar a mano (el equivalente
+// grilla del "Guardar y siguiente" del modal).
+function gpIrProximoSinTallar() {
+  const lista = gpState._lista || [];
+  const idx = lista.findIndex(a => !a.talla_top_key || !a.talla_bottom_key);
+  if (idx < 0) {
+    if (typeof showToast === 'function') showToast('🎉 Todos los alumnos del filtro tienen sus tallas', 'success');
+    else alert('🎉 Todos los alumnos del filtro tienen sus tallas.');
+    return;
+  }
+  const a = lista[idx];
+  const c = alumnosGlobalCache;
+  c.pagina = Math.floor(idx / gpPageSize()) + 1;
+  renderAlumnosGlobal();
+  setTimeout(() => {
+    const col = !a.talla_top_key ? 'talla_top' : 'talla_bot';
+    const td = document.querySelector(`#gp-tabla tr[data-id="${a.id}"] td[data-col="${col}"]`);
+    if (td) {
+      td.scrollIntoView({ block: 'center', inline: 'nearest' });
+      gpAbrirEditor(td);
+    }
+  }, 80);
 }
 
 function gpRefrescarFila(id) {
