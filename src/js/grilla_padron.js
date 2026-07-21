@@ -24,6 +24,7 @@ let gpState = {
 
 function toggleVistaGrilla() {
   alumnosGlobalCache.vistaGrilla = !alumnosGlobalCache.vistaGrilla;
+  localStorage.setItem('registro_vista', alumnosGlobalCache.vistaGrilla ? 'grilla' : 'tarjetas');
   renderAlumnosGlobal();
 }
 

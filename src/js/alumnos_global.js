@@ -15,6 +15,9 @@ let alumnosGlobalCache = {
   filtroTalla: '',             // KEY exacta (ej. 'C14') — puente desde Estadística→Por talla
   masFiltrosAbierto: false,
   cargado: false,
+  // Fase B unificación: la GRILLA es la vista default; la preferencia del
+  // usuario (si vuelve a tarjetas) se recuerda entre sesiones.
+  vistaGrilla: localStorage.getItem('registro_vista') !== 'tarjetas',
 };
 
 // ── Puentes Registro ↔ Estadística (integración v33) ─────────────────
