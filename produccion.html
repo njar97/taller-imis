@@ -1,4 +1,4 @@
-<!-- Generado: 2026-07-20 21:43 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-07-20 22:11 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -14285,88 +14285,92 @@ function renderAlumnosGlobal() {
     return;
   }
 
-  // Paginación: 50 alumnos por página. Reduce DOM de 5k+ nodos a ~500
-  // (10x más rápido el render en móvil). pagina vive en el cache global
-  // para sobrevivir re-renders. Reset a 1 cuando cambian filtros.
-  const PAGINA_SIZE = 50;
-  if (typeof c.pagina !== 'number' || c.pagina < 1) c.pagina = 1;
-  const totalPaginas = Math.max(1, Math.ceil(lista.length / PAGINA_SIZE));
-  if (c.pagina > totalPaginas) c.pagina = totalPaginas;
-  const inicioIdx = (c.pagina - 1) * PAGINA_SIZE;
-  const finIdx = Math.min(inicioIdx + PAGINA_SIZE, lista.length);
-  const visible = lista.slice(inicioIdx, finIdx);
+  // Vista tarjetas = LISTAS PLEGABLES compactas (sin paginación): grupos
+  // por escuela·grado (solo grado si hay una escuela filtrada), colapsados
+  // con render perezoso al abrir — todo el padrón navegable en una
+  // pantalla. Para editar en masa está la ⚡ Grilla; acá tap = ficha.
+  const multiEscuela = escuelasSel.length !== 1;
+  const grupos = new Map();   // etiqueta de grupo → alumnos[]
+  for (const a of lista) {
+    const escA = c.escuelas[a.escuela_id];
+    const alias = escA ? (escA.alias || escA.nombre) : '?';
+    const gkey = (multiEscuela ? alias + ' · ' : '') + (a.grado || 'Sin grado');
+    if (!grupos.has(gkey)) grupos.set(gkey, []);
+    grupos.get(gkey).push(a);
+  }
+  c._agGrupos = grupos;
+  if (!(c.agAbiertos instanceof Set)) c.agAbiertos = new Set();
+  const autoAbrir = grupos.size <= 2;  // búsqueda/filtro fino → abrir solos
 
-  const iconEstado = (e) => e === 'empacado' ? '✅' : (e === 'entregado' ? '🚚' : (e === 'reservado' ? '⏳' : '⬜'));
-
-  const filas = visible.map(a => {
-    const esc = c.escuelas[a.escuela_id];
-    const sinTallas = alumnoSinTallas(a);
-    const bg = sinTallas ? '#FFF4F0' : 'white';
-
-    const topStyle = 'color:' + (a.talla_top_key ? 'var(--azul)' : '#c44');
-    const botStyle = 'color:' + (a.talla_bottom_key ? 'var(--azul)' : '#c44');
-
-    // Celda Top/Bot: talla pedida, o alterna persistida en BD (se ve
-    // "F7 F6(tachado)" sobre fondo amarillo con outline punteado).
-    const renderCellTalla = (esTop) => {
-      const tallaPedida = esTop ? a.talla_top_key : a.talla_bottom_key;
-      const persistida  = esTop ? a.talla_empacada_top : a.talla_empacada_bot;
-      const tallaShow = persistida || tallaPedida;
-      const esAlterna = !!persistida && tallaShow !== tallaPedida;
-      const style = esTop ? topStyle : botStyle;
-      const display = !tallaPedida ? '⚠'
-        : esAlterna ? `${tallaShow}<span style="font-size:9px;color:#888;text-decoration:line-through;margin-left:3px;font-weight:400">${tallaPedida}</span>`
-        : tallaShow;
-      return `<td style="padding:4px 8px;text-align:center;font-family:monospace;${style}${esAlterna?';background:#FFF4CC;outline:1px dashed #C90;outline-offset:-2px':''}">${display}</td>`;
-    };
-
+  const bloques = [...grupos.entries()].map(([gkey, arr]) => {
+    const sinT = arr.filter(alumnoSinTallas).length;
+    const comp = arr.filter(x => x.estado_top === 'empacado' && x.estado_bottom === 'empacado').length;
+    const abierto = autoAbrir || c.agAbiertos.has(gkey);
     return `
-      <tr style="border-top:1px solid #EEE;background:${bg};cursor:pointer" onclick="editarAlumnoRapido('${a.id}')" title="Clic para editar">
-        <td style="padding:4px 8px;font-weight:600">${a.nombre}</td>
-        <td style="padding:4px 8px;font-size:11px;color:#666">${esc ? esc.nombre : '-'}</td>
-        <td style="padding:4px 8px;font-size:11px">${a.grado || '-'}</td>
-        <td style="padding:4px 8px;text-align:center">${a.sexo==='F'?'♀':(a.sexo==='M'?'♂':'-')}</td>
-        ${renderCellTalla(true)}
-        ${renderCellTalla(false)}
-        <td style="padding:4px 8px;text-align:center">${iconEstado(a.estado_top)}${iconEstado(a.estado_bottom)}</td>
-        <td style="padding:4px 8px;text-align:center" onclick="event.stopPropagation()">
-          <button class="btn-mini" onclick="editarAlumnoRapido('${a.id}')" title="Editar">✏</button>
-        </td>
-      </tr>
-    `;
+      <details class="ag-grupo" data-gkey="${gkey.replace(/"/g, '&quot;')}" ${abierto ? 'open' : ''} ontoggle="agToggleGrupo(this)">
+        <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:10px 12px;background:#F5F7FA;border-top:1px solid var(--borde);user-select:none">
+          <span style="opacity:.45;font-size:10px">▶</span>
+          <span style="font-weight:700;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${gkey}</span>
+          <span style="font-size:11px;color:#666">${arr.length}</span>
+          ${sinT ? `<span style="font-size:11px;color:#c44" title="Sin tallar">⚠${sinT}</span>` : ''}
+          ${comp ? `<span style="font-size:11px;color:var(--verde)" title="Completos">✅${comp}</span>` : ''}
+        </summary>
+        <div class="ag-grupo-body">${abierto ? agFilasGrupo(arr) : ''}</div>
+      </details>`;
   }).join('');
 
   cont.innerHTML = header + `
-    <div class="card" style="padding:0;overflow:auto;max-height:70vh">
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead style="position:sticky;top:0;background:#F5F7FA;z-index:1">
-          <tr>
-            <th style="padding:6px 8px;text-align:left">Nombre</th>
-            <th style="padding:6px 8px;text-align:left">Escuela</th>
-            <th style="padding:6px 8px;text-align:left">Grado</th>
-            <th style="padding:6px 8px">Sx</th>
-            <th style="padding:6px 8px">Top</th>
-            <th style="padding:6px 8px">Bottom</th>
-            <th style="padding:6px 8px">Estado</th>
-            <th style="padding:6px 8px"></th>
-          </tr>
-        </thead>
-        <tbody>${filas}</tbody>
-      </table>
-      ${totalPaginas > 1 ? `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 8px;border-top:1px solid #EEE;background:#F8FAFC;font-size:12px;gap:8px;flex-wrap:wrap">
-          <div style="color:#666">Mostrando <strong>${inicioIdx + 1}–${finIdx}</strong> de <strong>${lista.length}</strong></div>
-          <div style="display:flex;gap:4px;align-items:center">
-            <button class="btn btn-ghost btn-sm" onclick="irPaginaAlumnos(1)" ${c.pagina <= 1 ? 'disabled' : ''} title="Primera página">«</button>
-            <button class="btn btn-ghost btn-sm" onclick="irPaginaAlumnos(${c.pagina - 1})" ${c.pagina <= 1 ? 'disabled' : ''} title="Anterior">◀</button>
-            <span style="padding:0 8px;font-weight:600">${c.pagina} / ${totalPaginas}</span>
-            <button class="btn btn-ghost btn-sm" onclick="irPaginaAlumnos(${c.pagina + 1})" ${c.pagina >= totalPaginas ? 'disabled' : ''} title="Siguiente">▶</button>
-            <button class="btn btn-ghost btn-sm" onclick="irPaginaAlumnos(${totalPaginas})" ${c.pagina >= totalPaginas ? 'disabled' : ''} title="Última página">»</button>
-          </div>
-        </div>
-      ` : ''}
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="display:flex;gap:6px;align-items:center;padding:8px 12px;font-size:11px;color:#888;flex-wrap:wrap">
+        <span style="flex:1;min-width:150px">${grupos.size} grupo(s) · ${lista.length.toLocaleString()} alumno(s) · tap grupo = abrir · tap alumno = ficha</span>
+        <button class="btn btn-ghost btn-sm" onclick="agAbrirTodos(true)" style="font-size:10px;padding:2px 8px">▼ Abrir todo</button>
+        <button class="btn btn-ghost btn-sm" onclick="agAbrirTodos(false)" style="font-size:10px;padding:2px 8px">▲ Cerrar</button>
+      </div>
+      ${bloques}
     </div>
   `;
+}
+
+// Filas ultra-compactas de un grupo plegable (tap = ficha completa)
+function agFilasGrupo(arr) {
+  const talla = (a, esTop) => {
+    const pedida = esTop ? a.talla_top_key : a.talla_bottom_key;
+    const alt = esTop ? a.talla_empacada_top : a.talla_empacada_bot;
+    const show = alt || pedida;
+    const esAlt = !!alt && show !== pedida;
+    if (!pedida) return '<span style="color:#c44;min-width:40px;text-align:center">⚠</span>';
+    return `<span style="font-family:monospace;font-weight:600;color:var(--azul);min-width:40px;text-align:center;${esAlt ? 'background:#FFF4CC;outline:1px dashed #C90;outline-offset:-1px;border-radius:3px;padding:0 3px' : ''}">${show}${esAlt ? `<s style="font-size:9px;color:#888;margin-left:2px">${pedida}</s>` : ''}</span>`;
+  };
+  const ic = (e) => e === 'empacado' ? '✅' : (e === 'entregado' ? '🚚' : '⬜');
+  return arr.map(a => `
+    <div onclick="editarAlumnoRapido('${a.id}')" title="Abrir ficha"
+      style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid #F0F0F0;cursor:pointer;${alumnoSinTallas(a) ? 'background:#FFF9F7' : ''}">
+      <span style="flex:1;min-width:0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.nombre || ''} <span style="color:#aaa;font-weight:400;font-size:11px">${a.sexo === 'F' ? '♀' : (a.sexo === 'M' ? '♂' : '')}</span></span>
+      ${talla(a, true)}
+      ${talla(a, false)}
+      <span style="font-size:12px">${ic(a.estado_top)}${ic(a.estado_bottom)}</span>
+    </div>`).join('');
+}
+
+function agToggleGrupo(det) {
+  const c = alumnosGlobalCache;
+  const gkey = det.dataset.gkey;
+  if (!(c.agAbiertos instanceof Set)) c.agAbiertos = new Set();
+  if (det.open) {
+    c.agAbiertos.add(gkey);
+    const body = det.querySelector('.ag-grupo-body');
+    if (body && !body.innerHTML) {
+      const arr = (c._agGrupos && c._agGrupos.get(gkey)) || [];
+      body.innerHTML = agFilasGrupo(arr);   // render perezoso: solo al abrir
+    }
+  } else {
+    c.agAbiertos.delete(gkey);
+  }
+}
+
+function agAbrirTodos(abrir) {
+  document.querySelectorAll('#alumnos-global-contenido details.ag-grupo')
+    .forEach(d => { d.open = abrir; });  // ontoggle rellena y persiste
 }
 
 // Cambiar de página en la lista de alumnos del Registro.
