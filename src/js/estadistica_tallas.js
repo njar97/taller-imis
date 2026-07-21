@@ -475,11 +475,12 @@ function renderTallasResumen() {
                 const flecha = act ? (f.ordenDir === 'asc' ? ' ▲' : ' ▼') : '';
                 return `<th style="padding:6px 8px;text-align:right;cursor:pointer;user-select:none;${act?'color:var(--azul)':''}" onclick="ordenarTallasPor('balance')" title="Ordenar por balance">Balance${flecha}</th>`;
               })()}
+              <th style="padding:6px 8px;width:36px" title="Ver los alumnos de esa talla en Registro">👥</th>
             </tr>
           </thead>
           <tbody>
             ${rows.length === 0 ? `
-              <tr><td colspan="${5 + escuelasCols.length + (ver.corte?1:0) + (ver.prod?1:0) + (ver.bodega?1:0) + (ver.pool?1:0)}" style="padding:20px;text-align:center;color:#888">Sin resultados con los filtros aplicados.</td></tr>
+              <tr><td colspan="${6 + escuelasCols.length + (ver.corte?1:0) + (ver.prod?1:0) + (ver.bodega?1:0) + (ver.pool?1:0)}" style="padding:20px;text-align:center;color:#888">Sin resultados con los filtros aplicados.</td></tr>
             ` : rows.map(r => {
               const exp = c.expandidos.has(r.key);
               const balanceColor = r.balance < 0 ? 'var(--rojo)' : 'var(--verde)';
@@ -498,6 +499,9 @@ function renderTallasResumen() {
                   ${ver.bodega ? `<td style="padding:5px 8px;text-align:right;color:var(--azul)">${r.stockLibre || 0}</td>` : ''}
                   ${ver.pool ? `<td style="padding:5px 8px;text-align:right;color:#a82">${r.pool || 0}</td>` : ''}
                   <td style="padding:5px 8px;text-align:right;font-weight:700;color:${balanceColor}">${r.balance>=0?'+':''}${r.balance}</td>
+                  <td style="padding:5px 4px;text-align:center" onclick="event.stopPropagation()">
+                    <button class="btn-mini" onclick="verAlumnosPorTalla('${r.talla.replace(/'/g,"\\'")}')" title="Ver en Registro los alumnos con talla ${r.talla}">👥</button>
+                  </td>
                 </tr>
               `;
               if (!exp) return trMain;

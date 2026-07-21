@@ -141,53 +141,9 @@ async function cargarEscuelasTemporada() {
     registroCache.escuelas = Object.values(escuelasMap).filter(e => 
       e.piezas_solicitadas > 0 || e.num_alumnos > 0
     );
-    renderListaEscuelas();
   } catch(e) {
     cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }
-}
-
-function renderListaEscuelas() {
-  const cont = document.getElementById('registro-lista');
-  if (!cont) return;
-  
-  if (registroCache.escuelas.length === 0) {
-    cont.innerHTML = '<div class="alert alert-info">No hay escuelas con datos en esta temporada.</div>';
-    return;
-  }
-  
-  // Ordenar por piezas_solicitadas desc, luego por alumnos
-  const ordenadas = [...registroCache.escuelas].sort((a,b) => 
-    (b.piezas_solicitadas||0) - (a.piezas_solicitadas||0) || (b.num_alumnos||0) - (a.num_alumnos||0)
-  );
-  
-  cont.innerHTML = ordenadas.map(e => {
-    const pct = e.porcentaje_avance || 0;
-    const colorBar = pct >= 100 ? 'var(--verde)' : (pct > 0 ? 'var(--azul)' : '#CCC');
-    const grupo = e.grupo_produccion ? `<span style="background:#EEF;padding:2px 6px;border-radius:4px;font-size:10px;color:#66F;margin-left:4px">${e.grupo_produccion}</span>` : '';
-    const grupoBtnLabel = e.grupo_produccion ? `📦 ${e.grupo_produccion}` : '📦 + Grupo';
-    return `
-      <div class="card" style="padding:10px;margin-bottom:8px;cursor:pointer" onclick="verAlumnosDeEscuela('${e.escuela_id}')">
-        <div style="display:flex;justify-content:space-between;align-items:start">
-          <div style="flex:1">
-            <div style="font-weight:700;color:var(--azul)">${e.escuela_nombre}${grupo}</div>
-            <div style="font-size:11px;color:#666">CDE ${e.codigo_cde}</div>
-            <div style="font-size:13px;margin-top:4px">
-              ${e.num_alumnos > 0 ? `<strong>${e.num_alumnos}</strong> alumnos · ` : ''}
-              ${e.piezas_solicitadas > 0 ? `<strong>${(e.piezas_entregadas||0).toLocaleString()}/${e.piezas_solicitadas.toLocaleString()}</strong> piezas` : '<em style="color:#888">Sin pedidos</em>'}
-            </div>
-          </div>
-          ${e.piezas_solicitadas > 0 ? `<div style="font-size:20px;font-weight:700;color:${colorBar}">${pct}%</div>` : ''}
-          <button class="btn btn-ghost btn-sm" style="margin-left:6px;font-size:11px;padding:4px 8px" onclick="event.stopPropagation(); editarEscuela('${e.escuela_id}')" title="Editar escuela (datos, contrato, tela y grupo de producción)">${grupoBtnLabel}</button>
-          <button class="btn btn-ghost btn-sm" style="margin-left:4px" onclick="event.stopPropagation(); abrirDetalleEscuelaRegistro('${e.escuela_id}')" title="Acciones avanzadas (Por talla / Empaque / Pedidos)">⚙️</button>
-        </div>
-        ${e.piezas_solicitadas > 0 ? `
-          <div style="background:#EEE;height:6px;border-radius:3px;margin-top:6px;overflow:hidden">
-            <div style="background:${colorBar};height:100%;width:${pct}%"></div>
-          </div>` : ''}
-      </div>
-    `;
-  }).join('');
 }
 
 // El grupo de producción de una escuela se edita ahora dentro del modal
@@ -216,213 +172,25 @@ async function abrirDetalleEscuelaRegistro(escuelaId) {
   if (!esc) return;
   
   registroCache.escuelaActual = escuelaId;
-  registroCache.vistaDetalle = 'tallaje';
-  
+
   document.getElementById('registro-detalle-titulo').textContent = esc.escuela_nombre;
   const grupo = esc.grupo_produccion ? ` · Grupo ${esc.grupo_produccion}` : '';
-  document.getElementById('registro-detalle-subt').textContent = 
-    `CDE ${esc.codigo_cde}${grupo} · ${esc.num_alumnos||0} alumnos · ${esc.piezas_entregadas||0}/${esc.piezas_solicitadas||0} piezas`;
-  
-  document.getElementById('registro-detalle-subtabs').innerHTML = `
-    <div class="sub-tabs">
-      <div class="sub-tab active" onclick="cambiarVistaDetalle('tallaje', this)">📏 Tallaje</div>
-      <div class="sub-tab" onclick="cambiarVistaDetalle('alumnos', this)">👥 Alumnos</div>
-      <div class="sub-tab" onclick="cambiarVistaDetalle('por_talla', this)">📊 Por talla</div>
-      <div class="sub-tab" onclick="cambiarVistaDetalle('empaque', this)">📦 Empaque</div>
-    </div>
-  `;
-  
+  document.getElementById('registro-detalle-subt').textContent =
+    `CDE ${esc.codigo_cde}${grupo} · ${esc.num_alumnos||0} alumnos · 📏 Captura de tallaje`;
+
+  // Integración v33: este modal quedó SOLO como captura de tallaje.
+  // Las otras sub-vistas eran duplicados: Alumnos → lista global filtrada,
+  // Por talla → Estadística, Empaque → Sesión de empaque.
+  document.getElementById('registro-detalle-subtabs').innerHTML = '';
+
   modal.style.display = 'flex';
-  await mostrarVistaDetalle('tallaje');
+  renderTallajeInicial(escuelaId);
 }
 // alias
 const abrirDetalleEscuela = abrirDetalleEscuelaRegistro;
 
-function cambiarVistaDetalle(vista, el) {
-  document.querySelectorAll('#registro-detalle-subtabs .sub-tab').forEach(t => t.classList.remove('active'));
-  if (el) el.classList.add('active');
-  registroCache.vistaDetalle = vista;
-  mostrarVistaDetalle(vista);
-}
-
-async function mostrarVistaDetalle(vista) {
-  const cont = document.getElementById('registro-detalle-tabla');
-  cont.innerHTML = '<div class="text-muted">Cargando...</div>';
-  const escuelaId = registroCache.escuelaActual;
-  
-  if (vista === 'tallaje') {
-    renderTallajeInicial(escuelaId);
-  } else if (vista === 'alumnos') {
-    await mostrarAlumnos(escuelaId);
-  } else if (vista === 'por_talla') {
-    await cargarPedidosEscuela(escuelaId);
-  } else if (vista === 'empaque') {
-    await cargarVistaEmpaque(escuelaId);
-  }
-}
-
 function cerrarDetalleEscuela() {
   document.getElementById('registro-detalle-modal').style.display = 'none';
-}
-
-// ─── Sub-tab: Por Talla ─────────────────────────────────────────────
-async function cargarPedidosEscuela(escuelaId) {
-  document.getElementById('registro-detalle-tabla').innerHTML = '<div class="text-muted">Cargando pedidos...</div>';
-  try {
-    const pedidos = await supaFetch('pedido', 'GET', null, 
-      `?escuela_id=eq.${escuelaId}&order=nivel,cod_prenda,talla_key&limit=500`);
-    registroCache.pedidosPorEscuela[escuelaId] = pedidos;
-    renderDetallePedidos(escuelaId);
-  } catch(e) {
-    document.getElementById('registro-detalle-tabla').innerHTML = 
-      `<div style="color:red">Error: ${e.message}</div>`;
-  }
-}
-
-function renderDetallePedidos(escuelaId) {
-  const pedidos = registroCache.pedidosPorEscuela[escuelaId] || [];
-  const cont = document.getElementById('registro-detalle-tabla');
-  if (pedidos.length === 0) {
-    cont.innerHTML = '<div class="text-muted">Sin pedidos cargados para esta escuela. Agregá alumnos o cargá el contrato.</div>';
-    return;
-  }
-  
-  const grupos = {};
-  for (const p of pedidos) {
-    const k = `${p.nivel}|${p.nombre_prenda || p.cod_prenda}`;
-    if (!grupos[k]) grupos[k] = [];
-    grupos[k].push(p);
-  }
-  
-  cont.innerHTML = Object.entries(grupos).map(([k, lista]) => {
-    const [nivel, prenda] = k.split('|');
-    const total = lista.reduce((s, p) => s + p.cantidad_solicitada, 0);
-    const entregado = lista.reduce((s, p) => s + (p.cantidad_entregada || 0), 0);
-    
-    return `
-      <div style="margin-bottom:10px;border:1px solid var(--borde);border-radius:6px;overflow:hidden">
-        <div style="background:#F5F7FA;padding:6px 10px;font-size:13px;font-weight:600">
-          ${nivel} · ${prenda}
-          <span style="float:right;font-weight:normal">${entregado}/${total}</span>
-        </div>
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead>
-            <tr style="background:#FAFAFA">
-              <th style="padding:4px 8px;text-align:left">Talla</th>
-              <th style="padding:4px 8px;text-align:right">Pedido</th>
-              <th style="padding:4px 8px;text-align:right">Entregado</th>
-              <th style="padding:4px 8px;text-align:center">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${lista.map(p => `
-              <tr style="border-top:1px solid #EEE">
-                <td style="padding:4px 8px;font-family:monospace;font-weight:600">${p.talla_key}</td>
-                <td style="padding:4px 8px;text-align:right">${p.cantidad_solicitada}</td>
-                <td style="padding:4px 8px;text-align:right">
-                  <input type="number" value="${p.cantidad_entregada || 0}" min="0" max="${p.cantidad_solicitada}"
-                    style="width:60px;padding:2px 4px;text-align:right" id="ped-ent-${p.id}">
-                </td>
-                <td style="padding:4px 8px;text-align:center">
-                  <button class="btn-mini btn-mini-success" onclick="guardarEntrega('${p.id}','${escuelaId}')">Guardar</button>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-  }).join('');
-}
-
-async function guardarEntrega(pedidoId, escuelaId) {
-  const input = document.getElementById(`ped-ent-${pedidoId}`);
-  const nuevaCantidad = parseInt(input.value || 0);
-  if (isNaN(nuevaCantidad) || nuevaCantidad < 0) { alert('Cantidad inválida'); return; }
-  try {
-    await supaUpdate('pedido', pedidoId, {
-      cantidad_entregada: nuevaCantidad,
-      actualizado_en: new Date().toISOString()
-    });
-    input.style.background = '#D4EDDA';
-    setTimeout(() => { input.style.background = ''; }, 1000);
-    await cargarEscuelasTemporada();
-  } catch(e) { alert('Error: ' + e.message); }
-}
-
-// ─── Sub-tab: Empaque (resumen por escuela) ─────────────────────────
-async function cargarVistaEmpaque(escuelaId) {
-  const cont = document.getElementById('registro-detalle-tabla');
-  try {
-    const resumen = await supaFetch('vw_alumno_escuela', 'GET', null, 
-      `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&order=nivel,grado&limit=200`);
-    
-    if (!resumen || resumen.length === 0) {
-      cont.innerHTML = '<div class="alert alert-info">No hay alumnos cargados. Usá la sub-tab 📏 Tallaje para empezar.</div>';
-      return;
-    }
-    
-    const tot = resumen.reduce((a,r) => a + (r.total_alumnos||0), 0);
-    const completos = resumen.reduce((a,r) => a + (r.completos||0), 0);
-    const entregados = resumen.reduce((a,r) => a + (r.entregados||0), 0);
-    const pct = tot > 0 ? Math.round(100 * completos / tot) : 0;
-    
-    cont.innerHTML = `
-      <div class="card" style="padding:10px;margin-bottom:10px">
-        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px">
-          <div>Total alumnos: <strong>${tot}</strong></div>
-          <div style="color:var(--verde)">Completos: <strong>${completos}</strong></div>
-          <div style="color:var(--azul)">Entregados: <strong>${entregados}</strong></div>
-          <div><strong>${pct}%</strong> empacado</div>
-        </div>
-      </div>
-      <div class="card" style="padding:0;overflow:hidden">
-        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">Por grado</div>
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead>
-            <tr style="background:#FAFAFA">
-              <th style="padding:6px 8px;text-align:left">Grado</th>
-              <th style="padding:6px 8px;text-align:right">Total</th>
-              <th style="padding:6px 8px;text-align:right">Top ✓</th>
-              <th style="padding:6px 8px;text-align:right">Bottom ✓</th>
-              <th style="padding:6px 8px;text-align:right">Completos</th>
-              <th style="padding:6px 8px;text-align:right">Entregados</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${resumen.map(r => `
-              <tr style="border-top:1px solid #EEE">
-                <td style="padding:4px 8px;font-weight:600">${r.grado || '-'}</td>
-                <td style="padding:4px 8px;text-align:right">${r.total_alumnos}</td>
-                <td style="padding:4px 8px;text-align:right">${r.top_empacados}</td>
-                <td style="padding:4px 8px;text-align:right">${r.bottom_empacados}</td>
-                <td style="padding:4px 8px;text-align:right;color:var(--verde);font-weight:600">${r.completos}</td>
-                <td style="padding:4px 8px;text-align:right;color:var(--azul);font-weight:600">${r.entregados}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-      <div style="margin-top:10px;text-align:center">
-        <button class="btn btn-primary" onclick="cambiarVistaDetalle('alumnos', null); document.querySelectorAll('#registro-detalle-subtabs .sub-tab')[1].classList.add('active'); document.querySelectorAll('#registro-detalle-subtabs .sub-tab')[3].classList.remove('active')">→ Empacar alumno por alumno</button>
-      </div>
-      
-      <!-- Sugerencias de empaque automáticas -->
-      <div class="card" style="padding:10px;margin-top:10px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div style="font-weight:600;font-size:13px">✨ Sugerencias automáticas</div>
-          <button class="btn btn-ghost btn-sm" onclick="cargarSugerenciasEmpaque('${escuelaId}')">🔄 Recalcular</button>
-        </div>
-        <div id="sugerencias-empaque-area">
-          <div class="text-muted" style="font-size:12px">Calculando alumnos empacables según stock actual...</div>
-        </div>
-      </div>
-    `;
-    // Auto-cargar sugerencias al abrir vista Empaque
-    setTimeout(() => cargarSugerenciasEmpaque(escuelaId), 100);
-  } catch(e) {
-    cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
-  }
 }
 
 // ─── Nueva escuela ad-hoc ───────────────────────────────────────────

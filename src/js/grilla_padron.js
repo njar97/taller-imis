@@ -185,35 +185,44 @@ function gpToggleResumen() {
 // ── Resumen vivo de tallas (sobre TODO el filtro, no solo la página) ─
 
 function gpResumenHtml(lista) {
-  const conteo = {};  // prenda → talla → n
+  // Misma definición que Estadística→Por talla: el conteo principal son las
+  // piezas PENDIENTES (sin empacar/entregar); las ya listas se muestran
+  // aparte por prenda — así los números cuadran entre los dos menús.
+  const conteo = {};      // prenda → talla → n pendientes
+  const listas = {};      // prenda → n empacadas/entregadas
+  const pieza = (a, prenda, talla, estado) => {
+    if (!prenda || !talla) return;
+    if (estado === 'empacado' || estado === 'entregado') {
+      listas[prenda] = (listas[prenda] || 0) + 1;
+      return;
+    }
+    (conteo[prenda] = conteo[prenda] || {})[talla] = (conteo[prenda][talla] || 0) + 1;
+  };
   for (const a of lista) {
-    if (a.prenda_top && a.talla_top_key) {
-      const t = gpTallaTop(a);
-      (conteo[a.prenda_top] = conteo[a.prenda_top] || {})[t] = (conteo[a.prenda_top][t] || 0) + 1;
-    }
-    if (a.prenda_bottom && a.talla_bottom_key) {
-      const t = gpTallaBot(a);
-      (conteo[a.prenda_bottom] = conteo[a.prenda_bottom] || {})[t] = (conteo[a.prenda_bottom][t] || 0) + 1;
-    }
+    pieza(a, a.prenda_top, gpTallaTop(a), a.estado_top);
+    pieza(a, a.prenda_bottom, gpTallaBot(a), a.estado_bottom);
   }
   const sinTop = lista.filter(x => !x.talla_top_key).length;
   const sinBot = lista.filter(x => !x.talla_bottom_key).length;
-  const bloques = Object.keys(conteo).sort().map(p => {
-    const tallas = Object.entries(conteo[p])
+  const prendas = [...new Set([...Object.keys(conteo), ...Object.keys(listas)])].sort();
+  const bloques = prendas.map(p => {
+    const tallas = Object.entries(conteo[p] || {})
       .sort((x, y) => (parseInt(x[0], 10) || 999) - (parseInt(y[0], 10) || 999));
     const tot = tallas.reduce((s, t) => s + t[1], 0);
     return `
       <div style="margin-bottom:10px">
-        <div style="font-weight:700;font-size:12px;border-bottom:1px solid var(--borde);padding-bottom:2px;margin-bottom:4px">${gpEsc(p)} <span style="color:#888;font-weight:400">· ${tot}</span></div>
+        <div style="font-weight:700;font-size:12px;border-bottom:1px solid var(--borde);padding-bottom:2px;margin-bottom:4px">${gpEsc(p)} <span style="color:#888;font-weight:400">· ${tot} pend.</span></div>
         ${tallas.map(([t, n]) => `
           <div style="display:flex;justify-content:space-between;font-size:12px;padding:1px 2px">
             <span>${gpEsc(t)}</span><strong>${n}</strong>
-          </div>`).join('')}
+          </div>`).join('') || '<div style="color:#aaa;font-size:11px;padding:1px 2px">sin pendientes</div>'}
+        ${listas[p] ? `<div style="font-size:11px;color:var(--verde);padding:1px 2px">✓ ${listas[p]} ya empacada(s)</div>` : ''}
       </div>`;
   }).join('');
   return `
     <div class="card" style="padding:10px">
-      <div style="font-weight:700;font-size:13px;margin-bottom:8px">▤ Tallas del filtro actual</div>
+      <div style="font-weight:700;font-size:13px;margin-bottom:2px">▤ Tallas pendientes</div>
+      <div style="font-size:10px;color:#888;margin-bottom:8px">Del filtro actual · misma cuenta que Estadística→Por talla</div>
       ${bloques || '<div style="color:#aaa;font-size:12px">Sin tallas aún</div>'}
       ${(sinTop || sinBot) ? `<div style="font-size:11px;color:#c44;border-top:1px dashed var(--borde);padding-top:6px">⚠️ Falta top: ${sinTop} · bottom: ${sinBot}</div>` : ''}
     </div>`;

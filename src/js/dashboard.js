@@ -167,7 +167,7 @@ function renderDashboard() {
           </thead>
           <tbody>
             ${r.topEscuelas.slice(0,5).map(e => `
-              <tr style="border-top:1px solid #EEE;cursor:pointer" onclick="switchTab('registro'); setTimeout(() => abrirDetalleEscuelaRegistro('${e.escuela_id}'), 500)">
+              <tr style="border-top:1px solid #EEE;cursor:pointer" onclick="_avanceEscIrA('registro','${e.escuela_id}')" title="Ver los alumnos de esta escuela en Registro">
                 <td style="padding:6px 8px">
                   <div style="font-weight:600">${e.escuela_nombre}</div>
                   <div style="font-size:10px;color:#888">CDE ${e.codigo_cde}</div>

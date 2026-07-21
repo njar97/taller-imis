@@ -413,6 +413,12 @@ async function ejecutarImportacion() {
   if (exitosos > 0) {
     cerrarImportacion();
     await cargarEscuelasTemporada();
-    await mostrarAlumnos(escuelaId);
+    // Mostrar los importados en la lista global filtrada por esta escuela
+    if (typeof cerrarDetalleEscuela === 'function') cerrarDetalleEscuela();
+    if (typeof alumnosGlobalCache !== 'undefined') {
+      alumnosGlobalCache.filtroEscuelas = [escuelaId];
+      alumnosGlobalCache.pagina = 1;
+    }
+    if (typeof initAlumnosGlobal === 'function') await initAlumnosGlobal();
   }
 }

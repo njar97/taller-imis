@@ -12,9 +12,32 @@ let alumnosGlobalCache = {
   filtroNivel: '',
   filtroTemporada: '',
   filtroEstado: '',            // 'pendiente'|'parcial'|'completo'|'entregado'|'sin_tallas'
+  filtroTalla: '',             // KEY exacta (ej. 'C14') — puente desde Estadística→Por talla
   masFiltrosAbierto: false,
   cargado: false,
 };
+
+// ── Puentes Registro ↔ Estadística (integración v33) ─────────────────
+// Desde una fila de Estadística→Por talla: ver LOS ALUMNOS de esa talla.
+function verAlumnosPorTalla(talla) {
+  const c = alumnosGlobalCache;
+  c.filtroTalla = talla;
+  c.filtroEstado = '';
+  c.busqueda = '';
+  c.pagina = 1;
+  if (typeof switchTab === 'function') switchTab('registro');
+  setTimeout(() => {
+    if (c.cargado && typeof renderAlumnosGlobal === 'function') renderAlumnosGlobal();
+    else if (typeof initAlumnosGlobal === 'function') initAlumnosGlobal();
+  }, 50);
+}
+
+// Desde una escuela filtrada en Registro: ver SU reporte en Estadística.
+function verEstadisticaEscuela(escuelaId) {
+  window._estEscuelaHint = escuelaId;
+  if (typeof switchTab === 'function') switchTab('estadistica');
+  setTimeout(() => { if (typeof switchSubEst === 'function') switchSubEst('escuela'); }, 50);
+}
 
 // Preferencia de orden para etiquetas — persistida en localStorage
 const ET_ORDEN_DEFAULT = ['escuela', 'sexo_fm', 'grado', 'nombre'];
@@ -154,6 +177,9 @@ function aplicarFiltrosAlumnos(c, opts = {}) {
   } else if (c.filtroEscuela) {
     lista = lista.filter(a => a.escuela_id === c.filtroEscuela);
   }
+  if (c.filtroTalla) {
+    lista = lista.filter(a => a.talla_top_key === c.filtroTalla || a.talla_bottom_key === c.filtroTalla);
+  }
   if (c.filtroNivel) lista = lista.filter(a => a.nivel === c.filtroNivel);
   if (c.filtroTemporada) lista = lista.filter(a => a.temporada_id === c.filtroTemporada);
   if (c.filtroEstado) {
@@ -231,7 +257,7 @@ function renderAlumnosGlobal() {
     c.filtroEscuela = '';
   }
   const escuelasSel = c.filtroEscuelas || [];
-  const algunFiltro = (c.busqueda || escuelasSel.length || c.filtroNivel || c.filtroEstado);
+  const algunFiltro = (c.busqueda || escuelasSel.length || c.filtroNivel || c.filtroEstado || c.filtroTalla);
   const masFiltrosAbierto = !!c.masFiltrosAbierto;
 
   // Opciones de escuela que aún NO están seleccionadas
@@ -263,6 +289,7 @@ function renderAlumnosGlobal() {
           onclick="aplicarFiltroEstado('sin_tallas')">⚠️ Falta tallar (${sinTallas})</button>
         <button class="btn btn-sm ${c.filtroEstado==='completo'?'btn-primary':'btn-ghost'}"
           onclick="aplicarFiltroEstado('completo')">✅ Completos (${completos})</button>
+        ${c.filtroTalla ? `<span class="btn btn-sm btn-primary" style="cursor:default" title="Filtro por talla (vino de Estadística)">📐 ${c.filtroTalla} <span style="margin-left:4px;cursor:pointer" onclick="alumnosGlobalCache.filtroTalla='';alumnosGlobalCache.pagina=1;renderAlumnosGlobal()">✕</span></span>` : ''}
         <span style="margin-left:auto;color:#888;font-size:11px;align-self:center">${totMostrando.toLocaleString()} mostrando</span>
       </div>
 
@@ -281,7 +308,7 @@ function renderAlumnosGlobal() {
               if (!e) return '';
               const label = e.alias || e.nombre;
               const sinAlias = !e.alias;
-              return `<span class="btn btn-sm btn-primary" style="cursor:default">🏫 ${label}${sinAlias ? ' ⚠️' : ''} <span style="margin-left:4px;cursor:pointer;opacity:0.85" onclick="editarEscuela('${eid}')" title="Editar escuela (alias, datos)">✏️</span> <span style="margin-left:2px;cursor:pointer" onclick="quitarFiltroEscuela('${eid}')" title="Quitar filtro">✕</span></span>`;
+              return `<span class="btn btn-sm btn-primary" style="cursor:default">🏫 ${label}${sinAlias ? ' ⚠️' : ''} <span style="margin-left:4px;cursor:pointer;opacity:0.85" onclick="verEstadisticaEscuela('${eid}')" title="Ver estadística de esta escuela (tallaje, contrato, tela)">📊</span> <span style="margin-left:2px;cursor:pointer;opacity:0.85" onclick="editarEscuela('${eid}')" title="Editar escuela (alias, datos)">✏️</span> <span style="margin-left:2px;cursor:pointer" onclick="quitarFiltroEscuela('${eid}')" title="Quitar filtro">✕</span></span>`;
             }).join('')}
             ${escuelasDisponibles.length > 0 ? `
               <select onchange="if(this.value){agregarFiltroEscuela(this.value); this.value='';}" style="padding:4px 6px;font-size:12px;border:1px solid var(--borde);border-radius:4px">
@@ -454,6 +481,7 @@ function limpiarFiltros() {
   alumnosGlobalCache.filtroNivel = '';
   alumnosGlobalCache.filtroTemporada = '';
   alumnosGlobalCache.filtroEstado = '';
+  alumnosGlobalCache.filtroTalla = '';
   alumnosGlobalCache.pagina = 1;
   renderAlumnosGlobal();
 }
@@ -1074,36 +1102,6 @@ async function verificarYAgregarGradoAlCatalogo(grado, alumnoId) {
       if (nivelSel) nivelSel.focus();
     }, 100);
   });
-}
-
-// Editar alumno desde vista global (path completo a Escuela > Tallaje)
-// Mantenido por compatibilidad — la vista global ahora usa editarAlumnoRapido.
-async function editarAlumnoGlobal(alumnoId) {
-  try {
-    const res = await supaFetch('alumno', 'GET', null, `?id=eq.${alumnoId}&limit=1`);
-    if (!res || res.length === 0) return;
-    const a = res[0];
-    
-    // Switchear al tab Registro, abrir escuela, sub-tab Tallaje, editar alumno
-    switchTab('registro');
-    setTimeout(async () => {
-      // Cambiar temporada si hace falta
-      if (a.temporada_id !== registroCache.temporadaActual) {
-        registroCache.temporadaActual = a.temporada_id;
-        renderRegistroHeader();
-        await cargarEscuelasTemporada();
-      }
-      // Abrir detalle de escuela
-      setTimeout(async () => {
-        await abrirDetalleEscuelaRegistro(a.escuela_id);
-        // Ir a Tallaje sub-tab
-        setTimeout(() => {
-          cambiarVistaDetalle('tallaje', document.querySelectorAll('#registro-detalle-subtabs .sub-tab')[0]);
-          setTimeout(() => editarAlumno(alumnoId), 200);
-        }, 200);
-      }, 200);
-    }, 100);
-  } catch(e) { alert('Error: ' + e.message); }
 }
 
 // Abre flow de nuevo alumno: pide escuela y redirige al sub-tab Tallaje

@@ -41,7 +41,6 @@ $jsOrder = @(
     'registro.js',
     'tallaje.js',
     'importacion.js',
-    'alumnos.js',
     'bodega.js',
     'empaque.js',
     'reportes.js',

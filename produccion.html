@@ -1,4 +1,4 @@
-<!-- Generado: 2026-07-20 16:58 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-07-20 18:03 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1516,26 +1516,6 @@
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="cerrarNuevaEscuela()">Cancelar</button>
         <button class="btn btn-success" onclick="guardarNuevaEscuela()">✓ Agregar escuela</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: asignar/cambiar grupo de producción de escuela -->
-  <!-- Modal: empaque de alumno (reutilizado de v22) -->
-  <div id="bodega-empaque-modal" class="modal" style="display:none">
-    <div class="modal-content" style="max-width:550px">
-      <div class="modal-header">
-        <div>
-          <div class="card-title" id="emp-alumno-nombre" style="margin:0"></div>
-          <div id="emp-alumno-info" style="font-size:12px;color:#666;margin-top:2px"></div>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="cerrarEmpaque()">✕</button>
-      </div>
-      <div class="modal-body">
-        <div id="emp-body"></div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" onclick="cerrarEmpaque()">Cerrar</button>
       </div>
     </div>
   </div>
@@ -3593,7 +3573,7 @@ function renderDashboard() {
           </thead>
           <tbody>
             ${r.topEscuelas.slice(0,5).map(e => `
-              <tr style="border-top:1px solid #EEE;cursor:pointer" onclick="switchTab('registro'); setTimeout(() => abrirDetalleEscuelaRegistro('${e.escuela_id}'), 500)">
+              <tr style="border-top:1px solid #EEE;cursor:pointer" onclick="_avanceEscIrA('registro','${e.escuela_id}')" title="Ver los alumnos de esta escuela en Registro">
                 <td style="padding:6px 8px">
                   <div style="font-weight:600">${e.escuela_nombre}</div>
                   <div style="font-size:10px;color:#888">CDE ${e.codigo_cde}</div>
@@ -4428,11 +4408,12 @@ function renderTallasResumen() {
                 const flecha = act ? (f.ordenDir === 'asc' ? ' ▲' : ' ▼') : '';
                 return `<th style="padding:6px 8px;text-align:right;cursor:pointer;user-select:none;${act?'color:var(--azul)':''}" onclick="ordenarTallasPor('balance')" title="Ordenar por balance">Balance${flecha}</th>`;
               })()}
+              <th style="padding:6px 8px;width:36px" title="Ver los alumnos de esa talla en Registro">👥</th>
             </tr>
           </thead>
           <tbody>
             ${rows.length === 0 ? `
-              <tr><td colspan="${5 + escuelasCols.length + (ver.corte?1:0) + (ver.prod?1:0) + (ver.bodega?1:0) + (ver.pool?1:0)}" style="padding:20px;text-align:center;color:#888">Sin resultados con los filtros aplicados.</td></tr>
+              <tr><td colspan="${6 + escuelasCols.length + (ver.corte?1:0) + (ver.prod?1:0) + (ver.bodega?1:0) + (ver.pool?1:0)}" style="padding:20px;text-align:center;color:#888">Sin resultados con los filtros aplicados.</td></tr>
             ` : rows.map(r => {
               const exp = c.expandidos.has(r.key);
               const balanceColor = r.balance < 0 ? 'var(--rojo)' : 'var(--verde)';
@@ -4451,6 +4432,9 @@ function renderTallasResumen() {
                   ${ver.bodega ? `<td style="padding:5px 8px;text-align:right;color:var(--azul)">${r.stockLibre || 0}</td>` : ''}
                   ${ver.pool ? `<td style="padding:5px 8px;text-align:right;color:#a82">${r.pool || 0}</td>` : ''}
                   <td style="padding:5px 8px;text-align:right;font-weight:700;color:${balanceColor}">${r.balance>=0?'+':''}${r.balance}</td>
+                  <td style="padding:5px 4px;text-align:center" onclick="event.stopPropagation()">
+                    <button class="btn-mini" onclick="verAlumnosPorTalla('${r.talla.replace(/'/g,"\\'")}')" title="Ver en Registro los alumnos con talla ${r.talla}">👥</button>
+                  </td>
                 </tr>
               `;
               if (!exp) return trMain;
@@ -5012,6 +4996,11 @@ let estEscuelaCache = {
 };
 
 async function initEstEscuela() {
+  // Puente desde Registro: llegar con la escuela ya elegida
+  if (window._estEscuelaHint) {
+    estEscuelaCache.escuelaSel = window._estEscuelaHint;
+    window._estEscuelaHint = null;
+  }
   const root = document.getElementById('est-sub-escuela-view');
   if (!root) return;
   root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando reporte por escuela...</div>';
@@ -10010,53 +9999,9 @@ async function cargarEscuelasTemporada() {
     registroCache.escuelas = Object.values(escuelasMap).filter(e => 
       e.piezas_solicitadas > 0 || e.num_alumnos > 0
     );
-    renderListaEscuelas();
   } catch(e) {
     cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }
-}
-
-function renderListaEscuelas() {
-  const cont = document.getElementById('registro-lista');
-  if (!cont) return;
-  
-  if (registroCache.escuelas.length === 0) {
-    cont.innerHTML = '<div class="alert alert-info">No hay escuelas con datos en esta temporada.</div>';
-    return;
-  }
-  
-  // Ordenar por piezas_solicitadas desc, luego por alumnos
-  const ordenadas = [...registroCache.escuelas].sort((a,b) => 
-    (b.piezas_solicitadas||0) - (a.piezas_solicitadas||0) || (b.num_alumnos||0) - (a.num_alumnos||0)
-  );
-  
-  cont.innerHTML = ordenadas.map(e => {
-    const pct = e.porcentaje_avance || 0;
-    const colorBar = pct >= 100 ? 'var(--verde)' : (pct > 0 ? 'var(--azul)' : '#CCC');
-    const grupo = e.grupo_produccion ? `<span style="background:#EEF;padding:2px 6px;border-radius:4px;font-size:10px;color:#66F;margin-left:4px">${e.grupo_produccion}</span>` : '';
-    const grupoBtnLabel = e.grupo_produccion ? `📦 ${e.grupo_produccion}` : '📦 + Grupo';
-    return `
-      <div class="card" style="padding:10px;margin-bottom:8px;cursor:pointer" onclick="verAlumnosDeEscuela('${e.escuela_id}')">
-        <div style="display:flex;justify-content:space-between;align-items:start">
-          <div style="flex:1">
-            <div style="font-weight:700;color:var(--azul)">${e.escuela_nombre}${grupo}</div>
-            <div style="font-size:11px;color:#666">CDE ${e.codigo_cde}</div>
-            <div style="font-size:13px;margin-top:4px">
-              ${e.num_alumnos > 0 ? `<strong>${e.num_alumnos}</strong> alumnos · ` : ''}
-              ${e.piezas_solicitadas > 0 ? `<strong>${(e.piezas_entregadas||0).toLocaleString()}/${e.piezas_solicitadas.toLocaleString()}</strong> piezas` : '<em style="color:#888">Sin pedidos</em>'}
-            </div>
-          </div>
-          ${e.piezas_solicitadas > 0 ? `<div style="font-size:20px;font-weight:700;color:${colorBar}">${pct}%</div>` : ''}
-          <button class="btn btn-ghost btn-sm" style="margin-left:6px;font-size:11px;padding:4px 8px" onclick="event.stopPropagation(); editarEscuela('${e.escuela_id}')" title="Editar escuela (datos, contrato, tela y grupo de producción)">${grupoBtnLabel}</button>
-          <button class="btn btn-ghost btn-sm" style="margin-left:4px" onclick="event.stopPropagation(); abrirDetalleEscuelaRegistro('${e.escuela_id}')" title="Acciones avanzadas (Por talla / Empaque / Pedidos)">⚙️</button>
-        </div>
-        ${e.piezas_solicitadas > 0 ? `
-          <div style="background:#EEE;height:6px;border-radius:3px;margin-top:6px;overflow:hidden">
-            <div style="background:${colorBar};height:100%;width:${pct}%"></div>
-          </div>` : ''}
-      </div>
-    `;
-  }).join('');
 }
 
 // El grupo de producción de una escuela se edita ahora dentro del modal
@@ -10085,213 +10030,25 @@ async function abrirDetalleEscuelaRegistro(escuelaId) {
   if (!esc) return;
   
   registroCache.escuelaActual = escuelaId;
-  registroCache.vistaDetalle = 'tallaje';
-  
+
   document.getElementById('registro-detalle-titulo').textContent = esc.escuela_nombre;
   const grupo = esc.grupo_produccion ? ` · Grupo ${esc.grupo_produccion}` : '';
-  document.getElementById('registro-detalle-subt').textContent = 
-    `CDE ${esc.codigo_cde}${grupo} · ${esc.num_alumnos||0} alumnos · ${esc.piezas_entregadas||0}/${esc.piezas_solicitadas||0} piezas`;
-  
-  document.getElementById('registro-detalle-subtabs').innerHTML = `
-    <div class="sub-tabs">
-      <div class="sub-tab active" onclick="cambiarVistaDetalle('tallaje', this)">📏 Tallaje</div>
-      <div class="sub-tab" onclick="cambiarVistaDetalle('alumnos', this)">👥 Alumnos</div>
-      <div class="sub-tab" onclick="cambiarVistaDetalle('por_talla', this)">📊 Por talla</div>
-      <div class="sub-tab" onclick="cambiarVistaDetalle('empaque', this)">📦 Empaque</div>
-    </div>
-  `;
-  
+  document.getElementById('registro-detalle-subt').textContent =
+    `CDE ${esc.codigo_cde}${grupo} · ${esc.num_alumnos||0} alumnos · 📏 Captura de tallaje`;
+
+  // Integración v33: este modal quedó SOLO como captura de tallaje.
+  // Las otras sub-vistas eran duplicados: Alumnos → lista global filtrada,
+  // Por talla → Estadística, Empaque → Sesión de empaque.
+  document.getElementById('registro-detalle-subtabs').innerHTML = '';
+
   modal.style.display = 'flex';
-  await mostrarVistaDetalle('tallaje');
+  renderTallajeInicial(escuelaId);
 }
 // alias
 const abrirDetalleEscuela = abrirDetalleEscuelaRegistro;
 
-function cambiarVistaDetalle(vista, el) {
-  document.querySelectorAll('#registro-detalle-subtabs .sub-tab').forEach(t => t.classList.remove('active'));
-  if (el) el.classList.add('active');
-  registroCache.vistaDetalle = vista;
-  mostrarVistaDetalle(vista);
-}
-
-async function mostrarVistaDetalle(vista) {
-  const cont = document.getElementById('registro-detalle-tabla');
-  cont.innerHTML = '<div class="text-muted">Cargando...</div>';
-  const escuelaId = registroCache.escuelaActual;
-  
-  if (vista === 'tallaje') {
-    renderTallajeInicial(escuelaId);
-  } else if (vista === 'alumnos') {
-    await mostrarAlumnos(escuelaId);
-  } else if (vista === 'por_talla') {
-    await cargarPedidosEscuela(escuelaId);
-  } else if (vista === 'empaque') {
-    await cargarVistaEmpaque(escuelaId);
-  }
-}
-
 function cerrarDetalleEscuela() {
   document.getElementById('registro-detalle-modal').style.display = 'none';
-}
-
-// ─── Sub-tab: Por Talla ─────────────────────────────────────────────
-async function cargarPedidosEscuela(escuelaId) {
-  document.getElementById('registro-detalle-tabla').innerHTML = '<div class="text-muted">Cargando pedidos...</div>';
-  try {
-    const pedidos = await supaFetch('pedido', 'GET', null, 
-      `?escuela_id=eq.${escuelaId}&order=nivel,cod_prenda,talla_key&limit=500`);
-    registroCache.pedidosPorEscuela[escuelaId] = pedidos;
-    renderDetallePedidos(escuelaId);
-  } catch(e) {
-    document.getElementById('registro-detalle-tabla').innerHTML = 
-      `<div style="color:red">Error: ${e.message}</div>`;
-  }
-}
-
-function renderDetallePedidos(escuelaId) {
-  const pedidos = registroCache.pedidosPorEscuela[escuelaId] || [];
-  const cont = document.getElementById('registro-detalle-tabla');
-  if (pedidos.length === 0) {
-    cont.innerHTML = '<div class="text-muted">Sin pedidos cargados para esta escuela. Agregá alumnos o cargá el contrato.</div>';
-    return;
-  }
-  
-  const grupos = {};
-  for (const p of pedidos) {
-    const k = `${p.nivel}|${p.nombre_prenda || p.cod_prenda}`;
-    if (!grupos[k]) grupos[k] = [];
-    grupos[k].push(p);
-  }
-  
-  cont.innerHTML = Object.entries(grupos).map(([k, lista]) => {
-    const [nivel, prenda] = k.split('|');
-    const total = lista.reduce((s, p) => s + p.cantidad_solicitada, 0);
-    const entregado = lista.reduce((s, p) => s + (p.cantidad_entregada || 0), 0);
-    
-    return `
-      <div style="margin-bottom:10px;border:1px solid var(--borde);border-radius:6px;overflow:hidden">
-        <div style="background:#F5F7FA;padding:6px 10px;font-size:13px;font-weight:600">
-          ${nivel} · ${prenda}
-          <span style="float:right;font-weight:normal">${entregado}/${total}</span>
-        </div>
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead>
-            <tr style="background:#FAFAFA">
-              <th style="padding:4px 8px;text-align:left">Talla</th>
-              <th style="padding:4px 8px;text-align:right">Pedido</th>
-              <th style="padding:4px 8px;text-align:right">Entregado</th>
-              <th style="padding:4px 8px;text-align:center">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${lista.map(p => `
-              <tr style="border-top:1px solid #EEE">
-                <td style="padding:4px 8px;font-family:monospace;font-weight:600">${p.talla_key}</td>
-                <td style="padding:4px 8px;text-align:right">${p.cantidad_solicitada}</td>
-                <td style="padding:4px 8px;text-align:right">
-                  <input type="number" value="${p.cantidad_entregada || 0}" min="0" max="${p.cantidad_solicitada}"
-                    style="width:60px;padding:2px 4px;text-align:right" id="ped-ent-${p.id}">
-                </td>
-                <td style="padding:4px 8px;text-align:center">
-                  <button class="btn-mini btn-mini-success" onclick="guardarEntrega('${p.id}','${escuelaId}')">Guardar</button>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-  }).join('');
-}
-
-async function guardarEntrega(pedidoId, escuelaId) {
-  const input = document.getElementById(`ped-ent-${pedidoId}`);
-  const nuevaCantidad = parseInt(input.value || 0);
-  if (isNaN(nuevaCantidad) || nuevaCantidad < 0) { alert('Cantidad inválida'); return; }
-  try {
-    await supaUpdate('pedido', pedidoId, {
-      cantidad_entregada: nuevaCantidad,
-      actualizado_en: new Date().toISOString()
-    });
-    input.style.background = '#D4EDDA';
-    setTimeout(() => { input.style.background = ''; }, 1000);
-    await cargarEscuelasTemporada();
-  } catch(e) { alert('Error: ' + e.message); }
-}
-
-// ─── Sub-tab: Empaque (resumen por escuela) ─────────────────────────
-async function cargarVistaEmpaque(escuelaId) {
-  const cont = document.getElementById('registro-detalle-tabla');
-  try {
-    const resumen = await supaFetch('vw_alumno_escuela', 'GET', null, 
-      `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&order=nivel,grado&limit=200`);
-    
-    if (!resumen || resumen.length === 0) {
-      cont.innerHTML = '<div class="alert alert-info">No hay alumnos cargados. Usá la sub-tab 📏 Tallaje para empezar.</div>';
-      return;
-    }
-    
-    const tot = resumen.reduce((a,r) => a + (r.total_alumnos||0), 0);
-    const completos = resumen.reduce((a,r) => a + (r.completos||0), 0);
-    const entregados = resumen.reduce((a,r) => a + (r.entregados||0), 0);
-    const pct = tot > 0 ? Math.round(100 * completos / tot) : 0;
-    
-    cont.innerHTML = `
-      <div class="card" style="padding:10px;margin-bottom:10px">
-        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px">
-          <div>Total alumnos: <strong>${tot}</strong></div>
-          <div style="color:var(--verde)">Completos: <strong>${completos}</strong></div>
-          <div style="color:var(--azul)">Entregados: <strong>${entregados}</strong></div>
-          <div><strong>${pct}%</strong> empacado</div>
-        </div>
-      </div>
-      <div class="card" style="padding:0;overflow:hidden">
-        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">Por grado</div>
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead>
-            <tr style="background:#FAFAFA">
-              <th style="padding:6px 8px;text-align:left">Grado</th>
-              <th style="padding:6px 8px;text-align:right">Total</th>
-              <th style="padding:6px 8px;text-align:right">Top ✓</th>
-              <th style="padding:6px 8px;text-align:right">Bottom ✓</th>
-              <th style="padding:6px 8px;text-align:right">Completos</th>
-              <th style="padding:6px 8px;text-align:right">Entregados</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${resumen.map(r => `
-              <tr style="border-top:1px solid #EEE">
-                <td style="padding:4px 8px;font-weight:600">${r.grado || '-'}</td>
-                <td style="padding:4px 8px;text-align:right">${r.total_alumnos}</td>
-                <td style="padding:4px 8px;text-align:right">${r.top_empacados}</td>
-                <td style="padding:4px 8px;text-align:right">${r.bottom_empacados}</td>
-                <td style="padding:4px 8px;text-align:right;color:var(--verde);font-weight:600">${r.completos}</td>
-                <td style="padding:4px 8px;text-align:right;color:var(--azul);font-weight:600">${r.entregados}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-      <div style="margin-top:10px;text-align:center">
-        <button class="btn btn-primary" onclick="cambiarVistaDetalle('alumnos', null); document.querySelectorAll('#registro-detalle-subtabs .sub-tab')[1].classList.add('active'); document.querySelectorAll('#registro-detalle-subtabs .sub-tab')[3].classList.remove('active')">→ Empacar alumno por alumno</button>
-      </div>
-      
-      <!-- Sugerencias de empaque automáticas -->
-      <div class="card" style="padding:10px;margin-top:10px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div style="font-weight:600;font-size:13px">✨ Sugerencias automáticas</div>
-          <button class="btn btn-ghost btn-sm" onclick="cargarSugerenciasEmpaque('${escuelaId}')">🔄 Recalcular</button>
-        </div>
-        <div id="sugerencias-empaque-area">
-          <div class="text-muted" style="font-size:12px">Calculando alumnos empacables según stock actual...</div>
-        </div>
-      </div>
-    `;
-    // Auto-cargar sugerencias al abrir vista Empaque
-    setTimeout(() => cargarSugerenciasEmpaque(escuelaId), 100);
-  } catch(e) {
-    cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
-  }
 }
 
 // ─── Nueva escuela ad-hoc ───────────────────────────────────────────
@@ -11142,322 +10899,13 @@ async function ejecutarImportacion() {
   if (exitosos > 0) {
     cerrarImportacion();
     await cargarEscuelasTemporada();
-    await mostrarAlumnos(escuelaId);
-  }
-}
-
-// +++++++++++++++++++ alumnos.js +++++++++++++++++++
-// ══════════════════════════════════════════════════════════════════════
-// ALUMNOS + EMPAQUE (v22)
-// Se monta como sub-tab dentro de 📚 Pedidos
-// ══════════════════════════════════════════════════════════════════════
-
-let alumnosCache = {
-  escuelaId: null,
-  alumnos: [],
-  filtroGrado: '',
-  filtroNivel: '',
-  filtroEstado: '', // 'pendiente'|'parcial'|'completo'|'entregado'
-  busqueda: '',
-  stockPorTalla: {}, // talla_key -> stock disponible
-};
-
-async function mostrarAlumnos(escuelaId) {
-  alumnosCache.escuelaId = escuelaId;
-  const cont = document.getElementById('registro-detalle-tabla');
-  cont.innerHTML = '<div class="text-muted">Cargando alumnos...</div>';
-  try {
-    const [alumnos, stock] = await Promise.all([
-      supaFetchAll('alumno',
-        `?escuela_id=eq.${escuelaId}&temporada_id=eq.${registroCache.temporadaActual}&order=nivel,grado,nombre`),
-      supaFetchAll('vw_bodega_stock')
-    ]);
-    alumnosCache.alumnos = alumnos;
-    // Indexar stock por talla_key
-    alumnosCache.stockPorTalla = {};
-    for (const s of stock) {
-      alumnosCache.stockPorTalla[s.talla_key] = s.stock_disponible || 0;
+    // Mostrar los importados en la lista global filtrada por esta escuela
+    if (typeof cerrarDetalleEscuela === 'function') cerrarDetalleEscuela();
+    if (typeof alumnosGlobalCache !== 'undefined') {
+      alumnosGlobalCache.filtroEscuelas = [escuelaId];
+      alumnosGlobalCache.pagina = 1;
     }
-    renderAlumnosLista();
-  } catch(e) {
-    cont.innerHTML = `<div style="color:red">Error: ${e.message}</div>`;
-  }
-}
-
-function renderAlumnosLista() {
-  const cont = document.getElementById('registro-detalle-tabla');
-  let list = alumnosCache.alumnos;
-  
-  // Filtros
-  if (alumnosCache.filtroGrado) list = list.filter(a => a.grado === alumnosCache.filtroGrado);
-  if (alumnosCache.filtroNivel) list = list.filter(a => a.nivel === alumnosCache.filtroNivel);
-  if (alumnosCache.busqueda) {
-    const q = alumnosCache.busqueda.toLowerCase();
-    list = list.filter(a => (a.nombre||'').toLowerCase().includes(q));
-  }
-  if (alumnosCache.filtroEstado) {
-    list = list.filter(a => {
-      const t = a.estado_top, b = a.estado_bottom;
-      if (alumnosCache.filtroEstado === 'pendiente') return t==='pendiente' && b==='pendiente';
-      if (alumnosCache.filtroEstado === 'parcial') 
-        return (t==='empacado' && b!=='empacado') || (b==='empacado' && t!=='empacado');
-      if (alumnosCache.filtroEstado === 'completo') return t==='empacado' && b==='empacado';
-      if (alumnosCache.filtroEstado === 'entregado') return t==='entregado' && b==='entregado';
-      return true;
-    });
-  }
-  
-  // Estadísticas
-  const tot = alumnosCache.alumnos.length;
-  const completos = alumnosCache.alumnos.filter(a => a.estado_top==='empacado' && a.estado_bottom==='empacado').length;
-  const parciales = alumnosCache.alumnos.filter(a => 
-    (a.estado_top==='empacado' && a.estado_bottom!=='empacado') ||
-    (a.estado_bottom==='empacado' && a.estado_top!=='empacado')
-  ).length;
-  
-  // Grados únicos
-  const grados = [...new Set(alumnosCache.alumnos.map(a => a.grado).filter(Boolean))].sort();
-  const niveles = [...new Set(alumnosCache.alumnos.map(a => a.nivel).filter(Boolean))].sort();
-  
-  const header = `
-    <div style="background:white;padding:8px;border-radius:8px;margin-bottom:10px">
-      <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin-bottom:8px">
-        <div>Total: <strong>${tot}</strong></div>
-        <div style="color:var(--verde)">Completos: <strong>${completos}</strong></div>
-        <div style="color:var(--naranja)">Parciales: <strong>${parciales}</strong></div>
-        <div style="color:#888">Mostrando: <strong>${list.length}</strong></div>
-      </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <input type="text" placeholder="Buscar por nombre..." value="${alumnosCache.busqueda}"
-          oninput="alumnosCache.busqueda = this.value; renderAlumnosLista()"
-          style="flex:1;min-width:140px;padding:4px 8px;border:1px solid var(--borde);border-radius:4px">
-        <select onchange="alumnosCache.filtroNivel = this.value; renderAlumnosLista()" style="padding:4px">
-          <option value="">Todo nivel</option>
-          ${niveles.map(n => `<option value="${n}" ${n===alumnosCache.filtroNivel?'selected':''}>${n}</option>`).join('')}
-        </select>
-        <select onchange="alumnosCache.filtroGrado = this.value; renderAlumnosLista()" style="padding:4px">
-          <option value="">Todo grado</option>
-          ${grados.map(g => `<option value="${g}" ${g===alumnosCache.filtroGrado?'selected':''}>${g}</option>`).join('')}
-        </select>
-        <select onchange="alumnosCache.filtroEstado = this.value; renderAlumnosLista()" style="padding:4px">
-          <option value="">Todo estado</option>
-          <option value="pendiente" ${alumnosCache.filtroEstado==='pendiente'?'selected':''}>❌❌ Pendiente</option>
-          <option value="parcial" ${alumnosCache.filtroEstado==='parcial'?'selected':''}>✅❌ Parcial</option>
-          <option value="completo" ${alumnosCache.filtroEstado==='completo'?'selected':''}>✅✅ Completo</option>
-          <option value="entregado" ${alumnosCache.filtroEstado==='entregado'?'selected':''}>🚚 Entregado</option>
-        </select>
-      </div>
-    </div>
-  `;
-  
-  if (list.length === 0) {
-    cont.innerHTML = header + '<div class="text-muted">Sin resultados.</div>';
-    return;
-  }
-  
-  // Limitar a 100 visibles para performance
-  const visible = list.slice(0, 100);
-  const hayMas = list.length > 100;
-  
-  const iconEstado = (e) => {
-    if (e === 'empacado') return '✅';
-    if (e === 'entregado') return '🚚';
-    if (e === 'reservado') return '⏳';
-    return '⬜';
-  };
-  
-  const colorEstado = (t, b) => {
-    if (t === 'entregado' && b === 'entregado') return '#EEE';
-    if (t === 'empacado' && b === 'empacado') return '#DCF5E0';
-    if (t === 'empacado' || b === 'empacado') return '#FFF4D6';
-    return 'white';
-  };
-  
-  const rows = visible.map(a => {
-    const stockT = alumnosCache.stockPorTalla[a.talla_top_key] || 0;
-    const stockB = alumnosCache.stockPorTalla[a.talla_bottom_key] || 0;
-    const puedeT = stockT > 0 || a.estado_top === 'empacado' || a.estado_top === 'entregado';
-    const puedeB = stockB > 0 || a.estado_bottom === 'empacado' || a.estado_bottom === 'entregado';
-    const bg = colorEstado(a.estado_top, a.estado_bottom);
-    
-    return `
-      <tr style="border-top:1px solid #EEE;background:${bg}">
-        <td style="padding:4px 8px;font-size:12px">
-          <div style="font-weight:600">${a.nombre}</div>
-          <div style="color:#666;font-size:10px">${a.grado||'-'} · ${a.sexo==='F'?'♀':'♂'}</div>
-        </td>
-        <td style="padding:4px 8px;text-align:center">
-          <div style="font-size:14px">${iconEstado(a.estado_top)}</div>
-          <div style="font-size:10px;color:#666">${a.talla_top_key||'-'}</div>
-          <div style="font-size:9px;color:${stockT>0?'var(--verde)':'#ccc'}">stock: ${stockT}</div>
-        </td>
-        <td style="padding:4px 8px;text-align:center">
-          <div style="font-size:14px">${iconEstado(a.estado_bottom)}</div>
-          <div style="font-size:10px;color:#666">${a.talla_bottom_key||'-'}</div>
-          <div style="font-size:9px;color:${stockB>0?'var(--verde)':'#ccc'}">stock: ${stockB}</div>
-        </td>
-        <td style="padding:4px 8px;text-align:center">
-          <button class="btn-mini btn-mini-primary" onclick="abrirEmpaqueAlumno('${a.id}')">📦</button>
-        </td>
-      </tr>
-    `;
-  }).join('');
-  
-  cont.innerHTML = header + `
-    <div class="card" style="padding:0;overflow:hidden">
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead>
-          <tr style="background:#F5F7FA">
-            <th style="padding:6px 8px;text-align:left">Alumno</th>
-            <th style="padding:6px 8px;text-align:center">Top</th>
-            <th style="padding:6px 8px;text-align:center">Bottom</th>
-            <th style="padding:6px 8px;text-align:center">Empacar</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-      ${hayMas ? `<div style="padding:8px;text-align:center;color:#888;font-size:12px">... ${list.length-100} alumnos más. Usá filtros para ver más.</div>` : ''}
-    </div>
-  `;
-}
-
-// ─── Modal empaque individual ──────────────────────────────────────
-let empaqueCache = { alumnoActual: null };
-
-async function abrirEmpaqueAlumno(alumnoId) {
-  const alumno = alumnosCache.alumnos.find(a => a.id === alumnoId);
-  if (!alumno) return;
-  empaqueCache.alumnoActual = alumno;
-  
-  const stockT = alumnosCache.stockPorTalla[alumno.talla_top_key] || 0;
-  const stockB = alumnosCache.stockPorTalla[alumno.talla_bottom_key] || 0;
-  
-  document.getElementById('emp-alumno-nombre').textContent = alumno.nombre;
-  document.getElementById('emp-alumno-info').textContent = 
-    `${alumno.grado || ''} · ${alumno.nivel || ''} · ${alumno.sexo === 'F' ? '♀ Niña' : '♂ Niño'}`;
-  
-  const estadoLabel = {pendiente:'⬜ Pendiente',reservado:'⏳ Reservado',empacado:'✅ Empacado',entregado:'🚚 Entregado',cancelado:'✗ Cancelado'};
-  
-  document.getElementById('emp-body').innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="card" style="padding:10px;border:2px solid ${alumno.estado_top==='empacado'?'var(--verde)':'var(--borde)'}">
-        <div style="font-weight:600;font-size:13px">👕 ${alumno.prenda_top || 'Top'}</div>
-        <div style="font-size:20px;margin:6px 0;font-family:monospace;color:var(--azul);font-weight:700">${alumno.talla_top_key || '-'}</div>
-        <div style="font-size:11px;margin-bottom:4px">Estado: ${estadoLabel[alumno.estado_top]||alumno.estado_top}</div>
-        <div style="font-size:11px;color:${stockT>0?'var(--verde)':'#c44'};margin-bottom:8px">Stock: <strong>${stockT}</strong></div>
-        ${alumno.estado_top === 'pendiente' ? 
-          (stockT > 0 
-            ? `<button class="btn btn-success btn-sm" style="width:100%" onclick="marcarEmpacado('top')">✅ Empacar top</button>`
-            : `<button class="btn btn-sm" style="width:100%" disabled>Sin stock</button>`) :
-         alumno.estado_top === 'empacado' ? 
-          `<button class="btn btn-primary btn-sm" style="width:100%" onclick="marcarEntregado('top')">🚚 Marcar entregado</button>` :
-          `<button class="btn btn-ghost btn-sm" style="width:100%" disabled>Ya ${alumno.estado_top}</button>`}
-      </div>
-      
-      <div class="card" style="padding:10px;border:2px solid ${alumno.estado_bottom==='empacado'?'var(--verde)':'var(--borde)'}">
-        <div style="font-weight:600;font-size:13px">👖 ${alumno.prenda_bottom || 'Bottom'}</div>
-        <div style="font-size:20px;margin:6px 0;font-family:monospace;color:var(--azul);font-weight:700">${alumno.talla_bottom_key || '-'}</div>
-        <div style="font-size:11px;margin-bottom:4px">Estado: ${estadoLabel[alumno.estado_bottom]||alumno.estado_bottom}</div>
-        <div style="font-size:11px;color:${stockB>0?'var(--verde)':'#c44'};margin-bottom:8px">Stock: <strong>${stockB}</strong></div>
-        ${alumno.estado_bottom === 'pendiente' ? 
-          (stockB > 0 
-            ? `<button class="btn btn-success btn-sm" style="width:100%" onclick="marcarEmpacado('bottom')">✅ Empacar bottom</button>`
-            : `<button class="btn btn-sm" style="width:100%" disabled>Sin stock</button>`) :
-         alumno.estado_bottom === 'empacado' ? 
-          `<button class="btn btn-primary btn-sm" style="width:100%" onclick="marcarEntregado('bottom')">🚚 Marcar entregado</button>` :
-          `<button class="btn btn-ghost btn-sm" style="width:100%" disabled>Ya ${alumno.estado_bottom}</button>`}
-      </div>
-    </div>
-    ${(alumno.estado_top==='pendiente' && alumno.estado_bottom==='pendiente' && stockT>0 && stockB>0) ? `
-      <div style="margin-top:10px;text-align:center">
-        <button class="btn btn-success" onclick="empacarAmbos()">✅✅ Empacar completo (ambos)</button>
-      </div>` : ''}
-  `;
-  
-  document.getElementById('bodega-empaque-modal').style.display = 'flex';
-}
-
-function cerrarEmpaque() {
-  document.getElementById('bodega-empaque-modal').style.display = 'none';
-  empaqueCache.alumnoActual = null;
-}
-
-async function marcarEmpacado(tipo) {
-  const a = empaqueCache.alumnoActual;
-  if (!a) return;
-  
-  const prenda = tipo === 'top' ? a.prenda_top : a.prenda_bottom;
-  const talla = tipo === 'top' ? a.talla_top_key : a.talla_bottom_key;
-  if (!prenda || !talla) { alert('El alumno no tiene talla asignada'); return; }
-  
-  const codMap = {
-    'CAMISA':'C','BLUSA':'B','CAMISA_CELESTE':'CC','PANTALON':'P','PANTALON_BEIGE':'PB',
-    'FALDA':'F','FALDA_BEIGE':'FB','FALDA_C.E':'FCE','SHORT':'S'
-  };
-  const codPrenda = codMap[prenda] || prenda.slice(0,3);
-  
-  try {
-    // 1. Actualizar alumno
-    const patch = tipo === 'top' 
-      ? { estado_top: 'empacado', empacado_top_en: new Date().toISOString() }
-      : { estado_bottom: 'empacado', empacado_bottom_en: new Date().toISOString() };
-    patch.actualizado_en = new Date().toISOString();
-    await supaUpdate('alumno', a.id, patch);
-    
-    // 2. Registrar salida de bodega
-    await supaFetch('bodega_movimiento', 'POST', {
-      tipo: 'SALIDA_EMPAQUE',
-      cod_prenda: codPrenda, nombre_prenda: prenda, talla_key: talla,
-      cantidad: 1, alumno_id: a.id, escuela_id: a.escuela_id,
-      observaciones: `Empacado para ${a.nombre}`
-    });
-    
-    // Actualizar cache local
-    Object.assign(a, patch);
-    alumnosCache.stockPorTalla[talla] = Math.max(0, (alumnosCache.stockPorTalla[talla]||0) - 1);
-    
-    cerrarEmpaque();
-    renderAlumnosLista();
-  } catch(e) {
-    alert('Error: ' + e.message);
-  }
-}
-
-async function marcarEntregado(tipo) {
-  const a = empaqueCache.alumnoActual;
-  if (!a) return;
-  const prenda = tipo === 'top' ? a.prenda_top : a.prenda_bottom;
-  const talla = tipo === 'top' ? a.talla_top_key : a.talla_bottom_key;
-  const codMap = {
-    'CAMISA':'C','BLUSA':'B','CAMISA_CELESTE':'CC','PANTALON':'P','PANTALON_BEIGE':'PB',
-    'FALDA':'F','FALDA_BEIGE':'FB','FALDA_C.E':'FCE','SHORT':'S'
-  };
-  const codPrenda = codMap[prenda] || prenda.slice(0,3);
-  
-  try {
-    const patch = tipo === 'top' ? { estado_top: 'entregado' } : { estado_bottom: 'entregado' };
-    patch.actualizado_en = new Date().toISOString();
-    await supaUpdate('alumno', a.id, patch);
-    await supaFetch('bodega_movimiento', 'POST', {
-      tipo: 'SALIDA_ENTREGA',
-      cod_prenda: codPrenda, nombre_prenda: prenda, talla_key: talla,
-      cantidad: 1, alumno_id: a.id, escuela_id: a.escuela_id,
-      observaciones: `Entregado a ${a.nombre}`
-    });
-    Object.assign(a, patch);
-    cerrarEmpaque();
-    renderAlumnosLista();
-  } catch(e) { alert('Error: ' + e.message); }
-}
-
-async function empacarAmbos() {
-  const a = empaqueCache.alumnoActual;
-  if (!a) return;
-  await marcarEmpacado('top');
-  // Recuperar actualizado
-  empaqueCache.alumnoActual = alumnosCache.alumnos.find(x => x.id === a.id);
-  if (empaqueCache.alumnoActual && empaqueCache.alumnoActual.estado_bottom === 'pendiente') {
-    await marcarEmpacado('bottom');
+    if (typeof initAlumnosGlobal === 'function') await initAlumnosGlobal();
   }
 }
 
@@ -14659,9 +14107,32 @@ let alumnosGlobalCache = {
   filtroNivel: '',
   filtroTemporada: '',
   filtroEstado: '',            // 'pendiente'|'parcial'|'completo'|'entregado'|'sin_tallas'
+  filtroTalla: '',             // KEY exacta (ej. 'C14') — puente desde Estadística→Por talla
   masFiltrosAbierto: false,
   cargado: false,
 };
+
+// ── Puentes Registro ↔ Estadística (integración v33) ─────────────────
+// Desde una fila de Estadística→Por talla: ver LOS ALUMNOS de esa talla.
+function verAlumnosPorTalla(talla) {
+  const c = alumnosGlobalCache;
+  c.filtroTalla = talla;
+  c.filtroEstado = '';
+  c.busqueda = '';
+  c.pagina = 1;
+  if (typeof switchTab === 'function') switchTab('registro');
+  setTimeout(() => {
+    if (c.cargado && typeof renderAlumnosGlobal === 'function') renderAlumnosGlobal();
+    else if (typeof initAlumnosGlobal === 'function') initAlumnosGlobal();
+  }, 50);
+}
+
+// Desde una escuela filtrada en Registro: ver SU reporte en Estadística.
+function verEstadisticaEscuela(escuelaId) {
+  window._estEscuelaHint = escuelaId;
+  if (typeof switchTab === 'function') switchTab('estadistica');
+  setTimeout(() => { if (typeof switchSubEst === 'function') switchSubEst('escuela'); }, 50);
+}
 
 // Preferencia de orden para etiquetas — persistida en localStorage
 const ET_ORDEN_DEFAULT = ['escuela', 'sexo_fm', 'grado', 'nombre'];
@@ -14801,6 +14272,9 @@ function aplicarFiltrosAlumnos(c, opts = {}) {
   } else if (c.filtroEscuela) {
     lista = lista.filter(a => a.escuela_id === c.filtroEscuela);
   }
+  if (c.filtroTalla) {
+    lista = lista.filter(a => a.talla_top_key === c.filtroTalla || a.talla_bottom_key === c.filtroTalla);
+  }
   if (c.filtroNivel) lista = lista.filter(a => a.nivel === c.filtroNivel);
   if (c.filtroTemporada) lista = lista.filter(a => a.temporada_id === c.filtroTemporada);
   if (c.filtroEstado) {
@@ -14878,7 +14352,7 @@ function renderAlumnosGlobal() {
     c.filtroEscuela = '';
   }
   const escuelasSel = c.filtroEscuelas || [];
-  const algunFiltro = (c.busqueda || escuelasSel.length || c.filtroNivel || c.filtroEstado);
+  const algunFiltro = (c.busqueda || escuelasSel.length || c.filtroNivel || c.filtroEstado || c.filtroTalla);
   const masFiltrosAbierto = !!c.masFiltrosAbierto;
 
   // Opciones de escuela que aún NO están seleccionadas
@@ -14910,6 +14384,7 @@ function renderAlumnosGlobal() {
           onclick="aplicarFiltroEstado('sin_tallas')">⚠️ Falta tallar (${sinTallas})</button>
         <button class="btn btn-sm ${c.filtroEstado==='completo'?'btn-primary':'btn-ghost'}"
           onclick="aplicarFiltroEstado('completo')">✅ Completos (${completos})</button>
+        ${c.filtroTalla ? `<span class="btn btn-sm btn-primary" style="cursor:default" title="Filtro por talla (vino de Estadística)">📐 ${c.filtroTalla} <span style="margin-left:4px;cursor:pointer" onclick="alumnosGlobalCache.filtroTalla='';alumnosGlobalCache.pagina=1;renderAlumnosGlobal()">✕</span></span>` : ''}
         <span style="margin-left:auto;color:#888;font-size:11px;align-self:center">${totMostrando.toLocaleString()} mostrando</span>
       </div>
 
@@ -14928,7 +14403,7 @@ function renderAlumnosGlobal() {
               if (!e) return '';
               const label = e.alias || e.nombre;
               const sinAlias = !e.alias;
-              return `<span class="btn btn-sm btn-primary" style="cursor:default">🏫 ${label}${sinAlias ? ' ⚠️' : ''} <span style="margin-left:4px;cursor:pointer;opacity:0.85" onclick="editarEscuela('${eid}')" title="Editar escuela (alias, datos)">✏️</span> <span style="margin-left:2px;cursor:pointer" onclick="quitarFiltroEscuela('${eid}')" title="Quitar filtro">✕</span></span>`;
+              return `<span class="btn btn-sm btn-primary" style="cursor:default">🏫 ${label}${sinAlias ? ' ⚠️' : ''} <span style="margin-left:4px;cursor:pointer;opacity:0.85" onclick="verEstadisticaEscuela('${eid}')" title="Ver estadística de esta escuela (tallaje, contrato, tela)">📊</span> <span style="margin-left:2px;cursor:pointer;opacity:0.85" onclick="editarEscuela('${eid}')" title="Editar escuela (alias, datos)">✏️</span> <span style="margin-left:2px;cursor:pointer" onclick="quitarFiltroEscuela('${eid}')" title="Quitar filtro">✕</span></span>`;
             }).join('')}
             ${escuelasDisponibles.length > 0 ? `
               <select onchange="if(this.value){agregarFiltroEscuela(this.value); this.value='';}" style="padding:4px 6px;font-size:12px;border:1px solid var(--borde);border-radius:4px">
@@ -15100,6 +14575,7 @@ function limpiarFiltros() {
   alumnosGlobalCache.filtroNivel = '';
   alumnosGlobalCache.filtroTemporada = '';
   alumnosGlobalCache.filtroEstado = '';
+  alumnosGlobalCache.filtroTalla = '';
   alumnosGlobalCache.pagina = 1;
   renderAlumnosGlobal();
 }
@@ -15720,36 +15196,6 @@ async function verificarYAgregarGradoAlCatalogo(grado, alumnoId) {
       if (nivelSel) nivelSel.focus();
     }, 100);
   });
-}
-
-// Editar alumno desde vista global (path completo a Escuela > Tallaje)
-// Mantenido por compatibilidad — la vista global ahora usa editarAlumnoRapido.
-async function editarAlumnoGlobal(alumnoId) {
-  try {
-    const res = await supaFetch('alumno', 'GET', null, `?id=eq.${alumnoId}&limit=1`);
-    if (!res || res.length === 0) return;
-    const a = res[0];
-    
-    // Switchear al tab Registro, abrir escuela, sub-tab Tallaje, editar alumno
-    switchTab('registro');
-    setTimeout(async () => {
-      // Cambiar temporada si hace falta
-      if (a.temporada_id !== registroCache.temporadaActual) {
-        registroCache.temporadaActual = a.temporada_id;
-        renderRegistroHeader();
-        await cargarEscuelasTemporada();
-      }
-      // Abrir detalle de escuela
-      setTimeout(async () => {
-        await abrirDetalleEscuelaRegistro(a.escuela_id);
-        // Ir a Tallaje sub-tab
-        setTimeout(() => {
-          cambiarVistaDetalle('tallaje', document.querySelectorAll('#registro-detalle-subtabs .sub-tab')[0]);
-          setTimeout(() => editarAlumno(alumnoId), 200);
-        }, 200);
-      }, 200);
-    }, 100);
-  } catch(e) { alert('Error: ' + e.message); }
 }
 
 // Abre flow de nuevo alumno: pide escuela y redirige al sub-tab Tallaje
@@ -16640,35 +16086,44 @@ function gpToggleResumen() {
 // ── Resumen vivo de tallas (sobre TODO el filtro, no solo la página) ─
 
 function gpResumenHtml(lista) {
-  const conteo = {};  // prenda → talla → n
+  // Misma definición que Estadística→Por talla: el conteo principal son las
+  // piezas PENDIENTES (sin empacar/entregar); las ya listas se muestran
+  // aparte por prenda — así los números cuadran entre los dos menús.
+  const conteo = {};      // prenda → talla → n pendientes
+  const listas = {};      // prenda → n empacadas/entregadas
+  const pieza = (a, prenda, talla, estado) => {
+    if (!prenda || !talla) return;
+    if (estado === 'empacado' || estado === 'entregado') {
+      listas[prenda] = (listas[prenda] || 0) + 1;
+      return;
+    }
+    (conteo[prenda] = conteo[prenda] || {})[talla] = (conteo[prenda][talla] || 0) + 1;
+  };
   for (const a of lista) {
-    if (a.prenda_top && a.talla_top_key) {
-      const t = gpTallaTop(a);
-      (conteo[a.prenda_top] = conteo[a.prenda_top] || {})[t] = (conteo[a.prenda_top][t] || 0) + 1;
-    }
-    if (a.prenda_bottom && a.talla_bottom_key) {
-      const t = gpTallaBot(a);
-      (conteo[a.prenda_bottom] = conteo[a.prenda_bottom] || {})[t] = (conteo[a.prenda_bottom][t] || 0) + 1;
-    }
+    pieza(a, a.prenda_top, gpTallaTop(a), a.estado_top);
+    pieza(a, a.prenda_bottom, gpTallaBot(a), a.estado_bottom);
   }
   const sinTop = lista.filter(x => !x.talla_top_key).length;
   const sinBot = lista.filter(x => !x.talla_bottom_key).length;
-  const bloques = Object.keys(conteo).sort().map(p => {
-    const tallas = Object.entries(conteo[p])
+  const prendas = [...new Set([...Object.keys(conteo), ...Object.keys(listas)])].sort();
+  const bloques = prendas.map(p => {
+    const tallas = Object.entries(conteo[p] || {})
       .sort((x, y) => (parseInt(x[0], 10) || 999) - (parseInt(y[0], 10) || 999));
     const tot = tallas.reduce((s, t) => s + t[1], 0);
     return `
       <div style="margin-bottom:10px">
-        <div style="font-weight:700;font-size:12px;border-bottom:1px solid var(--borde);padding-bottom:2px;margin-bottom:4px">${gpEsc(p)} <span style="color:#888;font-weight:400">· ${tot}</span></div>
+        <div style="font-weight:700;font-size:12px;border-bottom:1px solid var(--borde);padding-bottom:2px;margin-bottom:4px">${gpEsc(p)} <span style="color:#888;font-weight:400">· ${tot} pend.</span></div>
         ${tallas.map(([t, n]) => `
           <div style="display:flex;justify-content:space-between;font-size:12px;padding:1px 2px">
             <span>${gpEsc(t)}</span><strong>${n}</strong>
-          </div>`).join('')}
+          </div>`).join('') || '<div style="color:#aaa;font-size:11px;padding:1px 2px">sin pendientes</div>'}
+        ${listas[p] ? `<div style="font-size:11px;color:var(--verde);padding:1px 2px">✓ ${listas[p]} ya empacada(s)</div>` : ''}
       </div>`;
   }).join('');
   return `
     <div class="card" style="padding:10px">
-      <div style="font-weight:700;font-size:13px;margin-bottom:8px">▤ Tallas del filtro actual</div>
+      <div style="font-weight:700;font-size:13px;margin-bottom:2px">▤ Tallas pendientes</div>
+      <div style="font-size:10px;color:#888;margin-bottom:8px">Del filtro actual · misma cuenta que Estadística→Por talla</div>
       ${bloques || '<div style="color:#aaa;font-size:12px">Sin tallas aún</div>'}
       ${(sinTop || sinBot) ? `<div style="font-size:11px;color:#c44;border-top:1px dashed var(--borde);padding-top:6px">⚠️ Falta top: ${sinTop} · bottom: ${sinBot}</div>` : ''}
     </div>`;

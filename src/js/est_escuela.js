@@ -42,6 +42,11 @@ let estEscuelaCache = {
 };
 
 async function initEstEscuela() {
+  // Puente desde Registro: llegar con la escuela ya elegida
+  if (window._estEscuelaHint) {
+    estEscuelaCache.escuelaSel = window._estEscuelaHint;
+    window._estEscuelaHint = null;
+  }
   const root = document.getElementById('est-sub-escuela-view');
   if (!root) return;
   root.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center">Cargando reporte por escuela...</div>';
