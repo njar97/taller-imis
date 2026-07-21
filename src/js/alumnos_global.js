@@ -1062,6 +1062,11 @@ async function editarAlumnoRapido(alumnoId) {
     document.getElementById('ae-nombre').value  = a.nombre || '';
     document.getElementById('ae-grado').value   = a.grado || '';
     document.getElementById('ae-obs').value     = a.observaciones || '';
+    // Observaciones plegadas: abiertas solo si ya hay algo (● = tiene contenido)
+    const obsDet = document.getElementById('ae-obs-det');
+    if (obsDet) obsDet.open = !!a.observaciones;
+    const obsHint = document.getElementById('ae-obs-hint');
+    if (obsHint) obsHint.textContent = a.observaciones ? '●' : '';
     document.getElementById('ae-subt').textContent = esc ? (esc.alias || esc.nombre) : '';
     // Posición dentro del filtro actual (para la navegación ◀ ▶)
     const navPos = document.getElementById('ae-nav-pos');

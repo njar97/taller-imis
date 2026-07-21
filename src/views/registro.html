@@ -148,6 +148,9 @@
           <button class="btn btn-ghost btn-sm" onclick="cerrarAlumnoEdit()" style="min-width:40px;padding:6px">✕</button>
         </div>
       </div>
+      <!-- Ficha COMPACTA (v33): identidad en una tira, Top/Bottom lado a
+           lado en pantallas anchas, y lo secundario (prenda manual,
+           observaciones) plegado. Mismos IDs — la lógica JS no cambia. -->
       <div class="modal-body" id="ae-body">
         <input type="hidden" id="ae-id">
         <input type="hidden" id="ae-prenda-top">
@@ -155,57 +158,54 @@
         <input type="hidden" id="ae-talla-top">
         <input type="hidden" id="ae-talla-bot">
 
-        <!-- Datos básicos -->
-        <div class="field">
-          <label>Nombre *</label>
-          <input type="text" id="ae-nombre" placeholder="Apellido, Nombre">
+        <!-- Identidad: nombre + sexo + grado en un solo bloque apretado -->
+        <input type="text" id="ae-nombre" placeholder="Apellido, Nombre"
+          style="width:100%;font-weight:600;margin-bottom:6px">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+          <button type="button" class="ae-sexo-btn btn btn-ghost btn-sm" data-val="M" onclick="aeSetSexo('M')" style="min-width:44px">♂</button>
+          <button type="button" class="ae-sexo-btn btn btn-ghost btn-sm" data-val="F" onclick="aeSetSexo('F')" style="min-width:44px">♀</button>
+          <input type="text" id="ae-grado" list="ae-grados-datalist" placeholder="Grado (ej: 3A)" oninput="aeRecalcular()"
+            style="flex:1;min-width:100px">
+          <datalist id="ae-grados-datalist"></datalist>
+          <span id="ae-nivel-info" style="font-size:11px;color:#666;white-space:nowrap">Nivel: <strong>—</strong></span>
         </div>
 
-        <div class="row2">
-          <div class="field">
-            <label>Sexo *</label>
-            <div style="display:flex;gap:6px">
-              <button type="button" class="ae-sexo-btn btn btn-ghost btn-sm" data-val="M" onclick="aeSetSexo('M')" style="flex:1">♂ Masculino</button>
-              <button type="button" class="ae-sexo-btn btn btn-ghost btn-sm" data-val="F" onclick="aeSetSexo('F')" style="flex:1">♀ Femenino</button>
+        <!-- Tallas: Top y Bottom lado a lado cuando cabe -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;margin-bottom:8px">
+          <div class="card" style="padding:8px 10px;margin:0;background:#F9FBFD">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:5px">
+              <span style="font-weight:600;font-size:12px">👕 <span id="ae-pt-label" style="font-weight:400;color:#666;font-size:11px"></span></span>
+              <span id="ae-tt-key" style="font-size:11px;color:var(--azul);font-weight:700"></span>
+            </div>
+            <div id="ae-tt-chips" style="display:flex;gap:4px;flex-wrap:wrap"></div>
+          </div>
+          <div class="card" style="padding:8px 10px;margin:0;background:#F9FBFD">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:5px">
+              <span style="font-weight:600;font-size:12px">👖 <span id="ae-pb-label" style="font-weight:400;color:#666;font-size:11px"></span></span>
+              <span id="ae-tb-key" style="font-size:11px;color:var(--azul);font-weight:700"></span>
+            </div>
+            <div id="ae-tb-chips" style="display:flex;gap:4px;flex-wrap:wrap"></div>
+            <div id="ae-tb-largo-wrap" style="margin-top:5px;display:none">
+              <div style="font-size:10px;color:#888;margin-bottom:3px">Largo:</div>
+              <div id="ae-tb-largos" style="display:flex;gap:4px;flex-wrap:wrap"></div>
             </div>
           </div>
-          <div class="field">
-            <label>Grado <span style="font-size:10px;color:#888;font-weight:normal">(elegí de la lista o escribí nuevo)</span></label>
-            <input type="text" id="ae-grado" list="ae-grados-datalist" placeholder="Ej: 3A, P5B" oninput="aeRecalcular()">
-            <datalist id="ae-grados-datalist"></datalist>
-            <div id="ae-nivel-info" style="font-size:11px;color:#666;margin-top:4px">Nivel: <strong>—</strong></div>
-          </div>
         </div>
 
-        <!-- TOP -->
-        <div class="card" style="padding:10px;margin-bottom:8px;background:#F9FBFD">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <div style="font-weight:600;font-size:13px">👕 Top</div>
-            <div id="ae-pt-label" style="font-size:11px;color:#666"></div>
-          </div>
-          <div style="font-size:11px;color:#888;margin-bottom:4px">Talla:</div>
-          <div id="ae-tt-chips" style="display:flex;gap:4px;flex-wrap:wrap"></div>
-          <div id="ae-tt-key" style="margin-top:6px;font-size:12px;color:var(--azul);font-weight:600"></div>
+        <!-- Estado de empaque (solo si tiene piezas empacadas/entregadas) -->
+        <div id="ae-estado-empaque" style="display:none;margin-bottom:8px">
+          <div style="font-weight:600;font-size:12px;color:#555;margin-bottom:4px">📦 Estado de empaque</div>
+          <div id="ae-estado-piezas" style="display:flex;flex-direction:column;gap:4px"></div>
         </div>
 
-        <!-- BOTTOM -->
-        <div class="card" style="padding:10px;margin-bottom:8px;background:#F9FBFD">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <div style="font-weight:600;font-size:13px">👖 Bottom</div>
-            <div id="ae-pb-label" style="font-size:11px;color:#666"></div>
-          </div>
-          <div style="font-size:11px;color:#888;margin-bottom:4px">Talla:</div>
-          <div id="ae-tb-chips" style="display:flex;gap:4px;flex-wrap:wrap"></div>
-          <div id="ae-tb-largo-wrap" style="margin-top:6px;display:none">
-            <div style="font-size:11px;color:#888;margin-bottom:4px">Largo:</div>
-            <div id="ae-tb-largos" style="display:flex;gap:4px;flex-wrap:wrap"></div>
-          </div>
-          <div id="ae-tb-key" style="margin-top:6px;font-size:12px;color:var(--azul);font-weight:600"></div>
-        </div>
-
-        <div class="field">
-          <label style="font-size:11px;color:#666">Cambiar prenda manualmente (avanzado)</label>
-          <div class="row2">
+        <!-- Secundario, plegado -->
+        <details id="ae-obs-det" style="margin-bottom:6px">
+          <summary style="cursor:pointer;list-style:none;font-size:12px;color:#666;padding:6px 8px;background:#F5F7FA;border-radius:6px;user-select:none">📝 Observaciones <span id="ae-obs-hint" style="color:#c90"></span></summary>
+          <textarea id="ae-obs" rows="2" style="margin-top:6px"></textarea>
+        </details>
+        <details style="margin-bottom:2px">
+          <summary style="cursor:pointer;list-style:none;font-size:12px;color:#666;padding:6px 8px;background:#F5F7FA;border-radius:6px;user-select:none">⚙️ Cambiar prenda manualmente</summary>
+          <div class="row2" style="margin-top:6px">
             <select id="ae-prenda-top-sel" onchange="aeSetPrenda('top', this.value)">
               <option value="">— Top auto —</option>
               <option value="CAMISA">CAMISA</option>
@@ -222,18 +222,7 @@
               <option value="SHORT">SHORT</option>
             </select>
           </div>
-        </div>
-
-        <div class="field">
-          <label>Observaciones</label>
-          <textarea id="ae-obs" rows="2"></textarea>
-        </div>
-
-        <!-- Estado de empaque (solo si el alumno tiene piezas empacadas/entregadas) -->
-        <div id="ae-estado-empaque" style="display:none;border-top:1px solid #EEE;padding-top:8px;margin-top:8px">
-          <div style="font-weight:600;font-size:12px;color:#555;margin-bottom:6px">📦 Estado de empaque</div>
-          <div id="ae-estado-piezas" style="display:flex;flex-direction:column;gap:4px"></div>
-        </div>
+        </details>
       </div>
       <div class="modal-footer" style="gap:6px;flex-wrap:wrap">
         <button class="btn btn-ghost" onclick="cerrarAlumnoEdit()">Cancelar</button>
