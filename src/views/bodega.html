@@ -141,6 +141,125 @@
     </div>
   </div>
 
+  <!-- Modal: MATERIALES — movimiento (conteo / compra / salida / ajuste) -->
+  <div id="mat-mov-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:480px">
+      <div class="modal-header">
+        <div class="card-title">🧵 Movimiento de material</div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarMatMov()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Tipo</label>
+          <select id="matmov-tipo" onchange="matMovTipoCambio()">
+            <option value="CONTEO">📊 Conteo (lo que hay)</option>
+            <option value="COMPRA">🛒 Compra recibida</option>
+            <option value="SALIDA">↗ Salida a producción</option>
+            <option value="AJUSTE">⚖ Ajuste</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Material *</label>
+          <select id="matmov-material"><option value="">— Elegí material —</option></select>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label id="matmov-cantidad-lbl">Cantidad *</label>
+            <input type="number" id="matmov-cantidad" step="any" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label>Fecha</label>
+            <input type="date" id="matmov-fecha">
+          </div>
+        </div>
+        <div id="matmov-ayuda" style="font-size:11px;color:#666;margin:-4px 0 8px"></div>
+        <div class="field">
+          <label>Observaciones</label>
+          <textarea id="matmov-obs" rows="2" placeholder="Ej: conteo de bodega, factura Coplaza…"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="cerrarMatMov()">Cancelar</button>
+        <button class="btn btn-success" id="matmov-btn" onclick="guardarMatMov()">✓ Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: MATERIALES — alta / edición del catálogo -->
+  <div id="mat-edit-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:560px">
+      <div class="modal-header">
+        <div class="card-title" id="mat-edit-titulo">+ Material nuevo</div>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarMatEditar()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="matedit-id">
+        <div class="field">
+          <label>Nombre corto *</label>
+          <input type="text" id="matedit-nombre" placeholder="Ej: Hilo blanco 12000Y">
+        </div>
+        <div class="field">
+          <label>Nombre como sale en la factura</label>
+          <input type="text" id="matedit-factura" placeholder="Ej: HILO POLI PANT 70/2 12000Y BLANCO 301">
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Categoría</label>
+            <select id="matedit-categoria">
+              <option value="HILO">🧵 Hilo</option>
+              <option value="BOTON">🔘 Botón</option>
+              <option value="ZIPPER">🤐 Zipper</option>
+              <option value="ELASTICO">➰ Elástico</option>
+              <option value="ENTRETELA">🩹 Entretela</option>
+              <option value="ETIQUETA">🏷 Etiqueta</option>
+              <option value="EMPAQUE">📦 Empaque</option>
+              <option value="OTRO">Otro</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Unidad *</label>
+            <input type="text" id="matedit-unidad" placeholder="cono, gruesa, unidad, yd, rollo">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Se compra por</label>
+            <input type="text" id="matedit-presentacion" placeholder="caja de 50, rollo de 75 yd, gruesa = 144">
+          </div>
+          <div class="field">
+            <label>Proveedor</label>
+            <input type="text" id="matedit-proveedor" placeholder="Comercial de Plásticos, Ardón…">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Pide el lote 1 (con merma)</label>
+            <input type="number" id="matedit-necesidad" step="any" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label>Pedido al proveedor (sin recibir)</label>
+            <input type="number" id="matedit-pedido" step="any" inputmode="decimal">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Precio por unidad (sin IVA)</label>
+            <input type="number" id="matedit-precio" step="any" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label>Notas</label>
+            <input type="text" id="matedit-obs">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" id="matedit-btn-baja" onclick="darBajaMaterial()" style="margin-right:auto;color:var(--rojo)">Ocultar</button>
+        <button class="btn btn-ghost" onclick="cerrarMatEditar()">Cancelar</button>
+        <button class="btn btn-success" onclick="guardarMatEditar()">✓ Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: SALIDA A ESCUELA — específico, con selects y stock visible -->
   <div id="bodega-salida-modal" class="modal" style="display:none">
     <div class="modal-content" style="max-width:540px">
