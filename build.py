@@ -35,6 +35,7 @@ JS_ORDER = [
     "tallaje.js",
     "importacion.js",
     "bodega.js",
+    "materiales.js",
     "empaque.js",
     "reportes.js",
     "alumnos_global.js",

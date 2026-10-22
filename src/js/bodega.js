@@ -24,6 +24,7 @@ function renderBodegaTabs() {
       <div class="sub-tab ${bodegaCache.vistaActual==='stock'?'active':''}" onclick="cambiarVistaBodega('stock')">📦 Stock</div>
       <div class="sub-tab ${bodegaCache.vistaActual==='vs_demanda'?'active':''}" onclick="cambiarVistaBodega('vs_demanda')">📊 Stock vs Demanda</div>
       <div class="sub-tab ${bodegaCache.vistaActual==='movimientos'?'active':''}" onclick="cambiarVistaBodega('movimientos')">🔄 Movimientos</div>
+      <div class="sub-tab ${bodegaCache.vistaActual==='materiales'?'active':''}" onclick="cambiarVistaBodega('materiales')" title="Hilo, botón, zipper, elástico, entretela">🧵 Materiales</div>
     </div>
   `;
 }
@@ -34,6 +35,7 @@ async function cambiarVistaBodega(v) {
   if (v === 'stock') await cargarBodegaStock();
   else if (v === 'vs_demanda') await cargarBodegaVsDemanda();
   else if (v === 'movimientos') await cargarMovimientos();
+  else if (v === 'materiales' && typeof cargarMateriales === 'function') await cargarMateriales();
 }
 
 async function cargarBodegaStock() {
