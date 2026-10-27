@@ -38,6 +38,7 @@ $jsOrder = @(
     'historial.js',
     'produccion.js',
     'plan_produccion.js',
+    'operarias.js',
     'asignaciones.js',
     'registro.js',
     'tallaje.js',
