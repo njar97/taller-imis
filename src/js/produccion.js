@@ -906,70 +906,7 @@ function switchSubProd(sub) {
   if (sub === 'grupos' && typeof initGrupos === 'function') initGrupos();
 }
 
-// ─── Operarias ────────────────────────────────────────────────────
-async function cargarOperarias() {
-  try {
-    operariasCache = await supaFetch('operaria','GET',null,'?order=nombre&limit=100');
-    renderOperarias();
-  } catch(e) {
-    console.error('Error cargando operarias:', e);
-  }
-}
-
-function renderOperarias() {
-  const cont = document.getElementById('operarias-lista');
-  if (!cont) return;
-  if (operariasCache.length === 0) {
-    cont.innerHTML = '<div class="text-muted">No hay operarias todavía. Agregá una.</div>';
-    return;
-  }
-  cont.innerHTML = operariasCache.map(op => `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border:1px solid var(--borde);border-radius:6px;margin-bottom:4px;${op.activo?'':'opacity:0.5;background:#F5F5F5'}">
-      <div>
-        <strong>${op.nombre}</strong>
-        ${op.activo?'':'<span class="text-muted" style="font-size:11px"> · inactiva</span>'}
-      </div>
-      <div style="display:flex;gap:4px">
-        <button class="btn-mini" onclick="renombrarOperaria('${op.id}','${op.nombre.replace(/'/g,"\\'")}')">✏️</button>
-        <button class="btn-mini ${op.activo?'btn-mini-danger':'btn-mini-success'}" onclick="toggleOperaria('${op.id}',${!op.activo})">
-          ${op.activo?'🚫 Desactivar':'✓ Activar'}
-        </button>
-      </div>
-    </div>
-  `).join('');
-}
-
-async function agregarOperaria() {
-  const nombre = document.getElementById('nueva-operaria').value.trim();
-  if (!nombre) return;
-  try {
-    await supaFetch('operaria','POST',{ nombre, activo: true });
-    document.getElementById('nueva-operaria').value = '';
-    await cargarOperarias();
-  } catch(e) {
-    alert('Error: ' + e.message);
-  }
-}
-
-async function renombrarOperaria(id, nombreActual) {
-  const nuevo = prompt('Nuevo nombre:', nombreActual);
-  if (!nuevo || nuevo.trim() === nombreActual) return;
-  try {
-    await supaUpdate('operaria', id, { nombre: nuevo.trim() });
-    await cargarOperarias();
-  } catch(e) {
-    alert('Error: ' + e.message);
-  }
-}
-
-async function toggleOperaria(id, activar) {
-  try {
-    await supaUpdate('operaria', id, { activo: activar });
-    await cargarOperarias();
-  } catch(e) {
-    alert('Error: ' + e.message);
-  }
-}
+// ─── Operarias: ver operarias.js ───
 
 // ─── Captura ──────────────────────────────────────────────────────
 async function initCaptura() {

@@ -29,6 +29,7 @@
       <button class="btn btn-ghost btn-sm" id="prod-sub-asignaciones" onclick="switchSubProd('asignaciones')" style="flex:1;min-width:80px">📋 Asignar</button>
       <button class="btn btn-ghost btn-sm" id="prod-sub-captura" onclick="switchSubProd('captura')" style="flex:1;min-width:80px">📝 Captura</button>
       <button class="btn btn-ghost btn-sm" id="prod-sub-plan" onclick="switchSubProd('plan')" style="flex:1;min-width:80px">📐 Plan</button>
+      <button class="btn btn-ghost btn-sm" id="prod-sub-operarias" onclick="switchSubProd('operarias')" style="flex:1;min-width:80px">👷 Operarias</button>
     </div>
   </div>
 
@@ -283,11 +284,9 @@
   <!-- SUB: Operarias (acceso desde Config) -->
   <div id="prod-sub-operarias-view" style="display:none">
     <div class="card">
-      <div class="card-title">👷 Operarias</div>
-      <div class="text-muted mb8" style="font-size:12px">Catálogo de operarias del taller. Usalo para asignar tareas en Producción.</div>
-      <div style="display:flex;gap:6px;margin-bottom:10px">
-        <input type="text" id="nueva-operaria" placeholder="Nombre de la operaria" style="flex:1;padding:6px">
-        <button class="btn btn-primary btn-sm" onclick="agregarOperaria()">+ Agregar</button>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">
+        <div class="card-title" style="margin:0">👷 Operarias y candidatas</div>
+        <button class="btn btn-primary btn-sm" onclick="opAbrirFicha(null)">+ Agregar</button>
       </div>
       <div id="operarias-lista"></div>
     </div>
