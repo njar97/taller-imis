@@ -30,6 +30,7 @@ JS_ORDER = [
     "bulto.js",
     "historial.js",
     "produccion.js",
+    "plan_produccion.js",
     "asignaciones.js",
     "registro.js",
     "tallaje.js",
