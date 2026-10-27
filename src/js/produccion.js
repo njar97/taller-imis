@@ -889,7 +889,7 @@ let FASE2_ACTIVA = localStorage.getItem('fase2_activa') === 'true';
 let FASE3_ACTIVA = localStorage.getItem('fase3_activa') === 'true';
 
 function switchSubProd(sub) {
-  ['dashboard','asignaciones','captura','operarias','grupos'].forEach(s => {
+  ['dashboard','asignaciones','captura','plan','operarias','grupos'].forEach(s => {
     const el = document.getElementById(`prod-sub-${s}-view`);
     if (el) el.style.display = (s===sub) ? 'block' : 'none';
     const btn = document.getElementById(`prod-sub-${s}`);
@@ -901,6 +901,7 @@ function switchSubProd(sub) {
   if (sub === 'dashboard') cargarProduccion();
   if (sub === 'asignaciones' && typeof initAsignaciones === 'function') initAsignaciones();
   if (sub === 'captura') initCaptura();
+  if (sub === 'plan') initPlanProduccion();
   if (sub === 'operarias') cargarOperarias();
   if (sub === 'grupos' && typeof initGrupos === 'function') initGrupos();
 }
