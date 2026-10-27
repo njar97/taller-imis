@@ -11,6 +11,8 @@ let buscadorCache = { alumnos: null, escuelas: null, debounce: null };
 // `kw` = palabras con las que el usuario podría buscarla. `ir()` navega
 // (no ejecuta acciones destructivas — solo lleva al lugar).
 const HERRAMIENTAS = [
+  { icono:'📐', nombre:'Hoja de corte: bolsa delantera del pantalón', kw:'hoja corte bolsa delantera pantalon separacion abertura imprimir mined',
+    ir: () => { _herrTab('corte'); _herrLuego(() => switchSubCorte('hojas')); } },
   { icono:'⚡', nombre:'Grilla del padrón (edición tipo Excel)', kw:'grilla excel editar tallas rapido masivo pegar columnas',
     ir: () => { if (typeof alumnosGlobalCache !== 'undefined') alumnosGlobalCache.vistaGrilla = true; _herrTab('registro'); } },
   { icono:'👤', nombre:'Alumnos / tallaje (Registro)', kw:'alumnos registro tallar tallas padron capturar lista',

@@ -9,6 +9,7 @@
       <button class="btn btn-ghost   btn-sm" id="corte-sub-trazos"   onclick="switchSubCorte('trazos')"   style="flex:1;min-width:80px">✂️ Trazos</button>
       <button class="btn btn-ghost   btn-sm" id="corte-sub-tendidos" onclick="switchSubCorte('tendidos')" style="flex:1;min-width:80px">📋 Tendidos</button>
       <button class="btn btn-ghost   btn-sm" id="corte-sub-bultos"   onclick="switchSubCorte('bultos')"   style="flex:1;min-width:80px">📦 Bultos</button>
+      <button class="btn btn-ghost   btn-sm" id="corte-sub-hojas"    onclick="switchSubCorte('hojas')"    style="flex:1;min-width:80px">📐 Hojas</button>
     </div>
   </div>
 
@@ -44,6 +45,11 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- SUB: Hojas para imprimir (hojas_corte.js) -->
+  <div id="corte-sub-hojas-view" style="display:none">
+    <div id="corte-hojas-content"></div>
   </div>
 
   <!-- SUB: Trazos / Tendidos / Bultos -->
