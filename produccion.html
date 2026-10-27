@@ -1,4 +1,4 @@
-<!-- Generado: 2026-10-26 23:36 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-10-27 14:39 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -535,6 +535,7 @@
       <button class="btn btn-ghost   btn-sm" id="corte-sub-trazos"   onclick="switchSubCorte('trazos')"   style="flex:1;min-width:80px">✂️ Trazos</button>
       <button class="btn btn-ghost   btn-sm" id="corte-sub-tendidos" onclick="switchSubCorte('tendidos')" style="flex:1;min-width:80px">📋 Tendidos</button>
       <button class="btn btn-ghost   btn-sm" id="corte-sub-bultos"   onclick="switchSubCorte('bultos')"   style="flex:1;min-width:80px">📦 Bultos</button>
+      <button class="btn btn-ghost   btn-sm" id="corte-sub-hojas"    onclick="switchSubCorte('hojas')"    style="flex:1;min-width:80px">📐 Hojas</button>
     </div>
   </div>
 
@@ -570,6 +571,11 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- SUB: Hojas para imprimir (hojas_corte.js) -->
+  <div id="corte-sub-hojas-view" style="display:none">
+    <div id="corte-hojas-content"></div>
   </div>
 
   <!-- SUB: Trazos / Tendidos / Bultos -->
@@ -3972,7 +3978,7 @@ function initCorte() {
 
 function switchSubCorte(sub) {
   corteSubActual = sub;
-  const subs = ['nuevo', 'trazos', 'tendidos', 'bultos'];
+  const subs = ['nuevo', 'trazos', 'tendidos', 'bultos', 'hojas'];
   subs.forEach(s => {
     const btn = document.getElementById('corte-sub-' + s);
     if (btn) {
@@ -3983,11 +3989,20 @@ function switchSubCorte(sub) {
 
   const nuevoView = document.getElementById('corte-sub-nuevo-view');
   const listaView = document.getElementById('corte-sub-lista-view');
+  const hojasView = document.getElementById('corte-sub-hojas-view');
   if (!nuevoView || !listaView) return;
+  if (hojasView) hojasView.style.display = sub === 'hojas' ? '' : 'none';
 
   if (sub === 'nuevo') {
     nuevoView.style.display = '';
     listaView.style.display = 'none';
+    return;
+  }
+
+  if (sub === 'hojas') {
+    nuevoView.style.display = 'none';
+    listaView.style.display = 'none';
+    if (typeof initHojasCorte === 'function') initHojasCorte();
     return;
   }
 
@@ -5724,6 +5739,8 @@ let buscadorCache = { alumnos: null, escuelas: null, debounce: null };
 // `kw` = palabras con las que el usuario podría buscarla. `ir()` navega
 // (no ejecuta acciones destructivas — solo lleva al lugar).
 const HERRAMIENTAS = [
+  { icono:'📐', nombre:'Hoja de corte: bolsa delantera del pantalón', kw:'hoja corte bolsa delantera pantalon separacion abertura imprimir mined',
+    ir: () => { _herrTab('corte'); _herrLuego(() => switchSubCorte('hojas')); } },
   { icono:'⚡', nombre:'Grilla del padrón (edición tipo Excel)', kw:'grilla excel editar tallas rapido masivo pegar columnas',
     ir: () => { if (typeof alumnosGlobalCache !== 'undefined') alumnosGlobalCache.vistaGrilla = true; _herrTab('registro'); } },
   { icono:'👤', nombre:'Alumnos / tallaje (Registro)', kw:'alumnos registro tallar tallas padron capturar lista',

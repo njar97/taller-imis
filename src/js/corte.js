@@ -11,7 +11,7 @@ function initCorte() {
 
 function switchSubCorte(sub) {
   corteSubActual = sub;
-  const subs = ['nuevo', 'trazos', 'tendidos', 'bultos'];
+  const subs = ['nuevo', 'trazos', 'tendidos', 'bultos', 'hojas'];
   subs.forEach(s => {
     const btn = document.getElementById('corte-sub-' + s);
     if (btn) {
@@ -22,11 +22,20 @@ function switchSubCorte(sub) {
 
   const nuevoView = document.getElementById('corte-sub-nuevo-view');
   const listaView = document.getElementById('corte-sub-lista-view');
+  const hojasView = document.getElementById('corte-sub-hojas-view');
   if (!nuevoView || !listaView) return;
+  if (hojasView) hojasView.style.display = sub === 'hojas' ? '' : 'none';
 
   if (sub === 'nuevo') {
     nuevoView.style.display = '';
     listaView.style.display = 'none';
+    return;
+  }
+
+  if (sub === 'hojas') {
+    nuevoView.style.display = 'none';
+    listaView.style.display = 'none';
+    if (typeof initHojasCorte === 'function') initHojasCorte();
     return;
   }
 
