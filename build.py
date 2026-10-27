@@ -46,6 +46,7 @@ JS_ORDER = [
     "grupos.js",
     "auditoria.js",
     "config.js",
+    "atras.js",
 ]
 
 VIEWS_ORDER = [
