@@ -52,7 +52,8 @@ $jsOrder = @(
     'exportar.js',
     'grupos.js',
     'auditoria.js',
-    'config.js'
+    'config.js',
+    'atras.js'
 )
 
 $viewsOrder = @(
