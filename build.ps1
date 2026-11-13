@@ -37,6 +37,7 @@ $jsOrder = @(
     'bulto.js',
     'historial.js',
     'corte_ficha.js',
+    'editor_trazo.js',
     'produccion.js',
     'plan_produccion.js',
     'operarias.js',

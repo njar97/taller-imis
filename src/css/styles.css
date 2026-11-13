@@ -456,3 +456,72 @@
     width: 60% !important;
   }
 }
+
+  /* ═══ Editor de trazo (v3.36) — pantalla completa, sirve en el celular ═══ */
+  .ed-overlay.modal { padding: 0; background: #F0F4F8; flex-direction: column; align-items: stretch; justify-content: flex-start; overflow-x: hidden; overflow-y: auto; }
+  .ed-overlay [hidden] { display: none !important; }
+  .ed-overlay .ed-top { padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top, 0px)); gap: 8px; flex-wrap: wrap; justify-content: flex-start; background: var(--azul); color: white; border-bottom: 0; }
+  .ed-overlay .ed-titulo { font-size: 16px; font-weight: 700; flex: 1 1 160px; min-width: 0; }
+  .ed-overlay .ed-cerrar { order: 99; min-width: 44px; min-height: 40px; font-size: 15px; justify-content: center; }
+  .ed-overlay select, .ed-overlay input { width: auto; padding: 8px 10px; font-size: 14px; min-height: 40px; }
+  .ed-overlay .ed-versiones { max-width: 280px; min-width: 0; flex: 0 1 auto; }
+  .ed-overlay .ed-datos { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 6px 12px; font-size: 13px; color: #555; background: white; border-bottom: 1px solid var(--borde); }
+  .ed-overlay .ed-dato b { color: var(--texto); font-variant-numeric: tabular-nums; }
+  .ed-overlay .ed-dato.ok b { color: var(--success-text); }
+  .ed-overlay .ed-dato.malo b, .ed-overlay .ed-guard.malo { color: var(--rojo); }
+  .ed-overlay .ed-guard { font-weight: 600; }
+  .ed-overlay .ed-barra { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 8px; background: white; border-bottom: 1px solid var(--borde); }
+  .ed-overlay .ed-grupo { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; padding-right: 8px; border-right: 1px solid var(--border-light); }
+  .ed-overlay .ed-grupo:last-child { border-right: 0; }
+  .ed-overlay .ed-grupo > span { font-size: 11px; color: #777; margin-right: 2px; }
+  .ed-overlay .ed-b { font-family: Arial, sans-serif; font-size: 14px; color: var(--texto); background: var(--gris); border: 1px solid var(--borde); border-radius: 8px; padding: 6px 10px; min-height: 40px; min-width: 40px; cursor: pointer; touch-action: manipulation; }
+  .ed-overlay .ed-b:hover:not(:disabled) { border-color: var(--azul2); }
+  .ed-overlay .ed-b:disabled { opacity: .4; cursor: default; }
+  .ed-overlay .ed-b.primario { background: var(--azul); color: white; border-color: var(--azul); font-weight: 700; }
+  .ed-overlay .ed-b.peligro { color: var(--rojo); }
+  .ed-overlay .ed-b[aria-pressed="true"] { background: var(--azul-claro); border-color: var(--azul2); }
+  .ed-overlay .ed-guardar input { width: 180px; }
+  .ed-overlay .ed-info { padding: 6px 12px; font-size: 13px; color: #555; min-height: 30px; }
+  .ed-overlay .ed-malo { color: var(--rojo); }
+  .ed-overlay .ed-vieja { margin: 6px 8px 0; padding: 8px 10px; background: var(--ambar-claro); border-left: 4px solid var(--ambar); border-radius: 6px; font-size: 13px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .ed-overlay .ed-panel { margin: 6px 8px 0; padding: 10px; background: white; border: 1px solid var(--azul2); border-radius: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .ed-overlay .ed-panel-tit { font-weight: 700; color: var(--azul); font-size: 14px; }
+  .ed-overlay .ed-panel-tit span { font-weight: 400; color: #777; font-size: 12px; }
+  .ed-overlay .ed-panel label { text-transform: none; letter-spacing: 0; font-size: 12px; display: flex; flex-direction: column; gap: 2px; margin: 0; }
+  .ed-overlay .ed-fila { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+  .ed-overlay .ed-ap-pz select { max-width: 260px; }
+  .ed-overlay .ed-ap-msg { font-size: 12px; color: #555; min-height: 16px; }
+  .ed-overlay .ed-mesa { flex: 1; min-height: 200px; overflow: auto; background: #dfe5ec; margin: 0 8px 8px; border: 1px solid var(--borde); border-radius: 8px; touch-action: none; cursor: grab; overscroll-behavior: contain; }
+  .ed-overlay .ed-mesa.arrastrando { cursor: grabbing; }
+  .ed-overlay .ed-mesa svg { display: block; }
+  .ed-overlay .ed-pieza polygon { stroke: #10202f; stroke-width: .25; cursor: move; }
+  .ed-overlay .ed-pieza.sel polygon { stroke: #ffb000; stroke-width: .9; }
+  .ed-overlay .ed-pieza.montada polygon { fill: #d93025 !important; fill-opacity: .85; }
+  .ed-overlay svg.con-foto .ed-pieza polygon { fill-opacity: .28; stroke-width: .45; }
+  .ed-overlay svg.con-foto .ed-pieza.montada polygon { fill-opacity: .45; }
+  .ed-overlay svg.con-foto .ed-pieza.sel polygon { fill-opacity: .4; }
+  .ed-overlay svg.con-foto .ed-etq { fill: #fff; paint-order: stroke; stroke: #10202f; stroke-width: .5; }
+  .ed-overlay .ed-etq { font-family: ui-monospace, Consolas, monospace; font-size: 3.6px; font-weight: 700; fill: #10202f; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+  .ed-overlay .ed-etq.chica { font-size: 2.6px; }
+  .ed-overlay .ed-regla { font-family: ui-monospace, Consolas, monospace; font-size: 3.4px; fill: #5c6b79; }
+  .ed-overlay .ed-ayuda { padding: 0 12px 8px; padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)); font-size: 11px; color: #777; }
+  @media (max-width: 640px) {
+    .ed-overlay .ed-grupo { border-right: 0; padding-right: 0; }
+    .ed-overlay .ed-grupo:not(.ed-guardar):not(.ed-arrimar) { display: contents; }
+    .ed-overlay .ed-arrimar { flex: 1 1 100%; }
+    .ed-overlay .ed-grupo > span { display: none; }
+    .ed-overlay .ed-grupo > span.ed-lbl-arrimar { display: inline; font-size: 11px; color: #777; }
+    .ed-overlay .ed-largo { display: none; }
+    .ed-overlay .ed-barra { gap: 4px; padding: 6px; }
+    .ed-overlay .ed-b { padding: 4px 8px; font-size: 13px; }
+    .ed-overlay .ed-ayuda { display: none; }
+    .ed-overlay .ed-guardar { flex: 1 1 100%; }
+    .ed-overlay .ed-guardar input { flex: 1; width: auto; min-width: 0; }
+    .ed-overlay .ed-top { flex-wrap: nowrap; padding-left: 10px; padding-right: 10px; }
+    .ed-overlay .ed-titulo { font-size: 14px; flex: 0 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ed-overlay .ed-versiones { max-width: none; flex: 1 1 90px; order: 1; font-size: 13px; padding: 6px; }
+    .ed-overlay .ed-cerrar { order: 2; flex: 0 0 auto; }
+    .ed-overlay .ed-panel { padding: 8px; }
+    .ed-overlay .ed-ap-pz select { max-width: 170px; }
+    .ed-overlay .ed-mesa { margin: 0 4px 4px; min-height: 260px; }
+  }

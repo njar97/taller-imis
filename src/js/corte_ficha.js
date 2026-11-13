@@ -12,9 +12,11 @@ function escH(s) {
 async function renderFichaCorte(trazoId) {
   const cont = document.getElementById('det-contenido');
   const [trazo] = await supaFetch('trazo', 'GET', null, `?id=eq.${trazoId}`);
-  const [tallas, tendidos] = await Promise.all([
+  const [tallas, tendidos, acomodo] = await Promise.all([
     supaFetch('trazo_talla_marcada', 'GET', null, `?trazo_id=eq.${trazoId}&order=orden`),
-    supaFetch('tendido', 'GET', null, `?trazo_id=eq.${trazoId}&order=fecha`)
+    supaFetch('tendido', 'GET', null, `?trazo_id=eq.${trazoId}&order=fecha`),
+    // último acomodo guardado en el editor de trazo (v3.36); si la tabla aún no existe, no estorba
+    supaFetch('trazo_layout', 'GET', null, `?trazo_id=eq.${trazoId}&select=version,creado_en,largo_cm&order=version.desc&limit=1`).catch(() => null)
   ]);
   document.getElementById('det-titulo').textContent = `Corte ${trazo.letra_corte || '—'} · ${trazo.codigo_corte || trazo.fecha}`;
 
@@ -25,6 +27,13 @@ async function renderFichaCorte(trazoId) {
       <a href="${escH(trazo.foto_url)}" target="_blank" rel="noopener"><img src="${escH(trazo.foto_url)}" style="width:100%;border-radius:8px;border:1px solid #ddd" alt="Trazo del corte ${escH(trazo.letra_corte)}"></a>
       <div class="text-muted" style="font-size:11px;margin-top:4px">Tocá la imagen para verla grande.</div></div>`;
   }
+  const ultAc = Array.isArray(acomodo) && acomodo[0];
+  const txtAc = acomodo === null ? ''
+    : ultAc ? `Último acomodo guardado: v${ultAc.version} · ${new Date(ultAc.creado_en).toLocaleString('es-SV', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}${ultAc.largo_cm ? ' · ' + (ultAc.largo_cm / 100).toFixed(2) + ' m' : ''}`
+    : 'Todavía no tiene acomodo guardado: empezás con la tela vacía.';
+  html += `<div class="detalle-seccion">
+      <button class="btn btn-primary btn-block" style="font-size:15px;padding:14px 16px" onclick="abrirEditorTrazo('${escH(trazoId)}')">✏️ Abrir en el editor de trazo</button>
+      <div class="text-muted" id="ficha-ed-ver" style="font-size:11px;margin-top:4px;text-align:center">${escH(txtAc)}</div></div>`;
   html += `<div class="detalle-seccion">
       <div class="detalle-seccion-titulo">Datos del trazo</div>
       <div class="detalle-campo"><span>Fecha</span><span>${escH(trazo.fecha)}</span></div>
