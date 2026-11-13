@@ -24,6 +24,7 @@ $jsOrder = @(
     'data_cache.js',
     'dashboard.js',
     'corte.js',
+    'hojas_corte.js',
     'estadistica.js',
     'estadistica_tallas.js',
     'est_escuela.js',
