@@ -1,10 +1,13 @@
 // ══════════════════════════════════════════════════════════════════════
 // BÚSQUEDA GLOBAL EN EL HEADER
-// Input en el nav que matchea contra alumnos (nombre) y escuelas
-// (nombre/alias/CDE). Click en resultado lleva al destino correspondiente.
+// Input en el nav que matchea contra alumnos (nombre), alumnos de talla
+// especial (nombre/NIE) y escuelas (nombre/alias/CDE). Click en resultado
+// lleva al destino correspondiente.
+// Alumnos y especiales: SOLO los de la temporada elegida en Registro (la
+// activa por defecto), para no mezclar la lista precargada de otros años.
 // ══════════════════════════════════════════════════════════════════════
 
-let buscadorCache = { alumnos: null, escuelas: null, debounce: null };
+let buscadorCache = { alumnos: null, escuelas: null, especiales: null, temporadaId: null, debounce: null };
 
 // ── Índice de herramientas ───────────────────────────────────────────
 // Además de alumnos/escuelas, Ctrl+K encuentra las funciones de la app.
@@ -17,6 +20,8 @@ const HERRAMIENTAS = [
     ir: () => { if (typeof alumnosGlobalCache !== 'undefined') alumnosGlobalCache.vistaGrilla = true; _herrTab('registro'); } },
   { icono:'👤', nombre:'Alumnos / tallaje (Registro)', kw:'alumnos registro tallar tallas padron capturar lista',
     ir: () => _herrTab('registro') },
+  { icono:'📏', nombre:'Tallas especiales (alumnos con medida propia)', kw:'tallas especiales medidas cintura cadera largo pecho nie alumnos csv',
+    ir: () => { window._regHintVista = 'especiales'; _herrTab('registro'); } },
   { icono:'🏷', nombre:'Etiquetas de alumnos (PDF)', kw:'etiquetas imprimir pdf pegatinas',
     ir: () => _herrTab('registro') },
   { icono:'📥', nombre:'Importar alumnos (pegar lista)', kw:'importar pegar lista excel subir alumnos nuevos',
@@ -110,19 +115,36 @@ async function buscadorOnInput(ev) {
   buscadorCache.debounce = setTimeout(() => buscadorRun(q), 200);
 }
 
+// Normaliza para buscar sin tildes (PEÑATE = penate)
+function _buscNorm(s) {
+  return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
 async function buscadorRun(q) {
+  // Temporada de trabajo: la elegida en Registro o, si no, la activa
+  let tempId = null;
+  try {
+    tempId = typeof asegurarTemporadaRegistro === 'function' ? await asegurarTemporadaRegistro() : null;
+  } catch (e) { console.warn('Buscador temporada:', e.message); }
+  if (buscadorCache.temporadaId !== tempId) {
+    buscadorCache.alumnos = null;
+    buscadorCache.especiales = null;
+    buscadorCache.temporadaId = tempId;
+  }
   try {
     if (!buscadorCache.alumnos || !buscadorCache.escuelas) {
-      // Reusar lo que ya tenga la app cargado si está disponible
-      if (typeof alumnosGlobalCache !== 'undefined'
-          && alumnosGlobalCache.cargado && alumnosGlobalCache.alumnos?.length > 0) {
-        buscadorCache.alumnos = alumnosGlobalCache.alumnos.map(a => ({
+      // Reusar lo que ya tenga la app cargado si es de la misma temporada
+      const ag = typeof alumnosGlobalCache !== 'undefined' ? alumnosGlobalCache : null;
+      if (ag && ag.cargado && ag.temporadaId === tempId && ag.alumnos?.length > 0) {
+        buscadorCache.alumnos = ag.alumnos.map(a => ({
           id: a.id, nombre: a.nombre, grado: a.grado, escuela_id: a.escuela_id,
         }));
-        buscadorCache.escuelas = Object.values(alumnosGlobalCache.escuelas || {});
+        buscadorCache.escuelas = Object.values(ag.escuelas || {});
       } else {
         const [als, escs] = await Promise.all([
-          supaFetchAll('alumno', '?activo=eq.true&select=id,nombre,grado,escuela_id&limit=10000'),
+          tempId
+            ? supaFetchAll('alumno', `?activo=eq.true&temporada_id=eq.${tempId}&select=id,nombre,grado,escuela_id`)
+            : Promise.resolve([]),
           supaFetchAll('escuela', '?activa=eq.true&select=id,nombre,alias,codigo_cde&order=alias'),
         ]);
         buscadorCache.alumnos = als;
@@ -133,6 +155,22 @@ async function buscadorRun(q) {
     // Sin datos no hay alumnos/escuelas, pero las herramientas (estáticas)
     // se pueden buscar igual — no abortar.
     console.warn('Buscador init:', e.message);
+  }
+  // Tallas especiales: si Registro ya las tiene de esta temporada, esas
+  // (están al día con lo que se edita); si no, se piden una vez.
+  let especiales = [];
+  try {
+    if (typeof regCant !== 'undefined' && regCant.cargado && regCant.temporadaId === tempId) {
+      especiales = regCant.esp;
+    } else if (tempId) {
+      if (!buscadorCache.especiales) {
+        buscadorCache.especiales = await supaFetchAll('talla_especial',
+          `?temporada_id=eq.${tempId}&select=id,nombre,nie,grado,escuela_id,talla,estado&order=nombre`);
+      }
+      especiales = buscadorCache.especiales;
+    }
+  } catch (e) {
+    console.warn('Buscador especiales:', e.message);
   }
 
   const lq = q.toLowerCase();
@@ -147,12 +185,16 @@ async function buscadorRun(q) {
   const als = (buscadorCache.alumnos || [])
     .filter(a => (a.nombre || '').toLowerCase().includes(lq))
     .slice(0, 20);
+  const nq = _buscNorm(q).trim();
+  const esps = (especiales || [])
+    .filter(r => _buscNorm(r.nombre).includes(nq) || String(r.nie || '').includes(nq))
+    .slice(0, 10);
 
   const herr = buscarHerramientas(q);
 
   const cont = document.getElementById('buscador-results');
   if (!cont) return;
-  if (escs.length === 0 && als.length === 0 && herr.length === 0) {
+  if (escs.length === 0 && als.length === 0 && esps.length === 0 && herr.length === 0) {
     cont.innerHTML = '<div style="padding:12px;color:#888;font-size:12px">Sin resultados para "'+_buscEsc(q)+'"</div>';
     cont.style.display = 'block';
     return;
@@ -173,6 +215,18 @@ async function buscadorRun(q) {
       html += `<div class="search-result" onclick="buscadorIrEscuela('${e.id}')">
         🏫 <strong>${_buscEsc(e.alias || e.nombre || '')}</strong>
         <span style="color:#888;font-size:11px;margin-left:4px">CDE ${_buscEsc(e.codigo_cde || '?')}</span>
+      </div>`;
+    }
+  }
+  if (esps.length > 0) {
+    html += '<div class="search-section">📏 Tallas especiales (' + esps.length + ')</div>';
+    for (const r of esps) {
+      const e = escMap[r.escuela_id] || (typeof regCant !== 'undefined' && regCant.escuelas.get(r.escuela_id));
+      const escLbl = e ? (e.alias || e.nombre || '') : '';
+      const extra = [r.grado, escLbl, r.talla].filter(Boolean).map(_buscEsc).join(' · ');
+      html += `<div class="search-result" onclick="buscadorIrEspecial('${r.id}')">
+        📏 <strong>${_buscEsc(r.nombre || '')}</strong>
+        <span style="color:#888;font-size:11px;margin-left:4px">${extra}</span>
       </div>`;
     }
   }
@@ -203,13 +257,23 @@ function buscadorIrEscuela(escId) {
     alumnosGlobalCache.busqueda = '';
     alumnosGlobalCache.filtroEstado = '';
   }
-  if (typeof switchTab === 'function') switchTab('registro');
+  // Temporada por pedido (2026): Registro abre la ficha de la escuela
+  window._regHintEscuela = escId;
+  _herrTab('registro');
   setTimeout(() => {
+    if (typeof registroEnModoPedido === 'function' && registroEnModoPedido()) return;
     if (typeof alumnosGlobalCache !== 'undefined' && alumnosGlobalCache.cargado
         && typeof renderAlumnosGlobal === 'function') renderAlumnosGlobal();
     else if (typeof initAlumnosGlobal === 'function') initAlumnosGlobal();
   }, 50);
   buscadorCerrar();
+}
+
+// Alumno de talla especial: Registro abre su escuela con la fila desplegada
+function buscadorIrEspecial(id) {
+  window._regHintEspecial = id;
+  buscadorCerrar();
+  _herrTab('registro');
 }
 
 function buscadorIrAlumno(id) {

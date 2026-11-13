@@ -2,6 +2,7 @@
 // BOTÓN ATRÁS DEL CELULAR
 // Sin esto, atrás sacaba de la app. Ahora, en orden:
 //   1. si hay una ventana (.modal) abierta, la cierra;
+//      (en Registro, con la ficha de una escuela abierta, vuelve a la lista)
 //   2. si no, vuelve a la pantalla anterior;
 //   3. si no hay anterior y no está en Inicio, va a Inicio;
 //   4. en Inicio, sale de la app.
@@ -72,6 +73,8 @@ window.addEventListener('popstate', () => {
   const m = _atrasModalAbierto();
   if (m) { _atrasCerrarModal(m); _atrasArmar(); return; }
   const actual = _atrasVistaActiva();
+  // Pantalla interna: la ficha de una escuela en Registro vuelve a la lista
+  if (actual === 'registro' && typeof registroCantAtras === 'function' && registroCantAtras()) { _atrasArmar(); return; }
   while (_atras.pila.length) {
     const v = _atras.pila.pop();
     if (v !== actual && document.getElementById('view-' + v)) { _atrasIr(v); _atrasArmar(); return; }

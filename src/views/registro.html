@@ -1,13 +1,21 @@
-<!-- ══════════ REGISTRO ══════════ una sola vista de alumnos con filtros -->
+<!-- ══════════ REGISTRO ══════════ temporada elegida (la activa por defecto):
+     · con PEDIDO por cantidades (2026): escuelas con su pedido por talla + tallas especiales
+     · con ALUMNOS (2025): lista de alumnos con filtros -->
 <div id="view-registro" class="view">
   <div id="alert-registro"></div>
 
-  <!-- Header invisible que mantiene compat con código que lo busca -->
-  <div id="registro-header" style="display:none"></div>
+  <!-- Selector de temporada (registro.js → renderRegistroHeader) -->
+  <div id="registro-header"><div class="text-muted" style="padding:20px;text-align:center">Cargando...</div></div>
+  <!-- Compat: cargarEscuelasTemporada() todavía escribe acá -->
   <div id="registro-lista" style="display:none"></div>
 
-  <!-- Lista global de alumnos con filtros/chips arriba -->
-  <div id="alumnos-global-contenido">
+  <!-- Temporada por cantidades (registro_cantidad.js) -->
+  <div id="registro-cant-contenido" style="display:none">
+    <div class="text-muted" style="padding:20px;text-align:center">Cargando...</div>
+  </div>
+
+  <!-- Temporada con alumnos: lista global con filtros/chips arriba -->
+  <div id="alumnos-global-contenido" style="display:none">
     <div class="text-muted" style="padding:20px;text-align:center">Cargando alumnos...</div>
   </div>
   

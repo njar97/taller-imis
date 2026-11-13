@@ -21,21 +21,76 @@ let registroCache = {
 // Mantener variable "pedidosCache" para compatibilidad con código viejo
 let pedidosCache = registroCache; // alias
 
+// Temporadas para el selector (vista chica; cache corto para no pedirla dos
+// veces cuando Registro, la lista de alumnos y el buscador arrancan juntos).
+async function temporadasRegistro() {
+  const temps = await cachedFetch('registro-temporadas',
+    () => supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.desc&limit=20'),
+    { ttl: 60_000, group: 'temporada' });
+  registroCache.temporadas = temps || [];
+  return registroCache.temporadas;
+}
+
+// Temporada con la que trabaja Registro: la que se eligió en esta sesión o,
+// si no, la ACTIVA. La usan también la lista de alumnos y el buscador.
+async function asegurarTemporadaRegistro() {
+  if (!registroCache.temporadas || registroCache.temporadas.length === 0) await temporadasRegistro();
+  const temps = registroCache.temporadas || [];
+  if (!temps.some(t => t.id === registroCache.temporadaActual)) {
+    const activa = temps.find(t => t.estado === 'activa') || temps[0];
+    registroCache.temporadaActual = activa ? activa.id : null;
+  }
+  return registroCache.temporadaActual;
+}
+
+function temporadaRegistro() {
+  return (registroCache.temporadas || []).find(t => t.id === registroCache.temporadaActual) || null;
+}
+
+// 2026 en adelante: pedido por cantidades, sin lista de alumnos. Mismo
+// criterio que Inicio (dashboard.js): la temporada tiene filas de pedido.
+function registroEnModoPedido(t) {
+  const temp = t === undefined ? temporadaRegistro() : t;
+  return !!temp && Number(temp.num_pedidos) > 0;
+}
+
 async function initRegistro() {
-  // Una sola vista: lista global de alumnos con chips de filtro arriba.
   try {
     const [temps, grados] = await Promise.all([
-      supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.desc&limit=20'),
+      temporadasRegistro(),
       supaFetch('vw_grados_conocidos', 'GET', null, '?limit=200').catch(() => [])
     ]);
-    registroCache.temporadas = temps;
     registroCache.gradosConocidos = grados;
-    const activa = temps.find(t => t.estado === 'activa') || temps[0];
-    if (activa) registroCache.temporadaActual = activa.id;
-    if (typeof initAlumnosGlobal === 'function') initAlumnosGlobal();
+    await asegurarTemporadaRegistro();
+    renderRegistroHeader();
+    await mostrarRegistroTemporada();
   } catch(e) {
     const cont = document.getElementById('alumnos-global-contenido');
-    if (cont) cont.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+    if (cont) {
+      cont.style.display = '';
+      cont.innerHTML = `<div class="alert alert-error">Error: ${rcEsc(e.message)}</div>`;
+    }
+  }
+}
+
+// Pinta la temporada elegida: por pedido (2026) o con su lista de alumnos (2025).
+async function mostrarRegistroTemporada() {
+  const t = temporadaRegistro();
+  const porPedido = registroEnModoPedido(t);
+  const cant = document.getElementById('registro-cant-contenido');
+  const alumnos = document.getElementById('alumnos-global-contenido');
+  if (cant) cant.style.display = porPedido ? '' : 'none';
+  if (alumnos) alumnos.style.display = porPedido ? 'none' : '';
+  if (porPedido) {
+    await initRegistroCantidad(t.id);
+  } else {
+    // Atajos del buscador que solo sirven en la vista por pedido
+    window._regHintEspecial = window._regHintVista = null;
+    if (window._regHintEscuela && typeof alumnosGlobalCache !== 'undefined') {
+      alumnosGlobalCache.filtroEscuelas = [window._regHintEscuela];
+    }
+    window._regHintEscuela = null;
+    if (typeof initAlumnosGlobal === 'function') initAlumnosGlobal();
   }
 }
 
@@ -50,43 +105,31 @@ const initPedidos = initRegistro;
 function renderRegistroHeader() {
   const cont = document.getElementById('registro-header');
   if (!cont) return;
-  if (registroCache.temporadas.length === 0) {
+  const temps = registroCache.temporadas || [];
+  if (temps.length === 0) {
     cont.innerHTML = '<div class="text-muted">Sin temporadas.</div>';
     return;
   }
-  
-  const opts = registroCache.temporadas.map(t => 
-    `<option value="${t.id}" ${t.id === registroCache.temporadaActual ? 'selected' : ''}>${t.codigo} — ${t.estado}</option>`
-  ).join('');
-  
-  const actual = registroCache.temporadas.find(t => t.id === registroCache.temporadaActual);
-  const resumen = actual ? `
-    <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;font-size:13px">
-      <div><strong>${actual.num_escuelas}</strong> escuelas</div>
-      <div><strong>${actual.piezas_solicitadas?.toLocaleString() || 0}</strong> piezas contratadas</div>
-      <div style="color:var(--verde)"><strong>${actual.piezas_entregadas?.toLocaleString() || 0}</strong> entregadas</div>
-      <div><strong>${actual.porcentaje_avance||0}%</strong> avance</div>
-    </div>` : '';
-  
   cont.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-      <div style="flex:1;min-width:200px">
-        <label style="font-size:11px;color:#666;display:block">Temporada</label>
-        <select onchange="cambiarTemporadaRegistro(this.value)" style="padding:6px 10px;border-radius:6px;border:1px solid var(--borde)">${opts}</select>
-      </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn btn-ghost btn-sm" onclick="abrirModalExport()">💾 Exportar</button>
-        <button class="btn btn-primary btn-sm" onclick="abrirNuevaEscuela()">+ Escuela ad-hoc</button>
-      </div>
-    </div>
-    ${resumen}
-  `;
+    <div class="rc-temporadas">
+      <span class="rc-temporadas-lbl">📅 Temporada</span>
+      ${temps.map(t => `
+        <button class="btn btn-sm ${t.id === registroCache.temporadaActual ? 'btn-primary' : 'btn-ghost'}"
+          onclick="cambiarTemporadaRegistro('${t.id}')">${rcEsc(t.codigo || t.anio)}${t.estado === 'activa' ? ' · activa' : ''}</button>`).join('')}
+    </div>`;
 }
 
 async function cambiarTemporadaRegistro(tempId) {
+  if (tempId === registroCache.temporadaActual) return;
   registroCache.temporadaActual = tempId;
+  if (typeof alumnosGlobalCache !== 'undefined') {
+    alumnosGlobalCache.filtroEscuelas = [];
+    alumnosGlobalCache.filtroEscuela = '';
+    alumnosGlobalCache.filtroTalla = '';
+    alumnosGlobalCache.pagina = 1;
+  }
   renderRegistroHeader();
-  await cargarEscuelasTemporada();
+  await mostrarRegistroTemporada();
 }
 const cambiarTemporada = cambiarTemporadaRegistro; // alias
 
