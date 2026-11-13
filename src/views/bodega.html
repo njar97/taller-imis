@@ -107,7 +107,7 @@
       <div class="modal-header">
         <div>
           <div class="card-title" style="margin:0">🚚 Marcar entrega a escuela</div>
-          <div style="font-size:12px;color:#666;margin-top:2px">Marca todos los alumnos EMPACADOS de la escuela como ENTREGADOS, con fecha de entrega.</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">Pasa lo EMPACADO de la escuela a ENTREGADO, con fecha. Por pedido (sin nombres) se puede entregar parcial.</div>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="cerrarEntregaModal()">✕</button>
       </div>
@@ -131,7 +131,7 @@
         </div>
         <div class="field">
           <label>Observaciones</label>
-          <textarea id="ent-obs" rows="2" placeholder="Opcional"></textarea>
+          <textarea id="entg-obs" rows="2" placeholder="Opcional"></textarea>
         </div>
       </div>
       <div class="modal-footer">
@@ -266,7 +266,7 @@
       <div class="modal-header">
         <div>
           <div class="card-title" style="margin:0">🚚 Salida a escuela</div>
-          <div style="font-size:12px;color:#666;margin-top:2px">Registrar entrega de piezas terminadas. Descuenta del stock.</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">Registrar entrega de piezas terminadas. Descuenta del stock y suma al pedido de la escuela.</div>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="cerrarSalidaModal()">✕</button>
       </div>

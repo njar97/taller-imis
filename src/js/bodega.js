@@ -659,8 +659,10 @@ async function empacarAlumnosDesdeRegistro(alumnos, prendasSet, opts = {}) {
   const escIds = [...new Set(alumnos.map(a => a.escuela_id).filter(Boolean))];
   if (escIds.length) {
     const rows = await supaFetchAll('escuela_acaparado',
-      `?escuela_id=in.(${escIds.join(',')})&select=id,escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida`);
+      `?escuela_id=in.(${escIds.join(',')})&select=id,escuela_id,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida,bodega_movimiento(pedido_id)`);
     for (const r of rows) {
+      // Lo empacado por PEDIDO (2026, sin nombres) no es reserva para alumnos
+      if (r.bodega_movimiento && r.bodega_movimiento.pedido_id) continue;
       const disp = (Number(r.cantidad_acaparada) || 0) - (Number(r.cantidad_consumida) || 0);
       if (disp <= 0) continue;
       const k = r.escuela_id + '|' + r.nombre_prenda + '|' + r.talla_key;
@@ -950,10 +952,12 @@ async function abrirEntregaModal() {
   const modal = document.getElementById('bodega-entrega-modal');
   if (!modal) return;
   document.getElementById('ent-escuela').value = '';
-  document.getElementById('ent-fecha').value = new Date().toISOString().slice(0,10);
+  document.getElementById('ent-fecha').value = typeof emqHoy === 'function' ? emqHoy() : new Date().toISOString().slice(0,10);
   document.getElementById('ent-receptor').value = '';
-  document.getElementById('ent-obs').value = '';
+  document.getElementById('entg-obs').value = '';
   document.getElementById('ent-resumen').style.display = 'none';
+  entregaCache.modoCant = false;
+  entregaCache.escSel = '';
   modal.style.display = 'flex';
   try {
     if (!entregaCache.escuelas) {
@@ -970,10 +974,33 @@ function cerrarEntregaModal() { document.getElementById('bodega-entrega-modal').
 async function onEntregaEscuelaCambio() {
   const escId = document.getElementById('ent-escuela').value;
   const info = document.getElementById('ent-resumen');
+  entregaCache.modoCant = false;
+  entregaCache.escSel = escId;
   if (!escId) { info.style.display = 'none'; return; }
+  info.style.display = '';
+  info.innerHTML = '<span style="color:#888">Buscando lo empacado…</span>';
   try {
+    // 📋 Escuela con pedido 2026 (sin nombres): se entrega lo empacado por cantidad
+    if (typeof emqCargarCant === 'function') {
+      const ctx = await emqCargarCant(escId);
+      if (entregaCache.escSel !== escId) return;   // cambiaron de escuela mientras cargaba
+      if (ctx.escuelasPedido.has(escId)) {
+        entregaCache.modoCant = true;
+        entregaCache.ctx = ctx;
+        const lineas = emqLineasEscuela(ctx, escId).filter(L => L.empacado > 0);
+        emqSelInit('bent', lineas.map(L => [L.k, L.empacado]), true);
+        info.innerHTML = lineas.length
+          ? '<div style="margin-bottom:4px">📋 Escuela <strong>por pedido</strong>. Empacado sin entregar (ajustá si es entrega parcial):</div>'
+            + emqListaEntregaHtml(lineas, 'bent')
+          : '<span style="color:#c44">⚠ Esta escuela no tiene piezas empacadas. Empacalas primero en 🧺 Sesión de empaque.</span>';
+        return;
+      }
+    }
+    // Por alumno: solo los de la temporada activa
+    const tempF = typeof emqFiltroTemporadaAlumno === 'function' ? await emqFiltroTemporadaAlumno() : '';
+    if (entregaCache.escSel !== escId) return;
     const empacados = await supaFetch('alumno', 'GET', null,
-      `?escuela_id=eq.${escId}&or=(estado_top.eq.empacado,estado_bottom.eq.empacado)&select=id,estado_top,estado_bottom&limit=10000`);
+      `?escuela_id=eq.${escId}${tempF}&or=(estado_top.eq.empacado,estado_bottom.eq.empacado)&select=id,estado_top,estado_bottom&limit=10000`);
     let n = 0;
     for (const a of empacados) {
       if (a.estado_top === 'empacado') n++;
@@ -990,16 +1017,36 @@ async function guardarEntrega() {
   const escId = document.getElementById('ent-escuela').value;
   const fecha = document.getElementById('ent-fecha').value;
   const receptor = document.getElementById('ent-receptor').value.trim() || null;
-  const obs = document.getElementById('ent-obs').value.trim() || null;
+  const obs = document.getElementById('entg-obs').value.trim() || null;
   if (!escId) return alert('Elegí escuela');
   if (!fecha) return alert('Elegí fecha');
 
   const btn = document.getElementById('ent-btn-guardar');
+
+  // 📋 Por pedido: entrega lo empacado por cantidad (suma al pedido, no mueve bodega)
+  if (entregaCache.modoCant && entregaCache.escSel === escId) {
+    const items = emqSelItems('bent');
+    if (!items.size) return alert('No hay nada empacado para entregar.');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Aplicando...'; }
+    try {
+      const ok = await emqCantConfirmarYEntregar(escId, items, fecha, receptor, obs, entregaCache.ctx);
+      if (ok) {
+        cerrarEntregaModal();
+        if (bodegaCache.vistaActual === 'stock') await cargarBodegaStock();
+        else if (bodegaCache.vistaActual === 'movimientos') await cargarMovimientos();
+      }
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '🚚 Marcar entregado'; }
+    }
+    return;
+  }
+
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Aplicando...'; }
   try {
-    // Contar empacados antes
+    // Contar empacados antes (solo alumnos de la temporada activa)
+    const tempF = typeof emqFiltroTemporadaAlumno === 'function' ? await emqFiltroTemporadaAlumno() : '';
     const empacados = await supaFetch('alumno', 'GET', null,
-      `?escuela_id=eq.${escId}&or=(estado_top.eq.empacado,estado_bottom.eq.empacado)&select=id,estado_top,estado_bottom&limit=10000`);
+      `?escuela_id=eq.${escId}${tempF}&or=(estado_top.eq.empacado,estado_bottom.eq.empacado)&select=id,estado_top,estado_bottom&limit=10000`);
     let n = 0;
     for (const a of empacados) {
       if (a.estado_top === 'empacado') n++;
@@ -1013,9 +1060,9 @@ async function guardarEntrega() {
     // UPDATE bulk vía PATCH PostgREST (filtra por columna y aplica el cambio)
     // — más portable y respeta RLS y audit triggers, sin pasar por exec_sql.
     const nowIso = new Date().toISOString();
-    await _bulkPatchAlumno(`?escuela_id=eq.${escId}&estado_top=eq.empacado`,
+    await _bulkPatchAlumno(`?escuela_id=eq.${escId}${tempF}&estado_top=eq.empacado`,
       { estado_top: 'entregado', actualizado_en: nowIso });
-    await _bulkPatchAlumno(`?escuela_id=eq.${escId}&estado_bottom=eq.empacado`,
+    await _bulkPatchAlumno(`?escuela_id=eq.${escId}${tempF}&estado_bottom=eq.empacado`,
       { estado_bottom: 'entregado', actualizado_en: nowIso });
 
     // Crear registro de entrega
@@ -1128,6 +1175,15 @@ async function abrirSalidaModal() {
 
   modal.style.display = 'flex';
 
+  // 📋 Pedido de la temporada (sin nombres), en segundo plano: muestra lo
+  // que le falta a la escuela. Si no carga, el modal funciona igual.
+  salidaCache.cant = null;
+  if (typeof emqCargarCant === 'function') {
+    emqCargarCant()
+      .then(c => { salidaCache.cant = c; onSalidaPrendaTalla(); })
+      .catch(e => console.warn('[salida] pedido:', e.message));
+  }
+
   try {
     // Cargar escuelas y stock en paralelo (si no están cacheados)
     if (!salidaCache.escuelas) {
@@ -1173,27 +1229,59 @@ function onSalidaPrendaCambio() {
     .sort((a,b) => (a.talla_key||'').localeCompare(b.talla_key||'', 'es', { numeric: true }));
   selT.innerHTML = '<option value="">— Elegí talla —</option>' +
     tallas.map(s => `<option value="${s.talla_key}">${s.talla_key} (stock: ${s.stock_actual})</option>`).join('');
-  document.getElementById('sal-stock-info').style.display = 'none';
+  onSalidaPrendaTalla();   // con la prenda sola ya muestra lo que le falta a la escuela
 }
 
-// Cuando cambia la talla (o la prenda), mostrar stock disponible
+// Cuando cambia escuela, prenda o talla: stock + pedido de la escuela
 function onSalidaPrendaTalla() {
+  const escId = document.getElementById('sal-escuela').value;
   const prenda = document.getElementById('sal-prenda').value;
   const talla = document.getElementById('sal-talla').value;
   const info = document.getElementById('sal-stock-info');
-  if (!prenda || !talla) { info.style.display = 'none'; return; }
-  const row = (salidaCache.stock || []).find(s =>
-    (s.nombre_prenda || s.cod_prenda) === prenda && s.talla_key === talla);
-  if (!row) { info.style.display = 'none'; return; }
-  const disponible = (row.stock_actual || 0) - (row.reservado_empaque || 0);
+  const partes = [];
+  if (prenda && talla) {
+    const row = (salidaCache.stock || []).find(s =>
+      (s.nombre_prenda || s.cod_prenda) === prenda && s.talla_key === talla);
+    if (row) {
+      // stock_actual ya tiene descontado lo empacado (SALIDA_EMPAQUE): no se resta otra vez
+      const disponible = Number(row.stock_actual) || 0;
+      partes.push(`<strong>${prenda} ${talla}</strong>: en bodega <strong style="color:var(--verde)">${disponible}</strong>
+        <span style="font-size:11px;color:#888">(lo empacado ya está descontado)</span>`);
+      document.getElementById('sal-cantidad').max = disponible;
+    }
+  }
+  const ped = _salidaPedidoHtml(escId, prenda, talla);
+  if (ped) partes.push(ped);
+  if (!partes.length) { info.style.display = 'none'; return; }
   info.style.display = '';
-  info.innerHTML = `
-    <strong>${prenda} ${talla}</strong>:
-    Stock actual <strong>${row.stock_actual}</strong>
-    · Reservado <strong>${row.reservado_empaque || 0}</strong>
-    · <span style="color:var(--verde);font-weight:700">Disponible ${disponible}</span>
-  `;
-  document.getElementById('sal-cantidad').max = disponible;
+  info.innerHTML = partes.join('<div style="height:6px"></div>');
+}
+
+// 📋 Lo que la escuela tiene pedido de esa prenda/talla (temporada activa)
+function _salidaCodPrenda(prenda) {
+  const row = (salidaCache.stock || []).find(s => (s.nombre_prenda || s.cod_prenda) === prenda);
+  return (row && row.cod_prenda) || _codPrenda(prenda);
+}
+function _salidaPedidoHtml(escId, prenda, talla) {
+  const ctx = salidaCache.cant;
+  if (!escId || !prenda || !ctx || !ctx.escuelasPedido.has(escId)) return '';
+  const cod = _salidaCodPrenda(prenda);
+  const lineas = emqLineasEscuela(ctx, escId).filter(L => L.cod === cod);
+  if (!talla) {
+    if (!lineas.length) return `<span style="color:#a60">📋 Esta escuela no tiene pedido de ${prenda}.</span>`;
+    const pend = lineas.filter(L => L.falta > 0);
+    return pend.length
+      ? `📋 Le falta de ${prenda}: ` + pend.map(L => `<strong>${L.talla}</strong> ${L.falta}`).join(' · ')
+      : `📋 ${prenda}: pedido cubierto ✓`;
+  }
+  const m = emqTallaDeBodega(cod, talla, ctx.eqMap);
+  const L = m && lineas.find(x => x.t === m.t);
+  if (!L) return `<span style="color:#a60">📋 Esta escuela no tiene pedido de ${prenda} ${talla}.</span>`;
+  return `📋 Pedido de la escuela · <strong>${L.talla}</strong>${talla !== L.talla ? ` <span style="color:#888">(bodega ${talla})</span>` : ''}:
+      pedido <strong>${L.pedido}</strong> · entregado <strong>${L.entregado}</strong>${L.empacado ? ` · empacado <strong>${L.empacado}</strong>` : ''}
+      · <span style="color:var(--naranja);font-weight:700">falta ${L.falta}</span>`
+    + (m.sirve ? '' : `<div style="color:#c44">⚠ ${talla} queda corto de largo para ${L.talla}.</div>`)
+    + (L.empacado ? `<div style="font-size:11px;color:#666">Ya hay ${L.empacado} empacadas para esta escuela: esas se entregan con 🚚 Marcar entrega.</div>` : '');
 }
 
 async function guardarSalida() {
@@ -1208,34 +1296,63 @@ async function guardarSalida() {
   if (!talla) return alert('Elegí una talla');
   if (!cantidad || cantidad <= 0) return alert('Cantidad inválida');
 
-  // Validar stock disponible
+  // Validar stock disponible (stock_actual ya descuenta lo empacado: no restar reservado_empaque otra vez)
   const row = (salidaCache.stock || []).find(s =>
     (s.nombre_prenda || s.cod_prenda) === prenda && s.talla_key === talla);
-  const disponible = row ? (row.stock_actual || 0) - (row.reservado_empaque || 0) : 0;
+  const disponible = row ? (Number(row.stock_actual) || 0) : 0;
   if (cantidad > disponible) {
     return alert(`No hay suficiente stock disponible. Solo hay ${disponible} de ${prenda} ${talla}.`);
   }
 
   // Derivar cod_prenda
-  const codMap = {
-    'CAMISA':'C','BLUSA':'B','CAMISA_CELESTE':'CC','PANTALON':'P','PANTALON_BEIGE':'PB',
-    'FALDA':'F','FALDA_BEIGE':'FB','FALDA_C.E':'FCE','SHORT':'S'
-  };
-  const codPrenda = codMap[prenda.toUpperCase()] || prenda.slice(0,3).toUpperCase();
+  const codPrenda = _salidaCodPrenda(prenda);
+
+  // 📋 Pedido de la temporada (sin nombres): la salida se suma a lo entregado
+  let patches = [], pedidoId = null, lineaTalla = null;
+  if (typeof emqCargarCant === 'function') {
+    try {
+      const ctx = await emqCargarCant(escuelaId);   // fresco
+      if (ctx.escuelasPedido.has(escuelaId)) {
+        const m = emqTallaDeBodega(codPrenda, talla, ctx.eqMap);
+        const L = m && emqLineasEscuela(ctx, escuelaId).find(x => x.cod === codPrenda && x.t === m.t);
+        if (!L) {
+          if (!confirm(`Esta escuela no tiene pedido de ${prenda} ${talla}.\n\n¿Registrar la salida igual? (no se suma a ningún pedido)`)) return;
+        } else {
+          if (!m.sirve && !confirm(`⚠ ${talla} queda corto de largo para ${L.talla}.\n\n¿Entregarlo igual?`)) return;
+          if (cantidad > L.falta && !confirm(`De ${L.talla} le faltan ${L.falta}${L.empacado ? ` (aparte de ${L.empacado} ya empacadas)` : ''} y vas a sacar ${cantidad}.\n\n¿Seguir igual?`)) return;
+          patches = emqRepartirEntrega(L.filas, cantidad);
+          pedidoId = emqFilaPrincipal(L).id;
+          lineaTalla = L.talla;
+        }
+      }
+    } catch (e) {
+      return alert('No se pudo leer el pedido de la escuela: ' + e.message);
+    }
+  }
 
   const btn = document.getElementById('sal-btn-guardar');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Guardando...'; }
   try {
-    await supaFetch('bodega_movimiento', 'POST', {
-      tipo: 'SALIDA_ENTREGA',
-      cod_prenda: codPrenda,
-      nombre_prenda: prenda,
-      talla_key: talla,
-      cantidad: cantidad,
-      escuela_id: escuelaId,
-      fecha: new Date().toISOString().slice(0, 10),
-      observaciones: obs,
-    });
+    // Primero lo que se puede revertir (pedido), después el movimiento de bodega
+    if (patches.length) await emqAplicarEntregado(patches);
+    try {
+      await supaFetch('bodega_movimiento', 'POST', {
+        tipo: 'SALIDA_ENTREGA',
+        cod_prenda: codPrenda,
+        nombre_prenda: prenda,
+        talla_key: talla,
+        cantidad: cantidad,
+        escuela_id: escuelaId,
+        pedido_id: pedidoId,
+        fecha: typeof emqHoy === 'function' ? emqHoy() : new Date().toISOString().slice(0, 10),
+        observaciones: obs,
+      });
+    } catch (e) {
+      for (const p of patches) {
+        try { await supaUpdate('pedido', p.id, { cantidad_entregada: p.antes }); } catch (_) { /* best effort */ }
+      }
+      throw e;
+    }
     cerrarSalidaModal();
     // Refrescar la vista actual
     if (bodegaCache.vistaActual === 'stock') await cargarBodegaStock();
@@ -1243,7 +1360,8 @@ async function guardarSalida() {
     else if (bodegaCache.vistaActual === 'vs_demanda') await cargarBodegaVsDemanda();
     // Invalidar cache de stock para próxima salida
     salidaCache.stock = null;
-    alert(`✓ Salida registrada: ${cantidad} ${prenda} ${talla}`);
+    if (typeof emqAvisarCambio === 'function') emqAvisarCambio();
+    alert(`✓ Salida registrada: ${cantidad} ${prenda} ${talla}${lineaTalla ? ` · sumada al pedido (${lineaTalla})` : ''}`);
   } catch (e) {
     alert('Error: ' + e.message);
   } finally {
