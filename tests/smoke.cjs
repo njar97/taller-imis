@@ -74,6 +74,9 @@ const ESPERADAS = [
   'function initTallasResumen', 'function initHistorico',
   'function buscadorOnInput', 'function actualizarBadgeEscuelasEsperando',
   'function cachedFetch', 'function invalidarCache',
+  // Registro 2026 (pedido por cantidades + tallas especiales)
+  'async function initRegistroCantidad', 'async function tespGuardar',
+  'async function tespAgregar', 'function tespDescargarCSV', 'function buscadorIrEspecial',
 ];
 const faltantes = ESPERADAS.filter(needle => !html.includes(needle));
 if (faltantes.length > 0) {

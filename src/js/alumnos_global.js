@@ -10,7 +10,8 @@ let alumnosGlobalCache = {
   filtroEscuela: '',           // (deprecated, se mantiene por compat con código viejo)
   filtroEscuelas: [],          // array de escuela_id seleccionadas (multi)
   filtroNivel: '',
-  filtroTemporada: '',
+  filtroTemporada: '',          // = temporada elegida en Registro (la activa por defecto)
+  temporadaId: null,           // temporada de la que son los alumnos cargados
   filtroEstado: '',            // 'pendiente'|'parcial'|'completo'|'entregado'|'sin_tallas'
   filtroTalla: '',             // KEY exacta (ej. 'C14') — puente desde Estadística→Por talla
   masFiltrosAbierto: false,
@@ -63,23 +64,44 @@ function _persistAlumnosCache() {
   const c = alumnosGlobalCache;
   if (!c.cargado || !Array.isArray(c.alumnos) || typeof tiCacheSet !== 'function') return;
   const escuelas = Object.values(c.escuelas || {});
-  tiCacheSet('alumnos_v1', { alumnos: c.alumnos, escuelas });
+  tiCacheSet('alumnos_v1', { alumnos: c.alumnos, escuelas, temporadaId: c.temporadaId || null });
 }
+
+// Carga en curso: si se cambia de temporada a medio camino, la respuesta
+// vieja se descarta (manda la última).
+let _agCargaSeq = 0;
 
 async function initAlumnosGlobal() {
   const cont = document.getElementById('alumnos-global-contenido');
   if (!cont) return;
+  const c = alumnosGlobalCache;
+  const seq = ++_agCargaSeq;
 
-  // Stale-while-revalidate: si hay cache válido (< 24h, mismo schema), pintar
-  // instantáneo. En paralelo, hacer fetch fresh y reemplazar cuando responda.
+  // Solo los alumnos de la temporada elegida en Registro (la ACTIVA por
+  // defecto). Antes bajaba los de todas las temporadas y en 2026 salía la
+  // lista precargada de años anteriores.
+  let tempId = null;
+  try {
+    tempId = typeof asegurarTemporadaRegistro === 'function' ? await asegurarTemporadaRegistro() : null;
+  } catch (e) { console.warn('[alumnos] temporada:', e.message); }
+  if (seq !== _agCargaSeq) return;
+  // Temporada por cantidades (2026): no hay lista de alumnos que cargar
+  if (typeof registroEnModoPedido === 'function' && registroEnModoPedido()) return;
+  if (c.temporadaId !== tempId) { c.alumnos = []; c.cargado = false; }
+  c.filtroTemporada = tempId || '';
+
+  // Stale-while-revalidate: si hay cache válido (< 24h, mismo schema y misma
+  // temporada), pintar instantáneo. En paralelo, fetch fresh y reemplazar.
   const cached = (typeof tiCacheGet === 'function') ? tiCacheGet('alumnos_v1') : null;
   let mostradoDesdeCache = false;
-  if (cached && Array.isArray(cached.alumnos) && Array.isArray(cached.escuelas)) {
+  if (cached && Array.isArray(cached.alumnos) && Array.isArray(cached.escuelas)
+      && (cached.temporadaId || null) === (tempId || null)) {
     const escMap = {};
     for (const e of cached.escuelas) escMap[e.id] = e;
-    alumnosGlobalCache.escuelas = escMap;
-    alumnosGlobalCache.alumnos = cached.alumnos;
-    alumnosGlobalCache.cargado = true;
+    c.escuelas = escMap;
+    c.alumnos = cached.alumnos;
+    c.temporadaId = tempId;
+    c.cargado = true;
     renderAlumnosGlobal();
     mostradoDesdeCache = true;
   } else {
@@ -89,11 +111,10 @@ async function initAlumnosGlobal() {
   try {
     const [escuelas, alumnos] = await Promise.all([
       supaFetchAll('escuela'),
-      // traer TODOS incluso los sin tallas — select explícito para evitar
-      // bajar columnas no usadas (creado_en/actualizado_en). Si después se
-      // agregan columnas grandes a alumno, no van a afectar el load inicial.
+      // traer TODOS (de la temporada) incluso los sin tallas — select explícito
+      // para evitar bajar columnas no usadas (creado_en/actualizado_en).
       supaFetchAll('alumno',
-        '?activo=eq.true&select=' +
+        '?activo=eq.true' + (tempId ? `&temporada_id=eq.${tempId}` : '') + '&select=' +
         'id,temporada_id,escuela_id,nombre,grado,nivel,ciclo,sexo,activo,' +
         'prenda_top,talla_top_key,estado_top,empacado_top_en,' +
         'prenda_bottom,talla_bottom_key,estado_bottom,empacado_bottom_en,' +
@@ -101,23 +122,18 @@ async function initAlumnosGlobal() {
         'observaciones,tiene_talla_no_estandar' +
         '&order=nombre'),
     ]);
+    if (seq !== _agCargaSeq) return;
 
     const escMap = {};
     for (const e of escuelas) escMap[e.id] = e;
-    alumnosGlobalCache.escuelas = escMap;
-    alumnosGlobalCache.alumnos = alumnos;
-    alumnosGlobalCache.cargado = true;
-
-    // Asegurar que tenemos la lista de temporadas
-    if (!registroCache.temporadas || registroCache.temporadas.length === 0) {
-      try {
-        registroCache.temporadas = await supaFetch('vw_temporada_resumen', 'GET', null, '?order=anio.desc&limit=20');
-      } catch(e) { registroCache.temporadas = []; }
-    }
+    c.escuelas = escMap;
+    c.alumnos = alumnos;
+    c.temporadaId = tempId;
+    c.cargado = true;
 
     // Persistir snapshot fresh y re-render. Si ya estábamos mostrando desde
     // cache, el reemplazo se ve como un refresh discreto.
-    if (typeof tiCacheSet === 'function') tiCacheSet('alumnos_v1', { alumnos, escuelas });
+    if (typeof tiCacheSet === 'function') tiCacheSet('alumnos_v1', { alumnos, escuelas, temporadaId: tempId || null });
     renderAlumnosGlobal();
   } catch(e) {
     // Si no había cache + falla la red → mostrar error. Si había cache →
@@ -249,7 +265,6 @@ function renderAlumnosGlobal() {
     }
   }
   const escuelasOpts = Object.values(escuelasUnicas).sort((a,b) => a.nombre.localeCompare(b.nombre));
-  const temporadasOpts = registroCache.temporadas || [];
   
   // Stats
   const totMostrando = lista.length;
@@ -270,8 +285,9 @@ function renderAlumnosGlobal() {
   const escuelasDisponibles = escuelasOpts.filter(e => !escuelasSel.includes(e.id));
 
   // Contador de "filtros activos" para el badge del botón de opciones
+  // (la temporada se elige arriba, en el selector de Registro)
   const filtrosActivos = (escuelasSel.length > 0 ? 1 : 0) +
-    (c.filtroNivel ? 1 : 0) + (c.filtroTemporada ? 1 : 0);
+    (c.filtroNivel ? 1 : 0);
 
   // Conteo de alumnos por escuela (para los chips)
   const alumnosPorEscuela = {};
@@ -344,7 +360,7 @@ function renderAlumnosGlobal() {
             </div>
           </div>
 
-          <!-- Filtros avanzados: nivel + estado + temporada -->
+          <!-- Filtros avanzados: nivel + estado (la temporada va en el selector de arriba) -->
           <div style="padding-top:6px;border-top:1px dashed #E0E0E0">
             <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Filtros avanzados</div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px">
@@ -361,11 +377,6 @@ function renderAlumnosGlobal() {
                 <option value="parcial"   ${c.filtroEstado==='parcial'?'selected':''}>✅❌ Parcial empacado</option>
                 <option value="entregado" ${c.filtroEstado==='entregado'?'selected':''}>🚚 Entregado</option>
               </select>
-              ${temporadasOpts.length > 1 ? `
-              <select onchange="alumnosGlobalCache.filtroTemporada = this.value; alumnosGlobalCache.pagina = 1; renderAlumnosGlobal()" style="padding:6px">
-                <option value="">Toda temporada</option>
-                ${temporadasOpts.map(t => `<option value="${t.id}" ${c.filtroTemporada===t.id?'selected':''}>${t.codigo || t.anio}</option>`).join('')}
-              </select>` : ''}
             </div>
           </div>
           <!-- Orden de la lista -->
@@ -633,7 +644,8 @@ function limpiarFiltros() {
   alumnosGlobalCache.filtroEscuela = '';
   alumnosGlobalCache.filtroEscuelas = [];
   alumnosGlobalCache.filtroNivel = '';
-  alumnosGlobalCache.filtroTemporada = '';
+  // La temporada NO se limpia: es la elegida en el selector de Registro
+  alumnosGlobalCache.filtroTemporada = (typeof registroCache !== 'undefined' && registroCache.temporadaActual) || '';
   alumnosGlobalCache.filtroEstado = '';
   alumnosGlobalCache.filtroTalla = '';
   alumnosGlobalCache.pagina = 1;
