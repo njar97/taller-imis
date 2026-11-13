@@ -45,7 +45,7 @@ async function cargarHistorial(tipo) {
     }
     container.innerHTML = data.map(r => {
       let meta = '';
-      if (tipo === 'trazo') meta = `${r.fecha} · ${r.capas||'?'} capas · Corte ${r.letra_corte||'—'}`;
+      if (tipo === 'trazo') meta = `${r.fecha} · Corte ${r.letra_corte||'—'} · ${r.capas||'?'} lienzos${r.tallas_tendido ? ' · ' + r.tallas_tendido : ''}${r.largo_cm ? ' · ' + (r.largo_cm/100).toFixed(2) + ' m' : ''}`;
       if (tipo === 'tendido') meta = `${r.fecha} · ${r.equipo||'sin equipo'} · Corte ${r.letra_corte||'—'}`;
       return `
         <div class="registro-item" onclick="verDetalle('${tipo}','${r.id}')">
@@ -78,31 +78,7 @@ async function verDetalle(tipo, id) {
   }
   try {
     if (tipo === 'trazo') {
-      const [trazo] = await supaFetch('trazo','GET',null,`?id=eq.${id}`);
-      const tallas = await supaFetch('trazo_talla_marcada','GET',null,`?trazo_id=eq.${id}&order=orden`);
-      document.getElementById('det-titulo').textContent = `Trazo ${trazo.codigo_corte} · Corte ${trazo.letra_corte||'—'}`;
-      let html = `
-        <div class="detalle-seccion">
-          <div class="detalle-seccion-titulo">Datos</div>
-          <div class="detalle-campo"><span>Fecha</span><span>${trazo.fecha}</span></div>
-          <div class="detalle-campo"><span>Código</span><span>${trazo.codigo_corte}</span></div>
-          <div class="detalle-campo"><span>Letra corte</span><span>${trazo.letra_corte||'—'}</span></div>
-          <div class="detalle-campo"><span>Capas planeadas</span><span>${trazo.capas||'—'}</span></div>
-          <div class="detalle-campo"><span>Yardas</span><span>${trazo.yardas_estimadas||'—'}</span></div>
-        </div>
-        <div class="detalle-seccion">
-          <div class="detalle-seccion-titulo">Tallas marcadas</div>
-          ${tallas.map(t => `
-            <div class="detalle-campo">
-              <span><strong style="color:var(--azul)">${t.letra_local}</strong> · ${t.talla_key_original}${t.talla_key_complemento?' ↔ '+t.talla_key_complemento:''}</span>
-              <span>${t.tipo}</span>
-            </div>
-          `).join('')}
-        </div>
-      `;
-      if (trazo.observaciones) html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo">Observaciones</div><p style="font-size:13px">${trazo.observaciones}</p></div>`;
-      if (trazo.foto_url) html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo">Foto</div><img src="${trazo.foto_url}" style="width:100%;border-radius:8px"></div>`;
-      document.getElementById('det-contenido').innerHTML = html;
+      await renderFichaCorte(id);
     } else {
       // tendido
       const [tend] = await supaFetch('tendido','GET',null,`?id=eq.${id}`);
@@ -165,7 +141,10 @@ async function verDetalle(tipo, id) {
         html += `<div class="detalle-seccion"><div class="alert alert-info">Bultos pendientes de capturar (usá el asistente de Bulto).</div></div>`;
       }
       if (tend.observaciones_generales) html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo">Observaciones</div><p>${tend.observaciones_generales}</p></div>`;
+      if (tend.trazo_id) html += `<div class="detalle-seccion"><button class="btn btn-ghost btn-sm btn-block" onclick="verDetalle('trazo','${tend.trazo_id}')">📂 Ver la ficha completa del corte (trazo → producción)</button></div>`;
+      html += `<div id="seg-corte-box"></div>`;
       document.getElementById('det-contenido').innerHTML = html;
+      renderSeguimientoCorte(document.getElementById('seg-corte-box'), { trazo_id: tend.trazo_id || null, tendido_id: id });
     }
   } catch(e) {
     document.getElementById('det-contenido').innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
