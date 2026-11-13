@@ -20,8 +20,11 @@ async function initDashboard() {
   const cont = document.getElementById('dashboard-contenido');
   if (!cont) { dashboardCache.cargando = false; return; }
 
-  // Inicio = dashboard "Hoy" únicamente. Por-escuela e histórico viven ahora en Estadística.
+  // Inicio = tareas del día arriba + dashboard "Hoy". Por-escuela e
+  // histórico viven en Estadística. Las tareas se pintan antes de cargar
+  // datos: si la red falla, igual se puede ir a trabajar.
   cont.innerHTML = `
+    ${tareasInicioHtml()}
     <div id="dashboard-sub-contenido">
       <div class="text-muted" style="padding:20px;text-align:center">Cargando dashboard...</div>
     </div>
@@ -34,6 +37,80 @@ async function initDashboard() {
 function dashElegirTemporada(id) {
   dashboardCache.temporadaSel = id;
   initDashboard();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// «¿QUÉ VAS A HACER HOY?» — botones grandes de tarea arriba de Inicio
+// Cada uno lleva a la pantalla que ya existe para esa tarea. Los ven
+// todos los roles (el taller es quien los usa).
+// ══════════════════════════════════════════════════════════════════════
+const TAREAS_INICIO = [
+  { id: 'corte',      ico: '✂️', tit: 'Anotar un corte',          sub: 'Lo del cuaderno de tendido' },
+  { id: 'bulto',      ico: '📦', tit: 'Bulto terminado',          sub: 'Pasa de costura a bodega' },
+  { id: 'entrada',    ico: '📥', tit: 'Entró a bodega',           sub: 'Piezas que llegaron' },
+  { id: 'contar',     ico: '🔢', tit: 'Contar bodega',            sub: 'Lo que hay en el estante' },
+  { id: 'empacar',    ico: '🧺', tit: 'Empacar para una escuela', sub: 'Apartar lo de una escuela' },
+  { id: 'entregar',   ico: '🚚', tit: 'Entregar a una escuela',   sub: 'Lo empacado se va' },
+  { id: 'especiales', ico: '📏', tit: 'Tallas especiales',        sub: 'Alumnos con medida propia' },
+  { id: 'avance',     ico: '🧵', tit: '¿Cómo van los bultos?',    sub: 'Qué va terminado y qué falta' },
+];
+
+function tareasInicioHtml() {
+  const ayuda = typeof ayudaHtml === 'function'
+    ? ayudaHtml('inicio', 'Tocá lo que vas a hacer y la app te lleva directo. Los números de la temporada están más abajo.')
+    : '';
+  return `
+    <section class="card tareas-card" aria-labelledby="tareas-tit">
+      ${ayuda}
+      <h2 class="tareas-tit" id="tareas-tit">¿Qué vas a hacer hoy?</h2>
+      <div class="tareas-grid">
+        ${TAREAS_INICIO.map(t => `
+        <button type="button" class="tarea-btn" data-tarea="${t.id}" onclick="tareaIr('${t.id}')">
+          <span class="tarea-ico" aria-hidden="true">${t.ico}</span>
+          <span class="tarea-tit">${t.tit}</span>
+          <span class="tarea-sub">${t.sub}</span>
+        </button>`).join('')}
+      </div>
+    </section>`;
+}
+
+function tareaIr(id) {
+  const ir = typeof abrirPestana === 'function' ? abrirPestana : (t) => switchTab(t);
+  switch (id) {
+    case 'corte':        // Corte → Nuevo → Tendido (lo que dice el cuaderno)
+      ir('corte');
+      if (typeof switchSubCorte === 'function') switchSubCorte('nuevo');
+      irA('tendido');
+      return;
+    case 'bulto':        // Producción → bultos sin terminar (✓ Terminar → bodega)
+    case 'avance':       // Producción → todos los bultos (con 📐 Plan al lado)
+      if (typeof produccionFiltro !== 'undefined') produccionFiltro = id === 'bulto' ? 'pendientes' : 'todos';
+      window._prodHintSub = 'dashboard';
+      ir('produccion');
+      return;
+    case 'entrada':      // Bodega → 📥 entrada de piezas
+      ir('bodega');
+      if (typeof abrirEntradaManual === 'function') abrirEntradaManual();
+      return;
+    case 'contar':       // Bodega → 🔢 conteo
+      ir('bodega');
+      if (typeof abrirConteoModal === 'function') abrirConteoModal();
+      return;
+    case 'empacar':      // Empaque por cantidad, desde la lista de escuelas
+      window._emqHintEscuela = null;
+      if (typeof emqState !== 'undefined') { emqState.escuelaId = null; emqState.paso = 1; }
+      ir('empaque');
+      return;
+    case 'entregar':     // Bodega → 🚚 entregar lo empacado de una escuela
+      ir('bodega');
+      if (typeof abrirEntregaModal === 'function') abrirEntregaModal();
+      return;
+    case 'especiales':   // Registro (temporada activa) → 📏 Especiales
+      if (typeof registroCache !== 'undefined') registroCache.temporadaActual = null;
+      window._regHintVista = 'especiales';
+      ir('registro');
+      return;
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -225,6 +302,8 @@ async function cargarDashboardHoy() {
     data.tempActiva = activa;
     data.tempSel = sel;
     data.modo = !sel ? 'vacio' : (Number(sel.num_pedidos) > 0 ? 'pedido' : 'alumnos');
+    // Esconder (o mostrar) en toda la app lo que solo sirve con alumnos
+    if (typeof tiFijarTemporada === 'function') tiFijarTemporada(activa, sel);
 
     if (data.modo === 'pedido') {
       const tareas = [
@@ -418,17 +497,7 @@ function renderDashboard() {
       </div>
     ` : ''}
 
-    <!-- Accesos rápidos -->
-    <div class="card" style="padding:14px">
-      <div style="font-weight:600;margin-bottom:10px">⚡ Accesos rápidos</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">
-        <button class="btn btn-ghost" onclick="switchTab('registro')" style="padding:10px">📋 Registro</button>
-        <button class="btn btn-ghost" onclick="switchTab('produccion')" style="padding:10px">🏭 Producción</button>
-        <button class="btn btn-ghost" onclick="switchTab('bodega')" style="padding:10px">📦 Bodega</button>
-        <button class="btn btn-ghost" onclick="irA('trazo')" style="padding:10px">✂ Nuevo trazo</button>
-      </div>
-    </div>
-
+    <!-- (Los accesos rápidos de antes quedaron arriba, en «¿Qué vas a hacer hoy?») -->
     <div style="text-align:center;margin-top:10px">
       <button class="btn btn-ghost btn-sm" onclick="initDashboard()">🔄 Refrescar</button>
     </div>
@@ -437,8 +506,11 @@ function renderDashboard() {
 
 // ─── Producción de la temporada (vw_plan_produccion, por prenda) ─────
 function dashVerPlan() {
-  if (typeof switchTab === 'function') switchTab('produccion');
-  if (typeof switchSubProd === 'function') switchSubProd('plan');
+  window._prodHintSub = 'plan';
+  if (typeof abrirPestana === 'function') abrirPestana('produccion');
+  else if (typeof switchTab === 'function') switchTab('produccion');
+  // Por si initProduccion no corrió (pestaña ya abierta o sin el atajo)
+  if (window._prodHintSub && typeof switchSubProd === 'function') { window._prodHintSub = null; switchSubProd('plan'); }
 }
 
 function _renderProduccionTemporada(plan) {

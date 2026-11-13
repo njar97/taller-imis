@@ -77,6 +77,11 @@ async function initRegistro() {
 async function mostrarRegistroTemporada() {
   const t = temporadaRegistro();
   const porPedido = registroEnModoPedido(t);
+  // Elegir 2025 acá vuelve a mostrar en toda la app lo de temporadas con alumnos
+  if (typeof tiFijarTemporada === 'function') {
+    const temps = registroCache.temporadas || [];
+    tiFijarTemporada(temps.find(x => x.estado === 'activa') || temps[0] || null, t);
+  }
   const cant = document.getElementById('registro-cant-contenido');
   const alumnos = document.getElementById('alumnos-global-contenido');
   if (cant) cant.style.display = porPedido ? '' : 'none';
