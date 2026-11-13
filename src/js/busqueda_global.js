@@ -54,13 +54,15 @@ const HERRAMIENTAS = [
     ir: () => _herrConfig('Usuarios') },
   { icono:'🔄', nombre:'Buscar actualizaciones de la app', kw:'actualizar version nueva pwa update refrescar',
     ir: () => _herrConfig('App (PWA)') },
-  { icono:'🧩', nombre:'Módulos avanzados (mostrar/ocultar Corte y Producción)', kw:'modulos avanzados ocultar mostrar menu corte produccion activar',
+  { icono:'🧩', nombre:'Mostrar u ocultar Corte y Producción en el menú', kw:'modulos avanzados ocultar mostrar menu corte produccion activar',
     ir: () => _herrConfig('App (PWA)') },
+  { icono:'🗄', nombre:'Temporadas anteriores (por alumno) y ayudas', kw:'2025 temporada anterior alumnos esconder mostrar demanda pronostico costos hoja entrega grados ayuda',
+    ir: () => { _herrTab('config'); _herrLuego(() => switchSubConfig('mas')); } },
   { icono:'🕵️', nombre:'Auditoría de cambios', kw:'auditoria cambios quien hizo log historial modificaciones',
     ir: () => _herrTab('auditoria') },
-  { icono:'✂️', nombre:'Corte: trazos, tendidos y bultos (módulo avanzado)', kw:'corte trazo tendido bulto lienzos capas rollos',
+  { icono:'✂️', nombre:'Corte: trazos, tendidos y bultos', kw:'corte trazo tendido bulto lienzos capas rollos',
     ir: () => _herrTab('corte') },
-  { icono:'🏭', nombre:'Producción: captura y operarias (módulo avanzado)', kw:'produccion operarias captura operaciones destajo asignaciones',
+  { icono:'🏭', nombre:'Producción: bultos, plan, captura y operarias', kw:'produccion operarias captura operaciones destajo asignaciones',
     ir: () => _herrTab('produccion') },
 ];
 

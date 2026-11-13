@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-12 23:45 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-13 00:18 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -659,6 +659,82 @@
   .rc-buscar-fila .rc-buscar, .rc-buscar-fila .btn { flex: 1 1 100%; }
 }
 
+/* ═══ App fácil para el taller (nov-2026) ═══════════════════════════════ */
+/* Temporada por cantidades: lo que solo sirve con lista de alumnos (2025)
+   se esconde. Vuelve a verse eligiendo 2025 o en Ajustes → 🗄 Más. */
+body.temporada-cantidad .oculto-2026 { display: none !important; }
+
+/* «¿Qué vas a hacer hoy?» — botones grandes de tarea arriba de Inicio */
+.tareas-card { padding: 14px; margin-bottom: 12px; }
+.tareas-tit { font-size: 19px; font-weight: 700; color: var(--azul); margin-bottom: 10px; }
+.tareas-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.tarea-btn {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  width: 100%; min-width: 0; min-height: 104px; padding: 12px;
+  border: 2px solid var(--azul-claro); border-radius: 12px; background: white;
+  font-family: inherit; color: var(--texto); text-align: left; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.tarea-btn:hover { border-color: var(--azul2); background: #F5F9FD; }
+.tarea-btn:active { transform: scale(0.98); background: var(--azul-claro); }
+.tarea-btn:focus-visible { outline: 3px solid #FFB300; outline-offset: 2px; }
+.tarea-ico { font-size: 30px; line-height: 1; }
+.tarea-tit { font-size: 15px; font-weight: 700; color: var(--azul); line-height: 1.2; overflow-wrap: anywhere; }
+.tarea-sub { font-size: 12.5px; color: #555; line-height: 1.3; overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .tareas-card { padding: 12px; }
+  .tareas-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .tarea-btn { min-height: 112px; padding: 10px; }
+}
+
+/* Ayuda de una línea «¿Cómo se usa?» (se cierra con ✕ y se recuerda) */
+.ayuda-tip {
+  display: flex; align-items: flex-start; gap: 8px;
+  background: #FFF8E1; border: 1px solid #F2D27A; color: #5D4300;
+  border-radius: 10px; padding: 10px 4px 10px 12px; margin-bottom: 10px;
+  font-size: 14px; line-height: 1.4;
+}
+.ayuda-tip.oculta { display: none; }
+.ayuda-tip-ico { font-size: 18px; line-height: 1.2; }
+.ayuda-tip-txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.ayuda-tip-x {
+  flex-shrink: 0; width: 44px; height: 44px; margin: -10px 0 -10px 0;
+  border: none; background: transparent; border-radius: 8px;
+  font-size: 18px; color: #8A6D00; cursor: pointer;
+}
+.ayuda-tip-x:hover { background: rgba(0,0,0,0.06); }
+
+/* Ajustes → Usuarios: invitar a alguien del taller */
+.inv-roles { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 12px; }
+.inv-rol {
+  display: flex; align-items: flex-start; gap: 10px; min-height: 52px; padding: 10px 12px;
+  border: 2px solid var(--borde); border-radius: 10px; background: white; cursor: pointer;
+  font-size: 14px; text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--texto);
+}
+.inv-rol input { width: 22px; height: 22px; margin-top: 1px; flex-shrink: 0; }
+.inv-rol:has(input:checked) { border-color: var(--azul); background: #F2F7FC; }
+.inv-rol b { display: block; font-size: 15px; color: var(--azul); }
+.inv-rol span { display: block; font-size: 13px; color: #555; margin-top: 2px; }
+.inv-ayuda { font-size: 12px; color: #666; margin-top: 3px; }
+
+/* Ajustes → 🗄 Más: interruptores grandes */
+.mas-opcion { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; padding: 8px 0; font-size: 14px; cursor: pointer; text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--texto); }
+.mas-opcion input { width: 22px; height: 22px; flex-shrink: 0; margin-top: 1px; }
+.mas-lista { margin: 8px 0 0 18px; font-size: 13px; color: #444; line-height: 1.6; }
+
+/* Sub-menús de Corte y Producción: ícono y palabra en la misma línea, ≥ 44 px */
+.subnav-btns .btn { justify-content: center; white-space: nowrap; min-height: 44px; padding: 6px 8px; }
+
+/* Ajustes → Usuarios: lista */
+.usr-rol-sel { min-height: 44px; min-width: 132px; padding: 6px 8px; font-size: 13px; border-radius: 6px; border: 1px solid var(--borde); }
+.usr-borrar { min-width: 44px; min-height: 44px; font-size: 16px; }
+
+/* Menú de abajo con 7 pestañas: que «Producción» y «Estadística» entren enteras */
+@media (max-width: 420px) {
+  .nav-tab { padding-left: 0; padding-right: 0; }
+  .nav-tab-lbl { font-size: 9.5px; letter-spacing: -0.2px; }
+}
+
 </style>
 </head>
 
@@ -678,18 +754,19 @@
       <div id="buscador-results" class="buscador-results" style="display:none"></div>
     </div>
   </div>
-  <!-- Orden por frecuencia de uso real. Corte/Producción son módulos
-       avanzados: ocultos por defecto, se activan en Config → App.
+  <!-- Orden por uso en la temporada 2026: Corte, Producción y Bodega son el
+       trabajo diario (visibles por defecto; se pueden esconder en Ajustes →
+       Sistema). Etiquetas en palabras simples.
        En móvil (≤640px) esta misma barra se fija ABAJO estilo bottom-nav
        (ícono arriba, label abajo) — ver styles.css. -->
   <div class="nav-tabs">
     <div class="nav-tab active" onclick="switchTab('inicio',this)"><span class="nav-tab-ico">🏠</span><span class="nav-tab-lbl">Inicio</span></div>
-    <div class="nav-tab" onclick="switchTab('registro',this)"><span class="nav-tab-ico">📋</span><span class="nav-tab-lbl">Registro</span></div>
-    <div class="nav-tab" onclick="switchTab('bodega',this)"><span class="nav-tab-ico">📦</span><span class="nav-tab-lbl">Bodega</span><span id="nav-badge-bodega" class="nav-badge" style="display:none"></span></div>
-    <div class="nav-tab" onclick="switchTab('estadistica',this)"><span class="nav-tab-ico">📊</span><span class="nav-tab-lbl">Estadística</span></div>
     <div class="nav-tab" id="tab-corte" onclick="switchTab('corte',this)"><span class="nav-tab-ico">✂️</span><span class="nav-tab-lbl">Corte</span></div>
-    <div class="nav-tab" id="tab-produccion" onclick="switchTab('produccion',this)"><span class="nav-tab-ico">🏭</span><span class="nav-tab-lbl">Prod.</span></div>
-    <div class="nav-tab" onclick="switchTab('config',this)"><span class="nav-tab-ico">⚙️</span><span class="nav-tab-lbl">Config</span></div>
+    <div class="nav-tab" id="tab-produccion" onclick="switchTab('produccion',this)"><span class="nav-tab-ico">🏭</span><span class="nav-tab-lbl">Producción</span></div>
+    <div class="nav-tab" onclick="switchTab('bodega',this)"><span class="nav-tab-ico">📦</span><span class="nav-tab-lbl">Bodega</span><span id="nav-badge-bodega" class="nav-badge" style="display:none"></span></div>
+    <div class="nav-tab" onclick="switchTab('registro',this)"><span class="nav-tab-ico">📋</span><span class="nav-tab-lbl">Registro</span></div>
+    <div class="nav-tab" onclick="switchTab('estadistica',this)"><span class="nav-tab-ico">📊</span><span class="nav-tab-lbl">Estadística</span></div>
+    <div class="nav-tab" onclick="switchTab('config',this)"><span class="nav-tab-ico">⚙️</span><span class="nav-tab-lbl">Ajustes</span></div>
   </div>
 </nav>
 
@@ -705,10 +782,15 @@
 <!-- ═══ CORTE ═══ unifica Nuevo (Trazo/Tendido/Bulto) + Historial -->
 <div id="view-corte" class="view">
   <div id="alert-corte"></div>
+  <div class="ayuda-tip" data-ayuda="corte" role="note">
+    <span class="ayuda-tip-ico" aria-hidden="true">💡</span>
+    <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> Para anotar un corte tocá <b>➕ Nuevo → 📋 Tendido</b> y copiá lo del cuaderno, rollo por rollo con sus capas.</span>
+    <button type="button" class="ayuda-tip-x" onclick="cerrarAyuda('corte')" aria-label="Cerrar esta ayuda" title="Cerrar esta ayuda">✕</button>
+  </div>
 
   <!-- Subnav -->
   <div class="card" style="padding:6px;margin-bottom:10px">
-    <div style="display:flex;gap:4px;flex-wrap:wrap">
+    <div class="subnav-btns" style="display:flex;gap:4px;flex-wrap:wrap">
       <button class="btn btn-primary btn-sm" id="corte-sub-nuevo"    onclick="switchSubCorte('nuevo')"    style="flex:1;min-width:80px">➕ Nuevo</button>
       <button class="btn btn-ghost   btn-sm" id="corte-sub-trazos"   onclick="switchSubCorte('trazos')"   style="flex:1;min-width:80px">✂️ Trazos</button>
       <button class="btn btn-ghost   btn-sm" id="corte-sub-tendidos" onclick="switchSubCorte('tendidos')" style="flex:1;min-width:80px">📋 Tendidos</button>
@@ -997,12 +1079,18 @@
 
 <div id="view-produccion" class="view">
   <div id="alert-produccion"></div>
+  <div class="ayuda-tip" data-ayuda="produccion" role="note">
+    <span class="ayuda-tip-ico" aria-hidden="true">💡</span>
+    <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> Cuando un bulto sale de costura, abrí su talla y tocá <b>✓ Terminar</b>: las piezas entran solas a bodega.</span>
+    <button type="button" class="ayuda-tip-x" onclick="cerrarAyuda('produccion')" aria-label="Cerrar esta ayuda" title="Cerrar esta ayuda">✕</button>
+  </div>
 
-  <!-- Subnav (Operarias y Grupos viven ahora en Config) -->
-  <div class="card" style="padding:6px;margin-bottom:10px">
-    <div style="display:flex;gap:4px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" id="prod-sub-dashboard" onclick="switchSubProd('dashboard')" style="flex:1;min-width:80px">📊 Dashboard</button>
-      <button class="btn btn-ghost btn-sm" id="prod-sub-asignaciones" onclick="switchSubProd('asignaciones')" style="flex:1;min-width:80px">📋 Asignar</button>
+  <!-- Subnav. 📋 Asignar nunca se usó: escondido en temporadas por cantidades
+       (2026); vuelve con 2025 o en Ajustes → 🗄 Más. -->
+  <div class="card" id="prod-subnav" style="padding:6px;margin-bottom:10px">
+    <div class="subnav-btns" style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" id="prod-sub-dashboard" onclick="switchSubProd('dashboard')" style="flex:1;min-width:80px">📦 Bultos</button>
+      <button class="btn btn-ghost btn-sm oculto-2026" id="prod-sub-asignaciones" onclick="switchSubProd('asignaciones')" style="flex:1;min-width:80px">📋 Asignar</button>
       <button class="btn btn-ghost btn-sm" id="prod-sub-captura" onclick="switchSubProd('captura')" style="flex:1;min-width:80px">📝 Captura</button>
       <button class="btn btn-ghost btn-sm" id="prod-sub-plan" onclick="switchSubProd('plan')" style="flex:1;min-width:80px">📐 Plan</button>
       <button class="btn btn-ghost btn-sm" id="prod-sub-operarias" onclick="switchSubProd('operarias')" style="flex:1;min-width:80px">👷 Operarias</button>
@@ -1390,11 +1478,13 @@
        · 📊 Por talla  — central, abre por defecto (incluye toggle 🔥 Solo críticas).
        · 📋 Por escuela — fusión de Tallaje + Contrato + Tela/Yardaje en un reporte.
        Inventario y Tallas críticas se fusionaron en Por talla.
-       Histórico y Costos se movieron a la pestaña Config. -->
+       Histórico y Costos se movieron a la pestaña Config.
+       2026 (por cantidades): Por talla y Pronóstico cuentan alumnos → van
+       escondidos (.oculto-2026) y la pestaña abre en Por escuela. -->
   <div class="card" style="padding:8px 10px;margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <button id="est-nav-tallas" class="btn btn-sm btn-primary" onclick="switchSubEst('tallas')">📊 Por talla</button>
+    <button id="est-nav-tallas" class="btn btn-sm btn-primary oculto-2026" onclick="switchSubEst('tallas')" title="Cuenta alumnos (temporadas con lista de alumnos)">📊 Por talla</button>
     <button id="est-nav-escuela" class="btn btn-sm btn-ghost" onclick="switchSubEst('escuela')">📋 Por escuela</button>
-    <button id="est-nav-pronostico" class="btn btn-sm btn-ghost" onclick="switchSubEst('pronostico')">🔮 Pronóstico</button>
+    <button id="est-nav-pronostico" class="btn btn-sm btn-ghost oculto-2026" onclick="switchSubEst('pronostico')" title="Servía antes de tener el pedido real">🔮 Pronóstico</button>
   </div>
 
   <!-- SUB: Por talla — demanda por escuela cruzada con corte/producción/bodega/pool (reporte central) -->
@@ -1418,6 +1508,11 @@
      · con ALUMNOS (2025): lista de alumnos con filtros -->
 <div id="view-registro" class="view">
   <div id="alert-registro"></div>
+  <div class="ayuda-tip" data-ayuda="registro" role="note">
+    <span class="ayuda-tip-ico" aria-hidden="true">💡</span>
+    <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> Acá está lo que pidió cada escuela, por talla. Los alumnos con medida propia van en <b>📏 Especiales</b>.</span>
+    <button type="button" class="ayuda-tip-x" onclick="cerrarAyuda('registro')" aria-label="Cerrar esta ayuda" title="Cerrar esta ayuda">✕</button>
+  </div>
 
   <!-- Selector de temporada (registro.js → renderRegistroHeader) -->
   <div id="registro-header"><div class="text-muted" style="padding:20px;text-align:center">Cargando...</div></div>
@@ -1928,6 +2023,11 @@
 <!-- ══════════ BODEGA ══════════ -->
 <div id="view-bodega" class="view">
   <div id="alert-bodega"></div>
+  <div class="ayuda-tip" data-ayuda="bodega" role="note">
+    <span class="ayuda-tip-ico" aria-hidden="true">💡</span>
+    <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> Tocá <b>✚ Acciones de bodega</b> para anotar lo que entró, contar lo que hay, empacar o entregar a una escuela.</span>
+    <button type="button" class="ayuda-tip-x" onclick="cerrarAyuda('bodega')" aria-label="Cerrar esta ayuda" title="Cerrar esta ayuda">✕</button>
+  </div>
   <div class="card">
     <div class="card-title">📦 Bodega</div>
     <div id="bodega-tabs"></div>
@@ -1938,7 +2038,7 @@
   <div id="bodega-entrada-modal" class="modal" style="display:none">
     <div class="modal-content" style="max-width:500px">
       <div class="modal-header">
-        <div class="card-title">+ Movimiento de bodega</div>
+        <div class="card-title">📥 Entró a bodega</div>
         <button class="btn btn-ghost btn-sm" onclick="cerrarEntradaManual()">✕</button>
       </div>
       <div class="modal-body">
@@ -1991,14 +2091,14 @@
     <div class="modal-content" style="max-width:720px">
       <div class="modal-header">
         <div>
-          <div class="card-title" style="margin:0">📊 Conteo inicial de stock</div>
-          <div style="font-size:12px;color:#666;margin-top:2px">Cargá las piezas físicas que hay en bodega. Cada fila ajusta el stock a la cantidad indicada (AJUSTE_INVENTARIO).</div>
+          <div class="card-title" style="margin:0">🔢 Contar bodega</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">Poné cuántas piezas hay de verdad en el estante, talla por talla. La app deja la bodega en ese número.</div>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="cerrarConteoModal()">✕</button>
       </div>
       <div class="modal-body">
         <div id="conteo-toolbar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
-          <button class="btn btn-ghost btn-sm" onclick="conteoCargarSugeridos()" title="Agrega combinaciones que tienen demanda pendiente">+ Sugeridos por demanda</button>
+          <button class="btn btn-ghost btn-sm oculto-2026" onclick="conteoCargarSugeridos()" title="Agrega las tallas que piden los alumnos (temporadas con lista de alumnos)">+ Sugeridos por demanda</button>
           <button class="btn btn-ghost btn-sm" onclick="conteoAgregarFila()">+ Fila vacía</button>
           <span id="conteo-meta" style="margin-left:auto;font-size:11px;color:#666"></span>
         </div>
@@ -2033,7 +2133,7 @@
     <div class="modal-content" style="max-width:520px">
       <div class="modal-header">
         <div>
-          <div class="card-title" style="margin:0">🚚 Marcar entrega a escuela</div>
+          <div class="card-title" style="margin:0">🚚 Entregar a una escuela</div>
           <div style="font-size:12px;color:#666;margin-top:2px">Pasa lo EMPACADO de la escuela a ENTREGADO, con fecha. Por pedido (sin nombres) se puede entregar parcial.</div>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="cerrarEntregaModal()">✕</button>
@@ -2244,6 +2344,11 @@
      por botones de Bodega/Inicio y por Ctrl+K). Motor: empaque.js, que
      reusa empacarAlumnosDesdeRegistro/desempacarPieza de bodega.js. -->
 <div id="view-empaque" class="view">
+  <div class="ayuda-tip" data-ayuda="empaque" role="note">
+    <span class="ayuda-tip-ico" aria-hidden="true">💡</span>
+    <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> Elegí la escuela, poné cuántas piezas de cada talla llevás y tocá <b>📦 Empacar</b>. Lo empacado sale de bodega y queda apartado para esa escuela.</span>
+    <button type="button" class="ayuda-tip-x" onclick="cerrarAyuda('empaque')" aria-label="Cerrar esta ayuda" title="Cerrar esta ayuda">✕</button>
+  </div>
   <div id="empaque-contenido">
     <div class="text-muted" style="padding:20px;text-align:center">Cargando sesión de empaque...</div>
   </div>
@@ -2334,12 +2439,14 @@
        · 📊 Reportes  — lo que se consulta seguido (índice + histórico + costos + hoja entrega)
        · 📚 Catálogos — datos maestros (grados, grupos de escuelas, operarias)
        · 👥 Usuarios  — sesión, invitar, administrar (admin)
-       · 🛠 Sistema   — PWA, backups, conexión, fases, auditoría (rara vez) -->
+       · 🛠 Sistema   — PWA, backups, conexión, fases, auditoría (rara vez)
+       · 🗄 Más       — lo de temporadas con alumnos (2025) y volver a ver las ayudas -->
   <div class="card" style="padding:8px 10px;margin-bottom:10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
     <button id="cfg-nav-reportes" class="btn btn-sm btn-primary" onclick="switchSubConfig('reportes')">📊 Reportes</button>
     <button id="cfg-nav-catalogos" class="btn btn-sm btn-ghost" onclick="switchSubConfig('catalogos')">📚 Catálogos</button>
     <button id="cfg-nav-usuarios" class="btn btn-sm btn-ghost" onclick="switchSubConfig('usuarios')">👥 Usuarios</button>
     <button id="cfg-nav-sistema" class="btn btn-sm btn-ghost" onclick="switchSubConfig('sistema')">🛠 Sistema</button>
+    <button id="cfg-nav-mas" class="btn btn-sm btn-ghost" onclick="switchSubConfig('mas')" title="Temporadas anteriores y avanzado">🗄 Más</button>
   </div>
 
   <!-- ════════════ SUB: 📊 REPORTES ════════════ -->
@@ -2351,7 +2458,7 @@
       <div class="text-muted mb8" style="font-size:12px">Todos los reportes de la app en un solo lugar. El botón te lleva a donde está cada uno.</div>
       <div style="display:flex;flex-direction:column;gap:6px">
 
-        <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+        <div class="oculto-2026" style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
           <div style="flex:1"><div style="font-weight:600;font-size:13px">📊 Por talla</div><div style="font-size:11px;color:#666">Demanda por talla cruzada con corte / bodega / pool (incluye 🔥 críticas).</div></div>
           <button class="btn btn-ghost btn-sm" onclick="switchTab('estadistica'); if(typeof switchSubEst==='function') switchSubEst('tallas')">Abrir →</button>
         </div>
@@ -2361,7 +2468,7 @@
           <button class="btn btn-ghost btn-sm" onclick="switchTab('estadistica'); if(typeof switchSubEst==='function') switchSubEst('escuela')">Abrir →</button>
         </div>
 
-        <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+        <div class="oculto-2026" style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
           <div style="flex:1"><div style="font-weight:600;font-size:13px">🔮 Pronóstico de tallas</div><div style="font-size:11px;color:#666">Distribución histórica aplicada a una cantidad nueva a producir.</div></div>
           <button class="btn btn-ghost btn-sm" onclick="switchTab('estadistica'); if(typeof switchSubEst==='function') switchSubEst('pronostico')">Abrir →</button>
         </div>
@@ -2371,17 +2478,17 @@
           <button class="btn btn-ghost btn-sm" onclick="var d=document.getElementById('cfg-rep-historico'); if(d){d.open=true; d.scrollIntoView({behavior:'smooth',block:'center'});}">Abrir ↓</button>
         </div>
 
-        <div class="dato-sensible" style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+        <div class="dato-sensible oculto-2026" style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
           <div style="flex:1"><div style="font-weight:600;font-size:13px">💰 Costos</div><div style="font-size:11px;color:#666">Mano de obra por nivel × sexo. Acá abajo, en este mismo grupo.</div></div>
           <button class="btn btn-ghost btn-sm" onclick="var d=document.getElementById('cfg-rep-costos'); if(d){d.open=true; d.scrollIntoView({behavior:'smooth',block:'center'});}">Abrir ↓</button>
         </div>
 
-        <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+        <div class="oculto-2026" style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
           <div style="flex:1"><div style="font-weight:600;font-size:13px">📄 Hoja de entrega (PDF director)</div><div style="font-size:11px;color:#666">Reporte imprimible por escuela. Acá abajo, en este mismo grupo.</div></div>
           <button class="btn btn-ghost btn-sm" onclick="var d=document.getElementById('cfg-rep-hoja'); if(d){d.scrollIntoView({behavior:'smooth',block:'center'});}">Abrir ↓</button>
         </div>
 
-        <div style="padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
+        <div class="oculto-2026" style="padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
           <div style="display:flex;gap:10px;align-items:center">
             <div style="flex:1"><div style="font-weight:600;font-size:13px">🧾 Reportes PDF por escuela</div><div style="font-size:11px;color:#666">Hoja de tallaje, lista de empaque y hoja de entrega.</div></div>
           </div>
@@ -2414,7 +2521,7 @@
         <div id="historico-contenido" style="padding-top:10px"><div class="text-muted" style="padding:16px;text-align:center">Abrí esta sección para cargar el histórico…</div></div>
       </details>
 
-      <details id="cfg-rep-costos" class="dato-sensible" ontoggle="if(this.open && typeof initCostos==='function') initCostos()">
+      <details id="cfg-rep-costos" class="dato-sensible oculto-2026" ontoggle="if(this.open && typeof initCostos==='function') initCostos()">
         <summary style="cursor:pointer;list-style:none;padding:10px 12px;background:#F5F7FA;border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
           <span>💰 Costos <span style="font-weight:400;color:#888;font-size:11px">— mano de obra por nivel × sexo</span></span><span style="opacity:0.6;font-size:11px">▼</span>
         </summary>
@@ -2423,7 +2530,7 @@
     </div>
 
     <!-- Hoja de entrega por escuela (PDF para director) -->
-    <div class="card" id="cfg-rep-hoja">
+    <div class="card oculto-2026" id="cfg-rep-hoja">
       <div class="card-title">📄 Hoja de entrega por escuela</div>
       <div class="text-muted mb8" style="font-size:12px">
         Reporte interno para entregar al director de la institución. Incluye detalle por grado (♀/♂/total), comparación contrato vs entregado por nivel educativo, totales y tela contratada. Carta vertical, listo para imprimir.
@@ -2448,7 +2555,7 @@
       <div class="card-title">📚 Catálogos</div>
       <div class="text-muted mb8" style="font-size:12px">Datos maestros que la app usa para todo lo demás. Se editan de vez en cuando.</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px">
-        <button class="btn btn-ghost" onclick="abrirCatalogoGrados()" style="padding:10px;text-align:left">
+        <button class="btn btn-ghost oculto-2026" onclick="abrirCatalogoGrados()" style="padding:10px;text-align:left">
           <div style="font-weight:600">🎓 Grados → Nivel/Ciclo</div>
           <div style="font-size:11px;color:#666;margin-top:2px">Qué nivel y ciclo corresponde a cada grado</div>
         </button>
@@ -2456,7 +2563,7 @@
           <div style="font-weight:600">👷 Operarias</div>
           <div style="font-size:11px;color:#666;margin-top:2px">Listado y alta de operarias (módulo Producción)</div>
         </button>
-        <button class="btn btn-ghost" onclick="abrirCatalogoGrupos()" style="padding:10px;text-align:left">
+        <button class="btn btn-ghost oculto-2026" onclick="abrirCatalogoGrupos()" style="padding:10px;text-align:left">
           <div style="font-weight:600">👥 Grupos de producción</div>
           <div style="font-size:11px;color:#666;margin-top:2px">Equipos de trabajo (módulo Producción)</div>
         </button>
@@ -2481,7 +2588,7 @@
     </div>
 
     <!-- Catálogo de grados (oculto, se abre por botón) -->
-    <div id="cfg-grados-card" class="card" style="display:none">
+    <div id="cfg-grados-card" class="card oculto-2026" style="display:none">
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
         <span>🎓 Catálogo de grados</span>
         <div style="display:flex;gap:6px">
@@ -2516,29 +2623,45 @@
       </div>
     </div>
 
-    <!-- Invitar usuario (solo admin) -->
+    <!-- Invitar a alguien del taller (solo admin). La invitación por correo
+         sigue igual: edge function invite-user con email + rol. -->
     <div id="cfg-invitar-card" class="card" style="display:none">
-      <div class="card-title">👥 Invitar usuario</div>
-      <div class="text-muted mb8" style="font-size:12px">
-        Le mandamos un email al invitado con un link para que defina su contraseña inicial. El link expira en 24 horas.
+      <div class="card-title">➕ Invitar a alguien del taller</div>
+      <div class="text-muted mb8" style="font-size:13px">
+        Le llega un correo con un enlace para que ponga su contraseña. El enlace dura 24 horas.
       </div>
 
-      <div class="row2" style="margin-bottom:10px">
-        <div class="field" style="margin:0">
-          <label>Email</label>
-          <input type="email" id="cfg-inv-email" placeholder="nuevo@correo.com" autocomplete="email">
-        </div>
-        <div class="field" style="margin:0">
-          <label>Rol</label>
-          <select id="cfg-inv-role">
-            <option value="operador" selected>Operador</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
+      <div class="field">
+        <label for="cfg-inv-nombre">Nombre</label>
+        <input type="text" id="cfg-inv-nombre" placeholder="Ej.: Paty" autocomplete="off">
+        <div class="inv-ayuda">Para reconocerla en la lista (se guarda en este aparato).</div>
+      </div>
+      <div class="field">
+        <label for="cfg-inv-email">Correo</label>
+        <input type="email" id="cfg-inv-email" placeholder="nombre@gmail.com" autocomplete="email" inputmode="email">
+        <div class="inv-ayuda">Adonde le va a llegar la invitación.</div>
       </div>
 
-      <button class="btn btn-primary btn-block" onclick="invitarUsuario()">Enviar invitación</button>
+      <label style="margin-bottom:6px">¿Qué va a poder hacer?</label>
+      <div class="inv-roles" role="radiogroup" aria-label="Qué va a poder hacer">
+        <label class="inv-rol">
+          <input type="radio" name="cfg-inv-role" value="operador" checked>
+          <div><b>🧵 Taller</b><span>Anota cortes, bultos, bodega, empaque y entregas.</span></div>
+        </label>
+        <label class="inv-rol">
+          <input type="radio" name="cfg-inv-role" value="admin">
+          <div><b>🔑 Administrador</b><span>Además borra y configura.</span></div>
+        </label>
+      </div>
+
+      <button class="btn btn-primary btn-block" id="cfg-inv-btn" onclick="invitarUsuario()" style="min-height:48px;font-size:15px">📩 Enviar invitación</button>
       <div id="cfg-inv-alert" style="margin-top:10px"></div>
+    </div>
+
+    <!-- Quien no es administrador: cómo pedir una cuenta para alguien -->
+    <div id="cfg-invitar-noadmin" class="card" style="display:none">
+      <div class="card-title">➕ Invitar a alguien del taller</div>
+      <div class="text-muted" style="font-size:13px">Solo un administrador puede invitar. Pedíselo y pasale el nombre y el correo de la persona.</div>
     </div>
 
     <!-- Lista de usuarios (solo admin) -->
@@ -2548,7 +2671,7 @@
         <button class="btn btn-ghost btn-sm" onclick="cargarUsuarios()">🔄</button>
       </div>
       <div class="text-muted mb8" style="font-size:12px">
-        Cambiá el rol con el select, o tocá 🗑 para eliminar el usuario. No te podés eliminar a vos mismo ni dejar al sistema sin admins.
+        Cambiá qué puede hacer cada persona con la lista, o tocá 🗑 para quitarle el acceso. No te podés quitar a vos mismo ni dejar la app sin administrador.
       </div>
       <div id="cfg-usuarios-lista">
         <div class="text-muted" style="padding:6px">Tocá 🔄 para cargar.</div>
@@ -2570,12 +2693,12 @@
       <div id="pwa-update-status" style="margin-top:8px;font-size:12px;color:#666"></div>
 
       <div style="margin-top:12px;border-top:1px dashed #E0E0E0;padding-top:10px">
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-          <input type="checkbox" id="cfg-modulos-avanzados" onchange="toggleModulosAvanzados(this.checked)" style="width:20px;height:20px">
-          🧩 Mostrar módulos avanzados (✂️ Corte y 🏭 Producción)
+        <label class="mas-opcion">
+          <input type="checkbox" id="cfg-modulos-avanzados" onchange="toggleModulosAvanzados(this.checked)">
+          <span>Mostrar ✂️ Corte y 🏭 Producción en el menú</span>
         </label>
-        <div class="text-muted" style="font-size:11px;margin-top:4px">
-          Ocultos el menú queda más simple. No se borra nada: al reactivarlos vuelven con todos sus datos.
+        <div class="text-muted" style="font-size:11px;margin-top:2px">
+          Vienen encendidos. Si en este aparato no se usan, se pueden esconder: no se borra nada.
         </div>
       </div>
     </div>
@@ -2627,7 +2750,7 @@
         </label>
       </div>
 
-      <div class="config-item">
+      <div class="config-item oculto-2026">
         <div style="flex:1">
           <div class="config-label">Fase 3 · Reportes y destajo</div>
           <div class="config-sub">Productividad por operaria, tarifas por pieza, liquidación por destajo. Requiere Fase 2 + 1-2 meses de datos.</div>
@@ -2669,6 +2792,34 @@
           <button class="btn btn-primary btn-block" onclick="guardarConfig()">Guardar configuración</button>
         </div>
       </details>
+    </div>
+  </div>
+
+  <!-- ════════════ SUB: 🗄 MÁS — temporadas anteriores y avanzado ════════════ -->
+  <div id="cfg-sub-mas" style="display:none">
+    <div class="card">
+      <div class="card-title">🗄 Temporadas anteriores (por alumno)</div>
+      <div class="text-muted mb8" style="font-size:13px">
+        En 2026 el pedido viene por cantidades, sin lista de alumnos. Lo que solo servía con alumnos (2025) quedó guardado acá para que no estorbe. No se borró nada.
+      </div>
+      <label class="mas-opcion">
+        <input type="checkbox" id="cfg-ver-anteriores" onchange="toggleTemporadasAnteriores(this.checked)">
+        <span>Mostrar lo de temporadas anteriores</span>
+      </label>
+      <div style="font-size:12px;color:#555;margin-top:4px">Al encenderlo vuelven a aparecer:</div>
+      <ul class="mas-lista">
+        <li><b>Bodega:</b> 📊 Stock vs Demanda y «+ Sugeridos por demanda» al contar.</li>
+        <li><b>Producción:</b> 📋 Asignar, los avisos de demanda por talla y «¿apartar para alguna escuela?» al terminar un bulto.</li>
+        <li><b>Estadística:</b> 📊 Por talla y 🔮 Pronóstico.</li>
+        <li><b>Ajustes:</b> 💰 Costos, 📄 Hoja de entrega, 🧾 PDF por escuela, 🎓 Grados, 👥 Grupos de producción y la Fase 3.</li>
+      </ul>
+      <div class="text-muted" style="font-size:12px;margin-top:8px">También aparecen solos si elegís 2025 en «Ver:» de Inicio o en Registro.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">💡 Ayudas «¿Cómo se usa?»</div>
+      <div class="text-muted mb8" style="font-size:13px">Si cerraste las ayudas de arriba de cada pantalla, las podés volver a ver.</div>
+      <button class="btn btn-ghost" onclick="mostrarAyudasOtraVez()" style="min-height:44px">💡 Volver a mostrar las ayudas</button>
     </div>
   </div>
 
@@ -3173,12 +3324,33 @@ function irA(seccion) {
   if (seccion === 'bulto')   tryInit('Bulto',   typeof initBulto === 'function'   ? initBulto   : null);
 }
 
-// ── Módulos avanzados (✂️ Corte / 🏭 Producción) ─────────────────────
-// Casi no se usan en el flujo real → ocultos del menú por defecto.
-// Toggle en Config → App. Nada se borra: las vistas siguen existiendo
-// (accesibles desde el buscador Ctrl+K) y los datos quedan intactos.
+// localStorage con try/catch: en modo privado o sin espacio puede fallar,
+// y una preferencia que no se guarda no debe romper la pantalla.
+function lsLeer(k) {
+  try { return localStorage.getItem(k); } catch (_) { return null; }
+}
+function lsGuardar(k, v) {
+  try {
+    if (v === null || v === undefined) localStorage.removeItem(k);
+    else localStorage.setItem(k, String(v));
+  } catch (_) { /* sin almacenamiento: se pierde solo la preferencia */ }
+}
+
+// Abre una pestaña del menú y la deja marcada (switchTab sin el botón no
+// resalta nada en el menú).
+function abrirPestana(tab) {
+  const btn = [...document.querySelectorAll('.nav-tab')]
+    .find(t => (t.getAttribute('onclick') || '').includes(`switchTab('${tab}'`));
+  switchTab(tab, btn || null);
+}
+
+// ── ✂️ Corte y 🏭 Producción en el menú ───────────────────────────────
+// Desde la temporada 2026 son el centro del trabajo diario: VISIBLES por
+// defecto. Quien quiera esconderlos lo hace en Ajustes → Sistema (queda
+// guardado en ese aparato). La clave vieja 'modulos_avanzados' (ocultos por
+// defecto) ya no se lee, así todos los teléfonos los ven tras actualizar.
 function modulosAvanzadosActivos() {
-  return localStorage.getItem('modulos_avanzados') === '1';
+  return lsLeer('ocultar_corte_prod') !== '1';
 }
 function aplicarModulosAvanzados() {
   const on = modulosAvanzadosActivos();
@@ -3188,7 +3360,7 @@ function aplicarModulosAvanzados() {
   });
 }
 function toggleModulosAvanzados(on) {
-  localStorage.setItem('modulos_avanzados', on ? '1' : '0');
+  lsGuardar('ocultar_corte_prod', on ? null : '1');
   aplicarModulosAvanzados();
   // Si estaba parado en una vista recién ocultada, volver a Inicio
   if (!on) {
@@ -3207,6 +3379,115 @@ function volverNuevo() {
   if (typeof switchTab === 'function') switchTab('corte', corteTab);
   if (typeof switchSubCorte === 'function') switchSubCorte('nuevo');
   window.scrollTo(0, 0);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// TEMPORADA POR CANTIDADES (2026) — esconder lo que solo sirve con alumnos
+// ══════════════════════════════════════════════════════════════════════
+// Desde 2026 el pedido viene por cantidades, sin lista de alumnos. Botones,
+// pestañas y avisos que cuentan alumnos (lógica 2025) llevan la clase
+// .oculto-2026 y no se ven mientras se trabaja una temporada por cantidades.
+// Nada se borra. Vuelven a verse:
+//   · si se elige una temporada con alumnos (2025) en «Ver:» de Inicio o en
+//     Registro (se cumple «solo cuando se elige 2025»);
+//   · o con Ajustes → 🗄 Más → «Mostrar lo de temporadas anteriores».
+// La regla CSS: body.temporada-cantidad .oculto-2026 { display:none }.
+const tiTemporada = {
+  // ¿La temporada ACTIVA es por cantidades? Arranca con lo de la última vez
+  // (así no parpadea lo de 2025 al abrir) y se confirma al cargar Inicio.
+  activaPorCantidad: (() => { const v = lsLeer('temporada_por_cantidad'); return v === null ? null : v === '1'; })(),
+  viendoConAlumnos: false,   // se eligió una temporada con alumnos (2025)
+};
+
+function verTemporadasAnteriores() {
+  return lsLeer('ver_temporadas_anteriores') === '1';
+}
+
+// true = se está trabajando por cantidades y lo de 2025 va escondido
+function tiOcultar2026() {
+  return document.body.classList.contains('temporada-cantidad');
+}
+
+function aplicarModoTemporada() {
+  const ocultar = tiTemporada.activaPorCantidad === true
+    && !tiTemporada.viendoConAlumnos && !verTemporadasAnteriores();
+  const antes = document.body.classList.contains('temporada-cantidad');
+  document.body.classList.toggle('temporada-cantidad', ocultar);
+  if (ocultar && !antes) _salirDeVistasOcultas();
+}
+
+// activa / vista: filas de vw_temporada_resumen (num_pedidos > 0 = por
+// cantidades). vista = la temporada que se está mirando (por defecto la activa).
+function tiFijarTemporada(activa, vista) {
+  if (activa) {
+    tiTemporada.activaPorCantidad = Number(activa.num_pedidos) > 0;
+    lsGuardar('temporada_por_cantidad', tiTemporada.activaPorCantidad ? '1' : '0');
+  }
+  const v = vista || activa;
+  if (v) tiTemporada.viendoConAlumnos = !(Number(v.num_pedidos) > 0);
+  aplicarModoTemporada();
+}
+
+function toggleTemporadasAnteriores(on) {
+  lsGuardar('ver_temporadas_anteriores', on ? '1' : null);
+  aplicarModoTemporada();
+}
+
+// Si la pantalla abierta quedó escondida, pasar a una que se vea.
+function _salirDeVistasOcultas() {
+  try {
+    if (typeof bodegaCache !== 'undefined' && bodegaCache.vistaActual === 'vs_demanda') {
+      bodegaCache.vistaActual = 'stock';
+      const vb = document.getElementById('view-bodega');
+      if (vb && vb.classList.contains('active') && typeof cambiarVistaBodega === 'function') cambiarVistaBodega('stock');
+    }
+    if (typeof estSubActual !== 'undefined' && ['tallas', 'pronostico'].includes(estSubActual)) {
+      estSubActual = 'escuela';
+      const ve = document.getElementById('view-estadistica');
+      if (ve && ve.classList.contains('active') && typeof switchSubEst === 'function') switchSubEst('escuela');
+    }
+    const asig = document.getElementById('prod-sub-asignaciones-view');
+    if (asig && asig.style.display === 'block' && typeof switchSubProd === 'function') switchSubProd('dashboard');
+  } catch (e) { console.warn('[modo temporada]', e); }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// AYUDA DE UNA LÍNEA «¿Cómo se usa?» arriba de cada pantalla principal
+// ══════════════════════════════════════════════════════════════════════
+// En el HTML: <div class="ayuda-tip" data-ayuda="corte">…</div>. Al tocar ✕
+// se recuerda en este aparato y no vuelve a salir (Ajustes → 🗄 Más las
+// vuelve a mostrar).
+function ayudaCerrada(id) {
+  return lsLeer('ayuda_cerrada_' + id) === '1';
+}
+function ayudaHtml(id, texto) {
+  return `
+    <div class="ayuda-tip${ayudaCerrada(id) ? ' oculta' : ''}" data-ayuda="${id}" role="note">
+      <span class="ayuda-tip-ico" aria-hidden="true">💡</span>
+      <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> ${texto}</span>
+      <button type="button" class="ayuda-tip-x" onclick="cerrarAyuda('${id}')" aria-label="Cerrar esta ayuda" title="Cerrar esta ayuda">✕</button>
+    </div>`;
+}
+function aplicarAyudas() {
+  document.querySelectorAll('[data-ayuda]').forEach(el => {
+    el.classList.toggle('oculta', ayudaCerrada(el.getAttribute('data-ayuda')));
+  });
+}
+function cerrarAyuda(id) {
+  lsGuardar('ayuda_cerrada_' + id, '1');
+  aplicarAyudas();
+}
+function mostrarAyudasOtraVez() {
+  try {
+    const claves = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('ayuda_cerrada_')) claves.push(k);
+    }
+    claves.forEach(k => lsGuardar(k, null));
+  } catch (_) {}
+  aplicarAyudas();
+  showToast('Listo: las ayudas «¿Cómo se usa?» vuelven a salir arriba de cada pantalla.', 'success');
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -3642,6 +3923,8 @@ async function bootApp() {
     }
   } catch (_e) {}
   aplicarModulosAvanzados();
+  aplicarModoTemporada();   // con lo de la última vez; Inicio lo confirma al cargar
+  aplicarAyudas();
   await gateApp();
   if (supaSession && typeof initDashboard === 'function') initDashboard();
   if (supaSession && typeof initAuditRoleTab === 'function') initAuditRoleTab();
@@ -3739,8 +4022,11 @@ async function initDashboard() {
   const cont = document.getElementById('dashboard-contenido');
   if (!cont) { dashboardCache.cargando = false; return; }
 
-  // Inicio = dashboard "Hoy" únicamente. Por-escuela e histórico viven ahora en Estadística.
+  // Inicio = tareas del día arriba + dashboard "Hoy". Por-escuela e
+  // histórico viven en Estadística. Las tareas se pintan antes de cargar
+  // datos: si la red falla, igual se puede ir a trabajar.
   cont.innerHTML = `
+    ${tareasInicioHtml()}
     <div id="dashboard-sub-contenido">
       <div class="text-muted" style="padding:20px;text-align:center">Cargando dashboard...</div>
     </div>
@@ -3753,6 +4039,80 @@ async function initDashboard() {
 function dashElegirTemporada(id) {
   dashboardCache.temporadaSel = id;
   initDashboard();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// «¿QUÉ VAS A HACER HOY?» — botones grandes de tarea arriba de Inicio
+// Cada uno lleva a la pantalla que ya existe para esa tarea. Los ven
+// todos los roles (el taller es quien los usa).
+// ══════════════════════════════════════════════════════════════════════
+const TAREAS_INICIO = [
+  { id: 'corte',      ico: '✂️', tit: 'Anotar un corte',          sub: 'Lo del cuaderno de tendido' },
+  { id: 'bulto',      ico: '📦', tit: 'Bulto terminado',          sub: 'Pasa de costura a bodega' },
+  { id: 'entrada',    ico: '📥', tit: 'Entró a bodega',           sub: 'Piezas que llegaron' },
+  { id: 'contar',     ico: '🔢', tit: 'Contar bodega',            sub: 'Lo que hay en el estante' },
+  { id: 'empacar',    ico: '🧺', tit: 'Empacar para una escuela', sub: 'Apartar lo de una escuela' },
+  { id: 'entregar',   ico: '🚚', tit: 'Entregar a una escuela',   sub: 'Lo empacado se va' },
+  { id: 'especiales', ico: '📏', tit: 'Tallas especiales',        sub: 'Alumnos con medida propia' },
+  { id: 'avance',     ico: '🧵', tit: '¿Cómo van los bultos?',    sub: 'Qué va terminado y qué falta' },
+];
+
+function tareasInicioHtml() {
+  const ayuda = typeof ayudaHtml === 'function'
+    ? ayudaHtml('inicio', 'Tocá lo que vas a hacer y la app te lleva directo. Los números de la temporada están más abajo.')
+    : '';
+  return `
+    <section class="card tareas-card" aria-labelledby="tareas-tit">
+      ${ayuda}
+      <h2 class="tareas-tit" id="tareas-tit">¿Qué vas a hacer hoy?</h2>
+      <div class="tareas-grid">
+        ${TAREAS_INICIO.map(t => `
+        <button type="button" class="tarea-btn" data-tarea="${t.id}" onclick="tareaIr('${t.id}')">
+          <span class="tarea-ico" aria-hidden="true">${t.ico}</span>
+          <span class="tarea-tit">${t.tit}</span>
+          <span class="tarea-sub">${t.sub}</span>
+        </button>`).join('')}
+      </div>
+    </section>`;
+}
+
+function tareaIr(id) {
+  const ir = typeof abrirPestana === 'function' ? abrirPestana : (t) => switchTab(t);
+  switch (id) {
+    case 'corte':        // Corte → Nuevo → Tendido (lo que dice el cuaderno)
+      ir('corte');
+      if (typeof switchSubCorte === 'function') switchSubCorte('nuevo');
+      irA('tendido');
+      return;
+    case 'bulto':        // Producción → bultos sin terminar (✓ Terminar → bodega)
+    case 'avance':       // Producción → todos los bultos (con 📐 Plan al lado)
+      if (typeof produccionFiltro !== 'undefined') produccionFiltro = id === 'bulto' ? 'pendientes' : 'todos';
+      window._prodHintSub = 'dashboard';
+      ir('produccion');
+      return;
+    case 'entrada':      // Bodega → 📥 entrada de piezas
+      ir('bodega');
+      if (typeof abrirEntradaManual === 'function') abrirEntradaManual();
+      return;
+    case 'contar':       // Bodega → 🔢 conteo
+      ir('bodega');
+      if (typeof abrirConteoModal === 'function') abrirConteoModal();
+      return;
+    case 'empacar':      // Empaque por cantidad, desde la lista de escuelas
+      window._emqHintEscuela = null;
+      if (typeof emqState !== 'undefined') { emqState.escuelaId = null; emqState.paso = 1; }
+      ir('empaque');
+      return;
+    case 'entregar':     // Bodega → 🚚 entregar lo empacado de una escuela
+      ir('bodega');
+      if (typeof abrirEntregaModal === 'function') abrirEntregaModal();
+      return;
+    case 'especiales':   // Registro (temporada activa) → 📏 Especiales
+      if (typeof registroCache !== 'undefined') registroCache.temporadaActual = null;
+      window._regHintVista = 'especiales';
+      ir('registro');
+      return;
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -3944,6 +4304,8 @@ async function cargarDashboardHoy() {
     data.tempActiva = activa;
     data.tempSel = sel;
     data.modo = !sel ? 'vacio' : (Number(sel.num_pedidos) > 0 ? 'pedido' : 'alumnos');
+    // Esconder (o mostrar) en toda la app lo que solo sirve con alumnos
+    if (typeof tiFijarTemporada === 'function') tiFijarTemporada(activa, sel);
 
     if (data.modo === 'pedido') {
       const tareas = [
@@ -4137,17 +4499,7 @@ function renderDashboard() {
       </div>
     ` : ''}
 
-    <!-- Accesos rápidos -->
-    <div class="card" style="padding:14px">
-      <div style="font-weight:600;margin-bottom:10px">⚡ Accesos rápidos</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">
-        <button class="btn btn-ghost" onclick="switchTab('registro')" style="padding:10px">📋 Registro</button>
-        <button class="btn btn-ghost" onclick="switchTab('produccion')" style="padding:10px">🏭 Producción</button>
-        <button class="btn btn-ghost" onclick="switchTab('bodega')" style="padding:10px">📦 Bodega</button>
-        <button class="btn btn-ghost" onclick="irA('trazo')" style="padding:10px">✂ Nuevo trazo</button>
-      </div>
-    </div>
-
+    <!-- (Los accesos rápidos de antes quedaron arriba, en «¿Qué vas a hacer hoy?») -->
     <div style="text-align:center;margin-top:10px">
       <button class="btn btn-ghost btn-sm" onclick="initDashboard()">🔄 Refrescar</button>
     </div>
@@ -4156,8 +4508,11 @@ function renderDashboard() {
 
 // ─── Producción de la temporada (vw_plan_produccion, por prenda) ─────
 function dashVerPlan() {
-  if (typeof switchTab === 'function') switchTab('produccion');
-  if (typeof switchSubProd === 'function') switchSubProd('plan');
+  window._prodHintSub = 'plan';
+  if (typeof abrirPestana === 'function') abrirPestana('produccion');
+  else if (typeof switchTab === 'function') switchTab('produccion');
+  // Por si initProduccion no corrió (pestaña ya abierta o sin el atajo)
+  if (window._prodHintSub && typeof switchSubProd === 'function') { window._prodHintSub = null; switchSubProd('plan'); }
 }
 
 function _renderProduccionTemporada(plan) {
@@ -4812,7 +5167,10 @@ async function hcImprimirBolsaDelantera() {
 let estSubActual = 'tallas';
 
 function initEstadistica() {
-  switchSubEst(estSubActual || 'tallas');
+  let sub = estSubActual || 'tallas';
+  // 2026 (por cantidades): Por talla y Pronóstico van escondidos
+  if (['tallas', 'pronostico'].includes(sub) && typeof tiOcultar2026 === 'function' && tiOcultar2026()) sub = 'escuela';
+  switchSubEst(sub);
 }
 
 function switchSubEst(sub) {
@@ -6557,13 +6915,15 @@ const HERRAMIENTAS = [
     ir: () => _herrConfig('Usuarios') },
   { icono:'🔄', nombre:'Buscar actualizaciones de la app', kw:'actualizar version nueva pwa update refrescar',
     ir: () => _herrConfig('App (PWA)') },
-  { icono:'🧩', nombre:'Módulos avanzados (mostrar/ocultar Corte y Producción)', kw:'modulos avanzados ocultar mostrar menu corte produccion activar',
+  { icono:'🧩', nombre:'Mostrar u ocultar Corte y Producción en el menú', kw:'modulos avanzados ocultar mostrar menu corte produccion activar',
     ir: () => _herrConfig('App (PWA)') },
+  { icono:'🗄', nombre:'Temporadas anteriores (por alumno) y ayudas', kw:'2025 temporada anterior alumnos esconder mostrar demanda pronostico costos hoja entrega grados ayuda',
+    ir: () => { _herrTab('config'); _herrLuego(() => switchSubConfig('mas')); } },
   { icono:'🕵️', nombre:'Auditoría de cambios', kw:'auditoria cambios quien hizo log historial modificaciones',
     ir: () => _herrTab('auditoria') },
-  { icono:'✂️', nombre:'Corte: trazos, tendidos y bultos (módulo avanzado)', kw:'corte trazo tendido bulto lienzos capas rollos',
+  { icono:'✂️', nombre:'Corte: trazos, tendidos y bultos', kw:'corte trazo tendido bulto lienzos capas rollos',
     ir: () => _herrTab('corte') },
-  { icono:'🏭', nombre:'Producción: captura y operarias (módulo avanzado)', kw:'produccion operarias captura operaciones destajo asignaciones',
+  { icono:'🏭', nombre:'Producción: bultos, plan, captura y operarias', kw:'produccion operarias captura operaciones destajo asignaciones',
     ir: () => _herrTab('produccion') },
 ];
 
@@ -10154,25 +10514,16 @@ let cortesExpandidos = new Set();
 let demandaProdCache = {};
 
 async function initProduccion() {
-  // Mostrar u ocultar sub-pestañas según Fase 2 activa
-  const navSub = document.querySelector('#view-produccion > .card:first-of-type');
-  if (navSub) {
-    // El primer card es el subnav — ocultarlo si Fase 2 no está activa
-    if (!FASE2_ACTIVA) {
-      navSub.style.display = 'none';
-    } else {
-      navSub.style.display = 'block';
-    }
-  }
-  // Si Fase 2 OFF, forzar dashboard
-  if (!FASE2_ACTIVA) {
-    document.getElementById('prod-sub-dashboard-view').style.display = 'block';
-    document.getElementById('prod-sub-captura-view').style.display = 'none';
-    document.getElementById('prod-sub-operarias-view').style.display = 'none';
-    await cargarProduccion();
-    return;
-  }
-  switchSubProd('dashboard');
+  // El subnav (📦 Bultos · 📐 Plan · 👷 Operarias · 📝 Captura) queda
+  // siempre a la vista: antes se quería esconder sin Fase 2, pero el
+  // selector no encontraba la tarjeta y en la práctica siempre se veía.
+  // Sin él no había cómo pasar de los bultos al Plan.
+  const navSub = document.getElementById('prod-subnav');
+  if (navSub) navSub.style.display = '';
+  // Atajo desde Inicio («Bulto terminado», «¿Cómo van los bultos?»)
+  const sub = window._prodHintSub || 'dashboard';
+  window._prodHintSub = null;
+  switchSubProd(sub);
 }
 
 async function cargarProduccion() {
@@ -10199,7 +10550,9 @@ async function cargarProduccion() {
     }
 
     // Cargar demanda + pool + stock para badges (en paralelo, no bloqueante).
-    cargarDemandaProd().catch(e => console.warn('Demanda prod:', e.message));
+    // La demanda sale de ALUMNOS: en temporadas por cantidades (2026) no aplica.
+    if (typeof tiOcultar2026 === 'function' && tiOcultar2026()) demandaProdCache = {};
+    else cargarDemandaProd().catch(e => console.warn('Demanda prod:', e.message));
 
     // Cargar progreso Fase 2 (solo si está activa)
     if (FASE2_ACTIVA) {
@@ -10278,6 +10631,7 @@ async function cargarDemandaProd() {
 // Usa prendaCanon (cod → nombre canónico de la base) para matchear con alumnos.
 function _badgeDemandaProd(cod_prenda, talla_key) {
   if (!cod_prenda || !talla_key || !demandaProdCache) return '';
+  if (typeof tiOcultar2026 === 'function' && tiOcultar2026()) return '';   // cuenta alumnos (2025)
   const nombre = (typeof prendaCanon === 'function') ? prendaCanon(cod_prenda) : cod_prenda;
   const d = demandaProdCache[nombre + '|' + talla_key];
   if (!d || d.pendientes === 0) return '';
@@ -10611,6 +10965,12 @@ async function terminarBulto(produccionBultoId, cantidadOriginal) {
       });
     }
     renderProduccion();
+    // 2026 (por cantidades): sin demanda por alumno ni «apartar para escuelas»
+    // (eso se hace en 🧺 Empacar). Solo avisar que entró a bodega.
+    if (typeof tiOcultar2026 === 'function' && tiOcultar2026()) {
+      showToast(`✓ Bulto terminado: ${cantidadFinal} pieza(s)${b ? ' de ' + b.talla_key_salida : ''} entraron a bodega.`, 'success', 6000);
+      return;
+    }
     // Recargar demanda para que los badges reflejen la nueva entrada
     cargarDemandaProd().catch(() => {});
     // Sugerir acaparar
@@ -10840,7 +11200,7 @@ async function marcarEtapaRapida(bultoId, operacionId) {
   if (operariasCache.length === 0) {
     operariasCache = await supaFetch('operaria','GET',null,'?activo=eq.true&order=nombre&limit=100');
   }
-  const activas = operariasCache.filter(o => o.activo);
+  const activas = operariasCache.filter(operariaTrabajando);
   if (activas.length === 0) { alert('No hay operarias activas. Andá a Operarias y agregá.'); return; }
 
   // Preguntar operaria
@@ -11041,7 +11401,9 @@ function switchSubProd(sub) {
     if (el) el.style.display = (s===sub) ? 'block' : 'none';
     const btn = document.getElementById(`prod-sub-${s}`);
     if (btn) {
-      btn.className = (s===sub) ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+      // toggle (no className =): el botón puede llevar .oculto-2026
+      btn.classList.toggle('btn-primary', s === sub);
+      btn.classList.toggle('btn-ghost', s !== sub);
       btn.style.flex = '1';
     }
   });
@@ -11054,6 +11416,13 @@ function switchSubProd(sub) {
 }
 
 // ─── Operarias: ver operarias.js ───
+
+// Solo las que están trabajando (no candidatas, descartadas, retiradas ni las
+// que no vinieron). Si la fila no trae `estado`, se usa `activo`.
+function operariaTrabajando(o) {
+  if (!o) return false;
+  return o.estado ? o.estado === 'trabajando' : !!o.activo;
+}
 
 // ─── Captura ──────────────────────────────────────────────────────
 async function initCaptura() {
@@ -11070,7 +11439,7 @@ async function initCaptura() {
     operariasCache = await supaFetch('operaria','GET',null,'?order=nombre&limit=100');
   }
   const optsOp = '<option value="">— Elegir operaria —</option>' +
-    operariasCache.filter(o => o.activo).map(o => `<option value="${o.id}">${o.nombre}</option>`).join('');
+    operariasCache.filter(operariaTrabajando).map(o => `<option value="${o.id}">${o.nombre}</option>`).join('');
   document.getElementById('cap-operaria').innerHTML = optsOp;
   document.getElementById('lote-operaria').innerHTML = optsOp;
 
@@ -12473,6 +12842,11 @@ async function initRegistro() {
 async function mostrarRegistroTemporada() {
   const t = temporadaRegistro();
   const porPedido = registroEnModoPedido(t);
+  // Elegir 2025 acá vuelve a mostrar en toda la app lo de temporadas con alumnos
+  if (typeof tiFijarTemporada === 'function') {
+    const temps = registroCache.temporadas || [];
+    tiFijarTemporada(temps.find(x => x.estado === 'activa') || temps[0] || null, t);
+  }
   const cant = document.getElementById('registro-cant-contenido');
   const alumnos = document.getElementById('alumnos-global-contenido');
   if (cant) cant.style.display = porPedido ? '' : 'none';
@@ -14322,6 +14696,10 @@ let bodegaCache = {
 };
 
 async function initBodega() {
+  // «Stock vs Demanda» cuenta alumnos: en 2026 (por cantidades) va escondido
+  if (bodegaCache.vistaActual === 'vs_demanda' && typeof tiOcultar2026 === 'function' && tiOcultar2026()) {
+    bodegaCache.vistaActual = 'stock';
+  }
   renderBodegaTabs();
   await cargarBodegaStock();
 }
@@ -14332,7 +14710,7 @@ function renderBodegaTabs() {
   cont.innerHTML = `
     <div class="sub-tabs">
       <div class="sub-tab ${bodegaCache.vistaActual==='stock'?'active':''}" onclick="cambiarVistaBodega('stock')">📦 Stock</div>
-      <div class="sub-tab ${bodegaCache.vistaActual==='vs_demanda'?'active':''}" onclick="cambiarVistaBodega('vs_demanda')">📊 Stock vs Demanda</div>
+      <div class="sub-tab oculto-2026 ${bodegaCache.vistaActual==='vs_demanda'?'active':''}" onclick="cambiarVistaBodega('vs_demanda')" title="Demanda por alumnos (temporadas con lista de alumnos)">📊 Stock vs Demanda</div>
       <div class="sub-tab ${bodegaCache.vistaActual==='movimientos'?'active':''}" onclick="cambiarVistaBodega('movimientos')">🔄 Movimientos</div>
       <div class="sub-tab ${bodegaCache.vistaActual==='materiales'?'active':''}" onclick="cambiarVistaBodega('materiales')" title="Hilo, botón, zipper, elástico, entretela">🧵 Materiales</div>
     </div>
@@ -14425,17 +14803,18 @@ function renderStock() {
                  Empacar-selector, empacar-pool y asignar quedaron sin botón
                  (el código se elimina en Fase 3). Acaparar por cantidad se
                  demota a "Otras" (el caso normal es 🔒 Reservar en la sesión). -->
+            <!-- Las 4 del día a día, con los mismos nombres que las tareas de Inicio -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px">
-              <button class="btn btn-success btn-sm" onclick="switchTab('empaque')" title="Escuela → marcar piezas → empacar → entrega" style="text-align:left">🧺 Sesión de empaque</button>
-              <button class="btn btn-warning btn-sm" onclick="emqAbrirReserva()" title="Apartar stock por talla y cantidad para una escuela (elegís escuela y prenda en el modal)" style="text-align:left">🔒 Reservar tallas</button>
-              <button class="btn btn-ghost btn-sm" onclick="abrirEntradaManual()" style="text-align:left">📥 + Entrada de stock</button>
+              <button class="btn btn-success" onclick="switchTab('empaque')" title="Escuela → cuántas piezas de cada talla → empacar" style="text-align:left;min-height:44px">🧺 Empacar para una escuela</button>
+              <button class="btn btn-primary" onclick="abrirEntregaModal()" title="Lo empacado de una escuela pasa a entregado, con fecha" style="text-align:left;min-height:44px">🚚 Entregar a una escuela</button>
+              <button class="btn btn-ghost" onclick="abrirEntradaManual()" title="Piezas que llegaron a bodega" style="text-align:left;min-height:44px">📥 Entró a bodega</button>
+              <button class="btn btn-ghost" onclick="abrirConteoModal()" title="Poner lo que hay de verdad en el estante" style="text-align:left;min-height:44px">🔢 Contar bodega</button>
             </div>
             <!-- Otras acciones (menos frecuentes) -->
             <details style="margin-top:6px">
-              <summary style="cursor:pointer;list-style:none;font-size:12px;color:#666;padding:4px 2px;user-select:none">⋯ Otras acciones</summary>
+              <summary style="cursor:pointer;list-style:none;font-size:13px;color:#666;padding:10px 2px;user-select:none">⋯ Otras acciones</summary>
               <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;margin-top:4px">
-                <button class="btn btn-ghost btn-sm" onclick="abrirEntregaModal()" title="Marcar empacados de una escuela como entregados" style="text-align:left">🚚 Marcar entrega</button>
-                <button class="btn btn-ghost btn-sm" onclick="abrirConteoModal()" title="Carga rápida de stock físico" style="text-align:left">📊 Conteo inicial</button>
+                <button class="btn btn-warning btn-sm" onclick="emqAbrirReserva()" title="Apartar stock por talla y cantidad para una escuela (elegís escuela y prenda en el modal)" style="text-align:left">🔒 Reservar tallas</button>
                 <button class="btn btn-ghost btn-sm" onclick="abrirSalidaModal()" title="Salida sin alumnos" style="text-align:left">↗ Salida rápida</button>
               </div>
             </details>
@@ -14831,6 +15210,14 @@ function conteoAgregarFila() {
     const input = last && last.querySelector('input[data-col="prenda"]');
     if (input) input.focus();
   }, 50);
+}
+
+// Se borró junto con los flujos viejos de acaparar (d218a40) pero el conteo
+// la sigue usando: sin ella «🔢 Contar bodega» fallaba con stock cargado.
+function escapeHtmlAca(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
 }
 
 function renderConteoTabla() {
@@ -22553,7 +22940,7 @@ let cfgSubActual = 'reportes';
 
 function switchSubConfig(sub) {
   cfgSubActual = sub;
-  ['reportes', 'catalogos', 'usuarios', 'sistema'].forEach(s => {
+  ['reportes', 'catalogos', 'usuarios', 'sistema', 'mas'].forEach(s => {
     const view = document.getElementById('cfg-sub-' + s);
     if (view) view.style.display = (s === sub) ? '' : 'none';
     const btn = document.getElementById('cfg-nav-' + s);
@@ -22571,6 +22958,8 @@ function initConfig() {
   document.getElementById('cfg-url-display').textContent = SUPA_URL;
   const chkMod = document.getElementById('cfg-modulos-avanzados');
   if (chkMod && typeof modulosAvanzadosActivos === 'function') chkMod.checked = modulosAvanzadosActivos();
+  const chkAnt = document.getElementById('cfg-ver-anteriores');
+  if (chkAnt && typeof verTemporadasAnteriores === 'function') chkAnt.checked = verTemporadasAnteriores();
   // Estado de features
   const f2 = document.getElementById('cfg-fase2');
   const f3 = document.getElementById('cfg-fase3');
@@ -22581,6 +22970,8 @@ function initConfig() {
   const isAdmin = (rol === 'admin');
   const cardInv = document.getElementById('cfg-invitar-card');
   if (cardInv) cardInv.style.display = isAdmin ? '' : 'none';
+  const cardInvNo = document.getElementById('cfg-invitar-noadmin');
+  if (cardInvNo) cardInvNo.style.display = isAdmin ? 'none' : '';
   const cardUsr = document.getElementById('cfg-usuarios-card');
   if (cardUsr) cardUsr.style.display = isAdmin ? '' : 'none';
   const cardBack = document.getElementById('cfg-backups-card');
@@ -23571,19 +23962,22 @@ function renderUsuarios(users) {
       ? new Date(u.last_sign_in_at).toISOString().slice(0,16).replace('T',' ')
       : '—';
     const role = u.role || 'sin role';
+    const nombre = nombreUsuarioLocal(u.email);
     const selfBadge = u.is_self ? ' <span style="background:var(--ambar-claro);color:#856404;padding:1px 5px;border-radius:3px;font-size:10px">vos</span>' : '';
-    const disableDel = u.is_self ? 'disabled title="No podés eliminarte a vos mismo"' : '';
+    const disableDel = u.is_self ? 'disabled title="No te podés quitar a vos mismo"' : 'title="Quitarle el acceso"';
     const selectHtml = `
-      <select onchange="cambiarRolUsuario('${u.id}', this.value, '${u.email.replace(/'/g,"&#39;")}')" style="padding:4px 6px;font-size:12px;border-radius:4px;border:1px solid var(--borde)">
-        <option value="operador" ${role==='operador'?'selected':''}>operador</option>
-        <option value="admin" ${role==='admin'?'selected':''}>admin</option>
+      <select class="usr-rol-sel" aria-label="Qué puede hacer" onchange="cambiarRolUsuario('${u.id}', this.value, '${u.email.replace(/'/g,"&#39;")}')">
+        <option value="operador" ${role==='operador'?'selected':''}>Taller</option>
+        <option value="admin" ${role==='admin'?'selected':''}>Administrador</option>
       </select>`;
     return `
-      <tr>
-        <td style="font-size:12px;padding:6px 4px;word-break:break-all">${escapeHtmlSafe(u.email||'')}${selfBadge}</td>
-        <td style="font-size:11px;padding:6px 4px;color:#666;white-space:nowrap">${lastLogin}</td>
-        <td style="padding:6px 4px">${selectHtml}</td>
-        <td style="padding:6px 4px"><button class="btn-mini btn-mini-danger" onclick="eliminarUsuario('${u.id}', '${u.email.replace(/'/g,"&#39;")}')" ${disableDel}>🗑</button></td>
+      <tr style="border-top:1px solid var(--border-light)">
+        <td style="font-size:12px;padding:8px 4px;word-break:break-all">
+          ${nombre ? `<strong style="font-size:14px">${escapeHtmlSafe(nombre)}</strong><br>` : ''}${escapeHtmlSafe(u.email||'')}${selfBadge}
+          <div style="font-size:11px;color:#888;margin-top:2px;word-break:normal">Último ingreso: ${u.last_sign_in_at ? lastLogin : 'todavía no entra'}</div>
+        </td>
+        <td style="padding:8px 4px">${selectHtml}</td>
+        <td style="padding:8px 4px"><button class="btn-mini btn-mini-danger usr-borrar" aria-label="Quitarle el acceso" onclick="eliminarUsuario('${u.id}', '${u.email.replace(/'/g,"&#39;")}')" ${disableDel}>🗑</button></td>
       </tr>
     `;
   }).join('');
@@ -23592,9 +23986,8 @@ function renderUsuarios(users) {
       <table style="width:100%;border-collapse:collapse">
         <thead style="background:var(--gris)">
           <tr>
-            <th style="text-align:left;padding:6px 4px;font-size:11px;color:#555;text-transform:uppercase">Email</th>
-            <th style="text-align:left;padding:6px 4px;font-size:11px;color:#555;text-transform:uppercase">Último login</th>
-            <th style="text-align:left;padding:6px 4px;font-size:11px;color:#555;text-transform:uppercase">Rol</th>
+            <th style="text-align:left;padding:6px 4px;font-size:11px;color:#555;text-transform:uppercase">Persona</th>
+            <th style="text-align:left;padding:6px 4px;font-size:11px;color:#555;text-transform:uppercase">Puede</th>
             <th></th>
           </tr>
         </thead>
@@ -23613,7 +24006,7 @@ async function cambiarRolUsuario(userId, newRole, email) {
   alertEl.innerHTML = '';
   try {
     await callUsersAdmin({ action: 'set-role', user_id: userId, role: newRole });
-    alertEl.innerHTML = `<div class="alert alert-success">${email} → ${newRole}</div>`;
+    alertEl.innerHTML = `<div class="alert alert-success">${escapeHtmlSafe(email)} → ${newRole === 'admin' ? 'Administrador' : 'Taller'}</div>`;
     setTimeout(() => { alertEl.innerHTML = ''; }, 3000);
   } catch (e) {
     alertEl.innerHTML = `<div class="alert alert-error">${e.message}</div>`;
@@ -23634,15 +24027,40 @@ async function eliminarUsuario(userId, email) {
   }
 }
 
+// Nombre de cada persona invitada: solo en este aparato (localStorage),
+// para reconocerla en la lista. La invitación en sí no lo usa.
+function nombresUsuariosLocal() {
+  try { return JSON.parse(lsLeer('usuarios_nombres') || '{}') || {}; } catch (_) { return {}; }
+}
+function nombreUsuarioLocal(email) {
+  return nombresUsuariosLocal()[String(email || '').toLowerCase()] || '';
+}
+function guardarNombreUsuarioLocal(email, nombre) {
+  const m = nombresUsuariosLocal();
+  if (nombre) m[String(email).toLowerCase()] = nombre; else delete m[String(email).toLowerCase()];
+  lsGuardar('usuarios_nombres', JSON.stringify(m));
+}
+function cfgInvRolElegido() {
+  const r = document.querySelector('input[name="cfg-inv-role"]:checked');
+  return r ? r.value : 'operador';
+}
+
 async function invitarUsuario() {
   const emailEl = document.getElementById('cfg-inv-email');
-  const roleEl = document.getElementById('cfg-inv-role');
+  const nombreEl = document.getElementById('cfg-inv-nombre');
   const alertEl = document.getElementById('cfg-inv-alert');
   const email = emailEl.value.trim().toLowerCase();
-  const role = roleEl.value;
+  const nombre = nombreEl ? nombreEl.value.trim() : '';
+  const role = cfgInvRolElegido();
   alertEl.innerHTML = '';
   if (!email) {
-    alertEl.innerHTML = '<div class="alert alert-error">Ingresá un email.</div>';
+    alertEl.innerHTML = '<div class="alert alert-error">Escribí el correo de la persona.</div>';
+    emailEl.focus();
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    alertEl.innerHTML = '<div class="alert alert-error">Ese correo no está completo (ej.: nombre@gmail.com).</div>';
+    emailEl.focus();
     return;
   }
   const tokInv = await authTokenFresh();
@@ -23650,7 +24068,7 @@ async function invitarUsuario() {
     alertEl.innerHTML = '<div class="alert alert-error">Sin sesión válida. Volvé a loguearte.</div>';
     return;
   }
-  const btn = alertEl.parentElement.querySelector('button.btn-primary');
+  const btn = document.getElementById('cfg-inv-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
   try {
     const redirectTo = window.location.origin + window.location.pathname;
@@ -23667,14 +24085,19 @@ async function invitarUsuario() {
     if (!res.ok) {
       throw new Error(data.error || `HTTP ${res.status}`);
     }
-    const warn = data.warning ? `<br><small>${data.warning}</small>` : '';
-    alertEl.innerHTML = `<div class="alert alert-success">Invitación enviada a <strong>${email}</strong> (${role}).${warn}</div>`;
+    const warn = data.warning ? `<br><small>${escapeHtmlSafe(data.warning)}</small>` : '';
+    if (nombre) guardarNombreUsuarioLocal(email, nombre);
+    const quien = nombre ? `${escapeHtmlSafe(nombre)} (${escapeHtmlSafe(email)})` : escapeHtmlSafe(email);
+    alertEl.innerHTML = `<div class="alert alert-success">✓ Invitación enviada a <strong>${quien}</strong> como ${role === 'admin' ? 'Administrador' : 'Taller'}. Que revise su correo (y la carpeta de spam).${warn}</div>`;
     emailEl.value = '';
-    roleEl.value = 'operador';
+    if (nombreEl) nombreEl.value = '';
+    const rOp = document.querySelector('input[name="cfg-inv-role"][value="operador"]');
+    if (rOp) rOp.checked = true;
+    if (typeof cargarUsuarios === 'function') cargarUsuarios();
   } catch (e) {
     alertEl.innerHTML = `<div class="alert alert-error">${e.message || 'Error al invitar'}</div>`;
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Enviar invitación'; }
+    if (btn) { btn.disabled = false; btn.textContent = '📩 Enviar invitación'; }
   }
 }
 

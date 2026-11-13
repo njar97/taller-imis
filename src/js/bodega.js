@@ -12,6 +12,10 @@ let bodegaCache = {
 };
 
 async function initBodega() {
+  // «Stock vs Demanda» cuenta alumnos: en 2026 (por cantidades) va escondido
+  if (bodegaCache.vistaActual === 'vs_demanda' && typeof tiOcultar2026 === 'function' && tiOcultar2026()) {
+    bodegaCache.vistaActual = 'stock';
+  }
   renderBodegaTabs();
   await cargarBodegaStock();
 }
@@ -22,7 +26,7 @@ function renderBodegaTabs() {
   cont.innerHTML = `
     <div class="sub-tabs">
       <div class="sub-tab ${bodegaCache.vistaActual==='stock'?'active':''}" onclick="cambiarVistaBodega('stock')">📦 Stock</div>
-      <div class="sub-tab ${bodegaCache.vistaActual==='vs_demanda'?'active':''}" onclick="cambiarVistaBodega('vs_demanda')">📊 Stock vs Demanda</div>
+      <div class="sub-tab oculto-2026 ${bodegaCache.vistaActual==='vs_demanda'?'active':''}" onclick="cambiarVistaBodega('vs_demanda')" title="Demanda por alumnos (temporadas con lista de alumnos)">📊 Stock vs Demanda</div>
       <div class="sub-tab ${bodegaCache.vistaActual==='movimientos'?'active':''}" onclick="cambiarVistaBodega('movimientos')">🔄 Movimientos</div>
       <div class="sub-tab ${bodegaCache.vistaActual==='materiales'?'active':''}" onclick="cambiarVistaBodega('materiales')" title="Hilo, botón, zipper, elástico, entretela">🧵 Materiales</div>
     </div>
@@ -115,17 +119,18 @@ function renderStock() {
                  Empacar-selector, empacar-pool y asignar quedaron sin botón
                  (el código se elimina en Fase 3). Acaparar por cantidad se
                  demota a "Otras" (el caso normal es 🔒 Reservar en la sesión). -->
+            <!-- Las 4 del día a día, con los mismos nombres que las tareas de Inicio -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px">
-              <button class="btn btn-success btn-sm" onclick="switchTab('empaque')" title="Escuela → marcar piezas → empacar → entrega" style="text-align:left">🧺 Sesión de empaque</button>
-              <button class="btn btn-warning btn-sm" onclick="emqAbrirReserva()" title="Apartar stock por talla y cantidad para una escuela (elegís escuela y prenda en el modal)" style="text-align:left">🔒 Reservar tallas</button>
-              <button class="btn btn-ghost btn-sm" onclick="abrirEntradaManual()" style="text-align:left">📥 + Entrada de stock</button>
+              <button class="btn btn-success" onclick="switchTab('empaque')" title="Escuela → cuántas piezas de cada talla → empacar" style="text-align:left;min-height:44px">🧺 Empacar para una escuela</button>
+              <button class="btn btn-primary" onclick="abrirEntregaModal()" title="Lo empacado de una escuela pasa a entregado, con fecha" style="text-align:left;min-height:44px">🚚 Entregar a una escuela</button>
+              <button class="btn btn-ghost" onclick="abrirEntradaManual()" title="Piezas que llegaron a bodega" style="text-align:left;min-height:44px">📥 Entró a bodega</button>
+              <button class="btn btn-ghost" onclick="abrirConteoModal()" title="Poner lo que hay de verdad en el estante" style="text-align:left;min-height:44px">🔢 Contar bodega</button>
             </div>
             <!-- Otras acciones (menos frecuentes) -->
             <details style="margin-top:6px">
-              <summary style="cursor:pointer;list-style:none;font-size:12px;color:#666;padding:4px 2px;user-select:none">⋯ Otras acciones</summary>
+              <summary style="cursor:pointer;list-style:none;font-size:13px;color:#666;padding:10px 2px;user-select:none">⋯ Otras acciones</summary>
               <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;margin-top:4px">
-                <button class="btn btn-ghost btn-sm" onclick="abrirEntregaModal()" title="Marcar empacados de una escuela como entregados" style="text-align:left">🚚 Marcar entrega</button>
-                <button class="btn btn-ghost btn-sm" onclick="abrirConteoModal()" title="Carga rápida de stock físico" style="text-align:left">📊 Conteo inicial</button>
+                <button class="btn btn-warning btn-sm" onclick="emqAbrirReserva()" title="Apartar stock por talla y cantidad para una escuela (elegís escuela y prenda en el modal)" style="text-align:left">🔒 Reservar tallas</button>
                 <button class="btn btn-ghost btn-sm" onclick="abrirSalidaModal()" title="Salida sin alumnos" style="text-align:left">↗ Salida rápida</button>
               </div>
             </details>
@@ -521,6 +526,14 @@ function conteoAgregarFila() {
     const input = last && last.querySelector('input[data-col="prenda"]');
     if (input) input.focus();
   }, 50);
+}
+
+// Se borró junto con los flujos viejos de acaparar (d218a40) pero el conteo
+// la sigue usando: sin ella «🔢 Contar bodega» fallaba con stock cargado.
+function escapeHtmlAca(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
 }
 
 function renderConteoTabla() {

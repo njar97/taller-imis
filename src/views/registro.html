@@ -3,6 +3,11 @@
      · con ALUMNOS (2025): lista de alumnos con filtros -->
 <div id="view-registro" class="view">
   <div id="alert-registro"></div>
+  <div class="ayuda-tip" data-ayuda="registro" role="note">
+    <span class="ayuda-tip-ico" aria-hidden="true">💡</span>
+    <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> Acá está lo que pidió cada escuela, por talla. Los alumnos con medida propia van en <b>📏 Especiales</b>.</span>
+    <button type="button" class="ayuda-tip-x" onclick="cerrarAyuda('registro')" aria-label="Cerrar esta ayuda" title="Cerrar esta ayuda">✕</button>
+  </div>
 
   <!-- Selector de temporada (registro.js → renderRegistroHeader) -->
   <div id="registro-header"><div class="text-muted" style="padding:20px;text-align:center">Cargando...</div></div>

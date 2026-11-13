@@ -14,18 +14,19 @@
       <div id="buscador-results" class="buscador-results" style="display:none"></div>
     </div>
   </div>
-  <!-- Orden por frecuencia de uso real. Corte/Producción son módulos
-       avanzados: ocultos por defecto, se activan en Config → App.
+  <!-- Orden por uso en la temporada 2026: Corte, Producción y Bodega son el
+       trabajo diario (visibles por defecto; se pueden esconder en Ajustes →
+       Sistema). Etiquetas en palabras simples.
        En móvil (≤640px) esta misma barra se fija ABAJO estilo bottom-nav
        (ícono arriba, label abajo) — ver styles.css. -->
   <div class="nav-tabs">
     <div class="nav-tab active" onclick="switchTab('inicio',this)"><span class="nav-tab-ico">🏠</span><span class="nav-tab-lbl">Inicio</span></div>
-    <div class="nav-tab" onclick="switchTab('registro',this)"><span class="nav-tab-ico">📋</span><span class="nav-tab-lbl">Registro</span></div>
-    <div class="nav-tab" onclick="switchTab('bodega',this)"><span class="nav-tab-ico">📦</span><span class="nav-tab-lbl">Bodega</span><span id="nav-badge-bodega" class="nav-badge" style="display:none"></span></div>
-    <div class="nav-tab" onclick="switchTab('estadistica',this)"><span class="nav-tab-ico">📊</span><span class="nav-tab-lbl">Estadística</span></div>
     <div class="nav-tab" id="tab-corte" onclick="switchTab('corte',this)"><span class="nav-tab-ico">✂️</span><span class="nav-tab-lbl">Corte</span></div>
-    <div class="nav-tab" id="tab-produccion" onclick="switchTab('produccion',this)"><span class="nav-tab-ico">🏭</span><span class="nav-tab-lbl">Prod.</span></div>
-    <div class="nav-tab" onclick="switchTab('config',this)"><span class="nav-tab-ico">⚙️</span><span class="nav-tab-lbl">Config</span></div>
+    <div class="nav-tab" id="tab-produccion" onclick="switchTab('produccion',this)"><span class="nav-tab-ico">🏭</span><span class="nav-tab-lbl">Producción</span></div>
+    <div class="nav-tab" onclick="switchTab('bodega',this)"><span class="nav-tab-ico">📦</span><span class="nav-tab-lbl">Bodega</span><span id="nav-badge-bodega" class="nav-badge" style="display:none"></span></div>
+    <div class="nav-tab" onclick="switchTab('registro',this)"><span class="nav-tab-ico">📋</span><span class="nav-tab-lbl">Registro</span></div>
+    <div class="nav-tab" onclick="switchTab('estadistica',this)"><span class="nav-tab-ico">📊</span><span class="nav-tab-lbl">Estadística</span></div>
+    <div class="nav-tab" onclick="switchTab('config',this)"><span class="nav-tab-ico">⚙️</span><span class="nav-tab-lbl">Ajustes</span></div>
   </div>
 </nav>
 

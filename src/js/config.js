@@ -5,7 +5,7 @@ let cfgSubActual = 'reportes';
 
 function switchSubConfig(sub) {
   cfgSubActual = sub;
-  ['reportes', 'catalogos', 'usuarios', 'sistema'].forEach(s => {
+  ['reportes', 'catalogos', 'usuarios', 'sistema', 'mas'].forEach(s => {
     const view = document.getElementById('cfg-sub-' + s);
     if (view) view.style.display = (s === sub) ? '' : 'none';
     const btn = document.getElementById('cfg-nav-' + s);
@@ -23,6 +23,8 @@ function initConfig() {
   document.getElementById('cfg-url-display').textContent = SUPA_URL;
   const chkMod = document.getElementById('cfg-modulos-avanzados');
   if (chkMod && typeof modulosAvanzadosActivos === 'function') chkMod.checked = modulosAvanzadosActivos();
+  const chkAnt = document.getElementById('cfg-ver-anteriores');
+  if (chkAnt && typeof verTemporadasAnteriores === 'function') chkAnt.checked = verTemporadasAnteriores();
   // Estado de features
   const f2 = document.getElementById('cfg-fase2');
   const f3 = document.getElementById('cfg-fase3');
@@ -33,6 +35,8 @@ function initConfig() {
   const isAdmin = (rol === 'admin');
   const cardInv = document.getElementById('cfg-invitar-card');
   if (cardInv) cardInv.style.display = isAdmin ? '' : 'none';
+  const cardInvNo = document.getElementById('cfg-invitar-noadmin');
+  if (cardInvNo) cardInvNo.style.display = isAdmin ? 'none' : '';
   const cardUsr = document.getElementById('cfg-usuarios-card');
   if (cardUsr) cardUsr.style.display = isAdmin ? '' : 'none';
   const cardBack = document.getElementById('cfg-backups-card');
@@ -1023,19 +1027,22 @@ function renderUsuarios(users) {
       ? new Date(u.last_sign_in_at).toISOString().slice(0,16).replace('T',' ')
       : '—';
     const role = u.role || 'sin role';
+    const nombre = nombreUsuarioLocal(u.email);
     const selfBadge = u.is_self ? ' <span style="background:var(--ambar-claro);color:#856404;padding:1px 5px;border-radius:3px;font-size:10px">vos</span>' : '';
-    const disableDel = u.is_self ? 'disabled title="No podés eliminarte a vos mismo"' : '';
+    const disableDel = u.is_self ? 'disabled title="No te podés quitar a vos mismo"' : 'title="Quitarle el acceso"';
     const selectHtml = `
-      <select onchange="cambiarRolUsuario('${u.id}', this.value, '${u.email.replace(/'/g,"&#39;")}')" style="padding:4px 6px;font-size:12px;border-radius:4px;border:1px solid var(--borde)">
-        <option value="operador" ${role==='operador'?'selected':''}>operador</option>
-        <option value="admin" ${role==='admin'?'selected':''}>admin</option>
+      <select class="usr-rol-sel" aria-label="Qué puede hacer" onchange="cambiarRolUsuario('${u.id}', this.value, '${u.email.replace(/'/g,"&#39;")}')">
+        <option value="operador" ${role==='operador'?'selected':''}>Taller</option>
+        <option value="admin" ${role==='admin'?'selected':''}>Administrador</option>
       </select>`;
     return `
-      <tr>
-        <td style="font-size:12px;padding:6px 4px;word-break:break-all">${escapeHtmlSafe(u.email||'')}${selfBadge}</td>
-        <td style="font-size:11px;padding:6px 4px;color:#666;white-space:nowrap">${lastLogin}</td>
-        <td style="padding:6px 4px">${selectHtml}</td>
-        <td style="padding:6px 4px"><button class="btn-mini btn-mini-danger" onclick="eliminarUsuario('${u.id}', '${u.email.replace(/'/g,"&#39;")}')" ${disableDel}>🗑</button></td>
+      <tr style="border-top:1px solid var(--border-light)">
+        <td style="font-size:12px;padding:8px 4px;word-break:break-all">
+          ${nombre ? `<strong style="font-size:14px">${escapeHtmlSafe(nombre)}</strong><br>` : ''}${escapeHtmlSafe(u.email||'')}${selfBadge}
+          <div style="font-size:11px;color:#888;margin-top:2px;word-break:normal">Último ingreso: ${u.last_sign_in_at ? lastLogin : 'todavía no entra'}</div>
+        </td>
+        <td style="padding:8px 4px">${selectHtml}</td>
+        <td style="padding:8px 4px"><button class="btn-mini btn-mini-danger usr-borrar" aria-label="Quitarle el acceso" onclick="eliminarUsuario('${u.id}', '${u.email.replace(/'/g,"&#39;")}')" ${disableDel}>🗑</button></td>
       </tr>
     `;
   }).join('');
@@ -1044,9 +1051,8 @@ function renderUsuarios(users) {
       <table style="width:100%;border-collapse:collapse">
         <thead style="background:var(--gris)">
           <tr>
-            <th style="text-align:left;padding:6px 4px;font-size:11px;color:#555;text-transform:uppercase">Email</th>
-            <th style="text-align:left;padding:6px 4px;font-size:11px;color:#555;text-transform:uppercase">Último login</th>
-            <th style="text-align:left;padding:6px 4px;font-size:11px;color:#555;text-transform:uppercase">Rol</th>
+            <th style="text-align:left;padding:6px 4px;font-size:11px;color:#555;text-transform:uppercase">Persona</th>
+            <th style="text-align:left;padding:6px 4px;font-size:11px;color:#555;text-transform:uppercase">Puede</th>
             <th></th>
           </tr>
         </thead>
@@ -1065,7 +1071,7 @@ async function cambiarRolUsuario(userId, newRole, email) {
   alertEl.innerHTML = '';
   try {
     await callUsersAdmin({ action: 'set-role', user_id: userId, role: newRole });
-    alertEl.innerHTML = `<div class="alert alert-success">${email} → ${newRole}</div>`;
+    alertEl.innerHTML = `<div class="alert alert-success">${escapeHtmlSafe(email)} → ${newRole === 'admin' ? 'Administrador' : 'Taller'}</div>`;
     setTimeout(() => { alertEl.innerHTML = ''; }, 3000);
   } catch (e) {
     alertEl.innerHTML = `<div class="alert alert-error">${e.message}</div>`;
@@ -1086,15 +1092,40 @@ async function eliminarUsuario(userId, email) {
   }
 }
 
+// Nombre de cada persona invitada: solo en este aparato (localStorage),
+// para reconocerla en la lista. La invitación en sí no lo usa.
+function nombresUsuariosLocal() {
+  try { return JSON.parse(lsLeer('usuarios_nombres') || '{}') || {}; } catch (_) { return {}; }
+}
+function nombreUsuarioLocal(email) {
+  return nombresUsuariosLocal()[String(email || '').toLowerCase()] || '';
+}
+function guardarNombreUsuarioLocal(email, nombre) {
+  const m = nombresUsuariosLocal();
+  if (nombre) m[String(email).toLowerCase()] = nombre; else delete m[String(email).toLowerCase()];
+  lsGuardar('usuarios_nombres', JSON.stringify(m));
+}
+function cfgInvRolElegido() {
+  const r = document.querySelector('input[name="cfg-inv-role"]:checked');
+  return r ? r.value : 'operador';
+}
+
 async function invitarUsuario() {
   const emailEl = document.getElementById('cfg-inv-email');
-  const roleEl = document.getElementById('cfg-inv-role');
+  const nombreEl = document.getElementById('cfg-inv-nombre');
   const alertEl = document.getElementById('cfg-inv-alert');
   const email = emailEl.value.trim().toLowerCase();
-  const role = roleEl.value;
+  const nombre = nombreEl ? nombreEl.value.trim() : '';
+  const role = cfgInvRolElegido();
   alertEl.innerHTML = '';
   if (!email) {
-    alertEl.innerHTML = '<div class="alert alert-error">Ingresá un email.</div>';
+    alertEl.innerHTML = '<div class="alert alert-error">Escribí el correo de la persona.</div>';
+    emailEl.focus();
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    alertEl.innerHTML = '<div class="alert alert-error">Ese correo no está completo (ej.: nombre@gmail.com).</div>';
+    emailEl.focus();
     return;
   }
   const tokInv = await authTokenFresh();
@@ -1102,7 +1133,7 @@ async function invitarUsuario() {
     alertEl.innerHTML = '<div class="alert alert-error">Sin sesión válida. Volvé a loguearte.</div>';
     return;
   }
-  const btn = alertEl.parentElement.querySelector('button.btn-primary');
+  const btn = document.getElementById('cfg-inv-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
   try {
     const redirectTo = window.location.origin + window.location.pathname;
@@ -1119,14 +1150,19 @@ async function invitarUsuario() {
     if (!res.ok) {
       throw new Error(data.error || `HTTP ${res.status}`);
     }
-    const warn = data.warning ? `<br><small>${data.warning}</small>` : '';
-    alertEl.innerHTML = `<div class="alert alert-success">Invitación enviada a <strong>${email}</strong> (${role}).${warn}</div>`;
+    const warn = data.warning ? `<br><small>${escapeHtmlSafe(data.warning)}</small>` : '';
+    if (nombre) guardarNombreUsuarioLocal(email, nombre);
+    const quien = nombre ? `${escapeHtmlSafe(nombre)} (${escapeHtmlSafe(email)})` : escapeHtmlSafe(email);
+    alertEl.innerHTML = `<div class="alert alert-success">✓ Invitación enviada a <strong>${quien}</strong> como ${role === 'admin' ? 'Administrador' : 'Taller'}. Que revise su correo (y la carpeta de spam).${warn}</div>`;
     emailEl.value = '';
-    roleEl.value = 'operador';
+    if (nombreEl) nombreEl.value = '';
+    const rOp = document.querySelector('input[name="cfg-inv-role"][value="operador"]');
+    if (rOp) rOp.checked = true;
+    if (typeof cargarUsuarios === 'function') cargarUsuarios();
   } catch (e) {
     alertEl.innerHTML = `<div class="alert alert-error">${e.message || 'Error al invitar'}</div>`;
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Enviar invitación'; }
+    if (btn) { btn.disabled = false; btn.textContent = '📩 Enviar invitación'; }
   }
 }
 

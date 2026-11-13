@@ -6,11 +6,13 @@
        · 📊 Por talla  — central, abre por defecto (incluye toggle 🔥 Solo críticas).
        · 📋 Por escuela — fusión de Tallaje + Contrato + Tela/Yardaje en un reporte.
        Inventario y Tallas críticas se fusionaron en Por talla.
-       Histórico y Costos se movieron a la pestaña Config. -->
+       Histórico y Costos se movieron a la pestaña Config.
+       2026 (por cantidades): Por talla y Pronóstico cuentan alumnos → van
+       escondidos (.oculto-2026) y la pestaña abre en Por escuela. -->
   <div class="card" style="padding:8px 10px;margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <button id="est-nav-tallas" class="btn btn-sm btn-primary" onclick="switchSubEst('tallas')">📊 Por talla</button>
+    <button id="est-nav-tallas" class="btn btn-sm btn-primary oculto-2026" onclick="switchSubEst('tallas')" title="Cuenta alumnos (temporadas con lista de alumnos)">📊 Por talla</button>
     <button id="est-nav-escuela" class="btn btn-sm btn-ghost" onclick="switchSubEst('escuela')">📋 Por escuela</button>
-    <button id="est-nav-pronostico" class="btn btn-sm btn-ghost" onclick="switchSubEst('pronostico')">🔮 Pronóstico</button>
+    <button id="est-nav-pronostico" class="btn btn-sm btn-ghost oculto-2026" onclick="switchSubEst('pronostico')" title="Servía antes de tener el pedido real">🔮 Pronóstico</button>
   </div>
 
   <!-- SUB: Por talla — demanda por escuela cruzada con corte/producción/bodega/pool (reporte central) -->

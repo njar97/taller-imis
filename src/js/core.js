@@ -318,12 +318,33 @@ function irA(seccion) {
   if (seccion === 'bulto')   tryInit('Bulto',   typeof initBulto === 'function'   ? initBulto   : null);
 }
 
-// ── Módulos avanzados (✂️ Corte / 🏭 Producción) ─────────────────────
-// Casi no se usan en el flujo real → ocultos del menú por defecto.
-// Toggle en Config → App. Nada se borra: las vistas siguen existiendo
-// (accesibles desde el buscador Ctrl+K) y los datos quedan intactos.
+// localStorage con try/catch: en modo privado o sin espacio puede fallar,
+// y una preferencia que no se guarda no debe romper la pantalla.
+function lsLeer(k) {
+  try { return localStorage.getItem(k); } catch (_) { return null; }
+}
+function lsGuardar(k, v) {
+  try {
+    if (v === null || v === undefined) localStorage.removeItem(k);
+    else localStorage.setItem(k, String(v));
+  } catch (_) { /* sin almacenamiento: se pierde solo la preferencia */ }
+}
+
+// Abre una pestaña del menú y la deja marcada (switchTab sin el botón no
+// resalta nada en el menú).
+function abrirPestana(tab) {
+  const btn = [...document.querySelectorAll('.nav-tab')]
+    .find(t => (t.getAttribute('onclick') || '').includes(`switchTab('${tab}'`));
+  switchTab(tab, btn || null);
+}
+
+// ── ✂️ Corte y 🏭 Producción en el menú ───────────────────────────────
+// Desde la temporada 2026 son el centro del trabajo diario: VISIBLES por
+// defecto. Quien quiera esconderlos lo hace en Ajustes → Sistema (queda
+// guardado en ese aparato). La clave vieja 'modulos_avanzados' (ocultos por
+// defecto) ya no se lee, así todos los teléfonos los ven tras actualizar.
 function modulosAvanzadosActivos() {
-  return localStorage.getItem('modulos_avanzados') === '1';
+  return lsLeer('ocultar_corte_prod') !== '1';
 }
 function aplicarModulosAvanzados() {
   const on = modulosAvanzadosActivos();
@@ -333,7 +354,7 @@ function aplicarModulosAvanzados() {
   });
 }
 function toggleModulosAvanzados(on) {
-  localStorage.setItem('modulos_avanzados', on ? '1' : '0');
+  lsGuardar('ocultar_corte_prod', on ? null : '1');
   aplicarModulosAvanzados();
   // Si estaba parado en una vista recién ocultada, volver a Inicio
   if (!on) {
@@ -352,6 +373,115 @@ function volverNuevo() {
   if (typeof switchTab === 'function') switchTab('corte', corteTab);
   if (typeof switchSubCorte === 'function') switchSubCorte('nuevo');
   window.scrollTo(0, 0);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// TEMPORADA POR CANTIDADES (2026) — esconder lo que solo sirve con alumnos
+// ══════════════════════════════════════════════════════════════════════
+// Desde 2026 el pedido viene por cantidades, sin lista de alumnos. Botones,
+// pestañas y avisos que cuentan alumnos (lógica 2025) llevan la clase
+// .oculto-2026 y no se ven mientras se trabaja una temporada por cantidades.
+// Nada se borra. Vuelven a verse:
+//   · si se elige una temporada con alumnos (2025) en «Ver:» de Inicio o en
+//     Registro (se cumple «solo cuando se elige 2025»);
+//   · o con Ajustes → 🗄 Más → «Mostrar lo de temporadas anteriores».
+// La regla CSS: body.temporada-cantidad .oculto-2026 { display:none }.
+const tiTemporada = {
+  // ¿La temporada ACTIVA es por cantidades? Arranca con lo de la última vez
+  // (así no parpadea lo de 2025 al abrir) y se confirma al cargar Inicio.
+  activaPorCantidad: (() => { const v = lsLeer('temporada_por_cantidad'); return v === null ? null : v === '1'; })(),
+  viendoConAlumnos: false,   // se eligió una temporada con alumnos (2025)
+};
+
+function verTemporadasAnteriores() {
+  return lsLeer('ver_temporadas_anteriores') === '1';
+}
+
+// true = se está trabajando por cantidades y lo de 2025 va escondido
+function tiOcultar2026() {
+  return document.body.classList.contains('temporada-cantidad');
+}
+
+function aplicarModoTemporada() {
+  const ocultar = tiTemporada.activaPorCantidad === true
+    && !tiTemporada.viendoConAlumnos && !verTemporadasAnteriores();
+  const antes = document.body.classList.contains('temporada-cantidad');
+  document.body.classList.toggle('temporada-cantidad', ocultar);
+  if (ocultar && !antes) _salirDeVistasOcultas();
+}
+
+// activa / vista: filas de vw_temporada_resumen (num_pedidos > 0 = por
+// cantidades). vista = la temporada que se está mirando (por defecto la activa).
+function tiFijarTemporada(activa, vista) {
+  if (activa) {
+    tiTemporada.activaPorCantidad = Number(activa.num_pedidos) > 0;
+    lsGuardar('temporada_por_cantidad', tiTemporada.activaPorCantidad ? '1' : '0');
+  }
+  const v = vista || activa;
+  if (v) tiTemporada.viendoConAlumnos = !(Number(v.num_pedidos) > 0);
+  aplicarModoTemporada();
+}
+
+function toggleTemporadasAnteriores(on) {
+  lsGuardar('ver_temporadas_anteriores', on ? '1' : null);
+  aplicarModoTemporada();
+}
+
+// Si la pantalla abierta quedó escondida, pasar a una que se vea.
+function _salirDeVistasOcultas() {
+  try {
+    if (typeof bodegaCache !== 'undefined' && bodegaCache.vistaActual === 'vs_demanda') {
+      bodegaCache.vistaActual = 'stock';
+      const vb = document.getElementById('view-bodega');
+      if (vb && vb.classList.contains('active') && typeof cambiarVistaBodega === 'function') cambiarVistaBodega('stock');
+    }
+    if (typeof estSubActual !== 'undefined' && ['tallas', 'pronostico'].includes(estSubActual)) {
+      estSubActual = 'escuela';
+      const ve = document.getElementById('view-estadistica');
+      if (ve && ve.classList.contains('active') && typeof switchSubEst === 'function') switchSubEst('escuela');
+    }
+    const asig = document.getElementById('prod-sub-asignaciones-view');
+    if (asig && asig.style.display === 'block' && typeof switchSubProd === 'function') switchSubProd('dashboard');
+  } catch (e) { console.warn('[modo temporada]', e); }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// AYUDA DE UNA LÍNEA «¿Cómo se usa?» arriba de cada pantalla principal
+// ══════════════════════════════════════════════════════════════════════
+// En el HTML: <div class="ayuda-tip" data-ayuda="corte">…</div>. Al tocar ✕
+// se recuerda en este aparato y no vuelve a salir (Ajustes → 🗄 Más las
+// vuelve a mostrar).
+function ayudaCerrada(id) {
+  return lsLeer('ayuda_cerrada_' + id) === '1';
+}
+function ayudaHtml(id, texto) {
+  return `
+    <div class="ayuda-tip${ayudaCerrada(id) ? ' oculta' : ''}" data-ayuda="${id}" role="note">
+      <span class="ayuda-tip-ico" aria-hidden="true">💡</span>
+      <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> ${texto}</span>
+      <button type="button" class="ayuda-tip-x" onclick="cerrarAyuda('${id}')" aria-label="Cerrar esta ayuda" title="Cerrar esta ayuda">✕</button>
+    </div>`;
+}
+function aplicarAyudas() {
+  document.querySelectorAll('[data-ayuda]').forEach(el => {
+    el.classList.toggle('oculta', ayudaCerrada(el.getAttribute('data-ayuda')));
+  });
+}
+function cerrarAyuda(id) {
+  lsGuardar('ayuda_cerrada_' + id, '1');
+  aplicarAyudas();
+}
+function mostrarAyudasOtraVez() {
+  try {
+    const claves = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('ayuda_cerrada_')) claves.push(k);
+    }
+    claves.forEach(k => lsGuardar(k, null));
+  } catch (_) {}
+  aplicarAyudas();
+  showToast('Listo: las ayudas «¿Cómo se usa?» vuelven a salir arriba de cada pantalla.', 'success');
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -787,6 +917,8 @@ async function bootApp() {
     }
   } catch (_e) {}
   aplicarModulosAvanzados();
+  aplicarModoTemporada();   // con lo de la última vez; Inicio lo confirma al cargar
+  aplicarAyudas();
   await gateApp();
   if (supaSession && typeof initDashboard === 'function') initDashboard();
   if (supaSession && typeof initAuditRoleTab === 'function') initAuditRoleTab();

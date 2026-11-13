@@ -4,6 +4,11 @@
      por botones de Bodega/Inicio y por Ctrl+K). Motor: empaque.js, que
      reusa empacarAlumnosDesdeRegistro/desempacarPieza de bodega.js. -->
 <div id="view-empaque" class="view">
+  <div class="ayuda-tip" data-ayuda="empaque" role="note">
+    <span class="ayuda-tip-ico" aria-hidden="true">💡</span>
+    <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> Elegí la escuela, poné cuántas piezas de cada talla llevás y tocá <b>📦 Empacar</b>. Lo empacado sale de bodega y queda apartado para esa escuela.</span>
+    <button type="button" class="ayuda-tip-x" onclick="cerrarAyuda('empaque')" aria-label="Cerrar esta ayuda" title="Cerrar esta ayuda">✕</button>
+  </div>
   <div id="empaque-contenido">
     <div class="text-muted" style="padding:20px;text-align:center">Cargando sesión de empaque...</div>
   </div>

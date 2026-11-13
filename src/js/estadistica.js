@@ -10,7 +10,10 @@
 let estSubActual = 'tallas';
 
 function initEstadistica() {
-  switchSubEst(estSubActual || 'tallas');
+  let sub = estSubActual || 'tallas';
+  // 2026 (por cantidades): Por talla y Pronóstico van escondidos
+  if (['tallas', 'pronostico'].includes(sub) && typeof tiOcultar2026 === 'function' && tiOcultar2026()) sub = 'escuela';
+  switchSubEst(sub);
 }
 
 function switchSubEst(sub) {

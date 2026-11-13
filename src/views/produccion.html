@@ -21,12 +21,18 @@
 
 <div id="view-produccion" class="view">
   <div id="alert-produccion"></div>
+  <div class="ayuda-tip" data-ayuda="produccion" role="note">
+    <span class="ayuda-tip-ico" aria-hidden="true">💡</span>
+    <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> Cuando un bulto sale de costura, abrí su talla y tocá <b>✓ Terminar</b>: las piezas entran solas a bodega.</span>
+    <button type="button" class="ayuda-tip-x" onclick="cerrarAyuda('produccion')" aria-label="Cerrar esta ayuda" title="Cerrar esta ayuda">✕</button>
+  </div>
 
-  <!-- Subnav (Operarias y Grupos viven ahora en Config) -->
-  <div class="card" style="padding:6px;margin-bottom:10px">
-    <div style="display:flex;gap:4px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" id="prod-sub-dashboard" onclick="switchSubProd('dashboard')" style="flex:1;min-width:80px">📊 Dashboard</button>
-      <button class="btn btn-ghost btn-sm" id="prod-sub-asignaciones" onclick="switchSubProd('asignaciones')" style="flex:1;min-width:80px">📋 Asignar</button>
+  <!-- Subnav. 📋 Asignar nunca se usó: escondido en temporadas por cantidades
+       (2026); vuelve con 2025 o en Ajustes → 🗄 Más. -->
+  <div class="card" id="prod-subnav" style="padding:6px;margin-bottom:10px">
+    <div class="subnav-btns" style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" id="prod-sub-dashboard" onclick="switchSubProd('dashboard')" style="flex:1;min-width:80px">📦 Bultos</button>
+      <button class="btn btn-ghost btn-sm oculto-2026" id="prod-sub-asignaciones" onclick="switchSubProd('asignaciones')" style="flex:1;min-width:80px">📋 Asignar</button>
       <button class="btn btn-ghost btn-sm" id="prod-sub-captura" onclick="switchSubProd('captura')" style="flex:1;min-width:80px">📝 Captura</button>
       <button class="btn btn-ghost btn-sm" id="prod-sub-plan" onclick="switchSubProd('plan')" style="flex:1;min-width:80px">📐 Plan</button>
       <button class="btn btn-ghost btn-sm" id="prod-sub-operarias" onclick="switchSubProd('operarias')" style="flex:1;min-width:80px">👷 Operarias</button>

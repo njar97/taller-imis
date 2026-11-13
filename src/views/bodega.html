@@ -1,6 +1,11 @@
 <!-- ══════════ BODEGA ══════════ -->
 <div id="view-bodega" class="view">
   <div id="alert-bodega"></div>
+  <div class="ayuda-tip" data-ayuda="bodega" role="note">
+    <span class="ayuda-tip-ico" aria-hidden="true">💡</span>
+    <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> Tocá <b>✚ Acciones de bodega</b> para anotar lo que entró, contar lo que hay, empacar o entregar a una escuela.</span>
+    <button type="button" class="ayuda-tip-x" onclick="cerrarAyuda('bodega')" aria-label="Cerrar esta ayuda" title="Cerrar esta ayuda">✕</button>
+  </div>
   <div class="card">
     <div class="card-title">📦 Bodega</div>
     <div id="bodega-tabs"></div>
@@ -11,7 +16,7 @@
   <div id="bodega-entrada-modal" class="modal" style="display:none">
     <div class="modal-content" style="max-width:500px">
       <div class="modal-header">
-        <div class="card-title">+ Movimiento de bodega</div>
+        <div class="card-title">📥 Entró a bodega</div>
         <button class="btn btn-ghost btn-sm" onclick="cerrarEntradaManual()">✕</button>
       </div>
       <div class="modal-body">
@@ -64,14 +69,14 @@
     <div class="modal-content" style="max-width:720px">
       <div class="modal-header">
         <div>
-          <div class="card-title" style="margin:0">📊 Conteo inicial de stock</div>
-          <div style="font-size:12px;color:#666;margin-top:2px">Cargá las piezas físicas que hay en bodega. Cada fila ajusta el stock a la cantidad indicada (AJUSTE_INVENTARIO).</div>
+          <div class="card-title" style="margin:0">🔢 Contar bodega</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">Poné cuántas piezas hay de verdad en el estante, talla por talla. La app deja la bodega en ese número.</div>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="cerrarConteoModal()">✕</button>
       </div>
       <div class="modal-body">
         <div id="conteo-toolbar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
-          <button class="btn btn-ghost btn-sm" onclick="conteoCargarSugeridos()" title="Agrega combinaciones que tienen demanda pendiente">+ Sugeridos por demanda</button>
+          <button class="btn btn-ghost btn-sm oculto-2026" onclick="conteoCargarSugeridos()" title="Agrega las tallas que piden los alumnos (temporadas con lista de alumnos)">+ Sugeridos por demanda</button>
           <button class="btn btn-ghost btn-sm" onclick="conteoAgregarFila()">+ Fila vacía</button>
           <span id="conteo-meta" style="margin-left:auto;font-size:11px;color:#666"></span>
         </div>
@@ -106,7 +111,7 @@
     <div class="modal-content" style="max-width:520px">
       <div class="modal-header">
         <div>
-          <div class="card-title" style="margin:0">🚚 Marcar entrega a escuela</div>
+          <div class="card-title" style="margin:0">🚚 Entregar a una escuela</div>
           <div style="font-size:12px;color:#666;margin-top:2px">Pasa lo EMPACADO de la escuela a ENTREGADO, con fecha. Por pedido (sin nombres) se puede entregar parcial.</div>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="cerrarEntregaModal()">✕</button>

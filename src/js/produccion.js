@@ -7,25 +7,16 @@ let cortesExpandidos = new Set();
 let demandaProdCache = {};
 
 async function initProduccion() {
-  // Mostrar u ocultar sub-pestañas según Fase 2 activa
-  const navSub = document.querySelector('#view-produccion > .card:first-of-type');
-  if (navSub) {
-    // El primer card es el subnav — ocultarlo si Fase 2 no está activa
-    if (!FASE2_ACTIVA) {
-      navSub.style.display = 'none';
-    } else {
-      navSub.style.display = 'block';
-    }
-  }
-  // Si Fase 2 OFF, forzar dashboard
-  if (!FASE2_ACTIVA) {
-    document.getElementById('prod-sub-dashboard-view').style.display = 'block';
-    document.getElementById('prod-sub-captura-view').style.display = 'none';
-    document.getElementById('prod-sub-operarias-view').style.display = 'none';
-    await cargarProduccion();
-    return;
-  }
-  switchSubProd('dashboard');
+  // El subnav (📦 Bultos · 📐 Plan · 👷 Operarias · 📝 Captura) queda
+  // siempre a la vista: antes se quería esconder sin Fase 2, pero el
+  // selector no encontraba la tarjeta y en la práctica siempre se veía.
+  // Sin él no había cómo pasar de los bultos al Plan.
+  const navSub = document.getElementById('prod-subnav');
+  if (navSub) navSub.style.display = '';
+  // Atajo desde Inicio («Bulto terminado», «¿Cómo van los bultos?»)
+  const sub = window._prodHintSub || 'dashboard';
+  window._prodHintSub = null;
+  switchSubProd(sub);
 }
 
 async function cargarProduccion() {
@@ -52,7 +43,9 @@ async function cargarProduccion() {
     }
 
     // Cargar demanda + pool + stock para badges (en paralelo, no bloqueante).
-    cargarDemandaProd().catch(e => console.warn('Demanda prod:', e.message));
+    // La demanda sale de ALUMNOS: en temporadas por cantidades (2026) no aplica.
+    if (typeof tiOcultar2026 === 'function' && tiOcultar2026()) demandaProdCache = {};
+    else cargarDemandaProd().catch(e => console.warn('Demanda prod:', e.message));
 
     // Cargar progreso Fase 2 (solo si está activa)
     if (FASE2_ACTIVA) {
@@ -131,6 +124,7 @@ async function cargarDemandaProd() {
 // Usa prendaCanon (cod → nombre canónico de la base) para matchear con alumnos.
 function _badgeDemandaProd(cod_prenda, talla_key) {
   if (!cod_prenda || !talla_key || !demandaProdCache) return '';
+  if (typeof tiOcultar2026 === 'function' && tiOcultar2026()) return '';   // cuenta alumnos (2025)
   const nombre = (typeof prendaCanon === 'function') ? prendaCanon(cod_prenda) : cod_prenda;
   const d = demandaProdCache[nombre + '|' + talla_key];
   if (!d || d.pendientes === 0) return '';
@@ -464,6 +458,12 @@ async function terminarBulto(produccionBultoId, cantidadOriginal) {
       });
     }
     renderProduccion();
+    // 2026 (por cantidades): sin demanda por alumno ni «apartar para escuelas»
+    // (eso se hace en 🧺 Empacar). Solo avisar que entró a bodega.
+    if (typeof tiOcultar2026 === 'function' && tiOcultar2026()) {
+      showToast(`✓ Bulto terminado: ${cantidadFinal} pieza(s)${b ? ' de ' + b.talla_key_salida : ''} entraron a bodega.`, 'success', 6000);
+      return;
+    }
     // Recargar demanda para que los badges reflejen la nueva entrada
     cargarDemandaProd().catch(() => {});
     // Sugerir acaparar
@@ -693,7 +693,7 @@ async function marcarEtapaRapida(bultoId, operacionId) {
   if (operariasCache.length === 0) {
     operariasCache = await supaFetch('operaria','GET',null,'?activo=eq.true&order=nombre&limit=100');
   }
-  const activas = operariasCache.filter(o => o.activo);
+  const activas = operariasCache.filter(operariaTrabajando);
   if (activas.length === 0) { alert('No hay operarias activas. Andá a Operarias y agregá.'); return; }
 
   // Preguntar operaria
@@ -894,7 +894,9 @@ function switchSubProd(sub) {
     if (el) el.style.display = (s===sub) ? 'block' : 'none';
     const btn = document.getElementById(`prod-sub-${s}`);
     if (btn) {
-      btn.className = (s===sub) ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+      // toggle (no className =): el botón puede llevar .oculto-2026
+      btn.classList.toggle('btn-primary', s === sub);
+      btn.classList.toggle('btn-ghost', s !== sub);
       btn.style.flex = '1';
     }
   });
@@ -907,6 +909,13 @@ function switchSubProd(sub) {
 }
 
 // ─── Operarias: ver operarias.js ───
+
+// Solo las que están trabajando (no candidatas, descartadas, retiradas ni las
+// que no vinieron). Si la fila no trae `estado`, se usa `activo`.
+function operariaTrabajando(o) {
+  if (!o) return false;
+  return o.estado ? o.estado === 'trabajando' : !!o.activo;
+}
 
 // ─── Captura ──────────────────────────────────────────────────────
 async function initCaptura() {
@@ -923,7 +932,7 @@ async function initCaptura() {
     operariasCache = await supaFetch('operaria','GET',null,'?order=nombre&limit=100');
   }
   const optsOp = '<option value="">— Elegir operaria —</option>' +
-    operariasCache.filter(o => o.activo).map(o => `<option value="${o.id}">${o.nombre}</option>`).join('');
+    operariasCache.filter(operariaTrabajando).map(o => `<option value="${o.id}">${o.nombre}</option>`).join('');
   document.getElementById('cap-operaria').innerHTML = optsOp;
   document.getElementById('lote-operaria').innerHTML = optsOp;
 
