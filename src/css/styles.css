@@ -735,3 +735,21 @@ body.temporada-cantidad .oculto-2026 { display: none !important; }
 .prod-btn-terminar { padding: 12px 18px; font-size: 14px; min-height: 44px; }
 .prod-btn-mas { padding: 8px 12px; font-size: 18px; line-height: 1; min-height: 44px; color: #555; }
 .prod-bulto-mas { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+
+/* ── Inicio → «Hoy sigue» ──────────────────────────────────────────── */
+.hoy-sigue { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.hoy-sigue:empty { display: none; }
+.hoy-sigue-fila { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 10px 12px; min-height: 44px; border: 1px solid #BFD9C6; background: #F3FBF5; border-radius: 10px; font-size: 14px; color: #1f2d3d; cursor: pointer; font-family: inherit; }
+.hoy-sigue-fila > span:nth-child(2) { flex: 1; min-width: 0; }
+.hoy-sigue-ir { font-size: 20px; color: #7a8; }
+
+/* Menú de abajo con 8 pestañas (se sumó 🧺 Empaque) */
+@media (max-width: 420px) {
+  .nav-tab-ico { font-size: 19px; }
+  .nav-tab-lbl { font-size: 9px; letter-spacing: -0.3px; }
+}
+/* Con 8 pestañas «Producción» no cabe en su casilla: que se pase un poco a
+   los lados (las vecinas son cortas) en vez de cortarse con «…». */
+@media (max-width: 420px) {
+  .nav-tab-lbl { max-width: none; overflow: visible; white-space: nowrap; }
+}

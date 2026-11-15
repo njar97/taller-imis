@@ -63,6 +63,7 @@ function tareasInicioHtml() {
     <section class="card tareas-card" aria-labelledby="tareas-tit">
       ${ayuda}
       <h2 class="tareas-tit" id="tareas-tit">¿Qué vas a hacer hoy?</h2>
+      <div id="dash-hoy-sigue" class="hoy-sigue"></div>
       <div class="tareas-grid">
         ${TAREAS_INICIO.map(t => `
         <button type="button" class="tarea-btn" data-tarea="${t.id}" onclick="tareaIr('${t.id}')">
@@ -72,6 +73,41 @@ function tareasInicioHtml() {
         </button>`).join('')}
       </div>
     </section>`;
+}
+
+// ── «Hoy sigue»: el tendido que toca y lo que está en costura ─────────
+// Dos renglones arriba de los botones; se llenan aparte para no frenar Inicio.
+let _hoySigue = { t: 0, html: '' };
+async function cargarHoySigue() {
+  const el = document.getElementById('dash-hoy-sigue');
+  if (!el) return;
+  if (_hoySigue.html && Date.now() - _hoySigue.t < 60000) { el.innerHTML = _hoySigue.html; return; }
+  try {
+    const [pend, bultos] = await Promise.all([
+      supaFetch('vw_trazos_sin_tendido', 'GET', null, '?select=id,codigo_corte&limit=50').catch(() => []),
+      supaFetch('vw_produccion_estado', 'GET', null, '?select=fecha_corte,estado_manual,cantidad_original&limit=2000').catch(() => []),
+    ]);
+    const filas = [];
+    if (pend.length) {
+      pend.sort((a, b) => String(a.codigo_corte || '').localeCompare(String(b.codigo_corte || ''), 'es', { numeric: true }));
+      filas.push(`<button type="button" class="hoy-sigue-fila" onclick="tareaIr('corte')">
+        <span aria-hidden="true">✂️</span>
+        <span><b>Sigue tender: ${dashEsc(pend[0].codigo_corte)}</b> · ${pend.length === 1 ? 'es el último que falta' : 'faltan ' + pend.length + ' tendidos'}</span>
+        <span class="hoy-sigue-ir" aria-hidden="true">›</span></button>`);
+    }
+    const desde = typeof CORTES_DESDE === 'string' ? CORTES_DESDE : '';
+    const enCostura = (bultos || []).filter(b => b.estado_manual !== 'terminado' && (!b.fecha_corte || String(b.fecha_corte) >= desde));
+    if (enCostura.length) {
+      const pz = enCostura.reduce((s, b) => s + (Number(b.cantidad_original) || 0), 0);
+      filas.push(`<button type="button" class="hoy-sigue-fila" onclick="tareaIr('avance')">
+        <span aria-hidden="true">🧵</span>
+        <span><b>En costura: ${dashNum(enCostura.length)} bultos</b> · ${dashNum(pz)} piezas sin terminar</span>
+        <span class="hoy-sigue-ir" aria-hidden="true">›</span></button>`);
+    }
+    _hoySigue = { t: Date.now(), html: filas.join('') };
+    const el2 = document.getElementById('dash-hoy-sigue');
+    if (el2) el2.innerHTML = _hoySigue.html;
+  } catch (_) { /* sin estos renglones Inicio sigue sirviendo */ }
 }
 
 function tareaIr(id) {
@@ -395,6 +431,7 @@ function _dashSelectorTemporada(temps, selId) {
 function renderDashboard() {
   const cont = document.getElementById('dashboard-sub-contenido');
   if (!cont) return;
+  cargarHoySigue();
 
   const r = dashboardCache.resumen;
   const sel = r.tempSel || null;
@@ -429,7 +466,7 @@ function renderDashboard() {
       + _dashKpi('Entregado', dashNum(tot.ent), `de ${dashNum(tot.sol)} pedidas`, '#333');
     cuerpo = _renderProduccionTemporada(r.plan)
       + _renderEmpaquePorPrenda(lineas)
-      + _renderTopEscuelas(r.topEscuelas, 'pedido')
+      // («Escuelas con más por entregar» repetía «Avance por escuela»: quitada)
       + _renderAvancePedido(r, lineas);
   } else {
     // Temporada con alumnos (2025) o sin datos
