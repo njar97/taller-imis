@@ -19,8 +19,28 @@ async function initProduccion() {
   switchSubProd(sub);
 }
 
+// Talla 2026 de la clave de un bulto (P1181 → T12). En 2026 el pedido es
+// por talla, SIN largo: el largo ya no se muestra.
+let prodEquivIdx = null;
+function prodTalla2026(cod, key) {
+  if (!prodEquivIdx || !cod || typeof tallaBodega2026 !== 'function') return null;
+  const t = tallaBodega2026(cod, key, prodEquivIdx);
+  if (!t) return null;
+  return /^T/i.test(String(t)) ? String(t).toUpperCase() : 'T' + t;
+}
+function toggleMasBulto(id) {
+  const el = document.getElementById('mas-' + id);
+  if (el) el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+}
+
 async function cargarProduccion() {
   try {
+    if (!prodEquivIdx) {
+      try {
+        const eq = await supaFetch('talla_equivalencia', 'GET', null, '?select=cod_prenda,talla_vieja,talla_2026,largo_2026_cm');
+        prodEquivIdx = new Map((eq || []).map(e => [e.cod_prenda + '|' + e.talla_vieja, e]));
+      } catch (_) { prodEquivIdx = new Map(); }
+    }
     document.getElementById('prod-resumen-hoy').textContent = 'Cargando...';
     document.getElementById('prod-cortes-container').innerHTML = '';
 
@@ -256,13 +276,19 @@ function renderProduccion() {
     if (grupo.talla !== null && grupo.talla !== undefined) desc.push(`talla ${grupo.talla}`);
     if (grupo.largo !== null && grupo.largo !== undefined) desc.push(`largo ${grupo.largo}`);
     if (grupo.detalle) desc.push(grupo.detalle);
+    // 2026: nombre de la prenda + talla nueva, sin largo; la clave queda chiquita.
+    const t26 = prodTalla2026(grupo.cod_prenda, grupo.key);
+    const tituloGrupo = t26 ? `${grupo.nombre_prenda} ${t26}` : grupo.key;
+    const subGrupo = t26
+      ? `clave ${grupo.key}${grupo.detalle ? ' · ' + grupo.detalle : ''}`
+      : `${grupo.nombre_prenda}${desc.length ? ' · ' + desc.join(' · ') : ''}`;
 
     return `
       <div class="prod-corte-card ${expandido?'expandido':''}">
         <div class="prod-corte-header" onclick="toggleCorte('${k.replace(/'/g,"\\'")}')">
           <div style="flex:1">
-            <div class="prod-corte-titulo">${grupo.key}</div>
-            <div class="prod-corte-prenda">${grupo.nombre_prenda}${desc.length?' · '+desc.join(' · '):''}</div>
+            <div class="prod-corte-titulo${t26 ? ' prod-corte-titulo-palabras' : ''}">${tituloGrupo}</div>
+            <div class="prod-corte-prenda">${subGrupo}</div>
             <div class="prod-corte-meta">
               <strong>${piezasTerm}/${piezasOrig} piezas (${pct}%)</strong> · ${terminados}/${total} bultos
             </div>
@@ -326,8 +352,8 @@ function renderProdBulto(b) {
   const clase = estadoEfectivo === 'terminado' ? 'terminado' : (estadoEfectivo === 'en_proceso' ? 'proceso' : '');
   const cantActual = b.cantidad_original;
   const cantFinal = b.cantidad_final && b.cantidad_final !== cantActual
-    ? `${b.cantidad_final}/${cantActual} pz`
-    : `${cantActual} pz`;
+    ? `${b.cantidad_final} de ${cantActual} piezas`
+    : `${cantActual} piezas`;
 
   // Progreso
   let progresoHtml = '';
@@ -375,15 +401,20 @@ function renderProdBulto(b) {
       : `terminarBulto('${b.produccion_bulto_id}', ${cantActual})`;
     acciones = `<button class="prod-btn-accion prod-btn-terminar" onclick="${onclickTerm}">✓ Terminar</button>`;
   }
+  // Lo de todos los días es «Terminar»; lo demás va detrás de «⋯».
+  let mas = '';
   if (estadoEfectivo !== 'terminado' && cantActual > 1) {
-    acciones += `<button class="prod-btn-accion prod-btn-dividir" onclick="abrirDividir('${b.produccion_bulto_id}', ${cantActual}, '${b.codigo_bulto}')">✂️ Dividir</button>`;
+    mas += `<button class="prod-btn-accion prod-btn-dividir" onclick="abrirDividir('${b.produccion_bulto_id}', ${cantActual}, '${b.codigo_bulto}')">✂️ Dividir</button>`;
   }
   if (estadoEfectivo !== 'terminado') {
-    acciones += `<button class="prod-btn-accion prod-btn-unir" onclick="abrirUnir('${b.produccion_bulto_id}', '${b.talla_key_salida}', '${b.codigo_bulto}')">🔗 Unir</button>`;
+    mas += `<button class="prod-btn-accion prod-btn-unir" onclick="abrirUnir('${b.produccion_bulto_id}', '${b.talla_key_salida}', '${b.codigo_bulto}')">🔗 Unir</button>`;
   }
   // Botón expandir etapas (solo si Fase 2 activa)
   if (FASE2_ACTIVA && b.total_etapas > 0) {
-    acciones += `<button class="prod-btn-accion" onclick="toggleEtapasBulto('${b.produccion_bulto_id}')">▾ Etapas</button>`;
+    mas += `<button class="prod-btn-accion" onclick="toggleEtapasBulto('${b.produccion_bulto_id}')">▾ Etapas</button>`;
+  }
+  if (mas) {
+    acciones += `<button class="prod-btn-accion prod-btn-mas" onclick="toggleMasBulto('${b.produccion_bulto_id}')" aria-label="Más opciones" title="Dividir, unir, etapas">⋯</button>`;
   }
 
   const fechaInfo = estadoEfectivo === 'terminado' && b.fecha_terminado ? ` · ${b.fecha_terminado}` : '';
@@ -393,14 +424,14 @@ function renderProdBulto(b) {
     <div class="prod-bulto-row ${clase}" id="bulto-row-${b.produccion_bulto_id}">
       <div style="flex:1;min-width:0">
         <div>
-          <span class="prod-bulto-codigo">${b.codigo_bulto}</span>
-          <span class="prod-bulto-cant">${cantFinal}</span>
+          <span class="prod-bulto-nombre">Rollo ${b.numero_rollo ?? '?'}${b.sufijo_division ? ' (' + b.sufijo_division + ')' : ''} · ${cantFinal}</span>
         </div>
-        <div class="prod-bulto-corte">Corte ${b.letra_corte||'?'} · ${b.codigo_corte}${fechaInfo}</div>
+        <div class="prod-bulto-corte">Corte ${b.letra_corte||'?'} · ${b.codigo_corte}${fechaInfo} · <span class="prod-bulto-codigo">${b.codigo_bulto}</span></div>
         ${progresoHtml}
         ${asigHtml}
         ${badges?`<div class="prod-bulto-badges">${badges}</div>`:''}
         ${obsInfo}
+        ${mas ? `<div class="prod-bulto-mas" id="mas-${b.produccion_bulto_id}" style="display:none">${mas}</div>` : ''}
         <div id="etapas-${b.produccion_bulto_id}" style="display:none;margin-top:8px"></div>
       </div>
       <div class="prod-bulto-acciones">${acciones}</div>
