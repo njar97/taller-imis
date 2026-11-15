@@ -302,7 +302,7 @@ async function guardarMatEditar() {
 async function darBajaMaterial() {
   const id = document.getElementById('matedit-id').value;
   if (!id) return;
-  if (!confirm('¿Ocultar este material de la lista? El historial se conserva.')) return;
+  if (!await confirmar('¿Ocultar este material de la lista? El historial se conserva.')) return;
   try {
     await supaUpdate('material', id, { activo: false, actualizado_en: new Date().toISOString() });
     cerrarMatEditar();

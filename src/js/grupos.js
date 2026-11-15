@@ -156,7 +156,7 @@ async function guardarGrupo() {
 }
 
 async function archivarGrupo(grupoId, nombre) {
-  if (!confirm(`¿Archivar el grupo "${nombre}"?\n\nNo se borra, solo se oculta. Las tareas pasadas quedan intactas.`)) return;
+  if (!await confirmar(`¿Archivar el grupo "${nombre}"?\n\nNo se borra, solo se oculta. Las tareas pasadas quedan intactas.`)) return;
   try {
     await supaUpdate('grupo_trabajo', grupoId, { activo: false });
     await initGrupos();

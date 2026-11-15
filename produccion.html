@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-15 07:23 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-15 10:53 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -777,6 +777,15 @@ body.temporada-cantidad .oculto-2026 { display: none !important; }
 @media (max-width: 420px) {
   .nav-tab-lbl { max-width: none; overflow: visible; white-space: nowrap; }
 }
+
+/* ── Avisos dentro de la app (confirmar / pedir / aviso) ───────────── */
+.dlg-app-overlay { position: fixed; inset: 0; z-index: 100000; background: rgba(15, 30, 50, 0.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.dlg-app { background: white; border-radius: 14px; width: 100%; max-width: 420px; max-height: 85vh; overflow: auto; padding: 20px 18px 16px; box-shadow: 0 12px 40px rgba(0,0,0,0.35); }
+.dlg-app-msg { font-size: 15px; line-height: 1.45; color: #1f2d3d; white-space: pre-wrap; overflow-wrap: anywhere; }
+.dlg-app-input { width: 100%; margin-top: 14px; padding: 12px; font-size: 17px; border: 2px solid var(--borde); border-radius: 8px; }
+.dlg-app-input:focus { border-color: var(--azul); outline: none; }
+.dlg-app-botones { display: flex; gap: 8px; margin-top: 18px; }
+.dlg-app-btn { flex: 1; min-height: 48px; font-size: 15px; font-weight: 700; justify-content: center; }
 
 </style>
 </head>
@@ -3024,11 +3033,14 @@ body.temporada-cantidad .oculto-2026 { display: none !important; }
       <div class="detalle-titulo" id="det-titulo">Detalle</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" id="det-btn-editar" onclick="editarRegistro()" style="display:none">✏️ Editar</button>
-        <button class="btn btn-danger btn-sm" id="det-btn-eliminar" onclick="eliminarRegistro()" style="display:none;font-size:12px">🗑️ Eliminar</button>
         <button class="btn btn-ghost btn-sm" onclick="cerrarDetalle()">✕ Cerrar</button>
       </div>
     </div>
     <div id="det-contenido"></div>
+    <!-- «Eliminar» va abajo y chico, lejos de «Cerrar», para no tocarlo sin querer -->
+    <div style="margin-top:22px;text-align:center">
+      <button class="btn btn-ghost btn-sm" id="det-btn-eliminar" onclick="eliminarRegistro()" style="display:none;font-size:12px;color:#b00020;border-color:#e6b8bf">🗑️ Eliminar este registro</button>
+    </div>
   </div>
 </div>
 
@@ -3279,6 +3291,95 @@ function showToast(msg, type = 'info', ms = 5000) {
   cont.appendChild(toast);
   setTimeout(() => { if (toast.parentNode) toast.remove(); }, ms);
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// AVISOS DENTRO DE LA APP (en vez de las ventanas del navegador)
+//   await confirmar('¿…?')        → true / false
+//   await pedirTexto('…', 'x')    → texto, o null si cancela
+//   alert('…')                    → aviso corto abajo, o cuadro con «Entendido»
+// Las ventanas del navegador («Aceptar / Cancelar») asustan, tapan la app y
+// en el celular a veces traen la casilla «no mostrar más».
+// ══════════════════════════════════════════════════════════════════════
+function dialogoApp({ tipo = 'aviso', mensaje = '', valor = '' } = {}) {
+  return new Promise(resolve => {
+    const txt = String(mensaje == null ? '' : mensaje);
+    const peligro = tipo === 'confirmar' && /\b(eliminar|borrar|borra|elimina|quitar|descartar|revertir|deshacer|anular|permanente)/i.test(txt);
+    const ov = document.createElement('div');
+    ov.className = 'dlg-app-overlay';
+    ov.setAttribute('role', 'dialog');
+    ov.setAttribute('aria-modal', 'true');
+    const caja = document.createElement('div');
+    caja.className = 'dlg-app';
+    const msg = document.createElement('div');
+    msg.className = 'dlg-app-msg';
+    msg.textContent = txt;
+    caja.appendChild(msg);
+    let input = null;
+    if (tipo === 'pedir') {
+      input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'dlg-app-input';
+      input.value = valor == null ? '' : String(valor);
+      if (/^\d*$/.test(input.value) && /cantidad|n[úu]mero|piezas|cu[áa]nt/i.test(txt)) input.inputMode = 'numeric';
+      caja.appendChild(input);
+    }
+    const bot = document.createElement('div');
+    bot.className = 'dlg-app-botones';
+    const cerrar = (res) => {
+      document.removeEventListener('keydown', onKey, true);
+      ov.remove();
+      resolve(res);
+    };
+    const cancelar = () => cerrar(tipo === 'confirmar' ? false : tipo === 'pedir' ? null : undefined);
+    const aceptar = () => cerrar(tipo === 'confirmar' ? true : tipo === 'pedir' ? input.value : undefined);
+    let bCancel = null;
+    if (tipo !== 'aviso') {
+      bCancel = document.createElement('button');
+      bCancel.type = 'button';
+      bCancel.className = 'btn btn-ghost dlg-app-btn';
+      bCancel.textContent = 'Cancelar';
+      bCancel.onclick = cancelar;
+      bot.appendChild(bCancel);
+    }
+    const bOk = document.createElement('button');
+    bOk.type = 'button';
+    bOk.className = 'btn dlg-app-btn ' + (peligro ? 'btn-danger' : 'btn-primary');
+    bOk.textContent = tipo === 'aviso' ? 'Entendido' : tipo === 'pedir' ? 'Aceptar' : (peligro ? 'Sí' : 'Sí, continuar');
+    bOk.onclick = aceptar;
+    bot.appendChild(bOk);
+    caja.appendChild(bot);
+    ov.appendChild(caja);
+    // Tocar afuera = cancelar (en un aviso, cerrarlo)
+    ov.addEventListener('mousedown', (e) => { if (e.target === ov) cancelar(); });
+    function onKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancelar(); }
+      else if (e.key === 'Enter' && (tipo !== 'confirmar' || document.activeElement === bOk)) { e.preventDefault(); e.stopPropagation(); aceptar(); }
+    }
+    document.addEventListener('keydown', onKey, true);
+    document.body.appendChild(ov);
+    // Foco: al escribir, en la casilla; en algo que borra, en «Cancelar».
+    if (input) { input.focus(); input.select(); }
+    else if (peligro && bCancel) bCancel.focus();
+    else bOk.focus();
+  });
+}
+function confirmar(mensaje) { return dialogoApp({ tipo: 'confirmar', mensaje }); }
+function pedirTexto(mensaje, valor = '') { return dialogoApp({ tipo: 'pedir', mensaje, valor }); }
+// alert(): corto y de una línea → aviso abajo que se va solo; largo, de
+// varias líneas o de error → cuadro con «Entendido». Ninguno frena la app.
+const _alertNavegador = window.alert;
+window.alert = function (mensaje) {
+  try {
+    const txt = String(mensaje == null ? '' : mensaje);
+    const esError = /^\s*(❌|error\b|no se pudo|fall[óo])/i.test(txt);
+    if (!esError && txt.length <= 90 && !txt.includes('\n')) {
+      const tono = /^\s*(✅|✓|listo|guardad)/i.test(txt) ? 'success' : /^\s*⚠/.test(txt) ? 'warn' : 'info';
+      showToast(txt, tono, 6000);
+    } else {
+      dialogoApp({ tipo: 'aviso', mensaje: txt });
+    }
+  } catch (_) { _alertNavegador.call(window, mensaje); }
+};
 
 // Modal helper: centraliza apertura/cierre + manejo de tecla Esc +
 // click-en-backdrop para cerrar. Reemplaza los patrones repetidos
@@ -8589,7 +8690,7 @@ async function guardarTrazo() {
 
   const parsSinComp = tallas.filter(t => t.tipo === 'par' && !t.complementoKey);
   if (parsSinComp.length > 0) {
-    if (!confirm(`Hay ${parsSinComp.length} talla(s) "par" sin complemento asignado. ¿Guardar igual?`)) return;
+    if (!await confirmar(`Hay ${parsSinComp.length} talla(s) "par" sin complemento asignado. ¿Guardar igual?`)) return;
   }
 
   const btn = document.getElementById('btn-guardar-trazo');
@@ -9093,10 +9194,10 @@ function confirmarBulto(uid) {
   renderBultos();
 }
 
-function sustituirBulto(uid) {
+async function sustituirBulto(uid) {
   const b = bultosState.find(x => x.uid === uid);
   if (!b) return;
-  const nueva = prompt(`Sustituir talla de salida.\nOriginal: ${b.talla_original}\nCantidad: ${b.cantidad}\n\nEscribí la nueva talla (KEY):`, b.talla_salida);
+  const nueva = await pedirTexto(`Sustituir talla de salida.\nOriginal: ${b.talla_original}\nCantidad: ${b.cantidad}\n\nEscribí la nueva talla (KEY):`, b.talla_salida);
   if (nueva === null) return;
   const trimmed = nueva.trim();
   if (!trimmed) return;
@@ -9159,7 +9260,7 @@ async function guardarBultos() {
   // Validar: no quede nada 'propuesto' sin decidir
   const pendientes = bultosState.filter(b => b.estado === 'propuesto');
   if (pendientes.length) {
-    if (!confirm(`Hay ${pendientes.length} bulto(s) sin decidir. ¿Querés confirmarlos tal cual como están propuestos?`)) return;
+    if (!await confirmar(`Hay ${pendientes.length} bulto(s) sin decidir. ¿Querés confirmarlos tal cual como están propuestos?`)) return;
     pendientes.forEach(b => b.estado = 'confirmado');
   }
   // Validar: divididos deben sumar la cantidad original
@@ -9167,7 +9268,7 @@ async function guardarBultos() {
     if (b.estado === 'dividido') {
       const sum = b.partidas.reduce((s,p)=>s+(parseInt(p.cantidad)||0),0);
       if (sum !== b.cantidad) {
-        if (!confirm(`El bulto ${b.numero_rollo}${tendidoSeleccionado.tendido.letra_corte}${b.letra_talla} se dividió en partidas que suman ${sum} pero el bulto original tenía ${b.cantidad}. ¿Guardar igual? (diferencia: ${b.cantidad-sum})`)) return;
+        if (!await confirmar(`El bulto ${b.numero_rollo}${tendidoSeleccionado.tendido.letra_corte}${b.letra_talla} se dividió en partidas que suman ${sum} pero el bulto original tenía ${b.cantidad}. ¿Guardar igual? (diferencia: ${b.cantidad-sum})`)) return;
       }
       for (const p of b.partidas) {
         if (!p.talla || !p.talla.trim()) { mostrarAlerta('bulto','error','Hay partidas sin talla asignada.'); return; }
@@ -9454,7 +9555,7 @@ async function eliminarRegistro() {
             + `El trazo NO se borra.\n\nEsta acción NO se puede deshacer. ¿Continuar?`;
     }
 
-    if (!confirm(aviso)) return;
+    if (!await confirmar(aviso)) return;
 
     // Ejecutar DELETE (cascade se encarga del resto)
     await supaFetch(tipo, 'DELETE', null, `?id=eq.${id}`);
@@ -11269,7 +11370,7 @@ function cambiarFiltroProduccion(filtro) {
 }
 
 async function terminarBulto(produccionBultoId, cantidadOriginal) {
-  const cantStr = prompt(
+  const cantStr = await pedirTexto(
     `¿Cuántas piezas terminaron?\n\nCantidad original: ${cantidadOriginal}\n\n(Enter para usar el original, o escribí otra cantidad si hubo defectos)`,
     cantidadOriginal
   );
@@ -11278,7 +11379,7 @@ async function terminarBulto(produccionBultoId, cantidadOriginal) {
 
   let observaciones = null;
   if (cantidadFinal !== cantidadOriginal) {
-    observaciones = prompt(`Hubo diferencia (${cantidadFinal} vs ${cantidadOriginal}). ¿Qué pasó? (opcional)`) || null;
+    observaciones = await pedirTexto(`Hubo diferencia (${cantidadFinal} vs ${cantidadOriginal}). ¿Qué pasó? (opcional)`) || null;
   }
 
   try {
@@ -11469,7 +11570,7 @@ async function confirmarAutoAcaparar(escId, nombrePrenda, tallaKey) {
 }
 
 async function revertirBulto(produccionBultoId) {
-  if (!confirm('¿Revertir a pendiente? Se borrará la fecha de terminación.')) return;
+  if (!await confirmar('¿Revertir a pendiente? Se borrará la fecha de terminación.')) return;
   try {
     await supaUpdate('produccion_bulto', produccionBultoId, {
       estado: 'pendiente',
@@ -11485,7 +11586,7 @@ async function revertirBulto(produccionBultoId) {
 
 // Atajo: marcar terminado con confirmación (cuando Fase 2 está activa)
 async function terminarBultoAtajo(produccionBultoId, cantidadOriginal) {
-  if (!confirm('¿Marcar este bulto como terminado sin registrar etapas?\n\nSe perderá el detalle de operaciones. Usalo solo cuando no puedas capturar el detalle.')) return;
+  if (!await confirmar('¿Marcar este bulto como terminado sin registrar etapas?\n\nSe perderá el detalle de operaciones. Usalo solo cuando no puedas capturar el detalle.')) return;
   await terminarBulto(produccionBultoId, cantidadOriginal);
 }
 
@@ -11548,7 +11649,7 @@ async function marcarEtapaRapida(bultoId, operacionId) {
 
   // Preguntar operaria
   const nombres = activas.map((o,i) => `${i+1}. ${o.nombre}`).join('\n');
-  const idxStr = prompt(`¿Quién hizo esta etapa?\n\n${nombres}\n\nEscribí el número:`, '1');
+  const idxStr = await pedirTexto(`¿Quién hizo esta etapa?\n\n${nombres}\n\nEscribí el número:`, '1');
   if (idxStr === null) return;
   const idx = parseInt(idxStr) - 1;
   if (idx < 0 || idx >= activas.length) { alert('Número inválido'); return; }
@@ -11557,7 +11658,7 @@ async function marcarEtapaRapida(bultoId, operacionId) {
   // Buscar bulto para obtener cantidad
   const bulto = produccionData.find(b => b.produccion_bulto_id === bultoId);
   const cantDefault = bulto?.cantidad_original || 0;
-  const cantStr = prompt(`Cantidad de piezas (Enter = ${cantDefault}):`, cantDefault);
+  const cantStr = await pedirTexto(`Cantidad de piezas (Enter = ${cantDefault}):`, cantDefault);
   if (cantStr === null) return;
   const cantidad = parseInt(cantStr) || cantDefault;
 
@@ -11580,7 +11681,7 @@ async function marcarEtapaRapida(bultoId, operacionId) {
 }
 
 async function desmarcarEtapa(registroId, bultoId) {
-  if (!confirm('¿Deshacer esta etapa? Se elimina el registro de captura.')) return;
+  if (!await confirmar('¿Deshacer esta etapa? Se elimina el registro de captura.')) return;
   try {
     await supaFetch('produccion_registro_operacion','DELETE',null,`?id=eq.${registroId}`);
     await toggleEtapasBulto(bultoId); // cerrar
@@ -11593,7 +11694,7 @@ async function desmarcarEtapa(registroId, bultoId) {
 
 // ══ DIVIDIR ══════════════════════════════════════════════════════════
 async function abrirDividir(produccionBultoId, cantidadActual, codigoBulto) {
-  const cantStr = prompt(
+  const cantStr = await pedirTexto(
     `Dividir bulto ${codigoBulto} (${cantidadActual} piezas)\n\n¿Cuántas piezas separar en un bulto derivado?\n(El resto queda en el bulto original con la misma KEY)`,
     Math.floor(cantidadActual / 2)
   );
@@ -11604,7 +11705,7 @@ async function abrirDividir(produccionBultoId, cantidadActual, codigoBulto) {
     return;
   }
 
-  const motivo = prompt('Motivo de la división (opcional, ej: "defectos", "agilizar entrega"):') || null;
+  const motivo = await pedirTexto('Motivo de la división (opcional, ej: "defectos", "agilizar entrega"):') || null;
 
   try {
     // 1. Encontrar el bulto original para obtener su salida_id
@@ -11700,7 +11801,7 @@ async function ejecutarUnion() {
   const principal = produccionData.find(x => x.produccion_bulto_id === ctx.principalId);
   const nuevaCantidad = (principal?.cantidad_original || 0) + totalSumar;
   
-  if (!confirm(`Unir ${seleccionados.length} bulto(s) a ${ctx.principalCodigo}.\n\nEl principal pasa de ${principal?.cantidad_original} → ${nuevaCantidad} piezas.\n\n¿Continuar?`)) return;
+  if (!await confirmar(`Unir ${seleccionados.length} bulto(s) a ${ctx.principalCodigo}.\n\nEl principal pasa de ${principal?.cantidad_original} → ${nuevaCantidad} piezas.\n\n¿Continuar?`)) return;
 
   try {
     // 1. Actualizar cantidad del principal
@@ -11924,7 +12025,7 @@ async function guardarLote() {
   if (!operacionId) { alert('Elegí operación'); return; }
   if (marcados.length === 0) { alert('Marcá al menos un bulto'); return; }
 
-  if (!confirm(`Guardar ${marcados.length} registro(s) como hechos hoy?\n\nSe registrará la misma operación para todos los bultos seleccionados.`)) return;
+  if (!await confirmar(`Guardar ${marcados.length} registro(s) como hechos hoy?\n\nSe registrará la misma operación para todos los bultos seleccionados.`)) return;
 
   let ok = 0, err = 0;
   for (const el of marcados) {
@@ -12079,7 +12180,7 @@ function renderRegistrosHoy() {
 }
 
 async function eliminarRegistro2(id) {
-  if (!confirm('¿Eliminar este registro?')) return;
+  if (!await confirmar('¿Eliminar este registro?')) return;
   try {
     await supaFetch('produccion_registro_operacion','DELETE',null,`?id=eq.${id}`);
     await cargarRegistrosHoy();
@@ -13028,7 +13129,7 @@ async function guardarAsignacion() {
 
 // ─── Acciones sobre asignaciones ─────────────────────────────────
 async function marcarCompletada(asignId) {
-  if (!confirm('¿Marcar esta asignación como completada?')) return;
+  if (!await confirmar('¿Marcar esta asignación como completada?')) return;
   try {
     await supaUpdate('asignacion', asignId, { 
       estado: 'completada', 
@@ -13039,7 +13140,7 @@ async function marcarCompletada(asignId) {
 }
 
 async function cancelarAsignacion(asignId) {
-  if (!confirm('¿Cancelar esta asignación?\n\nLos registros de trabajo ya hecho se conservan.')) return;
+  if (!await confirmar('¿Cancelar esta asignación?\n\nLos registros de trabajo ya hecho se conservan.')) return;
   try {
     await supaUpdate('asignacion', asignId, { 
       estado: 'cancelada', 
@@ -13050,7 +13151,7 @@ async function cancelarAsignacion(asignId) {
 }
 
 async function reactivarAsignacion(asignId) {
-  if (!confirm('¿Reactivar esta asignación?')) return;
+  if (!await confirmar('¿Reactivar esta asignación?')) return;
   try {
     await supaUpdate('asignacion', asignId, { 
       estado: 'activa', 
@@ -14965,7 +15066,7 @@ async function ejecutarImportacion() {
   if (!escuelaId) { alert('Falta la escuela'); return; }
   if (!registroCache.temporadaActual) { alert('Falta la temporada'); return; }
   
-  if (!confirm(`¿Importar ${procesadas.length} alumnos a esta escuela?`)) return;
+  if (!await confirmar(`¿Importar ${procesadas.length} alumnos a esta escuela?`)) return;
   
   const btn = event.target;
   btn.disabled = true;
@@ -15474,7 +15575,7 @@ async function guardarEntradaManual() {
       alert(`La KEY debe empezar con el código de la prenda (${codPrenda}). Ej: ${codPrenda}12`);
       return;
     }
-    if (!confirm(`"${talla}" NO está en el catálogo de ${prenda}.\n\n¿Seguro que la KEY es correcta? Va a crear un código nuevo en bodega.`)) return;
+    if (!await confirmar(`"${talla}" NO está en el catálogo de ${prenda}.\n\n¿Seguro que la KEY es correcta? Va a crear un código nuevo en bodega.`)) return;
   }
 
   try {
@@ -15643,7 +15744,7 @@ async function aplicarConteoInicial() {
     return;
   }
 
-  if (!confirm(`¿Aplicar conteo a ${filas.length} fila(s)?\n\nSe crea 1 AJUSTE_INVENTARIO por fila con la diferencia necesaria para llegar al valor físico.\nNo se puede deshacer en bloque (sí por audit log).`)) return;
+  if (!await confirmar(`¿Aplicar conteo a ${filas.length} fila(s)?\n\nSe crea 1 AJUSTE_INVENTARIO por fila con la diferencia necesaria para llegar al valor físico.\nNo se puede deshacer en bloque (sí por audit log).`)) return;
 
   const btn = document.getElementById('conteo-btn-aplicar');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Aplicando...'; }
@@ -16362,10 +16463,10 @@ async function guardarSalida() {
         const m = emqTallaDeBodega(codPrenda, talla, ctx.eqMap);
         const L = m && emqLineasEscuela(ctx, escuelaId).find(x => x.cod === codPrenda && x.t === m.t);
         if (!L) {
-          if (!confirm(`Esta escuela no tiene pedido de ${prenda} ${talla}.\n\n¿Registrar la salida igual? (no se suma a ningún pedido)`)) return;
+          if (!await confirmar(`Esta escuela no tiene pedido de ${prenda} ${talla}.\n\n¿Registrar la salida igual? (no se suma a ningún pedido)`)) return;
         } else {
-          if (!m.sirve && !confirm(`⚠ ${talla} queda corto de largo para ${L.talla}.\n\n¿Entregarlo igual?`)) return;
-          if (cantidad > L.falta && !confirm(`De ${L.talla} le faltan ${L.falta}${L.empacado ? ` (aparte de ${L.empacado} ya empacadas)` : ''} y vas a sacar ${cantidad}.\n\n¿Seguir igual?`)) return;
+          if (!m.sirve && !await confirmar(`⚠ ${talla} queda corto de largo para ${L.talla}.\n\n¿Entregarlo igual?`)) return;
+          if (cantidad > L.falta && !await confirmar(`De ${L.talla} le faltan ${L.falta}${L.empacado ? ` (aparte de ${L.empacado} ya empacadas)` : ''} y vas a sacar ${cantidad}.\n\n¿Seguir igual?`)) return;
           patches = emqRepartirEntrega(L.filas, cantidad);
           pedidoId = emqFilaPrincipal(L).id;
           lineaTalla = L.talla;
@@ -16739,7 +16840,7 @@ async function guardarMatEditar() {
 async function darBajaMaterial() {
   const id = document.getElementById('matedit-id').value;
   if (!id) return;
-  if (!confirm('¿Ocultar este material de la lista? El historial se conserva.')) return;
+  if (!await confirmar('¿Ocultar este material de la lista? El historial se conserva.')) return;
   try {
     await supaUpdate('material', id, { activo: false, actualizado_en: new Date().toISOString() });
     cerrarMatEditar();
@@ -17047,7 +17148,7 @@ async function emqEmpacar() {
     if (m.bottom) piezas.push({ id, pieza: 'bottom' });
   }
   if (piezas.length === 0) return;
-  if (!confirm(`¿Empacar ${piezas.length} pieza(s) de ${alumnosSel.length} alumno(s)?`)) return;
+  if (!await confirmar(`¿Empacar ${piezas.length} pieza(s) de ${alumnosSel.length} alumno(s)?`)) return;
 
   const btn = document.getElementById('emq-btn-empacar');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Empacando…'; }
@@ -17082,7 +17183,7 @@ async function emqDeshacer() {
   const u = emqState.ultimoEmpaque;
   if (u && u.cant) return emqCantDeshacerUI();   // 📋 empaque por pedido
   if (!u || !u.piezas.length) return;
-  if (!confirm(`¿Deshacer el empaque de ${u.piezas.length} pieza(s)? Vuelven a pendiente y el stock/reserva se restaura.`)) return;
+  if (!await confirmar(`¿Deshacer el empaque de ${u.piezas.length} pieza(s)? Vuelven a pendiente y el stock/reserva se restaura.`)) return;
   const panel = document.getElementById('emq-exito-panel');
   let ok = 0, fail = 0;
   for (const p of u.piezas) {
@@ -17381,7 +17482,7 @@ async function emqConfirmarReserva() {
   }
 
   const total = pedidos.reduce((s, p) => s + p.n, 0);
-  if (!confirm(`¿Reservar ${total} pieza(s) para esta escuela?\n\n${pedidos.map(p => `· ${p.prenda} ${p.talla} × ${p.n}`).join('\n')}\n\nLos alumnos siguen PENDIENTES; al empacarlos, la reserva se consume sola.`)) return;
+  if (!await confirmar(`¿Reservar ${total} pieza(s) para esta escuela?\n\n${pedidos.map(p => `· ${p.prenda} ${p.talla} × ${p.n}`).join('\n')}\n\nLos alumnos siguen PENDIENTES; al empacarlos, la reserva se consume sola.`)) return;
 
   try {
     const hoy = hoyLocal();
@@ -17436,7 +17537,7 @@ async function emqEntregar() {
       if (a.estado_bottom === 'empacado') n++;
     }
     if (n === 0) { alert('No hay piezas empacadas pendientes de entrega.'); return; }
-    if (!confirm(`Se van a marcar como ENTREGADAS ${n} pieza(s) empacadas de esta escuela (todas, no solo las de esta sesión). ¿Confirmar?`)) return;
+    if (!await confirmar(`Se van a marcar como ENTREGADAS ${n} pieza(s) empacadas de esta escuela (todas, no solo las de esta sesión). ¿Confirmar?`)) return;
 
     const nowIso = new Date().toISOString();
     await _bulkPatchAlumno(`?escuela_id=eq.${escId}${tempF}&estado_top=eq.empacado`,
@@ -18266,7 +18367,7 @@ async function emqCantEmpacarUI(grupo, origen, soloK) {
   const lineas = emqLineasEscuela(ctx, escId).filter(L => items.has(L.k));
   const total = [...items.values()].reduce((s, n) => s + n, 0);
   const lista = lineas.map(L => `· ${L.prenda} ${L.talla} × ${items.get(L.k)}${emqFuentesTxt(L, items.get(L.k))}`);
-  if (!confirm(`¿Empacar ${total} pieza(s) para ${emqNombreEscuela(escId)}?\n\n${lista.join('\n')}\n\nSale de bodega ahora. La entrega se marca después con 🚚.`)) return;
+  if (!await confirmar(`¿Empacar ${total} pieza(s) para ${emqNombreEscuela(escId)}?\n\n${lista.join('\n')}\n\nSale de bodega ahora. La entrega se marca después con 🚚.`)) return;
 
   _emqOcupado = true;
   const btn = enModal ? null : document.getElementById('emq-btn-empacar');
@@ -18314,7 +18415,7 @@ async function emqCantConfirmarYEntregar(escId, items, fecha, receptor, obs, ctx
   const total = lineas.reduce((s, L) => s + items.get(L.k), 0);
   if (!total) { alert('Poné cuántas entregar.'); return false; }
   const lista = lineas.map(L => `· ${L.prenda} ${L.talla} × ${items.get(L.k)}`).join('\n');
-  if (!confirm(`¿Entregar ${total} pieza(s) a ${emqNombreEscuela(escId)} el ${fecha}?\n\n${lista}\n\nSe suma a lo entregado del pedido. Bodega no cambia (ya salió al empacar).`)) return false;
+  if (!await confirmar(`¿Entregar ${total} pieza(s) a ${emqNombreEscuela(escId)} el ${fecha}?\n\n${lista}\n\nSe suma a lo entregado del pedido. Bodega no cambia (ya salió al empacar).`)) return false;
   _emqOcupado = true;
   try {
     const r = await emqCantEntregar(escId, items, fecha, receptor, obs);
@@ -18348,7 +18449,7 @@ async function emqCantEntregarSesion() {
 async function emqCantDeshacerUI() {
   const u = emqState.ultimoEmpaque;
   if (!u || !u.cant || _emqOcupado) return;
-  if (!confirm('¿Deshacer este empaque? Lo que siga empacado vuelve a bodega.')) return;
+  if (!await confirmar('¿Deshacer este empaque? Lo que siga empacado vuelve a bodega.')) return;
   _emqOcupado = true;
   const st = document.getElementById('emq-undo-status');
   if (st) st.textContent = '↩️ Deshaciendo…';
@@ -19785,11 +19886,11 @@ function agEditarTalla(btn, alumnoId, pieza) {
     const b = ev.target.closest('button[data-k]');
     if (b) { ev.preventDefault(); agGuardarTalla(alumnoId, pieza, b.dataset.k); }
   });
-  el.querySelector('.ag-picker-otra').addEventListener('click', () => {
+  el.querySelector('.ag-picker-otra').addEventListener('click', async () => {
     let v = input.value.trim().toUpperCase();
     if (!v) return;
     if (!v.startsWith(pref)) v = pref + v;
-    if (!keys.includes(v) && !confirm(`"${v}" no está en el catálogo de ${prenda}.\n\n¿Usarla igual? Se registra en el catálogo para la próxima.`)) return;
+    if (!keys.includes(v) && !await confirmar(`"${v}" no está en el catálogo de ${prenda}.\n\n¿Usarla igual? Se registra en el catálogo para la próxima.`)) return;
     agGuardarTalla(alumnoId, pieza, v, !keys.includes(v));
   });
   render('');
@@ -20381,7 +20482,7 @@ function _renderEstadoEmpaqueAlumno(a) {
 }
 
 async function desempacarPiezaAlumno(alumnoId, pieza) {
-  if (!confirm(`¿Desempacar la pieza ${pieza === 'top' ? '👕 top' : '👖 bottom'} de este alumno?\n\nVa a:\n• Marcar el estado como "pendiente"\n• Devolver la unidad al stock o al pool acaparado (según de dónde haya salido)`)) return;
+  if (!await confirmar(`¿Desempacar la pieza ${pieza === 'top' ? '👕 top' : '👖 bottom'} de este alumno?\n\nVa a:\n• Marcar el estado como "pendiente"\n• Devolver la unidad al stock o al pool acaparado (según de dónde haya salido)`)) return;
   try {
     if (typeof desempacarPieza !== 'function') throw new Error('Función desempacarPieza no disponible');
     const r = await desempacarPieza(alumnoId, pieza);
@@ -20554,7 +20655,7 @@ async function abrirNuevoAlumno() {
       .sort((a,b) => (a.alias||a.nombre).localeCompare(b.alias||b.nombre));
     if (opts.length === 0) { alert('No hay escuelas activas. Cargá una primero.'); return; }
     const lista = opts.map((e,i) => `${i+1}. ${e.alias || e.nombre}`).join('\n');
-    const ans = prompt(`Para qué escuela?\n\n${lista}\n\nEscribí el número o el alias:`);
+    const ans = await pedirTexto(`Para qué escuela?\n\n${lista}\n\nEscribí el número o el alias:`);
     if (!ans) return;
     const num = parseInt(ans, 10);
     if (!isNaN(num) && num >= 1 && num <= opts.length) {
@@ -20848,7 +20949,7 @@ async function generarPdfDirecto(html, filename) {
   const esMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const LIMITE_MOBILE = 400;
   if (esMobile && numEtiq > LIMITE_MOBILE) {
-    const ok = confirm(
+    const ok = await confirmar(
       `Vas a generar ${numEtiq.toLocaleString()} etiquetas en un celular.\n\n` +
       `Esto puede tardar mucho o bloquear el navegador.\n\n` +
       `Recomendación: filtrá por una escuela o usá la PC.\n\n` +
@@ -22614,7 +22715,7 @@ async function guardarGrupo() {
 }
 
 async function archivarGrupo(grupoId, nombre) {
-  if (!confirm(`¿Archivar el grupo "${nombre}"?\n\nNo se borra, solo se oculta. Las tareas pasadas quedan intactas.`)) return;
+  if (!await confirmar(`¿Archivar el grupo "${nombre}"?\n\nNo se borra, solo se oculta. Las tareas pasadas quedan intactas.`)) return;
   try {
     await supaUpdate('grupo_trabajo', grupoId, { activo: false });
     await initGrupos();
@@ -23228,7 +23329,7 @@ async function revertirAudit(id) {
   const desc = f.op === 'INSERT' ? `borrar la fila creada (${f.table_name} pk=${shortPk(f.row_pk)})`
             : f.op === 'DELETE' ? `re-crear la fila borrada (${f.table_name} pk=${shortPk(f.row_pk)})`
             : `restaurar los valores anteriores en ${f.table_name} (cols: ${(f.changed_cols||[]).join(', ') || '—'})`;
-  if (!confirm(`¿Deshacer este cambio?\n\nVa a ${desc}.\n\nQueda registrado en el audit log como un cambio nuevo.`)) return;
+  if (!await confirmar(`¿Deshacer este cambio?\n\nVa a ${desc}.\n\nQueda registrado en el audit log como un cambio nuevo.`)) return;
 
   try {
     const tok = await authTokenFresh();
@@ -23338,7 +23439,7 @@ function initConfig() {
 
 // ─── Backups automáticos ──────────────────────────────────────────────
 async function ejecutarBackupAhora() {
-  if (!confirm('¿Ejecutar backup ahora?\n\nVa a tomar un snapshot de todas las tablas y subirlo al bucket.')) return;
+  if (!await confirmar('¿Ejecutar backup ahora?\n\nVa a tomar un snapshot de todas las tablas y subirlo al bucket.')) return;
   try {
     const tok = await authTokenFresh() || SUPA_KEY;
     const res = await fetch(`${SUPA_URL}/rest/v1/rpc/trigger_backup`, {
@@ -23438,7 +23539,7 @@ async function descargarBackup(name) {
 }
 
 async function borrarBackup(name) {
-  if (!confirm(`¿Borrar "${name}"?\n\nNo se puede deshacer.`)) return;
+  if (!await confirmar(`¿Borrar "${name}"?\n\nNo se puede deshacer.`)) return;
   try {
     const tok = await authTokenFresh() || SUPA_KEY;
     const res = await fetch(`${SUPA_URL}/storage/v1/object/backups/${encodeURIComponent(name)}`, {
@@ -24138,7 +24239,7 @@ async function calcularAutoGrupos() {
 async function aplicarAutoGrupos() {
   if (!_autoGruposPlan || _autoGruposPlan.length === 0) return;
   const totalEsc = _autoGruposPlan.reduce((s, g) => s + g.escuelas.length, 0);
-  if (!confirm(`¿Aplicar la agrupación a ${totalEsc} escuela(s)?\n\nEsto SOBRESCRIBE los grupos actuales asignados.`)) return;
+  if (!await confirmar(`¿Aplicar la agrupación a ${totalEsc} escuela(s)?\n\nEsto SOBRESCRIBE los grupos actuales asignados.`)) return;
 
   const btn = document.getElementById('ag-aplicar-btn');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Aplicando…'; }
@@ -24244,7 +24345,7 @@ async function descargarBackupExcel() {
 }
 
 async function aplicarCatalogoAExistentes() {
-  if (!confirm('Esto va a actualizar el nivel/ciclo de TODOS los alumnos según el catálogo actual. Es seguro (no borra ni cambia tallas). ¿Continuar?')) return;
+  if (!await confirmar('Esto va a actualizar el nivel/ciclo de TODOS los alumnos según el catálogo actual. Es seguro (no borra ni cambia tallas). ¿Continuar?')) return;
   try {
     const sql = `
       UPDATE public.alumno a
@@ -24364,7 +24465,7 @@ async function cambiarRolUsuario(userId, newRole, email) {
 }
 
 async function eliminarUsuario(userId, email) {
-  if (!confirm(`¿Eliminar a ${email}? Esta acción no se puede deshacer.`)) return;
+  if (!await confirmar(`¿Eliminar a ${email}? Esta acción no se puede deshacer.`)) return;
   const alertEl = document.getElementById('cfg-usuarios-alert');
   alertEl.innerHTML = '';
   try {

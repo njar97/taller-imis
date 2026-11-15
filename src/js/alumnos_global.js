@@ -552,11 +552,11 @@ function agEditarTalla(btn, alumnoId, pieza) {
     const b = ev.target.closest('button[data-k]');
     if (b) { ev.preventDefault(); agGuardarTalla(alumnoId, pieza, b.dataset.k); }
   });
-  el.querySelector('.ag-picker-otra').addEventListener('click', () => {
+  el.querySelector('.ag-picker-otra').addEventListener('click', async () => {
     let v = input.value.trim().toUpperCase();
     if (!v) return;
     if (!v.startsWith(pref)) v = pref + v;
-    if (!keys.includes(v) && !confirm(`"${v}" no está en el catálogo de ${prenda}.\n\n¿Usarla igual? Se registra en el catálogo para la próxima.`)) return;
+    if (!keys.includes(v) && !await confirmar(`"${v}" no está en el catálogo de ${prenda}.\n\n¿Usarla igual? Se registra en el catálogo para la próxima.`)) return;
     agGuardarTalla(alumnoId, pieza, v, !keys.includes(v));
   });
   render('');
@@ -1148,7 +1148,7 @@ function _renderEstadoEmpaqueAlumno(a) {
 }
 
 async function desempacarPiezaAlumno(alumnoId, pieza) {
-  if (!confirm(`¿Desempacar la pieza ${pieza === 'top' ? '👕 top' : '👖 bottom'} de este alumno?\n\nVa a:\n• Marcar el estado como "pendiente"\n• Devolver la unidad al stock o al pool acaparado (según de dónde haya salido)`)) return;
+  if (!await confirmar(`¿Desempacar la pieza ${pieza === 'top' ? '👕 top' : '👖 bottom'} de este alumno?\n\nVa a:\n• Marcar el estado como "pendiente"\n• Devolver la unidad al stock o al pool acaparado (según de dónde haya salido)`)) return;
   try {
     if (typeof desempacarPieza !== 'function') throw new Error('Función desempacarPieza no disponible');
     const r = await desempacarPieza(alumnoId, pieza);
@@ -1321,7 +1321,7 @@ async function abrirNuevoAlumno() {
       .sort((a,b) => (a.alias||a.nombre).localeCompare(b.alias||b.nombre));
     if (opts.length === 0) { alert('No hay escuelas activas. Cargá una primero.'); return; }
     const lista = opts.map((e,i) => `${i+1}. ${e.alias || e.nombre}`).join('\n');
-    const ans = prompt(`Para qué escuela?\n\n${lista}\n\nEscribí el número o el alias:`);
+    const ans = await pedirTexto(`Para qué escuela?\n\n${lista}\n\nEscribí el número o el alias:`);
     if (!ans) return;
     const num = parseInt(ans, 10);
     if (!isNaN(num) && num >= 1 && num <= opts.length) {
@@ -1615,7 +1615,7 @@ async function generarPdfDirecto(html, filename) {
   const esMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const LIMITE_MOBILE = 400;
   if (esMobile && numEtiq > LIMITE_MOBILE) {
-    const ok = confirm(
+    const ok = await confirmar(
       `Vas a generar ${numEtiq.toLocaleString()} etiquetas en un celular.\n\n` +
       `Esto puede tardar mucho o bloquear el navegador.\n\n` +
       `Recomendación: filtrá por una escuela o usá la PC.\n\n` +

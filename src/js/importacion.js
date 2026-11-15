@@ -362,7 +362,7 @@ async function ejecutarImportacion() {
   if (!escuelaId) { alert('Falta la escuela'); return; }
   if (!registroCache.temporadaActual) { alert('Falta la temporada'); return; }
   
-  if (!confirm(`¿Importar ${procesadas.length} alumnos a esta escuela?`)) return;
+  if (!await confirmar(`¿Importar ${procesadas.length} alumnos a esta escuela?`)) return;
   
   const btn = event.target;
   btn.disabled = true;

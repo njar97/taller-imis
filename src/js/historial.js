@@ -206,7 +206,7 @@ async function eliminarRegistro() {
             + `El trazo NO se borra.\n\nEsta acción NO se puede deshacer. ¿Continuar?`;
     }
 
-    if (!confirm(aviso)) return;
+    if (!await confirmar(aviso)) return;
 
     // Ejecutar DELETE (cascade se encarga del resto)
     await supaFetch(tipo, 'DELETE', null, `?id=eq.${id}`);

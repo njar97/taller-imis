@@ -297,7 +297,7 @@ async function emqEmpacar() {
     if (m.bottom) piezas.push({ id, pieza: 'bottom' });
   }
   if (piezas.length === 0) return;
-  if (!confirm(`¿Empacar ${piezas.length} pieza(s) de ${alumnosSel.length} alumno(s)?`)) return;
+  if (!await confirmar(`¿Empacar ${piezas.length} pieza(s) de ${alumnosSel.length} alumno(s)?`)) return;
 
   const btn = document.getElementById('emq-btn-empacar');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Empacando…'; }
@@ -332,7 +332,7 @@ async function emqDeshacer() {
   const u = emqState.ultimoEmpaque;
   if (u && u.cant) return emqCantDeshacerUI();   // 📋 empaque por pedido
   if (!u || !u.piezas.length) return;
-  if (!confirm(`¿Deshacer el empaque de ${u.piezas.length} pieza(s)? Vuelven a pendiente y el stock/reserva se restaura.`)) return;
+  if (!await confirmar(`¿Deshacer el empaque de ${u.piezas.length} pieza(s)? Vuelven a pendiente y el stock/reserva se restaura.`)) return;
   const panel = document.getElementById('emq-exito-panel');
   let ok = 0, fail = 0;
   for (const p of u.piezas) {
@@ -631,7 +631,7 @@ async function emqConfirmarReserva() {
   }
 
   const total = pedidos.reduce((s, p) => s + p.n, 0);
-  if (!confirm(`¿Reservar ${total} pieza(s) para esta escuela?\n\n${pedidos.map(p => `· ${p.prenda} ${p.talla} × ${p.n}`).join('\n')}\n\nLos alumnos siguen PENDIENTES; al empacarlos, la reserva se consume sola.`)) return;
+  if (!await confirmar(`¿Reservar ${total} pieza(s) para esta escuela?\n\n${pedidos.map(p => `· ${p.prenda} ${p.talla} × ${p.n}`).join('\n')}\n\nLos alumnos siguen PENDIENTES; al empacarlos, la reserva se consume sola.`)) return;
 
   try {
     const hoy = hoyLocal();
@@ -686,7 +686,7 @@ async function emqEntregar() {
       if (a.estado_bottom === 'empacado') n++;
     }
     if (n === 0) { alert('No hay piezas empacadas pendientes de entrega.'); return; }
-    if (!confirm(`Se van a marcar como ENTREGADAS ${n} pieza(s) empacadas de esta escuela (todas, no solo las de esta sesión). ¿Confirmar?`)) return;
+    if (!await confirmar(`Se van a marcar como ENTREGADAS ${n} pieza(s) empacadas de esta escuela (todas, no solo las de esta sesión). ¿Confirmar?`)) return;
 
     const nowIso = new Date().toISOString();
     await _bulkPatchAlumno(`?escuela_id=eq.${escId}${tempF}&estado_top=eq.empacado`,
@@ -1516,7 +1516,7 @@ async function emqCantEmpacarUI(grupo, origen, soloK) {
   const lineas = emqLineasEscuela(ctx, escId).filter(L => items.has(L.k));
   const total = [...items.values()].reduce((s, n) => s + n, 0);
   const lista = lineas.map(L => `· ${L.prenda} ${L.talla} × ${items.get(L.k)}${emqFuentesTxt(L, items.get(L.k))}`);
-  if (!confirm(`¿Empacar ${total} pieza(s) para ${emqNombreEscuela(escId)}?\n\n${lista.join('\n')}\n\nSale de bodega ahora. La entrega se marca después con 🚚.`)) return;
+  if (!await confirmar(`¿Empacar ${total} pieza(s) para ${emqNombreEscuela(escId)}?\n\n${lista.join('\n')}\n\nSale de bodega ahora. La entrega se marca después con 🚚.`)) return;
 
   _emqOcupado = true;
   const btn = enModal ? null : document.getElementById('emq-btn-empacar');
@@ -1564,7 +1564,7 @@ async function emqCantConfirmarYEntregar(escId, items, fecha, receptor, obs, ctx
   const total = lineas.reduce((s, L) => s + items.get(L.k), 0);
   if (!total) { alert('Poné cuántas entregar.'); return false; }
   const lista = lineas.map(L => `· ${L.prenda} ${L.talla} × ${items.get(L.k)}`).join('\n');
-  if (!confirm(`¿Entregar ${total} pieza(s) a ${emqNombreEscuela(escId)} el ${fecha}?\n\n${lista}\n\nSe suma a lo entregado del pedido. Bodega no cambia (ya salió al empacar).`)) return false;
+  if (!await confirmar(`¿Entregar ${total} pieza(s) a ${emqNombreEscuela(escId)} el ${fecha}?\n\n${lista}\n\nSe suma a lo entregado del pedido. Bodega no cambia (ya salió al empacar).`)) return false;
   _emqOcupado = true;
   try {
     const r = await emqCantEntregar(escId, items, fecha, receptor, obs);
@@ -1598,7 +1598,7 @@ async function emqCantEntregarSesion() {
 async function emqCantDeshacerUI() {
   const u = emqState.ultimoEmpaque;
   if (!u || !u.cant || _emqOcupado) return;
-  if (!confirm('¿Deshacer este empaque? Lo que siga empacado vuelve a bodega.')) return;
+  if (!await confirmar('¿Deshacer este empaque? Lo que siga empacado vuelve a bodega.')) return;
   _emqOcupado = true;
   const st = document.getElementById('emq-undo-status');
   if (st) st.textContent = '↩️ Deshaciendo…';
