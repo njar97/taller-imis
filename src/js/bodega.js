@@ -1333,7 +1333,10 @@ async function guardarSalida() {
         const m = emqTallaDeBodega(codPrenda, talla, ctx.eqMap);
         const L = m && emqLineasEscuela(ctx, escuelaId).find(x => x.cod === codPrenda && x.t === m.t);
         if (!L) {
-          if (!await confirmar(`Esta escuela no tiene pedido de ${prenda} ${talla}.\n\n¿Registrar la salida igual? (no se suma a ningún pedido)`)) return;
+          const aviso = bodegaNoSeEntrega(codPrenda)
+            ? `⚠ Las blusas no se entregan en 2026: este año solo camisa.\n\n¿Registrar la salida de ${prenda} ${talla} igual? (no se suma a ningún pedido)`
+            : `Esta escuela no tiene pedido de ${prenda} ${talla}.\n\n¿Registrar la salida igual? (no se suma a ningún pedido)`;
+          if (!await confirmar(aviso)) return;
         } else {
           if (!m.sirve && !await confirmar(`⚠ ${talla} queda corto de largo para ${L.talla}.\n\n¿Entregarlo igual?`)) return;
           if (cantidad > L.falta && !await confirmar(`De ${L.talla} le faltan ${L.falta}${L.empacado ? ` (aparte de ${L.empacado} ya empacadas)` : ''} y vas a sacar ${cantidad}.\n\n¿Seguir igual?`)) return;
