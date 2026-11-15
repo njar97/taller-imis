@@ -14,9 +14,10 @@ async function cargarHistorial(tipo) {
   container.innerHTML = '<div class="loading">Cargando...</div>';
   try {
     if (tipo === 'bulto') {
-      const data = await supaFetch('vw_bulto_derivado','GET',null,'?order=fecha.desc,numero_rollo,letra_talla&limit=100');
+      const data = filtrarCortesVigentes(await supaFetch('vw_bulto_derivado','GET',null,'?order=fecha.desc,numero_rollo,letra_talla&limit=100'), 'fecha');
+      const linkAnt = linkCortesAnteriores('bultos');
       if (!data.length) {
-        container.innerHTML = `<div class="empty"><div class="empty-icon">📭</div>Sin bultos todavía</div>`;
+        container.innerHTML = `<div class="empty"><div class="empty-icon">📭</div>Sin bultos todavía</div>` + linkAnt;
         return;
       }
       // Agrupar por tendido
@@ -34,13 +35,14 @@ async function cargarHistorial(tipo) {
             ${g.bultos.length>10?`<span class="text-muted">+${g.bultos.length-10} más</span>`:''}
           </div>
         </div>
-      `).join('');
+      `).join('') + linkAnt;
       return;
     }
 
-    const data = await supaFetch(tipo,'GET',null,'?order=creado_en.desc&limit=50');
+    const data = filtrarCortesVigentes(await supaFetch(tipo,'GET',null,'?order=creado_en.desc&limit=50'), 'fecha');
+    const linkAnt = linkCortesAnteriores(tipo === 'trazo' ? 'trazos' : 'tendidos');
     if (!data.length) {
-      container.innerHTML = `<div class="empty"><div class="empty-icon">📭</div>Sin registros</div>`;
+      container.innerHTML = `<div class="empty"><div class="empty-icon">📭</div>Sin registros</div>` + linkAnt;
       return;
     }
     container.innerHTML = data.map(r => {
@@ -58,7 +60,7 @@ async function cargarHistorial(tipo) {
           </div>
         </div>
       `;
-    }).join('');
+    }).join('') + linkAnt;
   } catch(e) {
     container.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }

@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-14 22:32 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-14 22:40 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -3352,6 +3352,32 @@ function switchTab(tab, el) {
 function hoyLocal() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// ── Cortes de antes de la temporada (pruebas de abril, SIM-DEMO) ──────
+// No se borran: se esconden de las listas de Corte y Producción. Quien
+// quiera verlos toca «Ver» (queda guardado en ese aparato).
+const CORTES_DESDE = '2026-10-01';
+let cortesOcultosN = 0;
+function verCortesAnteriores() { return lsLeer('ver_cortes_anteriores') === '1'; }
+function filtrarCortesVigentes(filas, campo) {
+  if (!Array.isArray(filas)) return filas;
+  const vig = filas.filter(r => !r[campo] || String(r[campo]) >= CORTES_DESDE);
+  cortesOcultosN = filas.length - vig.length;
+  return verCortesAnteriores() ? filas : vig;
+}
+function linkCortesAnteriores(que) {
+  if (!cortesOcultosN) return '';
+  const viendo = verCortesAnteriores();
+  return `<div class="text-muted" style="font-size:12px;text-align:center;margin-top:10px">
+    ${viendo ? `Se muestran también ${cortesOcultosN} ${que} de prueba (antes de octubre 2026).` : `Hay ${cortesOcultosN} ${que} de prueba (antes de octubre 2026) escondidos.`}
+    <a href="#" onclick="toggleCortesAnteriores();return false">${viendo ? 'Esconder' : 'Ver'}</a></div>`;
+}
+function toggleCortesAnteriores() {
+  lsGuardar('ver_cortes_anteriores', verCortesAnteriores() ? null : '1');
+  const activa = document.querySelector('.view.active');
+  if (activa && activa.id === 'view-corte' && typeof switchSubCorte === 'function') switchSubCorte(corteSubActual);
+  if (activa && activa.id === 'view-produccion' && typeof cargarProduccion === 'function') { produccionData = []; cargarProduccion(); }
 }
 
 function irA(seccion) {
@@ -9121,9 +9147,10 @@ async function cargarHistorial(tipo) {
   container.innerHTML = '<div class="loading">Cargando...</div>';
   try {
     if (tipo === 'bulto') {
-      const data = await supaFetch('vw_bulto_derivado','GET',null,'?order=fecha.desc,numero_rollo,letra_talla&limit=100');
+      const data = filtrarCortesVigentes(await supaFetch('vw_bulto_derivado','GET',null,'?order=fecha.desc,numero_rollo,letra_talla&limit=100'), 'fecha');
+      const linkAnt = linkCortesAnteriores('bultos');
       if (!data.length) {
-        container.innerHTML = `<div class="empty"><div class="empty-icon">📭</div>Sin bultos todavía</div>`;
+        container.innerHTML = `<div class="empty"><div class="empty-icon">📭</div>Sin bultos todavía</div>` + linkAnt;
         return;
       }
       // Agrupar por tendido
@@ -9141,13 +9168,14 @@ async function cargarHistorial(tipo) {
             ${g.bultos.length>10?`<span class="text-muted">+${g.bultos.length-10} más</span>`:''}
           </div>
         </div>
-      `).join('');
+      `).join('') + linkAnt;
       return;
     }
 
-    const data = await supaFetch(tipo,'GET',null,'?order=creado_en.desc&limit=50');
+    const data = filtrarCortesVigentes(await supaFetch(tipo,'GET',null,'?order=creado_en.desc&limit=50'), 'fecha');
+    const linkAnt = linkCortesAnteriores(tipo === 'trazo' ? 'trazos' : 'tendidos');
     if (!data.length) {
-      container.innerHTML = `<div class="empty"><div class="empty-icon">📭</div>Sin registros</div>`;
+      container.innerHTML = `<div class="empty"><div class="empty-icon">📭</div>Sin registros</div>` + linkAnt;
       return;
     }
     container.innerHTML = data.map(r => {
@@ -9165,7 +9193,7 @@ async function cargarHistorial(tipo) {
           </div>
         </div>
       `;
-    }).join('');
+    }).join('') + linkAnt;
   } catch(e) {
     container.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
   }
@@ -10701,6 +10729,7 @@ async function cargarProduccion() {
 
     produccionData = await supaFetch('vw_produccion_estado','GET',null,
       '?select=salida_id,produccion_bulto_id,tendido_id,codigo_corte,letra_corte,fecha_corte,numero_rollo,letra_talla,talla_key_salida,cod_prenda,cantidad_original,cantidad_final,sufijo_division,estado_manual,total_etapas,etapas_hechas,fecha_terminado,codigo_bulto&limit=2000');
+    produccionData = filtrarCortesVigentes(produccionData, 'fecha_corte');
 
     // Auto-crear produccion_bulto para salidas sin seguimiento aún
     const sinRegistro = produccionData.filter(b => !b.produccion_bulto_id);
@@ -10912,7 +10941,7 @@ function renderProduccion() {
 
   const cont = document.getElementById('prod-cortes-container');
   if (keys.length === 0) {
-    cont.innerHTML = '<div class="alert alert-info">No hay bultos con ese filtro.</div>';
+    cont.innerHTML = '<div class="alert alert-info">No hay bultos con ese filtro.</div>' + linkCortesAnteriores('bultos');
     return;
   }
 
@@ -10950,7 +10979,7 @@ function renderProduccion() {
         </div>
       </div>
     `;
-  }).join('');
+  }).join('') + linkCortesAnteriores('bultos');
 }
 
 function actualizarFiltrosProd() {
@@ -11615,6 +11644,7 @@ async function initCaptura() {
   if (!produccionData || produccionData.length === 0) {
     produccionData = await supaFetch('vw_produccion_estado','GET',null,
       '?select=salida_id,produccion_bulto_id,tendido_id,codigo_corte,letra_corte,fecha_corte,numero_rollo,letra_talla,talla_key_salida,cod_prenda,cantidad_original,cantidad_final,sufijo_division,estado_manual,total_etapas,etapas_hechas,fecha_terminado,codigo_bulto&limit=2000');
+    produccionData = filtrarCortesVigentes(produccionData, 'fecha_corte');
   }
   const selBulto = document.getElementById('cap-bulto');
   const bultosDisponibles = produccionData.filter(b => b.estado_manual !== 'terminado' && b.produccion_bulto_id);
@@ -12707,6 +12737,7 @@ async function abrirNuevaAsignacion() {
     produccionData = await supaFetch('vw_produccion_estado','GET',null,
       // Mismo select que produccion.js — mantener sincronizado.
       '?select=salida_id,produccion_bulto_id,tendido_id,codigo_corte,letra_corte,fecha_corte,numero_rollo,letra_talla,talla_key_salida,cod_prenda,cantidad_original,cantidad_final,sufijo_division,estado_manual,total_etapas,etapas_hechas,fecha_terminado,codigo_bulto&limit=2000');
+    produccionData = filtrarCortesVigentes(produccionData, 'fecha_corte');
   }
 
   // Llenar selects
