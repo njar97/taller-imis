@@ -87,3 +87,7 @@ CREATE OR REPLACE VIEW public.vw_plan_produccion AS
     en_proceso,
     GREATEST(pedido::numeric - de_bodega_c - en_proceso, 0::numeric) AS falta_iniciar
    FROM y;
+
+-- CREATE OR REPLACE VIEW sin WITH borra las opciones de la vista: hay que
+-- volver a poner security_invoker (para que respete el RLS de quien consulta).
+ALTER VIEW public.vw_plan_produccion SET (security_invoker = true);
