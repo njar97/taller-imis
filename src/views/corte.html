@@ -3,14 +3,15 @@
   <div id="alert-corte"></div>
   <div class="ayuda-tip" data-ayuda="corte" role="note">
     <span class="ayuda-tip-ico" aria-hidden="true">💡</span>
-    <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> Para anotar un corte tocá <b>➕ Nuevo → 📋 Tendido</b> y copiá lo del cuaderno, rollo por rollo con sus capas.</span>
+    <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> En <b>▶ Sigue</b> están los tendidos que faltan, en orden. Tocá <b>Tender este</b> y copiá lo del cuaderno, rollo por rollo con sus capas.</span>
     <button type="button" class="ayuda-tip-x" onclick="cerrarAyuda('corte')" aria-label="Cerrar esta ayuda" title="Cerrar esta ayuda">✕</button>
   </div>
 
   <!-- Subnav -->
   <div class="card" style="padding:6px;margin-bottom:10px">
     <div class="subnav-btns" style="display:flex;gap:4px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" id="corte-sub-nuevo"    onclick="switchSubCorte('nuevo')"    style="flex:1;min-width:80px">➕ Nuevo</button>
+      <button class="btn btn-primary btn-sm" id="corte-sub-sigue"    onclick="switchSubCorte('sigue')"    style="flex:1;min-width:80px">▶ Sigue</button>
+      <button class="btn btn-ghost   btn-sm" id="corte-sub-nuevo"    onclick="switchSubCorte('nuevo')"    style="flex:1;min-width:80px">➕ Nuevo</button>
       <button class="btn btn-ghost   btn-sm" id="corte-sub-trazos"   onclick="switchSubCorte('trazos')"   style="flex:1;min-width:80px">✂️ Trazos</button>
       <button class="btn btn-ghost   btn-sm" id="corte-sub-tendidos" onclick="switchSubCorte('tendidos')" style="flex:1;min-width:80px">📋 Tendidos</button>
       <button class="btn btn-ghost   btn-sm" id="corte-sub-bultos"   onclick="switchSubCorte('bultos')"   style="flex:1;min-width:80px">📦 Bultos</button>
@@ -18,8 +19,17 @@
     </div>
   </div>
 
+  <!-- SUB: Lo que sigue (trazos pendientes de tender, en orden) -->
+  <div id="corte-sub-sigue-view">
+    <div class="card">
+      <div class="card-title">▶ Lo que sigue</div>
+      <div class="card-sub">Tendidos que faltan, en orden. Tocá <b>Tender este</b> cuando se vaya a tender.</div>
+      <div id="corte-sigue-content"><div class="loading">Cargando...</div></div>
+    </div>
+  </div>
+
   <!-- SUB: Nuevo -->
-  <div id="corte-sub-nuevo-view">
+  <div id="corte-sub-nuevo-view" style="display:none">
     <div class="card">
       <div class="card-title">➕ Nuevo registro de corte</div>
       <div class="card-sub">Elegí qué querés registrar según el momento del taller.</div>

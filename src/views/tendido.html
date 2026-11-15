@@ -27,6 +27,11 @@
         <div class="field"><label>Fecha del tendido</label><input type="date" id="td-fecha"></div>
         <div class="field"><label>Equipo del día</label><input type="text" id="td-equipo" placeholder="Sandra, Blanky, Tere..."></div>
       </div>
+      <div class="field">
+        <label>Letra del corte</label>
+        <input type="text" id="td-letra" class="letra-input" maxlength="1" placeholder="A" oninput="this.value=this.value.toUpperCase();revisarLetraTendido()" style="max-width:90px">
+        <div class="text-muted" id="td-letra-ayuda" style="font-size:12px;margin-top:4px">Va en el código de cada bulto.</div>
+      </div>
     </div>
 
     <div class="card">
