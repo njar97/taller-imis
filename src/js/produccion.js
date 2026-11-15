@@ -26,7 +26,7 @@ function prodTalla2026(cod, key) {
   if (!prodEquivIdx || !cod || typeof tallaBodega2026 !== 'function') return null;
   const t = tallaBodega2026(cod, key, prodEquivIdx);
   if (!t) return null;
-  return /^T/i.test(String(t)) ? String(t).toUpperCase() : 'T' + t;
+  return /^(T|\dX$)/i.test(String(t)) ? String(t).toUpperCase() : 'T' + t;   // 1X, 2X, 3X van sin la T
 }
 function toggleMasBulto(id) {
   const el = document.getElementById('mas-' + id);

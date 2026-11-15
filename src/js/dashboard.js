@@ -485,7 +485,7 @@ function renderDashboard() {
           <tbody>
             ${stockTop.map(s => `
               <tr style="border-top:1px solid #EEE">
-                <td style="padding:4px 8px">${dashEsc(s.nombre_prenda || s.cod_prenda)}</td>
+                <td style="padding:4px 8px">${dashEsc(prendaBonita(s.nombre_prenda || s.cod_prenda))}</td>
                 <td style="padding:4px 8px;font-family:monospace;font-weight:600">${dashEsc(s.talla_key)}</td>
                 <td style="padding:4px 8px;text-align:right;color:var(--azul);font-weight:700">${dashNum(s.stock_actual)}</td>
                 <td style="padding:4px 8px;text-align:right;color:#888">${dashNum(s.reservado_empaque)}</td>

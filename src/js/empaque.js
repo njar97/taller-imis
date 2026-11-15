@@ -1396,14 +1396,14 @@ function emqTablaCantHtml(lineas, grupo, origen) {
   for (const L of lineas) {
     if (L.prenda !== prendaAct) {
       prendaAct = L.prenda;
-      html += `<tr><td colspan="7" style="background:#F5F7FA;padding:5px 6px;font-weight:700;border-top:1px solid var(--borde)">${emqEsc(L.prenda)}</td></tr>`;
+      html += `<tr><td colspan="7" style="background:#F5F7FA;padding:5px 6px;font-weight:700;border-top:1px solid var(--borde)">${emqEsc(prendaBonita(L.prenda))}</td></tr>`;
     }
     const fuentes = L.fuentes.map(f => f.talla_key + '×' + f.stock).join(' · ');
     const accion = L.puede > 0
       ? `${emqStepHtml(grupo, L.k)} <button class="btn btn-success btn-sm" style="padding:5px 8px" onclick="emqCantEmpacarUI('${grupo}','${origen}','${L.k}')">Empacar</button>`
       : `<span style="font-size:11px;color:#999">${L.falta ? 'sin stock' : '✓ cubierto'}</span>`;
     html += `<tr>
-      <td style="${td};text-align:left;font-family:monospace;font-weight:700">${emqEsc(L.talla)}${L.niveles.length > 1 ? `<div style="font-family:inherit;font-weight:400;font-size:10px;color:#999">${L.niveles.join(' + ')}</div>` : ''}</td>
+      <td style="${td};text-align:left;font-weight:700" title="${emqEsc(L.talla)}">${emqEsc(tallaPedidoBonita(L.talla))}${L.niveles.length > 1 ? `<div style="font-family:inherit;font-weight:400;font-size:10px;color:#999">${L.niveles.join(' + ')}</div>` : ''}</td>
       <td style="${td}">${L.pedido}</td>
       <td style="${td};color:${L.empacado ? '#a82' : '#bbb'};font-weight:${L.empacado ? 700 : 400}">${L.empacado}</td>
       <td style="${td};color:${L.entregado ? 'var(--verde)' : '#bbb'}">${L.entregado}</td>
@@ -1453,7 +1453,7 @@ function emqListaEntregaHtml(lineas, grupo) {
   return lineas.map(L => `
     <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #E6EFE6">
       <div style="flex:1;min-width:0;font-size:13px">
-        ${emqEsc(L.prenda)} <span style="font-family:monospace;font-weight:700">${emqEsc(L.talla)}</span>
+        ${emqEsc(prendaBonita(L.prenda))} <span style="font-weight:700">${emqEsc(tallaPedidoBonita(L.talla))}</span>
         <div style="font-size:11px;color:#666">empacadas ${L.empacado} · pedido ${L.pedido} · entregado ${L.entregado}</div>
       </div>
       ${emqStepHtml(grupo, L.k)}
