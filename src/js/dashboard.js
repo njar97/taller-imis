@@ -337,7 +337,7 @@ async function cargarDashboardHoy() {
 }
 
 async function cargarProduccionHoy() {
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = hoyLocal();
   try {
     const bultos = await supaFetch('produccion_bulto', 'GET', null,
       `?fecha_terminado=eq.${hoy}&estado=eq.terminado&limit=500`);

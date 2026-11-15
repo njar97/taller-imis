@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-14 22:30 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-14 22:32 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -3346,6 +3346,14 @@ function switchTab(tab, el) {
   window.scrollTo(0, 0);
 }
 
+// Fecha de HOY según el reloj del aparato (YYYY-MM-DD). No usar
+// toISOString() para esto: da la hora universal y después de las 6 p. m.
+// en El Salvador ya devuelve el día siguiente.
+function hoyLocal() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function irA(seccion) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + seccion).classList.add('active');
@@ -4371,7 +4379,7 @@ async function cargarDashboardHoy() {
 }
 
 async function cargarProduccionHoy() {
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = hoyLocal();
   try {
     const bultos = await supaFetch('produccion_bulto', 'GET', null,
       `?fecha_terminado=eq.${hoy}&estado=eq.terminado&limit=500`);
@@ -6295,7 +6303,7 @@ function exportarTallasCSV() {
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'tallas-' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.download = 'tallas-' + hoyLocal() + '.csv';
   document.body.appendChild(a);
   a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
@@ -7688,7 +7696,7 @@ function renderCostos() {
 // +++++++++++++++++++ trazo.js +++++++++++++++++++
 // ══════════════════════════════════════════════════════════════════════
 async function initTrazo() {
-  document.getElementById('t-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('t-fecha').value = hoyLocal();
   ['t-letra-corte','t-capas','t-yardas','t-video-url','t-observaciones'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
@@ -8496,7 +8504,7 @@ async function guardarTrazo() {
 // +++++++++++++++++++ tendido.js +++++++++++++++++++
 // ══════════════════════════════════════════════════════════════════════
 async function initTendido() {
-  document.getElementById('td-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('td-fecha').value = hoyLocal();
   ['td-equipo','td-observaciones'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('td-rollos-container').innerHTML = '';
   document.getElementById('td-paso-2').style.display = 'none';
@@ -9748,7 +9756,7 @@ async function renderSeguimientoCorte(box, ref) {
       <textarea id="seg-texto" placeholder="¿Qué pasó? (ej.: «se cambió el rollo de 85 por el de 102»)" style="width:100%;min-height:60px"></textarea>
       <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
         <input id="seg-quien" placeholder="Quién lo dijo (Javier, Imelda…)" style="flex:1;min-width:120px">
-        <input id="seg-fecha" type="date" value="${new Date().toISOString().slice(0, 10)}" style="width:140px">
+        <input id="seg-fecha" type="date" value="${hoyLocal()}" style="width:140px">
       </div>
       <input id="seg-foto" type="file" accept="image/*" style="margin-top:6px">
       <button class="btn btn-primary btn-sm btn-block" style="margin-top:6px" id="seg-btn" onclick="agregarSeguimientoCorte(${tz}, ${td})">➕ Agregar al seguimiento</button>
@@ -10825,7 +10833,7 @@ function abrirEmpacarPrendaTalla(prenda, talla) {
 }
 
 function renderProduccion() {
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = hoyLocal();
   // Función local: calcular estado efectivo
   function estadoEf(b) {
     if (FASE2_ACTIVA && b.total_etapas > 0) {
@@ -11101,7 +11109,7 @@ async function terminarBulto(produccionBultoId, cantidadOriginal) {
   try {
     await supaUpdate('produccion_bulto', produccionBultoId, {
       estado: 'terminado',
-      fecha_terminado: new Date().toISOString().split('T')[0],
+      fecha_terminado: hoyLocal(),
       cantidad_final: cantidadFinal,
       observaciones,
       actualizado_en: new Date().toISOString(),
@@ -11109,7 +11117,7 @@ async function terminarBulto(produccionBultoId, cantidadOriginal) {
     const b = produccionData.find(x => x.produccion_bulto_id === produccionBultoId);
     if (b) {
       b.estado = 'terminado';
-      b.fecha_terminado = new Date().toISOString().split('T')[0];
+      b.fecha_terminado = hoyLocal();
       b.cantidad_final = cantidadFinal;
       b.observaciones = observaciones;
     }
@@ -11262,7 +11270,7 @@ async function confirmarAutoAcaparar(escId, nombrePrenda, tallaKey) {
       tipo: 'SALIDA_EMPAQUE',
       cod_prenda: cod, nombre_prenda: nombrePrenda, talla_key: tallaKey,
       cantidad: cant, escuela_id: escId,
-      fecha: new Date().toISOString().slice(0,10),
+      fecha: hoyLocal(),
       observaciones: 'Acaparado para escuela (auto desde producción)',
     });
     const movId = Array.isArray(movs) ? movs[0]?.id : movs?.id;
@@ -11383,7 +11391,7 @@ async function marcarEtapaRapida(bultoId, operacionId) {
       produccion_bulto_id: bultoId,
       operacion_id: operacionId,
       operaria_id: operaria.id,
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: hoyLocal(),
       cantidad_realizada: cantidad,
       tipo: 'normal',
     });
@@ -11587,7 +11595,7 @@ function operariaTrabajando(o) {
 // ─── Captura ──────────────────────────────────────────────────────
 async function initCaptura() {
   // Fecha de hoy
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = hoyLocal();
   document.getElementById('cap-fecha').value = hoy;
   document.getElementById('lote-fecha').value = hoy;
   document.getElementById('cap-piezas').value = '';
@@ -11819,7 +11827,7 @@ async function guardarCaptura() {
 }
 
 async function cargarRegistrosHoy() {
-  const fecha = document.getElementById('cap-fecha').value || new Date().toISOString().split('T')[0];
+  const fecha = document.getElementById('cap-fecha').value || hoyLocal();
   try {
     registrosHoyCache = await supaFetch('produccion_registro_operacion','GET',null,
       `?fecha=eq.${fecha}&order=creado_en.desc&limit=200`);
@@ -11833,7 +11841,7 @@ async function cargarRegistrosHoy() {
 function renderResumenHoy() {
   const cont = document.getElementById('cap-resumen-hoy');
   if (!cont) return;
-  const fecha = document.getElementById('cap-fecha').value || new Date().toISOString().split('T')[0];
+  const fecha = document.getElementById('cap-fecha').value || hoyLocal();
   const registros = registrosHoyCache || [];
   // Agrupar por operaria
   const porOperaria = {};
@@ -12309,7 +12317,7 @@ function opHtmlPrivado(id) {
       : `<input id="opp-${k}" type="${tipo}" step="0.01" value="${opEsc(String(v).slice(0, tipo === 'date' ? 10 : 999))}" style="width:100%">`;
     return `<div style="margin-bottom:8px"><label style="font-size:12px;color:#666;display:block">${label}</label>${input}</div>`;
   };
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyLocal();
   const en30 = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
   const venc = p.dui_vence && p.dui_vence < en30
     ? `<div style="color:#C0392B;font-size:12px;margin-bottom:6px">⚠ DUI ${p.dui_vence < hoy ? 'VENCIDO' : 'por vencer'} (${opFecha(p.dui_vence)}): pedir el renovado.</div>` : '';
@@ -12732,7 +12740,7 @@ async function abrirNuevaAsignacion() {
   document.getElementById('asig-cuenta').textContent = '';
   
   // Fecha = hoy
-  document.getElementById('asig-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('asig-fecha').value = hoyLocal();
   document.getElementById('asig-observaciones').value = '';
 
   modal.style.display = 'flex';
@@ -15460,7 +15468,7 @@ async function aplicarConteoInicial() {
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Aplicando...'; }
 
   try {
-    const today = new Date().toISOString().slice(0,10);
+    const today = hoyLocal();
     const movs = filas.map(f => ({
       tipo: 'AJUSTE_INVENTARIO',
       cod_prenda: _codPrenda(f.prenda),
@@ -15670,7 +15678,7 @@ async function empacarAlumnosDesdeRegistro(alumnos, prendasSet, opts = {}) {
           cantidad: 1,
           alumno_id: a.id,
           escuela_id: a.escuela_id,
-          fecha: new Date().toISOString().slice(0,10),
+          fecha: hoyLocal(),
           observaciones: `Empacado para ${a.nombre}${esPareja ? ' (pareja)' : ''}${esAlterna ? ` [alterna ${talla}≠${tallaPedida}]` : ''}`,
         });
         piezasStock++;
@@ -15740,7 +15748,7 @@ async function desempacarPieza(alumnoId, pieza /* 'top' | 'bottom' */) {
       tipo: 'ENTRADA_MANUAL', cod_prenda: cod, nombre_prenda: prenda,
       talla_key: tallaDevolver, cantidad: 1,
       alumno_id: alumnoId, escuela_id: a.escuela_id,
-      fecha: new Date().toISOString().slice(0,10),
+      fecha: hoyLocal(),
       observaciones: `Desempacado de ${a.nombre}${tallaDevolver !== tallaPedida ? ` [talla usada ${tallaDevolver}, pedida ${tallaPedida}]` : ''}`,
     });
   } else {
@@ -15756,7 +15764,7 @@ async function desempacarPieza(alumnoId, pieza /* 'top' | 'bottom' */) {
         tipo: 'ENTRADA_MANUAL', cod_prenda: cod, nombre_prenda: prenda,
         talla_key: tallaDevolver, cantidad: 1,
         alumno_id: alumnoId, escuela_id: a.escuela_id,
-        fecha: new Date().toISOString().slice(0,10),
+        fecha: hoyLocal(),
         observaciones: `Desempacado de ${a.nombre} (sin origen claro)`,
       });
     }
@@ -15809,7 +15817,7 @@ async function abrirEntregaModal() {
   const modal = document.getElementById('bodega-entrega-modal');
   if (!modal) return;
   document.getElementById('ent-escuela').value = '';
-  document.getElementById('ent-fecha').value = typeof emqHoy === 'function' ? emqHoy() : new Date().toISOString().slice(0,10);
+  document.getElementById('ent-fecha').value = hoyLocal();
   document.getElementById('ent-receptor').value = '';
   document.getElementById('entg-obs').value = '';
   document.getElementById('ent-resumen').style.display = 'none';
@@ -16201,7 +16209,7 @@ async function guardarSalida() {
         cantidad: cantidad,
         escuela_id: escuelaId,
         pedido_id: pedidoId,
-        fecha: typeof emqHoy === 'function' ? emqHoy() : new Date().toISOString().slice(0, 10),
+        fecha: hoyLocal(),
         observaciones: obs,
       });
     } catch (e) {
@@ -16431,7 +16439,7 @@ function abrirMatMov(tipo, materialId) {
     matCache.stock.map(m => `<option value="${m.id}" ${m.id===materialId?'selected':''}>${matEsc(m.nombre)} (${matNum(m.stock)} ${matEsc(m.unidad)})</option>`).join('');
   document.getElementById('matmov-tipo').value = tipo || 'CONTEO';
   document.getElementById('matmov-cantidad').value = '';
-  document.getElementById('matmov-fecha').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('matmov-fecha').value = hoyLocal();
   document.getElementById('matmov-obs').value = '';
   matMovTipoCambio();
   modal.style.display = 'flex';
@@ -17195,7 +17203,7 @@ async function emqConfirmarReserva() {
   if (!confirm(`¿Reservar ${total} pieza(s) para esta escuela?\n\n${pedidos.map(p => `· ${p.prenda} ${p.talla} × ${p.n}`).join('\n')}\n\nLos alumnos siguen PENDIENTES; al empacarlos, la reserva se consume sola.`)) return;
 
   try {
-    const hoy = new Date().toISOString().slice(0, 10);
+    const hoy = hoyLocal();
     for (const p of pedidos) {
       const cod = (typeof _codPrenda === 'function') ? _codPrenda(p.prenda) : p.prenda;
       const movs = await supaFetch('bodega_movimiento', 'POST', {
@@ -17426,7 +17434,7 @@ function emqPaso3Html() {
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
           <div class="field" style="margin:0">
             <label>Fecha</label>
-            <input type="date" id="emq-ent-fecha" value="${new Date().toISOString().slice(0, 10)}" style="width:150px">
+            <input type="date" id="emq-ent-fecha" value="${hoyLocal()}" style="width:150px">
           </div>
           <div class="field" style="margin:0;flex:1;min-width:140px">
             <label>Recibió (opcional)</label>
@@ -20632,7 +20640,7 @@ function construirNombreArchivo(cache, tempActiva) {
   if (cache.filtroEstado === 'sin_tallas') partes.push('falta-tallar');
   if (cache.filtroNivel) partes.push(sanitizar(cache.filtroNivel));
   if (tempActiva && tempActiva.anio) partes.push(String(tempActiva.anio));
-  partes.push(new Date().toISOString().slice(0, 10));
+  partes.push(hoyLocal());
   return partes.join('_') + '.pdf';
 }
 
@@ -20855,7 +20863,7 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
   const tituloExtra = tempCodeHdr ? `Temporada ${tempCodeHdr}` : '';
 
   // Sugerencia de nombre de archivo
-  const fechaCorta = new Date().toISOString().slice(0,10);
+  const fechaCorta = hoyLocal();
   const filename = `etiquetas_${fechaCorta}.pdf`;
 
   return `
@@ -22482,7 +22490,7 @@ async function toggleMiembro(grupoId, operariaId, checked) {
       const res = await supaFetch('grupo_operaria', 'GET', null, 
         `?grupo_id=eq.${grupoId}&operaria_id=eq.${operariaId}&activo=eq.true&limit=1`);
       if (res && res.length > 0) {
-        await supaUpdate('grupo_operaria', res[0].id, { activo: false, hasta: new Date().toISOString().split('T')[0] });
+        await supaUpdate('grupo_operaria', res[0].id, { activo: false, hasta: hoyLocal() });
       }
     }
   } catch(e) { alert('Error: ' + e.message); }
@@ -22715,7 +22723,7 @@ async function guardarAvance() {
     const patch = { cantidad_terminada: nuevoTotal };
     if (finalizada) {
       patch.estado = 'terminada';
-      patch.fecha_cerrada = new Date().toISOString().split('T')[0];
+      patch.fecha_cerrada = hoyLocal();
     }
     await supaUpdate('grupo_produccion', tareaId, patch);
     
@@ -23541,7 +23549,7 @@ async function exportarHojaEntregaPDF() {
 
     // 4) HTML
     const hoy = new Date().toLocaleDateString('es-SV', { day:'2-digit', month:'2-digit', year:'numeric' });
-    const fileFecha = new Date().toISOString().slice(0, 10);
+    const fileFecha = hoyLocal();
     const escNombre = (esc.alias || esc.nombre || '').replace(/[^\w\-]/g, '_').slice(0, 30);
 
     // CSS común para tablas
@@ -24043,7 +24051,7 @@ async function descargarBackupExcel() {
     ];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(meta), '_meta');
 
-    const fecha = new Date().toISOString().slice(0, 10);
+    const fecha = hoyLocal();
     XLSX.writeFile(wb, `taller-imis-backup-${fecha}.xlsx`);
     setStatus(`✓ Descargado · ${totalRows.toLocaleString()} filas en ${resultados.length} hojas.`);
   } catch (e) {

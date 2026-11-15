@@ -309,6 +309,14 @@ function switchTab(tab, el) {
   window.scrollTo(0, 0);
 }
 
+// Fecha de HOY según el reloj del aparato (YYYY-MM-DD). No usar
+// toISOString() para esto: da la hora universal y después de las 6 p. m.
+// en El Salvador ya devuelve el día siguiente.
+function hoyLocal() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function irA(seccion) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + seccion).classList.add('active');

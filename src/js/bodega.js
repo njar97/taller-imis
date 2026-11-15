@@ -616,7 +616,7 @@ async function aplicarConteoInicial() {
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Aplicando...'; }
 
   try {
-    const today = new Date().toISOString().slice(0,10);
+    const today = hoyLocal();
     const movs = filas.map(f => ({
       tipo: 'AJUSTE_INVENTARIO',
       cod_prenda: _codPrenda(f.prenda),
@@ -826,7 +826,7 @@ async function empacarAlumnosDesdeRegistro(alumnos, prendasSet, opts = {}) {
           cantidad: 1,
           alumno_id: a.id,
           escuela_id: a.escuela_id,
-          fecha: new Date().toISOString().slice(0,10),
+          fecha: hoyLocal(),
           observaciones: `Empacado para ${a.nombre}${esPareja ? ' (pareja)' : ''}${esAlterna ? ` [alterna ${talla}≠${tallaPedida}]` : ''}`,
         });
         piezasStock++;
@@ -896,7 +896,7 @@ async function desempacarPieza(alumnoId, pieza /* 'top' | 'bottom' */) {
       tipo: 'ENTRADA_MANUAL', cod_prenda: cod, nombre_prenda: prenda,
       talla_key: tallaDevolver, cantidad: 1,
       alumno_id: alumnoId, escuela_id: a.escuela_id,
-      fecha: new Date().toISOString().slice(0,10),
+      fecha: hoyLocal(),
       observaciones: `Desempacado de ${a.nombre}${tallaDevolver !== tallaPedida ? ` [talla usada ${tallaDevolver}, pedida ${tallaPedida}]` : ''}`,
     });
   } else {
@@ -912,7 +912,7 @@ async function desempacarPieza(alumnoId, pieza /* 'top' | 'bottom' */) {
         tipo: 'ENTRADA_MANUAL', cod_prenda: cod, nombre_prenda: prenda,
         talla_key: tallaDevolver, cantidad: 1,
         alumno_id: alumnoId, escuela_id: a.escuela_id,
-        fecha: new Date().toISOString().slice(0,10),
+        fecha: hoyLocal(),
         observaciones: `Desempacado de ${a.nombre} (sin origen claro)`,
       });
     }
@@ -965,7 +965,7 @@ async function abrirEntregaModal() {
   const modal = document.getElementById('bodega-entrega-modal');
   if (!modal) return;
   document.getElementById('ent-escuela').value = '';
-  document.getElementById('ent-fecha').value = typeof emqHoy === 'function' ? emqHoy() : new Date().toISOString().slice(0,10);
+  document.getElementById('ent-fecha').value = hoyLocal();
   document.getElementById('ent-receptor').value = '';
   document.getElementById('entg-obs').value = '';
   document.getElementById('ent-resumen').style.display = 'none';
@@ -1357,7 +1357,7 @@ async function guardarSalida() {
         cantidad: cantidad,
         escuela_id: escuelaId,
         pedido_id: pedidoId,
-        fecha: typeof emqHoy === 'function' ? emqHoy() : new Date().toISOString().slice(0, 10),
+        fecha: hoyLocal(),
         observaciones: obs,
       });
     } catch (e) {

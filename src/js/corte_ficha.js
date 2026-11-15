@@ -127,7 +127,7 @@ async function renderSeguimientoCorte(box, ref) {
       <textarea id="seg-texto" placeholder="¿Qué pasó? (ej.: «se cambió el rollo de 85 por el de 102»)" style="width:100%;min-height:60px"></textarea>
       <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
         <input id="seg-quien" placeholder="Quién lo dijo (Javier, Imelda…)" style="flex:1;min-width:120px">
-        <input id="seg-fecha" type="date" value="${new Date().toISOString().slice(0, 10)}" style="width:140px">
+        <input id="seg-fecha" type="date" value="${hoyLocal()}" style="width:140px">
       </div>
       <input id="seg-foto" type="file" accept="image/*" style="margin-top:6px">
       <button class="btn btn-primary btn-sm btn-block" style="margin-top:6px" id="seg-btn" onclick="agregarSeguimientoCorte(${tz}, ${td})">➕ Agregar al seguimiento</button>

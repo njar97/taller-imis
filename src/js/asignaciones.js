@@ -199,7 +199,7 @@ async function abrirNuevaAsignacion() {
   document.getElementById('asig-cuenta').textContent = '';
   
   // Fecha = hoy
-  document.getElementById('asig-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('asig-fecha').value = hoyLocal();
   document.getElementById('asig-observaciones').value = '';
 
   modal.style.display = 'flex';
