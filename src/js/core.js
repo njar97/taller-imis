@@ -123,6 +123,18 @@ function tallasTendidoBonito(txt) {
   return String(txt || '').replace(/\b(FCE|FB|PB|CC|C|B|P|F|S)(\d{1,2}|\dX)(×\d+)?(?=\s|,|\+|$)/g,
     (_, cod, t, mult) => `${PRENDA_BONITA[cod]} ${/X$/i.test(t) ? '' : 'T'}${t}${mult ? ' ' + mult : ''}`);
 }
+// ── 2026: por lineamientos SOLO HAY CAMISA (Javier, 15-nov-2026) ──────
+// Lo que el pedido trae como blusa (B) se confecciona y entrega como camisa
+// (C). Las blusas viejas que hay en bodega NO se pueden entregar: no se
+// empacan, no se restan del plan y no cuentan como stock disponible.
+const PEDIDO_2026_COMO = { B: 'C' };
+function codPedido2026(cod) { return PEDIDO_2026_COMO[cod] || cod; }
+const BODEGA_NO_ENTREGA_2026 = ['B'];
+function bodegaNoSeEntrega(codONombre) {
+  const cod = codDeNombrePrenda(codONombre);
+  return !!cod && BODEGA_NO_ENTREGA_2026.includes(cod);
+}
+
 // Equivalencia bodega → talla 2026 (solo las prendas que la tienen: C, P, PB).
 let equivTallasIdx = null, _equivTallasProm = null;
 function asegurarEquivTallas() {

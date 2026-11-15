@@ -156,7 +156,7 @@ function renderStock() {
     return `
     <div class="card" style="padding:0;overflow:hidden;margin-bottom:8px">
       <div style="background:#F5F7FA;padding:8px 12px;font-weight:600;display:flex;justify-content:space-between">
-        <span>${prendaBonita(prenda)}</span>
+        <span>${prendaBonita(prenda)}${bodegaNoSeEntrega(prenda) ? ' <span style="font-size:11px;font-weight:700;color:#8a4b00;background:#FEF4D6;border:1px solid #E6C36A;border-radius:10px;padding:2px 8px;white-space:nowrap">No se entrega en 2026</span>' : ''}</span>
         <span style="font-size:13px">Stock: <strong>${totStock.toLocaleString()}</strong> · Reservado: <strong>${totReserv}</strong></span>
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
