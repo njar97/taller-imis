@@ -26,6 +26,7 @@ async function cargarProduccion() {
 
     produccionData = await supaFetch('vw_produccion_estado','GET',null,
       '?select=salida_id,produccion_bulto_id,tendido_id,codigo_corte,letra_corte,fecha_corte,numero_rollo,letra_talla,talla_key_salida,cod_prenda,cantidad_original,cantidad_final,sufijo_division,estado_manual,total_etapas,etapas_hechas,fecha_terminado,codigo_bulto&limit=2000');
+    produccionData = filtrarCortesVigentes(produccionData, 'fecha_corte');
 
     // Auto-crear produccion_bulto para salidas sin seguimiento aún
     const sinRegistro = produccionData.filter(b => !b.produccion_bulto_id);
@@ -237,7 +238,7 @@ function renderProduccion() {
 
   const cont = document.getElementById('prod-cortes-container');
   if (keys.length === 0) {
-    cont.innerHTML = '<div class="alert alert-info">No hay bultos con ese filtro.</div>';
+    cont.innerHTML = '<div class="alert alert-info">No hay bultos con ese filtro.</div>' + linkCortesAnteriores('bultos');
     return;
   }
 
@@ -275,7 +276,7 @@ function renderProduccion() {
         </div>
       </div>
     `;
-  }).join('');
+  }).join('') + linkCortesAnteriores('bultos');
 }
 
 function actualizarFiltrosProd() {
@@ -940,6 +941,7 @@ async function initCaptura() {
   if (!produccionData || produccionData.length === 0) {
     produccionData = await supaFetch('vw_produccion_estado','GET',null,
       '?select=salida_id,produccion_bulto_id,tendido_id,codigo_corte,letra_corte,fecha_corte,numero_rollo,letra_talla,talla_key_salida,cod_prenda,cantidad_original,cantidad_final,sufijo_division,estado_manual,total_etapas,etapas_hechas,fecha_terminado,codigo_bulto&limit=2000');
+    produccionData = filtrarCortesVigentes(produccionData, 'fecha_corte');
   }
   const selBulto = document.getElementById('cap-bulto');
   const bultosDisponibles = produccionData.filter(b => b.estado_manual !== 'terminado' && b.produccion_bulto_id);

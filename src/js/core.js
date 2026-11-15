@@ -317,6 +317,32 @@ function hoyLocal() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// ── Cortes de antes de la temporada (pruebas de abril, SIM-DEMO) ──────
+// No se borran: se esconden de las listas de Corte y Producción. Quien
+// quiera verlos toca «Ver» (queda guardado en ese aparato).
+const CORTES_DESDE = '2026-10-01';
+let cortesOcultosN = 0;
+function verCortesAnteriores() { return lsLeer('ver_cortes_anteriores') === '1'; }
+function filtrarCortesVigentes(filas, campo) {
+  if (!Array.isArray(filas)) return filas;
+  const vig = filas.filter(r => !r[campo] || String(r[campo]) >= CORTES_DESDE);
+  cortesOcultosN = filas.length - vig.length;
+  return verCortesAnteriores() ? filas : vig;
+}
+function linkCortesAnteriores(que) {
+  if (!cortesOcultosN) return '';
+  const viendo = verCortesAnteriores();
+  return `<div class="text-muted" style="font-size:12px;text-align:center;margin-top:10px">
+    ${viendo ? `Se muestran también ${cortesOcultosN} ${que} de prueba (antes de octubre 2026).` : `Hay ${cortesOcultosN} ${que} de prueba (antes de octubre 2026) escondidos.`}
+    <a href="#" onclick="toggleCortesAnteriores();return false">${viendo ? 'Esconder' : 'Ver'}</a></div>`;
+}
+function toggleCortesAnteriores() {
+  lsGuardar('ver_cortes_anteriores', verCortesAnteriores() ? null : '1');
+  const activa = document.querySelector('.view.active');
+  if (activa && activa.id === 'view-corte' && typeof switchSubCorte === 'function') switchSubCorte(corteSubActual);
+  if (activa && activa.id === 'view-produccion' && typeof cargarProduccion === 'function') { produccionData = []; cargarProduccion(); }
+}
+
 function irA(seccion) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + seccion).classList.add('active');
