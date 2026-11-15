@@ -1,10 +1,10 @@
-<!-- Generado: 2026-11-14 22:40 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-14 22:53 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Taller IMIS — Producción v32</title>
+<title>Taller IMIS — Uniformes</title>
 
 <!-- PWA -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -761,12 +761,12 @@ body.temporada-cantidad .oculto-2026 { display: none !important; }
     <div style="width:32px;height:32px;background:rgba(255,255,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">T</div>
     <h1 class="nav-brand">
       <span class="nav-brand-app">Taller IMIS</span>
-      <span class="nav-brand-section">Producción <span class="nav-brand-ver">v32</span></span>
+      <span class="nav-brand-section">Uniformes</span>
     </h1>
     <div id="buscador-wrap" class="buscador-wrap">
-      <input type="text" id="buscador-input" placeholder="🔍 Buscar alumno o escuela (Ctrl+K)"
+      <input type="text" id="buscador-input" placeholder="🔍 Buscar escuela o pantalla"
              oninput="buscadorOnInput(event)" onfocus="buscadorOnInput(event)"
-             autocomplete="off" title="Buscá cualquier alumno o escuela de toda la app y saltá a su ficha · Atajo: Ctrl/⌘ + K">
+             autocomplete="off" title="Buscá una escuela, un alumno de talla especial o una pantalla de la app · Atajo: Ctrl/⌘ + K">
       <div id="buscador-results" class="buscador-results" style="display:none"></div>
     </div>
   </div>
@@ -24493,7 +24493,35 @@ _atrasArmar();
     window.location.reload();
   });
 
+  // ── Actualizarse sola ──
+  // Si la persona todavía no ha escrito nada en esta visita, la versión
+  // nueva se aplica sin preguntar (la app se recarga una vez). Si ya está
+  // llenando algo, no se le interrumpe: sale el aviso con el botón.
+  let pwaEscribio = false;
+  let pwaOcultaDesde = 0;
+  const marcar = (e) => { if (e.isTrusted) pwaEscribio = true; };
+  document.addEventListener('input', marcar, true);
+  document.addEventListener('change', marcar, true);
+  // Si la app estuvo guardada 5 minutos o más, lo escrito antes ya no cuenta.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') pwaOcultaDesde = Date.now();
+    else if (pwaOcultaDesde && Date.now() - pwaOcultaDesde >= 5 * 60 * 1000) pwaEscribio = false;
+  });
+  try {
+    if (sessionStorage.getItem('pwa_actualizada') === '1') {
+      sessionStorage.removeItem('pwa_actualizada');
+      window.addEventListener('load', () => setTimeout(() => {
+        if (typeof showToast === 'function') showToast('✓ App actualizada a la última versión', 'success', 3500);
+      }, 600));
+    }
+  } catch (_) {}
+
   function showPwaUpdate(worker) {
+    if (!pwaEscribio) {
+      try { sessionStorage.setItem('pwa_actualizada', '1'); } catch (_) {}
+      worker.postMessage({ type: 'SKIP_WAITING' });
+      return;
+    }
     const banner = document.getElementById('pwa-update-banner');
     if (!banner) return;
     banner.style.display = 'flex';
@@ -24549,9 +24577,15 @@ _atrasArmar();
       });
     }).catch(err => console.warn('SW registration failed:', err));
 
-    setInterval(() => {
-      navigator.serviceWorker.getRegistration().then(reg => reg && reg.update());
-    }, 30 * 60 * 1000);
+    const buscarVersion = () => navigator.serviceWorker.getRegistration().then(reg => {
+      if (!reg) return;
+      // Una versión que quedó esperando se aplica al volver, si no hay nada a medias.
+      if (reg.waiting && navigator.serviceWorker.controller && !pwaEscribio) showPwaUpdate(reg.waiting);
+      return reg.update();
+    }).catch(() => {});
+    setInterval(buscarVersion, 30 * 60 * 1000);
+    // En el celular la app queda abierta días: al volver a ella, buscar versión nueva.
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') buscarVersion(); });
   });
 })();
 </script>

@@ -33,7 +33,35 @@
     window.location.reload();
   });
 
+  // ── Actualizarse sola ──
+  // Si la persona todavía no ha escrito nada en esta visita, la versión
+  // nueva se aplica sin preguntar (la app se recarga una vez). Si ya está
+  // llenando algo, no se le interrumpe: sale el aviso con el botón.
+  let pwaEscribio = false;
+  let pwaOcultaDesde = 0;
+  const marcar = (e) => { if (e.isTrusted) pwaEscribio = true; };
+  document.addEventListener('input', marcar, true);
+  document.addEventListener('change', marcar, true);
+  // Si la app estuvo guardada 5 minutos o más, lo escrito antes ya no cuenta.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') pwaOcultaDesde = Date.now();
+    else if (pwaOcultaDesde && Date.now() - pwaOcultaDesde >= 5 * 60 * 1000) pwaEscribio = false;
+  });
+  try {
+    if (sessionStorage.getItem('pwa_actualizada') === '1') {
+      sessionStorage.removeItem('pwa_actualizada');
+      window.addEventListener('load', () => setTimeout(() => {
+        if (typeof showToast === 'function') showToast('✓ App actualizada a la última versión', 'success', 3500);
+      }, 600));
+    }
+  } catch (_) {}
+
   function showPwaUpdate(worker) {
+    if (!pwaEscribio) {
+      try { sessionStorage.setItem('pwa_actualizada', '1'); } catch (_) {}
+      worker.postMessage({ type: 'SKIP_WAITING' });
+      return;
+    }
     const banner = document.getElementById('pwa-update-banner');
     if (!banner) return;
     banner.style.display = 'flex';
@@ -89,9 +117,15 @@
       });
     }).catch(err => console.warn('SW registration failed:', err));
 
-    setInterval(() => {
-      navigator.serviceWorker.getRegistration().then(reg => reg && reg.update());
-    }, 30 * 60 * 1000);
+    const buscarVersion = () => navigator.serviceWorker.getRegistration().then(reg => {
+      if (!reg) return;
+      // Una versión que quedó esperando se aplica al volver, si no hay nada a medias.
+      if (reg.waiting && navigator.serviceWorker.controller && !pwaEscribio) showPwaUpdate(reg.waiting);
+      return reg.update();
+    }).catch(() => {});
+    setInterval(buscarVersion, 30 * 60 * 1000);
+    // En el celular la app queda abierta días: al volver a ella, buscar versión nueva.
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') buscarVersion(); });
   });
 })();
 </script>
