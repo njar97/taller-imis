@@ -47,7 +47,7 @@ async function cargarHistorial(tipo) {
     }
     container.innerHTML = data.map(r => {
       let meta = '';
-      if (tipo === 'trazo') meta = `${r.fecha} · Corte ${r.letra_corte||'—'} · ${r.capas||'?'} lienzos${r.tallas_tendido ? ' · ' + r.tallas_tendido : ''}${r.largo_cm ? ' · ' + (r.largo_cm/100).toFixed(2) + ' m' : ''}`;
+      if (tipo === 'trazo') meta = `${r.fecha} · Corte ${r.letra_corte||'—'} · ${r.capas||'?'} lienzos${r.tallas_tendido ? ' · ' + tallasTendidoBonito(r.tallas_tendido) : ''}${r.largo_cm ? ' · ' + (r.largo_cm/100).toFixed(2) + ' m' : ''}`;
       if (tipo === 'tendido') meta = `${r.fecha} · ${r.equipo||'sin equipo'} · Corte ${r.letra_corte||'—'}`;
       return `
         <div class="registro-item" onclick="verDetalle('${tipo}','${r.id}')">

@@ -58,7 +58,7 @@ async function onElegirTrazo() {
         <div class="trazo-code">${trazo.codigo_corte} · Corte <span id="td-trazo-letra">${trazo.letra_corte || '?'}</span></div>
         <div class="trazo-meta">Trazado el ${trazo.fecha} · ${tallas.length} talla(s) marcada(s) · ${trazo.capas || '?'} capas planeadas</div>
         <div class="tallas-inline">
-          ${tallas.map(t => `<span class="talla-pill ${t.tipo==='par'?'par':''}">${t.letra_local}: ${t.talla_key_original}${t.talla_key_complemento?' ↔ '+t.talla_key_complemento:''}${t.tipo==='par'?' (par)':''}</span>`).join('')}
+          ${tallas.map(t => `<span class="talla-pill ${t.tipo==='par'?'par':''}">${t.letra_local}: ${tallasTendidoBonito(t.talla_key_original)}${t.talla_key_complemento?' ↔ '+tallasTendidoBonito(t.talla_key_complemento):''}${t.tipo==='par'?' (par)':''}</span>`).join('')}
         </div>
       </div>
     `;

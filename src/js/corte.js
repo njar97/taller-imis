@@ -90,7 +90,7 @@ async function cargarLoQueSigue() {
 
     cont.innerHTML = trazos.map((t, i) => {
       const datos = [
-        t.tallas_tendido ? corteEsc(t.tallas_tendido) : '',
+        t.tallas_tendido ? corteEsc(tallasTendidoBonito(t.tallas_tendido)) : '',
         t.capas ? `${t.capas} lienzos` : '',
         t.largo_cm ? `${(t.largo_cm / 100).toFixed(2)} m` : ''
       ].filter(Boolean).join(' · ');

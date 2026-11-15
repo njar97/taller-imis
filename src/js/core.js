@@ -95,6 +95,56 @@ function prendaCanon(cod) {
   return _PRENDA_CANON_MAP[cod] || String(cod).toUpperCase();
 }
 
+// ── Prendas y tallas EN PALABRAS (temporada 2026: por talla, sin largo) ──
+// Solo para MOSTRAR. Las claves guardadas (CAMISA_CELESTE, P1181) no cambian.
+const PRENDA_BONITA = {
+  C: 'Camisa blanca', B: 'Blusa blanca', P: 'Pantalón azul', F: 'Falda azul',
+  CC: 'Camisa celeste', S: 'Short azul', FCE: 'Falda elástico',
+  PB: 'Pantalón beige', FB: 'Falda beige',
+};
+function codDeNombrePrenda(x) {
+  const s = String(x || '');
+  if (PRENDA_BONITA[s]) return s;
+  const up = s.toUpperCase();
+  return Object.keys(_PRENDA_CANON_MAP).find(c => _PRENDA_CANON_MAP[c] === up) || null;
+}
+// 'CAMISA_CELESTE' | 'CC' → 'Camisa celeste'. Si no la conoce, la deja igual.
+function prendaBonita(x) {
+  const cod = codDeNombrePrenda(x);
+  return cod ? PRENDA_BONITA[cod] : String(x || '');
+}
+// Clave del PEDIDO 2026 (C8, PB20, FCE6) → 'T8'. Si no tiene esa forma, la deja igual.
+function tallaPedidoBonita(key) {
+  const m = /^(?:FCE|FB|PB|CC|C|B|P|F|S)(\d{1,2}|\dX)$/i.exec(String(key || ''));
+  return m ? (/X$/i.test(m[1]) ? '' : 'T') + m[1].toUpperCase() : String(key || '');
+}
+// 'FB20×2 + PB20×3' → 'Falda beige T20 ×2 + Pantalón beige T20 ×3'
+function tallasTendidoBonito(txt) {
+  return String(txt || '').replace(/\b(FCE|FB|PB|CC|C|B|P|F|S)(\d{1,2}|\dX)(×\d+)?(?=\s|,|\+|$)/g,
+    (_, cod, t, mult) => `${PRENDA_BONITA[cod]} ${/X$/i.test(t) ? '' : 'T'}${t}${mult ? ' ' + mult : ''}`);
+}
+// Equivalencia bodega → talla 2026 (solo las prendas que la tienen: C, P, PB).
+let equivTallasIdx = null, _equivTallasProm = null;
+function asegurarEquivTallas() {
+  if (!_equivTallasProm) {
+    _equivTallasProm = supaFetch('talla_equivalencia', 'GET', null, '?select=cod_prenda,talla_vieja,talla_2026,largo_2026_cm')
+      .then(eq => { equivTallasIdx = new Map((eq || []).map(e => [e.cod_prenda + '|' + e.talla_vieja, e])); })
+      .catch(() => { equivTallasIdx = new Map(); _equivTallasProm = null; });
+  }
+  return _equivTallasProm;
+}
+// Clave de BODEGA (P1181, C17) → 'T12' solo si la prenda tiene equivalencia cargada; si no, null.
+function tallaBodegaBonita(codONombre, key) {
+  const cod = codDeNombrePrenda(codONombre);
+  if (!cod || !equivTallasIdx || typeof tallaBodega2026 !== 'function') return null;
+  let tiene = false;
+  for (const k of equivTallasIdx.keys()) { if (k.startsWith(cod + '|')) { tiene = true; break; } }
+  if (!tiene) return null;
+  const t = tallaBodega2026(cod, key, equivTallasIdx);
+  if (!t) return null;
+  return /^(T|\dX$)/i.test(String(t)) ? String(t).toUpperCase() : 'T' + t;   // 1X, 2X, 3X van sin la T
+}
+
 // Estado global
 let historialTipo = 'trazo';
 let detalleActual = null; // { tipo, id } para editar/eliminar

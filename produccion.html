@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-15 05:43 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-15 06:36 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -3141,6 +3141,56 @@ function prendaCanon(cod) {
   return _PRENDA_CANON_MAP[cod] || String(cod).toUpperCase();
 }
 
+// ── Prendas y tallas EN PALABRAS (temporada 2026: por talla, sin largo) ──
+// Solo para MOSTRAR. Las claves guardadas (CAMISA_CELESTE, P1181) no cambian.
+const PRENDA_BONITA = {
+  C: 'Camisa blanca', B: 'Blusa blanca', P: 'Pantalón azul', F: 'Falda azul',
+  CC: 'Camisa celeste', S: 'Short azul', FCE: 'Falda elástico',
+  PB: 'Pantalón beige', FB: 'Falda beige',
+};
+function codDeNombrePrenda(x) {
+  const s = String(x || '');
+  if (PRENDA_BONITA[s]) return s;
+  const up = s.toUpperCase();
+  return Object.keys(_PRENDA_CANON_MAP).find(c => _PRENDA_CANON_MAP[c] === up) || null;
+}
+// 'CAMISA_CELESTE' | 'CC' → 'Camisa celeste'. Si no la conoce, la deja igual.
+function prendaBonita(x) {
+  const cod = codDeNombrePrenda(x);
+  return cod ? PRENDA_BONITA[cod] : String(x || '');
+}
+// Clave del PEDIDO 2026 (C8, PB20, FCE6) → 'T8'. Si no tiene esa forma, la deja igual.
+function tallaPedidoBonita(key) {
+  const m = /^(?:FCE|FB|PB|CC|C|B|P|F|S)(\d{1,2}|\dX)$/i.exec(String(key || ''));
+  return m ? (/X$/i.test(m[1]) ? '' : 'T') + m[1].toUpperCase() : String(key || '');
+}
+// 'FB20×2 + PB20×3' → 'Falda beige T20 ×2 + Pantalón beige T20 ×3'
+function tallasTendidoBonito(txt) {
+  return String(txt || '').replace(/\b(FCE|FB|PB|CC|C|B|P|F|S)(\d{1,2}|\dX)(×\d+)?(?=\s|,|\+|$)/g,
+    (_, cod, t, mult) => `${PRENDA_BONITA[cod]} ${/X$/i.test(t) ? '' : 'T'}${t}${mult ? ' ' + mult : ''}`);
+}
+// Equivalencia bodega → talla 2026 (solo las prendas que la tienen: C, P, PB).
+let equivTallasIdx = null, _equivTallasProm = null;
+function asegurarEquivTallas() {
+  if (!_equivTallasProm) {
+    _equivTallasProm = supaFetch('talla_equivalencia', 'GET', null, '?select=cod_prenda,talla_vieja,talla_2026,largo_2026_cm')
+      .then(eq => { equivTallasIdx = new Map((eq || []).map(e => [e.cod_prenda + '|' + e.talla_vieja, e])); })
+      .catch(() => { equivTallasIdx = new Map(); _equivTallasProm = null; });
+  }
+  return _equivTallasProm;
+}
+// Clave de BODEGA (P1181, C17) → 'T12' solo si la prenda tiene equivalencia cargada; si no, null.
+function tallaBodegaBonita(codONombre, key) {
+  const cod = codDeNombrePrenda(codONombre);
+  if (!cod || !equivTallasIdx || typeof tallaBodega2026 !== 'function') return null;
+  let tiene = false;
+  for (const k of equivTallasIdx.keys()) { if (k.startsWith(cod + '|')) { tiene = true; break; } }
+  if (!tiene) return null;
+  const t = tallaBodega2026(cod, key, equivTallasIdx);
+  if (!t) return null;
+  return /^(T|\dX$)/i.test(String(t)) ? String(t).toUpperCase() : 'T' + t;   // 1X, 2X, 3X van sin la T
+}
+
 // Estado global
 let historialTipo = 'trazo';
 let detalleActual = null; // { tipo, id } para editar/eliminar
@@ -4562,7 +4612,7 @@ function renderDashboard() {
           <tbody>
             ${stockTop.map(s => `
               <tr style="border-top:1px solid #EEE">
-                <td style="padding:4px 8px">${dashEsc(s.nombre_prenda || s.cod_prenda)}</td>
+                <td style="padding:4px 8px">${dashEsc(prendaBonita(s.nombre_prenda || s.cod_prenda))}</td>
                 <td style="padding:4px 8px;font-family:monospace;font-weight:600">${dashEsc(s.talla_key)}</td>
                 <td style="padding:4px 8px;text-align:right;color:var(--azul);font-weight:700">${dashNum(s.stock_actual)}</td>
                 <td style="padding:4px 8px;text-align:right;color:#888">${dashNum(s.reservado_empaque)}</td>
@@ -5098,7 +5148,7 @@ async function cargarLoQueSigue() {
 
     cont.innerHTML = trazos.map((t, i) => {
       const datos = [
-        t.tallas_tendido ? corteEsc(t.tallas_tendido) : '',
+        t.tallas_tendido ? corteEsc(tallasTendidoBonito(t.tallas_tendido)) : '',
         t.capas ? `${t.capas} lienzos` : '',
         t.largo_cm ? `${(t.largo_cm / 100).toFixed(2)} m` : ''
       ].filter(Boolean).join(' · ');
@@ -8597,7 +8647,7 @@ async function onElegirTrazo() {
         <div class="trazo-code">${trazo.codigo_corte} · Corte <span id="td-trazo-letra">${trazo.letra_corte || '?'}</span></div>
         <div class="trazo-meta">Trazado el ${trazo.fecha} · ${tallas.length} talla(s) marcada(s) · ${trazo.capas || '?'} capas planeadas</div>
         <div class="tallas-inline">
-          ${tallas.map(t => `<span class="talla-pill ${t.tipo==='par'?'par':''}">${t.letra_local}: ${t.talla_key_original}${t.talla_key_complemento?' ↔ '+t.talla_key_complemento:''}${t.tipo==='par'?' (par)':''}</span>`).join('')}
+          ${tallas.map(t => `<span class="talla-pill ${t.tipo==='par'?'par':''}">${t.letra_local}: ${tallasTendidoBonito(t.talla_key_original)}${t.talla_key_complemento?' ↔ '+tallasTendidoBonito(t.talla_key_complemento):''}${t.tipo==='par'?' (par)':''}</span>`).join('')}
         </div>
       </div>
     `;
@@ -9189,7 +9239,7 @@ async function cargarHistorial(tipo) {
     }
     container.innerHTML = data.map(r => {
       let meta = '';
-      if (tipo === 'trazo') meta = `${r.fecha} · Corte ${r.letra_corte||'—'} · ${r.capas||'?'} lienzos${r.tallas_tendido ? ' · ' + r.tallas_tendido : ''}${r.largo_cm ? ' · ' + (r.largo_cm/100).toFixed(2) + ' m' : ''}`;
+      if (tipo === 'trazo') meta = `${r.fecha} · Corte ${r.letra_corte||'—'} · ${r.capas||'?'} lienzos${r.tallas_tendido ? ' · ' + tallasTendidoBonito(r.tallas_tendido) : ''}${r.largo_cm ? ' · ' + (r.largo_cm/100).toFixed(2) + ' m' : ''}`;
       if (tipo === 'tendido') meta = `${r.fecha} · ${r.equipo||'sin equipo'} · Corte ${r.letra_corte||'—'}`;
       return `
         <div class="registro-item" onclick="verDetalle('${tipo}','${r.id}')">
@@ -10738,7 +10788,7 @@ function prodTalla2026(cod, key) {
   if (!prodEquivIdx || !cod || typeof tallaBodega2026 !== 'function') return null;
   const t = tallaBodega2026(cod, key, prodEquivIdx);
   if (!t) return null;
-  return /^T/i.test(String(t)) ? String(t).toUpperCase() : 'T' + t;
+  return /^(T|\dX$)/i.test(String(t)) ? String(t).toUpperCase() : 'T' + t;   // 1X, 2X, 3X van sin la T
 }
 function toggleMasBulto(id) {
   const el = document.getElementById('mas-' + id);
@@ -14998,6 +15048,8 @@ async function cargarBodegaStock() {
 function renderStock() {
   const cont = document.getElementById('bodega-contenido');
   let stock = bodegaCache.stock;
+  // Equivalencia de tallas 2026: se carga una vez y se vuelve a dibujar.
+  if (!equivTallasIdx) asegurarEquivTallas().then(() => { if (equivTallasIdx && equivTallasIdx.size && document.getElementById('bodega-contenido') === cont) renderStock(); });
   
   if (bodegaCache.filtroPrenda) stock = stock.filter(s => s.nombre_prenda === bodegaCache.filtroPrenda);
   if (!bodegaCache.filtroTallaVacia) stock = stock.filter(s => (s.stock_actual||0) !== 0 || (s.total_entrado||0) > 0);
@@ -15009,6 +15061,8 @@ function renderStock() {
     if (!grupos[p]) grupos[p] = [];
     grupos[p].push(s);
   }
+  // Tallas en orden de número (8, 10, 12…), no de letra (10, 12… 8).
+  for (const p in grupos) grupos[p].sort((a, b) => String(a.talla_key || '').localeCompare(String(b.talla_key || ''), 'es', { numeric: true }));
   
   const prendas = Object.keys(grupos).sort();
   const filtroBar = `
@@ -15020,7 +15074,7 @@ function renderStock() {
           Prenda
           <select onchange="bodegaCache.filtroPrenda = this.value || null; renderStock()" style="padding:4px 8px;width:auto">
             <option value="">Todas</option>
-            ${prendas.map(p => `<option value="${p}" ${p===bodegaCache.filtroPrenda?'selected':''}>${p}</option>`).join('')}
+            ${prendas.map(p => `<option value="${p}" ${p===bodegaCache.filtroPrenda?'selected':''}>${prendaBonita(p)}</option>`).join('')}
           </select>
         </label>
         <label style="font-size:12px;display:flex;align-items:center;gap:4px;margin:0">
@@ -15075,7 +15129,7 @@ function renderStock() {
     return `
     <div class="card" style="padding:0;overflow:hidden;margin-bottom:8px">
       <div style="background:#F5F7FA;padding:8px 12px;font-weight:600;display:flex;justify-content:space-between">
-        <span>${prenda}</span>
+        <span>${prendaBonita(prenda)}</span>
         <span style="font-size:13px">Stock: <strong>${totStock.toLocaleString()}</strong> · Reservado: <strong>${totReserv}</strong></span>
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -15091,7 +15145,7 @@ function renderStock() {
         <tbody>
           ${items.map(s => `
             <tr style="border-top:1px solid #EEE">
-              <td style="padding:4px 8px;font-family:monospace;font-weight:600">${s.talla_key}</td>
+              <td style="padding:4px 8px;font-family:monospace;font-weight:600">${s.talla_key}${(t26 => t26 ? ` <span style="font-family:inherit;font-weight:400;color:#888">= ${t26}</span>` : '')(tallaBodegaBonita(s.cod_prenda || prenda, s.talla_key))}</td>
               <td style="padding:4px 8px;text-align:right;color:#0a7">${s.total_entrado||0}</td>
               <td style="padding:4px 8px;text-align:right;color:#c44">${s.total_salido||0}</td>
               <td style="padding:4px 8px;text-align:right;color:#888">${s.reservado_empaque||0}</td>
@@ -15234,7 +15288,7 @@ function renderMovimientos(movs) {
             <tr style="border-top:1px solid #EEE">
               <td style="padding:4px 8px;color:#666;font-size:11px">${new Date(m.creado_en).toLocaleString('es-SV',{dateStyle:'short',timeStyle:'short'})}</td>
               <td style="padding:4px 8px;color:${tipoColor[m.tipo]}">${tipoIcon[m.tipo]||''} ${m.tipo.replace('_',' ')}</td>
-              <td style="padding:4px 8px"><strong>${m.nombre_prenda||m.cod_prenda}</strong> · ${m.talla_key}</td>
+              <td style="padding:4px 8px"><strong>${prendaBonita(m.nombre_prenda||m.cod_prenda)}</strong> · ${m.talla_key}</td>
               <td style="padding:4px 8px;text-align:right;font-weight:700">${m.cantidad}</td>
               <td style="padding:4px 8px;font-size:11px;color:#666">${m.observaciones||''}</td>
             </tr>
@@ -18036,14 +18090,14 @@ function emqTablaCantHtml(lineas, grupo, origen) {
   for (const L of lineas) {
     if (L.prenda !== prendaAct) {
       prendaAct = L.prenda;
-      html += `<tr><td colspan="7" style="background:#F5F7FA;padding:5px 6px;font-weight:700;border-top:1px solid var(--borde)">${emqEsc(L.prenda)}</td></tr>`;
+      html += `<tr><td colspan="7" style="background:#F5F7FA;padding:5px 6px;font-weight:700;border-top:1px solid var(--borde)">${emqEsc(prendaBonita(L.prenda))}</td></tr>`;
     }
     const fuentes = L.fuentes.map(f => f.talla_key + '×' + f.stock).join(' · ');
     const accion = L.puede > 0
       ? `${emqStepHtml(grupo, L.k)} <button class="btn btn-success btn-sm" style="padding:5px 8px" onclick="emqCantEmpacarUI('${grupo}','${origen}','${L.k}')">Empacar</button>`
       : `<span style="font-size:11px;color:#999">${L.falta ? 'sin stock' : '✓ cubierto'}</span>`;
     html += `<tr>
-      <td style="${td};text-align:left;font-family:monospace;font-weight:700">${emqEsc(L.talla)}${L.niveles.length > 1 ? `<div style="font-family:inherit;font-weight:400;font-size:10px;color:#999">${L.niveles.join(' + ')}</div>` : ''}</td>
+      <td style="${td};text-align:left;font-weight:700" title="${emqEsc(L.talla)}">${emqEsc(tallaPedidoBonita(L.talla))}${L.niveles.length > 1 ? `<div style="font-family:inherit;font-weight:400;font-size:10px;color:#999">${L.niveles.join(' + ')}</div>` : ''}</td>
       <td style="${td}">${L.pedido}</td>
       <td style="${td};color:${L.empacado ? '#a82' : '#bbb'};font-weight:${L.empacado ? 700 : 400}">${L.empacado}</td>
       <td style="${td};color:${L.entregado ? 'var(--verde)' : '#bbb'}">${L.entregado}</td>
@@ -18093,7 +18147,7 @@ function emqListaEntregaHtml(lineas, grupo) {
   return lineas.map(L => `
     <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #E6EFE6">
       <div style="flex:1;min-width:0;font-size:13px">
-        ${emqEsc(L.prenda)} <span style="font-family:monospace;font-weight:700">${emqEsc(L.talla)}</span>
+        ${emqEsc(prendaBonita(L.prenda))} <span style="font-weight:700">${emqEsc(tallaPedidoBonita(L.talla))}</span>
         <div style="font-size:11px;color:#666">empacadas ${L.empacado} · pedido ${L.pedido} · entregado ${L.entregado}</div>
       </div>
       ${emqStepHtml(grupo, L.k)}

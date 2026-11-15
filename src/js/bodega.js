@@ -75,6 +75,8 @@ async function cargarBodegaStock() {
 function renderStock() {
   const cont = document.getElementById('bodega-contenido');
   let stock = bodegaCache.stock;
+  // Equivalencia de tallas 2026: se carga una vez y se vuelve a dibujar.
+  if (!equivTallasIdx) asegurarEquivTallas().then(() => { if (equivTallasIdx && equivTallasIdx.size && document.getElementById('bodega-contenido') === cont) renderStock(); });
   
   if (bodegaCache.filtroPrenda) stock = stock.filter(s => s.nombre_prenda === bodegaCache.filtroPrenda);
   if (!bodegaCache.filtroTallaVacia) stock = stock.filter(s => (s.stock_actual||0) !== 0 || (s.total_entrado||0) > 0);
@@ -86,6 +88,8 @@ function renderStock() {
     if (!grupos[p]) grupos[p] = [];
     grupos[p].push(s);
   }
+  // Tallas en orden de número (8, 10, 12…), no de letra (10, 12… 8).
+  for (const p in grupos) grupos[p].sort((a, b) => String(a.talla_key || '').localeCompare(String(b.talla_key || ''), 'es', { numeric: true }));
   
   const prendas = Object.keys(grupos).sort();
   const filtroBar = `
@@ -97,7 +101,7 @@ function renderStock() {
           Prenda
           <select onchange="bodegaCache.filtroPrenda = this.value || null; renderStock()" style="padding:4px 8px;width:auto">
             <option value="">Todas</option>
-            ${prendas.map(p => `<option value="${p}" ${p===bodegaCache.filtroPrenda?'selected':''}>${p}</option>`).join('')}
+            ${prendas.map(p => `<option value="${p}" ${p===bodegaCache.filtroPrenda?'selected':''}>${prendaBonita(p)}</option>`).join('')}
           </select>
         </label>
         <label style="font-size:12px;display:flex;align-items:center;gap:4px;margin:0">
@@ -152,7 +156,7 @@ function renderStock() {
     return `
     <div class="card" style="padding:0;overflow:hidden;margin-bottom:8px">
       <div style="background:#F5F7FA;padding:8px 12px;font-weight:600;display:flex;justify-content:space-between">
-        <span>${prenda}</span>
+        <span>${prendaBonita(prenda)}</span>
         <span style="font-size:13px">Stock: <strong>${totStock.toLocaleString()}</strong> · Reservado: <strong>${totReserv}</strong></span>
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -168,7 +172,7 @@ function renderStock() {
         <tbody>
           ${items.map(s => `
             <tr style="border-top:1px solid #EEE">
-              <td style="padding:4px 8px;font-family:monospace;font-weight:600">${s.talla_key}</td>
+              <td style="padding:4px 8px;font-family:monospace;font-weight:600">${s.talla_key}${(t26 => t26 ? ` <span style="font-family:inherit;font-weight:400;color:#888">= ${t26}</span>` : '')(tallaBodegaBonita(s.cod_prenda || prenda, s.talla_key))}</td>
               <td style="padding:4px 8px;text-align:right;color:#0a7">${s.total_entrado||0}</td>
               <td style="padding:4px 8px;text-align:right;color:#c44">${s.total_salido||0}</td>
               <td style="padding:4px 8px;text-align:right;color:#888">${s.reservado_empaque||0}</td>
@@ -311,7 +315,7 @@ function renderMovimientos(movs) {
             <tr style="border-top:1px solid #EEE">
               <td style="padding:4px 8px;color:#666;font-size:11px">${new Date(m.creado_en).toLocaleString('es-SV',{dateStyle:'short',timeStyle:'short'})}</td>
               <td style="padding:4px 8px;color:${tipoColor[m.tipo]}">${tipoIcon[m.tipo]||''} ${m.tipo.replace('_',' ')}</td>
-              <td style="padding:4px 8px"><strong>${m.nombre_prenda||m.cod_prenda}</strong> · ${m.talla_key}</td>
+              <td style="padding:4px 8px"><strong>${prendaBonita(m.nombre_prenda||m.cod_prenda)}</strong> · ${m.talla_key}</td>
               <td style="padding:4px 8px;text-align:right;font-weight:700">${m.cantidad}</td>
               <td style="padding:4px 8px;font-size:11px;color:#666">${m.observaciones||''}</td>
             </tr>
