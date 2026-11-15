@@ -238,8 +238,8 @@ function tallaBodega2026(cod, talla_key, equivIdx) {
 function avancePedidoTemporada(pedido, acaparado, equiv) {
   const lineas = new Map();
   for (const p of pedido || []) {
-    const cod = p.cod_prenda;
-    const talla = tallaPedido2026(cod, p.talla_key);
+    const talla = tallaPedido2026(p.cod_prenda, p.talla_key);
+    const cod = codPedido2026(p.cod_prenda);   // 2026: lo pedido como blusa es camisa
     const k = p.escuela_id + '|' + cod + '|' + talla;
     let o = lineas.get(k);
     if (!o) {
@@ -438,7 +438,8 @@ function renderDashboard() {
   const esActiva = !!sel && sel === r.tempActiva;
 
   // Stock (todas las tallas; la tabla muestra las 10 con más)
-  const stock = (r.stock || []).slice()
+  const stock = (r.stock || [])
+    .filter(s => !(r.modo === 'pedido' && bodegaNoSeEntrega(s.cod_prenda || s.nombre_prenda)))   // blusas viejas: no se entregan
     .sort((a, b) => (Number(b.stock_actual) || 0) - (Number(a.stock_actual) || 0));
   const stockTotal = stock.reduce((s,x) => s + Math.max(0, Number(x.stock_actual) || 0), 0);
   const stockReservado = stock.reduce((s,x) => s + (Number(x.reservado_empaque) || 0), 0);

@@ -91,6 +91,7 @@ function planPrendaHtml(codigo, filas) {
       <span>${planEsc(PLAN_PRENDAS[codigo] || filas[0].nombre_prenda || codigo)}</span>
       <span style="font-size:24px">${planNum(total.falta_hacer)} <span style="font-size:12px">falta hacer</span></span>
     </div>
+    ${codigo === 'C' ? '<div style="color:#555;font-size:12px;margin-bottom:8px">Incluye lo pedido como blusa: este año solo se hace camisa. Las blusas viejas de bodega no se entregan.</div>' : ''}
     ${sinContar ? '<div style="color:#b45309;background:var(--ambar-claro);padding:6px;border-radius:6px;margin-bottom:8px;font-size:12px">⚠ Bodega sin contar este año — no se restó</div>' : ''}
     ${fechas.map(fecha => `<div style="color:var(--success-text);background:var(--verde-claro);padding:6px;border-radius:6px;margin-bottom:8px;font-size:12px">✓ Bodega contada el ${planFecha(fecha)}</div>`).join('')}
     <table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:18px">

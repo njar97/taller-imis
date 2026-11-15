@@ -958,6 +958,11 @@ function emqTallaDeBodega(cod, key, eqMap) {
 function emqLineaKey(cod, tallaKey) {
   return cod + '|' + String(tallaKey || '').slice(cod.length);
 }
+// Línea a la que pertenece una fila del pedido. En 2026 lo pedido como blusa
+// va en la línea de la camisa de esa talla (codPedido2026).
+function emqLineaKeyPedido(p) {
+  return codPedido2026(p.cod_prenda) + '|' + String(p.talla_key || '').slice(String(p.cod_prenda).length);
+}
 
 // Datos del modo por cantidad, siempre frescos. Con escuelaId trae solo el
 // pedido y lo empacado de esa escuela (más liviano para modales y escrituras).
@@ -1008,6 +1013,7 @@ async function emqCargarCant(escuelaId) {
   }
   for (const o of porKey.values()) {
     if (o.stock <= 0) continue;
+    if (bodegaNoSeEntrega(o.cod)) continue;   // blusas viejas: no se entregan en 2026
     const m = emqTallaDeBodega(o.cod, o.talla_key, ctx.eqMap);
     if (!m || !m.t) continue;
     const lk = o.cod + '|' + m.t;
@@ -1036,16 +1042,22 @@ function emqLineasEscuela(ctx, escId) {
   const lineas = new Map();
   for (const p of ctx.pedido) {
     if (p.escuela_id !== escId || !p.cod_prenda) continue;
-    const k = emqLineaKey(p.cod_prenda, p.talla_key);
+    const k = emqLineaKeyPedido(p);
+    const cod = codPedido2026(p.cod_prenda);
+    const cambia = cod !== p.cod_prenda;
     let L = lineas.get(k);
     if (!L) {
+      const t = k.slice(cod.length + 1);
       L = {
-        k, cod: p.cod_prenda, t: k.slice(p.cod_prenda.length + 1),
-        prenda: p.nombre_prenda || prendaCanon(p.cod_prenda), talla: p.talla_key,
+        k, cod, t,
+        prenda: cambia ? prendaCanon(cod) : (p.nombre_prenda || prendaCanon(cod)),
+        talla: cambia ? cod + t : p.talla_key,
         filas: [], niveles: [], acap: [], pedido: 0, entregado: 0, empacado: 0,
+        deOtraPrenda: 0,   // piezas que el pedido trae con otro nombre (blusa → camisa)
       };
       lineas.set(k, L);
     }
+    if (cambia) L.deOtraPrenda += Number(p.cantidad_solicitada) || 0;
     L.filas.push(p);
     L.pedido += Number(p.cantidad_solicitada) || 0;
     L.entregado += Number(p.cantidad_entregada) || 0;
@@ -1053,7 +1065,7 @@ function emqLineasEscuela(ctx, escId) {
   for (const a of ctx.acap) {
     if (a.escuela_id !== escId) continue;
     const p = ctx.pedidoById.get(a.pedido_id);
-    const L = p && lineas.get(emqLineaKey(p.cod_prenda, p.talla_key));
+    const L = p && lineas.get(emqLineaKeyPedido(p));
     if (!L) continue;
     L.acap.push(a);
     L.empacado += a.resto;
@@ -1403,7 +1415,7 @@ function emqTablaCantHtml(lineas, grupo, origen) {
       ? `${emqStepHtml(grupo, L.k)} <button class="btn btn-success btn-sm" style="padding:5px 8px" onclick="emqCantEmpacarUI('${grupo}','${origen}','${L.k}')">Empacar</button>`
       : `<span style="font-size:11px;color:#999">${L.falta ? 'sin stock' : '✓ cubierto'}</span>`;
     html += `<tr>
-      <td style="${td};text-align:left;font-weight:700" title="${emqEsc(L.talla)}">${emqEsc(tallaPedidoBonita(L.talla))}${L.niveles.length > 1 ? `<div style="font-family:inherit;font-weight:400;font-size:10px;color:#999">${L.niveles.join(' + ')}</div>` : ''}</td>
+      <td style="${td};text-align:left;font-weight:700" title="${emqEsc(L.talla)}">${emqEsc(tallaPedidoBonita(L.talla))}${L.deOtraPrenda ? `<div style="font-weight:400;font-size:10px;color:#999">con ${L.deOtraPrenda} pedidas como blusa</div>` : ''}${L.niveles.length > 1 ? `<div style="font-family:inherit;font-weight:400;font-size:10px;color:#999">${L.niveles.join(' + ')}</div>` : ''}</td>
       <td style="${td}">${L.pedido}</td>
       <td style="${td};color:${L.empacado ? '#a82' : '#bbb'};font-weight:${L.empacado ? 700 : 400}">${L.empacado}</td>
       <td style="${td};color:${L.entregado ? 'var(--verde)' : '#bbb'}">${L.entregado}</td>

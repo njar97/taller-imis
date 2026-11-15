@@ -156,7 +156,7 @@ function renderStock() {
     return `
     <div class="card" style="padding:0;overflow:hidden;margin-bottom:8px">
       <div style="background:#F5F7FA;padding:8px 12px;font-weight:600;display:flex;justify-content:space-between">
-        <span>${prendaBonita(prenda)}</span>
+        <span>${prendaBonita(prenda)}${bodegaNoSeEntrega(prenda) ? ' <span style="font-size:11px;font-weight:700;color:#8a4b00;background:#FEF4D6;border:1px solid #E6C36A;border-radius:10px;padding:2px 8px;white-space:nowrap">No se entrega en 2026</span>' : ''}</span>
         <span style="font-size:13px">Stock: <strong>${totStock.toLocaleString()}</strong> · Reservado: <strong>${totReserv}</strong></span>
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -1333,7 +1333,10 @@ async function guardarSalida() {
         const m = emqTallaDeBodega(codPrenda, talla, ctx.eqMap);
         const L = m && emqLineasEscuela(ctx, escuelaId).find(x => x.cod === codPrenda && x.t === m.t);
         if (!L) {
-          if (!await confirmar(`Esta escuela no tiene pedido de ${prenda} ${talla}.\n\n¿Registrar la salida igual? (no se suma a ningún pedido)`)) return;
+          const aviso = bodegaNoSeEntrega(codPrenda)
+            ? `⚠ Las blusas no se entregan en 2026: este año solo camisa.\n\n¿Registrar la salida de ${prenda} ${talla} igual? (no se suma a ningún pedido)`
+            : `Esta escuela no tiene pedido de ${prenda} ${talla}.\n\n¿Registrar la salida igual? (no se suma a ningún pedido)`;
+          if (!await confirmar(aviso)) return;
         } else {
           if (!m.sirve && !await confirmar(`⚠ ${talla} queda corto de largo para ${L.talla}.\n\n¿Entregarlo igual?`)) return;
           if (cantidad > L.falta && !await confirmar(`De ${L.talla} le faltan ${L.falta}${L.empacado ? ` (aparte de ${L.empacado} ya empacadas)` : ''} y vas a sacar ${cantidad}.\n\n¿Seguir igual?`)) return;
