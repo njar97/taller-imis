@@ -371,7 +371,8 @@ function volverNuevo() {
   const corteTab = Array.from(document.querySelectorAll('.nav-tab'))
     .find(t => (t.getAttribute('onclick') || '').includes("switchTab('corte'"));
   if (typeof switchTab === 'function') switchTab('corte', corteTab);
-  if (typeof switchSubCorte === 'function') switchSubCorte('nuevo');
+  // Regresa a la sub-vista de donde salió (▶ Sigue, ➕ Nuevo, …).
+  if (typeof switchSubCorte === 'function') switchSubCorte((typeof corteSubActual !== 'undefined' && corteSubActual) || 'sigue');
   window.scrollTo(0, 0);
 }
 

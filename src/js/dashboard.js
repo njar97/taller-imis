@@ -77,10 +77,9 @@ function tareasInicioHtml() {
 function tareaIr(id) {
   const ir = typeof abrirPestana === 'function' ? abrirPestana : (t) => switchTab(t);
   switch (id) {
-    case 'corte':        // Corte → Nuevo → Tendido (lo que dice el cuaderno)
+    case 'corte':        // Corte → ▶ Sigue (tendidos que faltan, con «Tender este»)
       ir('corte');
-      if (typeof switchSubCorte === 'function') switchSubCorte('nuevo');
-      irA('tendido');
+      if (typeof switchSubCorte === 'function') switchSubCorte('sigue');
       return;
     case 'bulto':        // Producción → bultos sin terminar (✓ Terminar → bodega)
     case 'avance':       // Producción → todos los bultos (con 📐 Plan al lado)

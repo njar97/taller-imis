@@ -7,6 +7,15 @@ async function initTendido() {
   document.getElementById('td-warnings').innerHTML = '';
   trazoSeleccionado = null;
   rollosCountTd = 0;
+  document.getElementById('td-letra').value = '';
+  tdLetrasUsadas = [];
+  const preId = window._tdPreseleccion || null;
+  window._tdPreseleccion = null;
+
+  // Letras ya usadas (para sugerir la que sigue y avisar si se repite)
+  supaFetch('tendido','GET',null,'?select=letra_corte,codigo_corte,fecha&letra_corte=not.is.null&order=fecha.desc&limit=40')
+    .then(r => { tdLetrasUsadas = r || []; sugerirLetraTendido(); })
+    .catch(() => {});
 
   // Cargar trazos sin tendido
   const sel = document.getElementById('td-trazo-select');
@@ -18,8 +27,13 @@ async function initTendido() {
       document.getElementById('td-trazo-info').innerHTML = '<div class="alert alert-warn">No hay trazos pendientes de tender. Registrá un trazo primero.</div>';
       return;
     }
+    trazos.sort((a, b) => String(a.codigo_corte || '').localeCompare(String(b.codigo_corte || ''), 'es', { numeric: true }));
     sel.innerHTML = '<option value="">— Elegir un trazo —</option>' + 
       trazos.map(t => `<option value="${t.id}">${t.codigo_corte} · ${t.fecha} · ${t.n_tallas_marcadas} talla(s)</option>`).join('');
+    if (preId && trazos.some(t => t.id === preId)) {
+      sel.value = preId;
+      await onElegirTrazo();
+    }
   } catch(e) {
     sel.innerHTML = '<option value="">— Error —</option>';
     mostrarAlerta('tendido','error','Error cargando trazos: ' + e.message);
@@ -41,7 +55,7 @@ async function onElegirTrazo() {
 
     const info = `
       <div class="trazo-card">
-        <div class="trazo-code">${trazo.codigo_corte} · Corte ${trazo.letra_corte || '?'}</div>
+        <div class="trazo-code">${trazo.codigo_corte} · Corte <span id="td-trazo-letra">${trazo.letra_corte || '?'}</span></div>
         <div class="trazo-meta">Trazado el ${trazo.fecha} · ${tallas.length} talla(s) marcada(s) · ${trazo.capas || '?'} capas planeadas</div>
         <div class="tallas-inline">
           ${tallas.map(t => `<span class="talla-pill ${t.tipo==='par'?'par':''}">${t.letra_local}: ${t.talla_key_original}${t.talla_key_complemento?' ↔ '+t.talla_key_complemento:''}${t.tipo==='par'?' (par)':''}</span>`).join('')}
@@ -50,6 +64,8 @@ async function onElegirTrazo() {
     `;
     document.getElementById('td-trazo-info').innerHTML = info;
     document.getElementById('td-paso-2').style.display = 'block';
+    document.getElementById('td-letra').value = trazo.letra_corte || '';
+    sugerirLetraTendido();
 
     // Agregar primer rollo si no hay ninguno
     if (document.querySelectorAll('.rollo-card').length === 0) {
@@ -59,6 +75,39 @@ async function onElegirTrazo() {
   } catch(e) {
     mostrarAlerta('tendido','error','Error: ' + e.message);
   }
+}
+
+// ── Letra del corte: se pone al tender ────────────────────────────────
+let tdLetrasUsadas = [];
+
+// Si el trazo no trae letra, propone la que sigue a la del último corte.
+function sugerirLetraTendido() {
+  const inp = document.getElementById('td-letra');
+  if (!inp || !trazoSeleccionado) return;
+  if (!inp.value && !trazoSeleccionado.trazo.letra_corte && tdLetrasUsadas.length) {
+    const ult = String(tdLetrasUsadas[0].letra_corte || '').toUpperCase();
+    if (/^[A-Y]$/.test(ult)) inp.value = String.fromCharCode(ult.charCodeAt(0) + 1);
+  }
+  revisarLetraTendido();
+}
+
+function revisarLetraTendido() {
+  const inp = document.getElementById('td-letra');
+  const ay = document.getElementById('td-letra-ayuda');
+  if (!inp || !ay) return;
+  const letra = inp.value.trim().toUpperCase();
+  const ult = tdLetrasUsadas[0];
+  const base = 'Va en el código de cada bulto.' + (ult ? ` El último corte fue el ${ult.letra_corte} (${ult.fecha}).` : '');
+  const rep = letra && tdLetrasUsadas.find(t => String(t.letra_corte).toUpperCase() === letra);
+  if (rep) {
+    ay.innerHTML = `⚠️ La letra <b>${letra}</b> ya se usó en «${rep.codigo_corte}» (${rep.fecha}). Mejor otra, para que los bultos no se confundan.`;
+    ay.style.color = '#b45309';
+  } else {
+    ay.textContent = base;
+    ay.style.color = '';
+  }
+  const cab = document.getElementById('td-trazo-letra');
+  if (cab) cab.textContent = letra || '?';
 }
 
 function agregarRolloTendido() {
@@ -132,6 +181,12 @@ async function guardarTendido() {
   if (!trazoSeleccionado) { mostrarAlerta('tendido','error','Elegí un trazo primero.'); return; }
   const fecha = document.getElementById('td-fecha').value;
   if (!fecha) { mostrarAlerta('tendido','error','Fecha es obligatoria.'); return; }
+  const letra = document.getElementById('td-letra').value.trim().toUpperCase();
+  if (!/^[A-Z]$/.test(letra)) {
+    mostrarAlerta('tendido','error','Falta la letra del corte (una sola letra). Va en el código de cada bulto.');
+    document.getElementById('td-letra').focus();
+    return;
+  }
   const rollos = document.querySelectorAll('.rollo-card');
   if (!rollos.length) { mostrarAlerta('tendido','error','Agregá al menos 1 rollo.'); return; }
 
@@ -145,7 +200,7 @@ async function guardarTendido() {
     const [tendido] = await supaFetch('tendido','POST',{
       fecha,
       codigo_corte: trazoSeleccionado.trazo.codigo_corte,
-      letra_corte: trazoSeleccionado.trazo.letra_corte,
+      letra_corte: letra,
       trazo_id: trazoSeleccionado.trazo.id,
       prendas: null, // se puede inferir de las tallas
       equipo: document.getElementById('td-equipo').value || null,
@@ -153,6 +208,12 @@ async function guardarTendido() {
       fecha_continuacion: (!completo && document.getElementById('td-continuacion').value) ? document.getElementById('td-continuacion').value : null,
       observaciones_generales: document.getElementById('td-observaciones').value || null,
     });
+
+    // El trazo queda con la misma letra (si no la tenía o se cambió)
+    if (trazoSeleccionado.trazo.letra_corte !== letra) {
+      await supaFetch('trazo','PATCH',{ letra_corte: letra },`?id=eq.${trazoSeleccionado.trazo.id}`);
+      trazoSeleccionado.trazo.letra_corte = letra;
+    }
 
     // Copiar tallas marcadas del trazo al tendido (con vinculación)
     const tmRemoteMap = {}; // letra_local -> id en tendido_talla_marcada

@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-13 00:18 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-14 22:30 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -735,6 +735,22 @@ body.temporada-cantidad .oculto-2026 { display: none !important; }
   .nav-tab-lbl { font-size: 9.5px; letter-spacing: -0.2px; }
 }
 
+/* ── Corte → ▶ Lo que sigue ─────────────────────────────────────────── */
+.sigue-item { display: flex; gap: 12px; align-items: center; padding: 12px; border: 1px solid var(--borde); border-radius: 10px; margin-bottom: 8px; background: white; }
+.sigue-item.sigue-primero { border: 2px solid var(--verde, #16a34a); background: #F3FBF5; }
+.sigue-foto { width: 120px; height: 72px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; cursor: pointer; flex: none; }
+.sigue-info { flex: 1; min-width: 0; }
+.sigue-etiqueta { font-size: 11px; font-weight: 700; letter-spacing: .5px; color: #15803d; }
+.sigue-titulo { font-size: 17px; font-weight: 700; color: var(--azul); }
+.sigue-datos { font-size: 13px; color: #555; margin: 2px 0 8px; }
+.sigue-botones { display: flex; gap: 6px; flex-wrap: wrap; }
+.sigue-botones .btn { min-height: 40px; }
+@media (max-width: 480px) {
+  .sigue-item { flex-direction: column; align-items: stretch; }
+  .sigue-foto { width: 100%; height: auto; max-height: 150px; }
+  .sigue-botones .btn { flex: 1; }
+}
+
 </style>
 </head>
 
@@ -784,14 +800,15 @@ body.temporada-cantidad .oculto-2026 { display: none !important; }
   <div id="alert-corte"></div>
   <div class="ayuda-tip" data-ayuda="corte" role="note">
     <span class="ayuda-tip-ico" aria-hidden="true">💡</span>
-    <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> Para anotar un corte tocá <b>➕ Nuevo → 📋 Tendido</b> y copiá lo del cuaderno, rollo por rollo con sus capas.</span>
+    <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> En <b>▶ Sigue</b> están los tendidos que faltan, en orden. Tocá <b>Tender este</b> y copiá lo del cuaderno, rollo por rollo con sus capas.</span>
     <button type="button" class="ayuda-tip-x" onclick="cerrarAyuda('corte')" aria-label="Cerrar esta ayuda" title="Cerrar esta ayuda">✕</button>
   </div>
 
   <!-- Subnav -->
   <div class="card" style="padding:6px;margin-bottom:10px">
     <div class="subnav-btns" style="display:flex;gap:4px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" id="corte-sub-nuevo"    onclick="switchSubCorte('nuevo')"    style="flex:1;min-width:80px">➕ Nuevo</button>
+      <button class="btn btn-primary btn-sm" id="corte-sub-sigue"    onclick="switchSubCorte('sigue')"    style="flex:1;min-width:80px">▶ Sigue</button>
+      <button class="btn btn-ghost   btn-sm" id="corte-sub-nuevo"    onclick="switchSubCorte('nuevo')"    style="flex:1;min-width:80px">➕ Nuevo</button>
       <button class="btn btn-ghost   btn-sm" id="corte-sub-trazos"   onclick="switchSubCorte('trazos')"   style="flex:1;min-width:80px">✂️ Trazos</button>
       <button class="btn btn-ghost   btn-sm" id="corte-sub-tendidos" onclick="switchSubCorte('tendidos')" style="flex:1;min-width:80px">📋 Tendidos</button>
       <button class="btn btn-ghost   btn-sm" id="corte-sub-bultos"   onclick="switchSubCorte('bultos')"   style="flex:1;min-width:80px">📦 Bultos</button>
@@ -799,8 +816,17 @@ body.temporada-cantidad .oculto-2026 { display: none !important; }
     </div>
   </div>
 
+  <!-- SUB: Lo que sigue (trazos pendientes de tender, en orden) -->
+  <div id="corte-sub-sigue-view">
+    <div class="card">
+      <div class="card-title">▶ Lo que sigue</div>
+      <div class="card-sub">Tendidos que faltan, en orden. Tocá <b>Tender este</b> cuando se vaya a tender.</div>
+      <div id="corte-sigue-content"><div class="loading">Cargando...</div></div>
+    </div>
+  </div>
+
   <!-- SUB: Nuevo -->
-  <div id="corte-sub-nuevo-view">
+  <div id="corte-sub-nuevo-view" style="display:none">
     <div class="card">
       <div class="card-title">➕ Nuevo registro de corte</div>
       <div class="card-sub">Elegí qué querés registrar según el momento del taller.</div>
@@ -958,6 +984,11 @@ body.temporada-cantidad .oculto-2026 { display: none !important; }
       <div class="row2">
         <div class="field"><label>Fecha del tendido</label><input type="date" id="td-fecha"></div>
         <div class="field"><label>Equipo del día</label><input type="text" id="td-equipo" placeholder="Sandra, Blanky, Tere..."></div>
+      </div>
+      <div class="field">
+        <label>Letra del corte</label>
+        <input type="text" id="td-letra" class="letra-input" maxlength="1" placeholder="A" oninput="this.value=this.value.toUpperCase();revisarLetraTendido()" style="max-width:90px">
+        <div class="text-muted" id="td-letra-ayuda" style="font-size:12px;margin-top:4px">Va en el código de cada bulto.</div>
       </div>
     </div>
 
@@ -3377,7 +3408,8 @@ function volverNuevo() {
   const corteTab = Array.from(document.querySelectorAll('.nav-tab'))
     .find(t => (t.getAttribute('onclick') || '').includes("switchTab('corte'"));
   if (typeof switchTab === 'function') switchTab('corte', corteTab);
-  if (typeof switchSubCorte === 'function') switchSubCorte('nuevo');
+  // Regresa a la sub-vista de donde salió (▶ Sigue, ➕ Nuevo, …).
+  if (typeof switchSubCorte === 'function') switchSubCorte((typeof corteSubActual !== 'undefined' && corteSubActual) || 'sigue');
   window.scrollTo(0, 0);
 }
 
@@ -4079,10 +4111,9 @@ function tareasInicioHtml() {
 function tareaIr(id) {
   const ir = typeof abrirPestana === 'function' ? abrirPestana : (t) => switchTab(t);
   switch (id) {
-    case 'corte':        // Corte → Nuevo → Tendido (lo que dice el cuaderno)
+    case 'corte':        // Corte → ▶ Sigue (tendidos que faltan, con «Tender este»)
       ir('corte');
-      if (typeof switchSubCorte === 'function') switchSubCorte('nuevo');
-      irA('tendido');
+      if (typeof switchSubCorte === 'function') switchSubCorte('sigue');
       return;
     case 'bulto':        // Producción → bultos sin terminar (✓ Terminar → bodega)
     case 'avance':       // Producción → todos los bultos (con 📐 Plan al lado)
@@ -4933,19 +4964,19 @@ function _avanceEscIrA(accion, escId) {
 
 // +++++++++++++++++++ corte.js +++++++++++++++++++
 // ══════════════════════════════════════════════════════════════════════
-// CORTE — tab unificado de Nuevo (Trazo/Tendido/Bulto) + Historial
+// CORTE — tab unificado: Lo que sigue + Nuevo (Trazo/Tendido/Bulto) + Historial
 // ══════════════════════════════════════════════════════════════════════
 
-let corteSubActual = 'nuevo';
+let corteSubActual = 'sigue';
 
 function initCorte() {
-  // Si veníamos de otra sub-tab, dejarla. Si es la primera entrada, 'nuevo'.
-  switchSubCorte(corteSubActual || 'nuevo');
+  // Si veníamos de otra sub-tab, dejarla. Si es la primera entrada, 'sigue'.
+  switchSubCorte(corteSubActual || 'sigue');
 }
 
 function switchSubCorte(sub) {
   corteSubActual = sub;
-  const subs = ['nuevo', 'trazos', 'tendidos', 'bultos', 'hojas'];
+  const subs = ['sigue', 'nuevo', 'trazos', 'tendidos', 'bultos', 'hojas'];
   subs.forEach(s => {
     const btn = document.getElementById('corte-sub-' + s);
     if (btn) {
@@ -4954,11 +4985,20 @@ function switchSubCorte(sub) {
     }
   });
 
+  const sigueView = document.getElementById('corte-sub-sigue-view');
   const nuevoView = document.getElementById('corte-sub-nuevo-view');
   const listaView = document.getElementById('corte-sub-lista-view');
   const hojasView = document.getElementById('corte-sub-hojas-view');
   if (!nuevoView || !listaView) return;
   if (hojasView) hojasView.style.display = sub === 'hojas' ? '' : 'none';
+  if (sigueView) sigueView.style.display = sub === 'sigue' ? '' : 'none';
+
+  if (sub === 'sigue') {
+    nuevoView.style.display = 'none';
+    listaView.style.display = 'none';
+    cargarLoQueSigue();
+    return;
+  }
 
   if (sub === 'nuevo') {
     nuevoView.style.display = '';
@@ -4989,6 +5029,64 @@ function switchSubCorte(sub) {
     cont.innerHTML = '<div id="historial-content"><div class="loading">Cargando...</div></div>';
   }
   if (typeof cargarHistorial === 'function') cargarHistorial(tipos[sub]);
+}
+
+// ── ▶ Lo que sigue: trazos pendientes de tender, en orden ─────────────
+function corteEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+async function cargarLoQueSigue() {
+  const cont = document.getElementById('corte-sigue-content');
+  if (!cont) return;
+  cont.innerHTML = '<div class="loading">Cargando...</div>';
+  try {
+    const pend = await supaFetch('vw_trazos_sin_tendido', 'GET', null, '?limit=50');
+    if (!pend.length) {
+      cont.innerHTML = `<div class="empty"><div class="empty-icon">✅</div>No hay tendidos pendientes.<br>
+        <button class="btn btn-ghost btn-sm mt8" onclick="switchSubCorte('nuevo')">➕ Anotar un trazo nuevo</button></div>`;
+      return;
+    }
+    const ids = pend.map(p => p.id).join(',');
+    const trazos = await supaFetch('trazo', 'GET', null,
+      `?id=in.(${ids})&select=id,codigo_corte,fecha,capas,largo_cm,tallas_tendido,foto_url`);
+    // Orden natural por nombre: Plan T1, Plan T2 … Plan T10
+    trazos.sort((a, b) => String(a.codigo_corte || '').localeCompare(String(b.codigo_corte || ''), 'es', { numeric: true }));
+
+    cont.innerHTML = trazos.map((t, i) => {
+      const datos = [
+        t.tallas_tendido ? corteEsc(t.tallas_tendido) : '',
+        t.capas ? `${t.capas} lienzos` : '',
+        t.largo_cm ? `${(t.largo_cm / 100).toFixed(2)} m` : ''
+      ].filter(Boolean).join(' · ');
+      const primero = i === 0;
+      return `
+        <div class="sigue-item${primero ? ' sigue-primero' : ''}">
+          ${t.foto_url ? `<img class="sigue-foto" src="${corteEsc(t.foto_url)}" alt="" loading="lazy" onclick="verDetalle('trazo','${t.id}')">` : ''}
+          <div class="sigue-info">
+            ${primero ? '<div class="sigue-etiqueta">SIGUE ESTE</div>' : ''}
+            <div class="sigue-titulo">${corteEsc(t.codigo_corte || t.fecha)}</div>
+            <div class="sigue-datos">${datos}</div>
+            <div class="sigue-botones">
+              <button class="btn ${primero ? 'btn-success' : 'btn-ghost'} btn-sm" onclick="tenderTrazo('${t.id}')">▶ Tender este</button>
+              <button class="btn btn-ghost btn-sm" onclick="verDetalle('trazo','${t.id}')">Ver ficha</button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  } catch (e) {
+    cont.innerHTML = `<div class="alert alert-error">Error: ${corteEsc(e.message)}</div>`;
+  }
+}
+
+// Abre el asistente de tendido con el trazo ya elegido.
+function tenderTrazo(trazoId) {
+  if (typeof cerrarDetalle === 'function') {
+    const ov = document.getElementById('detalle-overlay');
+    if (ov && ov.classList.contains('active')) cerrarDetalle();
+  }
+  window._tdPreseleccion = trazoId;
+  irA('tendido');
 }
 
 // +++++++++++++++++++ hojas_corte.js +++++++++++++++++++
@@ -8405,6 +8503,15 @@ async function initTendido() {
   document.getElementById('td-warnings').innerHTML = '';
   trazoSeleccionado = null;
   rollosCountTd = 0;
+  document.getElementById('td-letra').value = '';
+  tdLetrasUsadas = [];
+  const preId = window._tdPreseleccion || null;
+  window._tdPreseleccion = null;
+
+  // Letras ya usadas (para sugerir la que sigue y avisar si se repite)
+  supaFetch('tendido','GET',null,'?select=letra_corte,codigo_corte,fecha&letra_corte=not.is.null&order=fecha.desc&limit=40')
+    .then(r => { tdLetrasUsadas = r || []; sugerirLetraTendido(); })
+    .catch(() => {});
 
   // Cargar trazos sin tendido
   const sel = document.getElementById('td-trazo-select');
@@ -8416,8 +8523,13 @@ async function initTendido() {
       document.getElementById('td-trazo-info').innerHTML = '<div class="alert alert-warn">No hay trazos pendientes de tender. Registrá un trazo primero.</div>';
       return;
     }
+    trazos.sort((a, b) => String(a.codigo_corte || '').localeCompare(String(b.codigo_corte || ''), 'es', { numeric: true }));
     sel.innerHTML = '<option value="">— Elegir un trazo —</option>' + 
       trazos.map(t => `<option value="${t.id}">${t.codigo_corte} · ${t.fecha} · ${t.n_tallas_marcadas} talla(s)</option>`).join('');
+    if (preId && trazos.some(t => t.id === preId)) {
+      sel.value = preId;
+      await onElegirTrazo();
+    }
   } catch(e) {
     sel.innerHTML = '<option value="">— Error —</option>';
     mostrarAlerta('tendido','error','Error cargando trazos: ' + e.message);
@@ -8439,7 +8551,7 @@ async function onElegirTrazo() {
 
     const info = `
       <div class="trazo-card">
-        <div class="trazo-code">${trazo.codigo_corte} · Corte ${trazo.letra_corte || '?'}</div>
+        <div class="trazo-code">${trazo.codigo_corte} · Corte <span id="td-trazo-letra">${trazo.letra_corte || '?'}</span></div>
         <div class="trazo-meta">Trazado el ${trazo.fecha} · ${tallas.length} talla(s) marcada(s) · ${trazo.capas || '?'} capas planeadas</div>
         <div class="tallas-inline">
           ${tallas.map(t => `<span class="talla-pill ${t.tipo==='par'?'par':''}">${t.letra_local}: ${t.talla_key_original}${t.talla_key_complemento?' ↔ '+t.talla_key_complemento:''}${t.tipo==='par'?' (par)':''}</span>`).join('')}
@@ -8448,6 +8560,8 @@ async function onElegirTrazo() {
     `;
     document.getElementById('td-trazo-info').innerHTML = info;
     document.getElementById('td-paso-2').style.display = 'block';
+    document.getElementById('td-letra').value = trazo.letra_corte || '';
+    sugerirLetraTendido();
 
     // Agregar primer rollo si no hay ninguno
     if (document.querySelectorAll('.rollo-card').length === 0) {
@@ -8457,6 +8571,39 @@ async function onElegirTrazo() {
   } catch(e) {
     mostrarAlerta('tendido','error','Error: ' + e.message);
   }
+}
+
+// ── Letra del corte: se pone al tender ────────────────────────────────
+let tdLetrasUsadas = [];
+
+// Si el trazo no trae letra, propone la que sigue a la del último corte.
+function sugerirLetraTendido() {
+  const inp = document.getElementById('td-letra');
+  if (!inp || !trazoSeleccionado) return;
+  if (!inp.value && !trazoSeleccionado.trazo.letra_corte && tdLetrasUsadas.length) {
+    const ult = String(tdLetrasUsadas[0].letra_corte || '').toUpperCase();
+    if (/^[A-Y]$/.test(ult)) inp.value = String.fromCharCode(ult.charCodeAt(0) + 1);
+  }
+  revisarLetraTendido();
+}
+
+function revisarLetraTendido() {
+  const inp = document.getElementById('td-letra');
+  const ay = document.getElementById('td-letra-ayuda');
+  if (!inp || !ay) return;
+  const letra = inp.value.trim().toUpperCase();
+  const ult = tdLetrasUsadas[0];
+  const base = 'Va en el código de cada bulto.' + (ult ? ` El último corte fue el ${ult.letra_corte} (${ult.fecha}).` : '');
+  const rep = letra && tdLetrasUsadas.find(t => String(t.letra_corte).toUpperCase() === letra);
+  if (rep) {
+    ay.innerHTML = `⚠️ La letra <b>${letra}</b> ya se usó en «${rep.codigo_corte}» (${rep.fecha}). Mejor otra, para que los bultos no se confundan.`;
+    ay.style.color = '#b45309';
+  } else {
+    ay.textContent = base;
+    ay.style.color = '';
+  }
+  const cab = document.getElementById('td-trazo-letra');
+  if (cab) cab.textContent = letra || '?';
 }
 
 function agregarRolloTendido() {
@@ -8530,6 +8677,12 @@ async function guardarTendido() {
   if (!trazoSeleccionado) { mostrarAlerta('tendido','error','Elegí un trazo primero.'); return; }
   const fecha = document.getElementById('td-fecha').value;
   if (!fecha) { mostrarAlerta('tendido','error','Fecha es obligatoria.'); return; }
+  const letra = document.getElementById('td-letra').value.trim().toUpperCase();
+  if (!/^[A-Z]$/.test(letra)) {
+    mostrarAlerta('tendido','error','Falta la letra del corte (una sola letra). Va en el código de cada bulto.');
+    document.getElementById('td-letra').focus();
+    return;
+  }
   const rollos = document.querySelectorAll('.rollo-card');
   if (!rollos.length) { mostrarAlerta('tendido','error','Agregá al menos 1 rollo.'); return; }
 
@@ -8543,7 +8696,7 @@ async function guardarTendido() {
     const [tendido] = await supaFetch('tendido','POST',{
       fecha,
       codigo_corte: trazoSeleccionado.trazo.codigo_corte,
-      letra_corte: trazoSeleccionado.trazo.letra_corte,
+      letra_corte: letra,
       trazo_id: trazoSeleccionado.trazo.id,
       prendas: null, // se puede inferir de las tallas
       equipo: document.getElementById('td-equipo').value || null,
@@ -8551,6 +8704,12 @@ async function guardarTendido() {
       fecha_continuacion: (!completo && document.getElementById('td-continuacion').value) ? document.getElementById('td-continuacion').value : null,
       observaciones_generales: document.getElementById('td-observaciones').value || null,
     });
+
+    // El trazo queda con la misma letra (si no la tenía o se cambió)
+    if (trazoSeleccionado.trazo.letra_corte !== letra) {
+      await supaFetch('trazo','PATCH',{ letra_corte: letra },`?id=eq.${trazoSeleccionado.trazo.id}`);
+      trazoSeleccionado.trazo.letra_corte = letra;
+    }
 
     // Copiar tallas marcadas del trazo al tendido (con vinculación)
     const tmRemoteMap = {}; // letra_local -> id en tendido_talla_marcada
@@ -9511,7 +9670,8 @@ async function renderFichaCorte(trazoId) {
   if (trazo.observaciones) html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo">Observaciones</div><p style="font-size:13px">${escH(trazo.observaciones)}</p></div>`;
 
   if (!tendidos.length) {
-    html += `<div class="detalle-seccion"><div class="alert alert-info">Este trazo todavía no se tiende.</div></div>`;
+    html += `<div class="detalle-seccion"><div class="alert alert-info">Este trazo todavía no se tiende.</div>
+      <button class="btn btn-success btn-block" style="font-size:15px;padding:14px 16px" onclick="tenderTrazo('${escH(trazoId)}')">▶ Tender este trazo</button></div>`;
   }
   for (const tend of tendidos) {
     const [rollos, bultos] = await Promise.all([

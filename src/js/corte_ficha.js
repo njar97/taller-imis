@@ -49,7 +49,8 @@ async function renderFichaCorte(trazoId) {
   if (trazo.observaciones) html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo">Observaciones</div><p style="font-size:13px">${escH(trazo.observaciones)}</p></div>`;
 
   if (!tendidos.length) {
-    html += `<div class="detalle-seccion"><div class="alert alert-info">Este trazo todavía no se tiende.</div></div>`;
+    html += `<div class="detalle-seccion"><div class="alert alert-info">Este trazo todavía no se tiende.</div>
+      <button class="btn btn-success btn-block" style="font-size:15px;padding:14px 16px" onclick="tenderTrazo('${escH(trazoId)}')">▶ Tender este trazo</button></div>`;
   }
   for (const tend of tendidos) {
     const [rollos, bultos] = await Promise.all([
