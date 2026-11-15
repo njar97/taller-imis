@@ -752,7 +752,7 @@ async function guardarTrazo() {
 
   const parsSinComp = tallas.filter(t => t.tipo === 'par' && !t.complementoKey);
   if (parsSinComp.length > 0) {
-    if (!confirm(`Hay ${parsSinComp.length} talla(s) "par" sin complemento asignado. ¿Guardar igual?`)) return;
+    if (!await confirmar(`Hay ${parsSinComp.length} talla(s) "par" sin complemento asignado. ¿Guardar igual?`)) return;
   }
 
   const btn = document.getElementById('btn-guardar-trazo');

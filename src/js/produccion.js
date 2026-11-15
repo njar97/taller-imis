@@ -451,7 +451,7 @@ function cambiarFiltroProduccion(filtro) {
 }
 
 async function terminarBulto(produccionBultoId, cantidadOriginal) {
-  const cantStr = prompt(
+  const cantStr = await pedirTexto(
     `¿Cuántas piezas terminaron?\n\nCantidad original: ${cantidadOriginal}\n\n(Enter para usar el original, o escribí otra cantidad si hubo defectos)`,
     cantidadOriginal
   );
@@ -460,7 +460,7 @@ async function terminarBulto(produccionBultoId, cantidadOriginal) {
 
   let observaciones = null;
   if (cantidadFinal !== cantidadOriginal) {
-    observaciones = prompt(`Hubo diferencia (${cantidadFinal} vs ${cantidadOriginal}). ¿Qué pasó? (opcional)`) || null;
+    observaciones = await pedirTexto(`Hubo diferencia (${cantidadFinal} vs ${cantidadOriginal}). ¿Qué pasó? (opcional)`) || null;
   }
 
   try {
@@ -651,7 +651,7 @@ async function confirmarAutoAcaparar(escId, nombrePrenda, tallaKey) {
 }
 
 async function revertirBulto(produccionBultoId) {
-  if (!confirm('¿Revertir a pendiente? Se borrará la fecha de terminación.')) return;
+  if (!await confirmar('¿Revertir a pendiente? Se borrará la fecha de terminación.')) return;
   try {
     await supaUpdate('produccion_bulto', produccionBultoId, {
       estado: 'pendiente',
@@ -667,7 +667,7 @@ async function revertirBulto(produccionBultoId) {
 
 // Atajo: marcar terminado con confirmación (cuando Fase 2 está activa)
 async function terminarBultoAtajo(produccionBultoId, cantidadOriginal) {
-  if (!confirm('¿Marcar este bulto como terminado sin registrar etapas?\n\nSe perderá el detalle de operaciones. Usalo solo cuando no puedas capturar el detalle.')) return;
+  if (!await confirmar('¿Marcar este bulto como terminado sin registrar etapas?\n\nSe perderá el detalle de operaciones. Usalo solo cuando no puedas capturar el detalle.')) return;
   await terminarBulto(produccionBultoId, cantidadOriginal);
 }
 
@@ -730,7 +730,7 @@ async function marcarEtapaRapida(bultoId, operacionId) {
 
   // Preguntar operaria
   const nombres = activas.map((o,i) => `${i+1}. ${o.nombre}`).join('\n');
-  const idxStr = prompt(`¿Quién hizo esta etapa?\n\n${nombres}\n\nEscribí el número:`, '1');
+  const idxStr = await pedirTexto(`¿Quién hizo esta etapa?\n\n${nombres}\n\nEscribí el número:`, '1');
   if (idxStr === null) return;
   const idx = parseInt(idxStr) - 1;
   if (idx < 0 || idx >= activas.length) { alert('Número inválido'); return; }
@@ -739,7 +739,7 @@ async function marcarEtapaRapida(bultoId, operacionId) {
   // Buscar bulto para obtener cantidad
   const bulto = produccionData.find(b => b.produccion_bulto_id === bultoId);
   const cantDefault = bulto?.cantidad_original || 0;
-  const cantStr = prompt(`Cantidad de piezas (Enter = ${cantDefault}):`, cantDefault);
+  const cantStr = await pedirTexto(`Cantidad de piezas (Enter = ${cantDefault}):`, cantDefault);
   if (cantStr === null) return;
   const cantidad = parseInt(cantStr) || cantDefault;
 
@@ -762,7 +762,7 @@ async function marcarEtapaRapida(bultoId, operacionId) {
 }
 
 async function desmarcarEtapa(registroId, bultoId) {
-  if (!confirm('¿Deshacer esta etapa? Se elimina el registro de captura.')) return;
+  if (!await confirmar('¿Deshacer esta etapa? Se elimina el registro de captura.')) return;
   try {
     await supaFetch('produccion_registro_operacion','DELETE',null,`?id=eq.${registroId}`);
     await toggleEtapasBulto(bultoId); // cerrar
@@ -775,7 +775,7 @@ async function desmarcarEtapa(registroId, bultoId) {
 
 // ══ DIVIDIR ══════════════════════════════════════════════════════════
 async function abrirDividir(produccionBultoId, cantidadActual, codigoBulto) {
-  const cantStr = prompt(
+  const cantStr = await pedirTexto(
     `Dividir bulto ${codigoBulto} (${cantidadActual} piezas)\n\n¿Cuántas piezas separar en un bulto derivado?\n(El resto queda en el bulto original con la misma KEY)`,
     Math.floor(cantidadActual / 2)
   );
@@ -786,7 +786,7 @@ async function abrirDividir(produccionBultoId, cantidadActual, codigoBulto) {
     return;
   }
 
-  const motivo = prompt('Motivo de la división (opcional, ej: "defectos", "agilizar entrega"):') || null;
+  const motivo = await pedirTexto('Motivo de la división (opcional, ej: "defectos", "agilizar entrega"):') || null;
 
   try {
     // 1. Encontrar el bulto original para obtener su salida_id
@@ -882,7 +882,7 @@ async function ejecutarUnion() {
   const principal = produccionData.find(x => x.produccion_bulto_id === ctx.principalId);
   const nuevaCantidad = (principal?.cantidad_original || 0) + totalSumar;
   
-  if (!confirm(`Unir ${seleccionados.length} bulto(s) a ${ctx.principalCodigo}.\n\nEl principal pasa de ${principal?.cantidad_original} → ${nuevaCantidad} piezas.\n\n¿Continuar?`)) return;
+  if (!await confirmar(`Unir ${seleccionados.length} bulto(s) a ${ctx.principalCodigo}.\n\nEl principal pasa de ${principal?.cantidad_original} → ${nuevaCantidad} piezas.\n\n¿Continuar?`)) return;
 
   try {
     // 1. Actualizar cantidad del principal
@@ -1106,7 +1106,7 @@ async function guardarLote() {
   if (!operacionId) { alert('Elegí operación'); return; }
   if (marcados.length === 0) { alert('Marcá al menos un bulto'); return; }
 
-  if (!confirm(`Guardar ${marcados.length} registro(s) como hechos hoy?\n\nSe registrará la misma operación para todos los bultos seleccionados.`)) return;
+  if (!await confirmar(`Guardar ${marcados.length} registro(s) como hechos hoy?\n\nSe registrará la misma operación para todos los bultos seleccionados.`)) return;
 
   let ok = 0, err = 0;
   for (const el of marcados) {
@@ -1261,7 +1261,7 @@ function renderRegistrosHoy() {
 }
 
 async function eliminarRegistro2(id) {
-  if (!confirm('¿Eliminar este registro?')) return;
+  if (!await confirmar('¿Eliminar este registro?')) return;
   try {
     await supaFetch('produccion_registro_operacion','DELETE',null,`?id=eq.${id}`);
     await cargarRegistrosHoy();

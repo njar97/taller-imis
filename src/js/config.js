@@ -54,7 +54,7 @@ function initConfig() {
 
 // ─── Backups automáticos ──────────────────────────────────────────────
 async function ejecutarBackupAhora() {
-  if (!confirm('¿Ejecutar backup ahora?\n\nVa a tomar un snapshot de todas las tablas y subirlo al bucket.')) return;
+  if (!await confirmar('¿Ejecutar backup ahora?\n\nVa a tomar un snapshot de todas las tablas y subirlo al bucket.')) return;
   try {
     const tok = await authTokenFresh() || SUPA_KEY;
     const res = await fetch(`${SUPA_URL}/rest/v1/rpc/trigger_backup`, {
@@ -154,7 +154,7 @@ async function descargarBackup(name) {
 }
 
 async function borrarBackup(name) {
-  if (!confirm(`¿Borrar "${name}"?\n\nNo se puede deshacer.`)) return;
+  if (!await confirmar(`¿Borrar "${name}"?\n\nNo se puede deshacer.`)) return;
   try {
     const tok = await authTokenFresh() || SUPA_KEY;
     const res = await fetch(`${SUPA_URL}/storage/v1/object/backups/${encodeURIComponent(name)}`, {
@@ -854,7 +854,7 @@ async function calcularAutoGrupos() {
 async function aplicarAutoGrupos() {
   if (!_autoGruposPlan || _autoGruposPlan.length === 0) return;
   const totalEsc = _autoGruposPlan.reduce((s, g) => s + g.escuelas.length, 0);
-  if (!confirm(`¿Aplicar la agrupación a ${totalEsc} escuela(s)?\n\nEsto SOBRESCRIBE los grupos actuales asignados.`)) return;
+  if (!await confirmar(`¿Aplicar la agrupación a ${totalEsc} escuela(s)?\n\nEsto SOBRESCRIBE los grupos actuales asignados.`)) return;
 
   const btn = document.getElementById('ag-aplicar-btn');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Aplicando…'; }
@@ -960,7 +960,7 @@ async function descargarBackupExcel() {
 }
 
 async function aplicarCatalogoAExistentes() {
-  if (!confirm('Esto va a actualizar el nivel/ciclo de TODOS los alumnos según el catálogo actual. Es seguro (no borra ni cambia tallas). ¿Continuar?')) return;
+  if (!await confirmar('Esto va a actualizar el nivel/ciclo de TODOS los alumnos según el catálogo actual. Es seguro (no borra ni cambia tallas). ¿Continuar?')) return;
   try {
     const sql = `
       UPDATE public.alumno a
@@ -1080,7 +1080,7 @@ async function cambiarRolUsuario(userId, newRole, email) {
 }
 
 async function eliminarUsuario(userId, email) {
-  if (!confirm(`¿Eliminar a ${email}? Esta acción no se puede deshacer.`)) return;
+  if (!await confirmar(`¿Eliminar a ${email}? Esta acción no se puede deshacer.`)) return;
   const alertEl = document.getElementById('cfg-usuarios-alert');
   alertEl.innerHTML = '';
   try {

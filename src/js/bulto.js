@@ -184,10 +184,10 @@ function confirmarBulto(uid) {
   renderBultos();
 }
 
-function sustituirBulto(uid) {
+async function sustituirBulto(uid) {
   const b = bultosState.find(x => x.uid === uid);
   if (!b) return;
-  const nueva = prompt(`Sustituir talla de salida.\nOriginal: ${b.talla_original}\nCantidad: ${b.cantidad}\n\nEscribí la nueva talla (KEY):`, b.talla_salida);
+  const nueva = await pedirTexto(`Sustituir talla de salida.\nOriginal: ${b.talla_original}\nCantidad: ${b.cantidad}\n\nEscribí la nueva talla (KEY):`, b.talla_salida);
   if (nueva === null) return;
   const trimmed = nueva.trim();
   if (!trimmed) return;
@@ -250,7 +250,7 @@ async function guardarBultos() {
   // Validar: no quede nada 'propuesto' sin decidir
   const pendientes = bultosState.filter(b => b.estado === 'propuesto');
   if (pendientes.length) {
-    if (!confirm(`Hay ${pendientes.length} bulto(s) sin decidir. ¿Querés confirmarlos tal cual como están propuestos?`)) return;
+    if (!await confirmar(`Hay ${pendientes.length} bulto(s) sin decidir. ¿Querés confirmarlos tal cual como están propuestos?`)) return;
     pendientes.forEach(b => b.estado = 'confirmado');
   }
   // Validar: divididos deben sumar la cantidad original
@@ -258,7 +258,7 @@ async function guardarBultos() {
     if (b.estado === 'dividido') {
       const sum = b.partidas.reduce((s,p)=>s+(parseInt(p.cantidad)||0),0);
       if (sum !== b.cantidad) {
-        if (!confirm(`El bulto ${b.numero_rollo}${tendidoSeleccionado.tendido.letra_corte}${b.letra_talla} se dividió en partidas que suman ${sum} pero el bulto original tenía ${b.cantidad}. ¿Guardar igual? (diferencia: ${b.cantidad-sum})`)) return;
+        if (!await confirmar(`El bulto ${b.numero_rollo}${tendidoSeleccionado.tendido.letra_corte}${b.letra_talla} se dividió en partidas que suman ${sum} pero el bulto original tenía ${b.cantidad}. ¿Guardar igual? (diferencia: ${b.cantidad-sum})`)) return;
       }
       for (const p of b.partidas) {
         if (!p.talla || !p.talla.trim()) { mostrarAlerta('bulto','error','Hay partidas sin talla asignada.'); return; }

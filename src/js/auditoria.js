@@ -214,7 +214,7 @@ async function revertirAudit(id) {
   const desc = f.op === 'INSERT' ? `borrar la fila creada (${f.table_name} pk=${shortPk(f.row_pk)})`
             : f.op === 'DELETE' ? `re-crear la fila borrada (${f.table_name} pk=${shortPk(f.row_pk)})`
             : `restaurar los valores anteriores en ${f.table_name} (cols: ${(f.changed_cols||[]).join(', ') || '—'})`;
-  if (!confirm(`¿Deshacer este cambio?\n\nVa a ${desc}.\n\nQueda registrado en el audit log como un cambio nuevo.`)) return;
+  if (!await confirmar(`¿Deshacer este cambio?\n\nVa a ${desc}.\n\nQueda registrado en el audit log como un cambio nuevo.`)) return;
 
   try {
     const tok = await authTokenFresh();

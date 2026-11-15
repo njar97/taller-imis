@@ -215,6 +215,95 @@ function showToast(msg, type = 'info', ms = 5000) {
   setTimeout(() => { if (toast.parentNode) toast.remove(); }, ms);
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// AVISOS DENTRO DE LA APP (en vez de las ventanas del navegador)
+//   await confirmar('¿…?')        → true / false
+//   await pedirTexto('…', 'x')    → texto, o null si cancela
+//   alert('…')                    → aviso corto abajo, o cuadro con «Entendido»
+// Las ventanas del navegador («Aceptar / Cancelar») asustan, tapan la app y
+// en el celular a veces traen la casilla «no mostrar más».
+// ══════════════════════════════════════════════════════════════════════
+function dialogoApp({ tipo = 'aviso', mensaje = '', valor = '' } = {}) {
+  return new Promise(resolve => {
+    const txt = String(mensaje == null ? '' : mensaje);
+    const peligro = tipo === 'confirmar' && /\b(eliminar|borrar|borra|elimina|quitar|descartar|revertir|deshacer|anular|permanente)/i.test(txt);
+    const ov = document.createElement('div');
+    ov.className = 'dlg-app-overlay';
+    ov.setAttribute('role', 'dialog');
+    ov.setAttribute('aria-modal', 'true');
+    const caja = document.createElement('div');
+    caja.className = 'dlg-app';
+    const msg = document.createElement('div');
+    msg.className = 'dlg-app-msg';
+    msg.textContent = txt;
+    caja.appendChild(msg);
+    let input = null;
+    if (tipo === 'pedir') {
+      input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'dlg-app-input';
+      input.value = valor == null ? '' : String(valor);
+      if (/^\d*$/.test(input.value) && /cantidad|n[úu]mero|piezas|cu[áa]nt/i.test(txt)) input.inputMode = 'numeric';
+      caja.appendChild(input);
+    }
+    const bot = document.createElement('div');
+    bot.className = 'dlg-app-botones';
+    const cerrar = (res) => {
+      document.removeEventListener('keydown', onKey, true);
+      ov.remove();
+      resolve(res);
+    };
+    const cancelar = () => cerrar(tipo === 'confirmar' ? false : tipo === 'pedir' ? null : undefined);
+    const aceptar = () => cerrar(tipo === 'confirmar' ? true : tipo === 'pedir' ? input.value : undefined);
+    let bCancel = null;
+    if (tipo !== 'aviso') {
+      bCancel = document.createElement('button');
+      bCancel.type = 'button';
+      bCancel.className = 'btn btn-ghost dlg-app-btn';
+      bCancel.textContent = 'Cancelar';
+      bCancel.onclick = cancelar;
+      bot.appendChild(bCancel);
+    }
+    const bOk = document.createElement('button');
+    bOk.type = 'button';
+    bOk.className = 'btn dlg-app-btn ' + (peligro ? 'btn-danger' : 'btn-primary');
+    bOk.textContent = tipo === 'aviso' ? 'Entendido' : tipo === 'pedir' ? 'Aceptar' : (peligro ? 'Sí' : 'Sí, continuar');
+    bOk.onclick = aceptar;
+    bot.appendChild(bOk);
+    caja.appendChild(bot);
+    ov.appendChild(caja);
+    // Tocar afuera = cancelar (en un aviso, cerrarlo)
+    ov.addEventListener('mousedown', (e) => { if (e.target === ov) cancelar(); });
+    function onKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancelar(); }
+      else if (e.key === 'Enter' && (tipo !== 'confirmar' || document.activeElement === bOk)) { e.preventDefault(); e.stopPropagation(); aceptar(); }
+    }
+    document.addEventListener('keydown', onKey, true);
+    document.body.appendChild(ov);
+    // Foco: al escribir, en la casilla; en algo que borra, en «Cancelar».
+    if (input) { input.focus(); input.select(); }
+    else if (peligro && bCancel) bCancel.focus();
+    else bOk.focus();
+  });
+}
+function confirmar(mensaje) { return dialogoApp({ tipo: 'confirmar', mensaje }); }
+function pedirTexto(mensaje, valor = '') { return dialogoApp({ tipo: 'pedir', mensaje, valor }); }
+// alert(): corto y de una línea → aviso abajo que se va solo; largo, de
+// varias líneas o de error → cuadro con «Entendido». Ninguno frena la app.
+const _alertNavegador = window.alert;
+window.alert = function (mensaje) {
+  try {
+    const txt = String(mensaje == null ? '' : mensaje);
+    const esError = /^\s*(❌|error\b|no se pudo|fall[óo])/i.test(txt);
+    if (!esError && txt.length <= 90 && !txt.includes('\n')) {
+      const tono = /^\s*(✅|✓|listo|guardad)/i.test(txt) ? 'success' : /^\s*⚠/.test(txt) ? 'warn' : 'info';
+      showToast(txt, tono, 6000);
+    } else {
+      dialogoApp({ tipo: 'aviso', mensaje: txt });
+    }
+  } catch (_) { _alertNavegador.call(window, mensaje); }
+};
+
 // Modal helper: centraliza apertura/cierre + manejo de tecla Esc +
 // click-en-backdrop para cerrar. Reemplaza los patrones repetidos
 // `document.getElementById('xxx').style.display = 'flex'/'none'`.

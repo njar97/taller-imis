@@ -311,7 +311,7 @@ async function guardarAsignacion() {
 
 // ─── Acciones sobre asignaciones ─────────────────────────────────
 async function marcarCompletada(asignId) {
-  if (!confirm('¿Marcar esta asignación como completada?')) return;
+  if (!await confirmar('¿Marcar esta asignación como completada?')) return;
   try {
     await supaUpdate('asignacion', asignId, { 
       estado: 'completada', 
@@ -322,7 +322,7 @@ async function marcarCompletada(asignId) {
 }
 
 async function cancelarAsignacion(asignId) {
-  if (!confirm('¿Cancelar esta asignación?\n\nLos registros de trabajo ya hecho se conservan.')) return;
+  if (!await confirmar('¿Cancelar esta asignación?\n\nLos registros de trabajo ya hecho se conservan.')) return;
   try {
     await supaUpdate('asignacion', asignId, { 
       estado: 'cancelada', 
@@ -333,7 +333,7 @@ async function cancelarAsignacion(asignId) {
 }
 
 async function reactivarAsignacion(asignId) {
-  if (!confirm('¿Reactivar esta asignación?')) return;
+  if (!await confirmar('¿Reactivar esta asignación?')) return;
   try {
     await supaUpdate('asignacion', asignId, { 
       estado: 'activa', 

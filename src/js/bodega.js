@@ -445,7 +445,7 @@ async function guardarEntradaManual() {
       alert(`La KEY debe empezar con el código de la prenda (${codPrenda}). Ej: ${codPrenda}12`);
       return;
     }
-    if (!confirm(`"${talla}" NO está en el catálogo de ${prenda}.\n\n¿Seguro que la KEY es correcta? Va a crear un código nuevo en bodega.`)) return;
+    if (!await confirmar(`"${talla}" NO está en el catálogo de ${prenda}.\n\n¿Seguro que la KEY es correcta? Va a crear un código nuevo en bodega.`)) return;
   }
 
   try {
@@ -614,7 +614,7 @@ async function aplicarConteoInicial() {
     return;
   }
 
-  if (!confirm(`¿Aplicar conteo a ${filas.length} fila(s)?\n\nSe crea 1 AJUSTE_INVENTARIO por fila con la diferencia necesaria para llegar al valor físico.\nNo se puede deshacer en bloque (sí por audit log).`)) return;
+  if (!await confirmar(`¿Aplicar conteo a ${filas.length} fila(s)?\n\nSe crea 1 AJUSTE_INVENTARIO por fila con la diferencia necesaria para llegar al valor físico.\nNo se puede deshacer en bloque (sí por audit log).`)) return;
 
   const btn = document.getElementById('conteo-btn-aplicar');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Aplicando...'; }
@@ -1333,10 +1333,10 @@ async function guardarSalida() {
         const m = emqTallaDeBodega(codPrenda, talla, ctx.eqMap);
         const L = m && emqLineasEscuela(ctx, escuelaId).find(x => x.cod === codPrenda && x.t === m.t);
         if (!L) {
-          if (!confirm(`Esta escuela no tiene pedido de ${prenda} ${talla}.\n\n¿Registrar la salida igual? (no se suma a ningún pedido)`)) return;
+          if (!await confirmar(`Esta escuela no tiene pedido de ${prenda} ${talla}.\n\n¿Registrar la salida igual? (no se suma a ningún pedido)`)) return;
         } else {
-          if (!m.sirve && !confirm(`⚠ ${talla} queda corto de largo para ${L.talla}.\n\n¿Entregarlo igual?`)) return;
-          if (cantidad > L.falta && !confirm(`De ${L.talla} le faltan ${L.falta}${L.empacado ? ` (aparte de ${L.empacado} ya empacadas)` : ''} y vas a sacar ${cantidad}.\n\n¿Seguir igual?`)) return;
+          if (!m.sirve && !await confirmar(`⚠ ${talla} queda corto de largo para ${L.talla}.\n\n¿Entregarlo igual?`)) return;
+          if (cantidad > L.falta && !await confirmar(`De ${L.talla} le faltan ${L.falta}${L.empacado ? ` (aparte de ${L.empacado} ya empacadas)` : ''} y vas a sacar ${cantidad}.\n\n¿Seguir igual?`)) return;
           patches = emqRepartirEntrega(L.filas, cantidad);
           pedidoId = emqFilaPrincipal(L).id;
           lineaTalla = L.talla;
