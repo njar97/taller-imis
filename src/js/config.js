@@ -446,7 +446,7 @@ async function exportarHojaEntregaPDF() {
 
     // 4) HTML
     const hoy = new Date().toLocaleDateString('es-SV', { day:'2-digit', month:'2-digit', year:'numeric' });
-    const fileFecha = new Date().toISOString().slice(0, 10);
+    const fileFecha = hoyLocal();
     const escNombre = (esc.alias || esc.nombre || '').replace(/[^\w\-]/g, '_').slice(0, 30);
 
     // CSS común para tablas
@@ -948,7 +948,7 @@ async function descargarBackupExcel() {
     ];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(meta), '_meta');
 
-    const fecha = new Date().toISOString().slice(0, 10);
+    const fecha = hoyLocal();
     XLSX.writeFile(wb, `taller-imis-backup-${fecha}.xlsx`);
     setStatus(`✓ Descargado · ${totalRows.toLocaleString()} filas en ${resultados.length} hojas.`);
   } catch (e) {

@@ -634,7 +634,7 @@ async function emqConfirmarReserva() {
   if (!confirm(`¿Reservar ${total} pieza(s) para esta escuela?\n\n${pedidos.map(p => `· ${p.prenda} ${p.talla} × ${p.n}`).join('\n')}\n\nLos alumnos siguen PENDIENTES; al empacarlos, la reserva se consume sola.`)) return;
 
   try {
-    const hoy = new Date().toISOString().slice(0, 10);
+    const hoy = hoyLocal();
     for (const p of pedidos) {
       const cod = (typeof _codPrenda === 'function') ? _codPrenda(p.prenda) : p.prenda;
       const movs = await supaFetch('bodega_movimiento', 'POST', {
@@ -865,7 +865,7 @@ function emqPaso3Html() {
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
           <div class="field" style="margin:0">
             <label>Fecha</label>
-            <input type="date" id="emq-ent-fecha" value="${new Date().toISOString().slice(0, 10)}" style="width:150px">
+            <input type="date" id="emq-ent-fecha" value="${hoyLocal()}" style="width:150px">
           </div>
           <div class="field" style="margin:0;flex:1;min-width:140px">
             <label>Recibió (opcional)</label>

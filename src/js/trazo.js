@@ -1,6 +1,6 @@
 // ══════════════════════════════════════════════════════════════════════
 async function initTrazo() {
-  document.getElementById('t-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('t-fecha').value = hoyLocal();
   ['t-letra-corte','t-capas','t-yardas','t-video-url','t-observaciones'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';

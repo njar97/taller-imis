@@ -183,7 +183,7 @@ function abrirMatMov(tipo, materialId) {
     matCache.stock.map(m => `<option value="${m.id}" ${m.id===materialId?'selected':''}>${matEsc(m.nombre)} (${matNum(m.stock)} ${matEsc(m.unidad)})</option>`).join('');
   document.getElementById('matmov-tipo').value = tipo || 'CONTEO';
   document.getElementById('matmov-cantidad').value = '';
-  document.getElementById('matmov-fecha').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('matmov-fecha').value = hoyLocal();
   document.getElementById('matmov-obs').value = '';
   matMovTipoCambio();
   modal.style.display = 'flex';

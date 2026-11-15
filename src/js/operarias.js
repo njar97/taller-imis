@@ -224,7 +224,7 @@ function opHtmlPrivado(id) {
       : `<input id="opp-${k}" type="${tipo}" step="0.01" value="${opEsc(String(v).slice(0, tipo === 'date' ? 10 : 999))}" style="width:100%">`;
     return `<div style="margin-bottom:8px"><label style="font-size:12px;color:#666;display:block">${label}</label>${input}</div>`;
   };
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyLocal();
   const en30 = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
   const venc = p.dui_vence && p.dui_vence < en30
     ? `<div style="color:#C0392B;font-size:12px;margin-bottom:6px">⚠ DUI ${p.dui_vence < hoy ? 'VENCIDO' : 'por vencer'} (${opFecha(p.dui_vence)}): pedir el renovado.</div>` : '';

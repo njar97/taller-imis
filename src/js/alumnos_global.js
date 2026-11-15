@@ -1588,7 +1588,7 @@ function construirNombreArchivo(cache, tempActiva) {
   if (cache.filtroEstado === 'sin_tallas') partes.push('falta-tallar');
   if (cache.filtroNivel) partes.push(sanitizar(cache.filtroNivel));
   if (tempActiva && tempActiva.anio) partes.push(String(tempActiva.anio));
-  partes.push(new Date().toISOString().slice(0, 10));
+  partes.push(hoyLocal());
   return partes.join('_') + '.pdf';
 }
 
@@ -1811,7 +1811,7 @@ function renderHojaEtiquetas(grupos, cols, incluirObs, escuelasMap, tempCodeHdr,
   const tituloExtra = tempCodeHdr ? `Temporada ${tempCodeHdr}` : '';
 
   // Sugerencia de nombre de archivo
-  const fechaCorta = new Date().toISOString().slice(0,10);
+  const fechaCorta = hoyLocal();
   const filename = `etiquetas_${fechaCorta}.pdf`;
 
   return `

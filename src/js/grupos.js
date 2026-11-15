@@ -213,7 +213,7 @@ async function toggleMiembro(grupoId, operariaId, checked) {
       const res = await supaFetch('grupo_operaria', 'GET', null, 
         `?grupo_id=eq.${grupoId}&operaria_id=eq.${operariaId}&activo=eq.true&limit=1`);
       if (res && res.length > 0) {
-        await supaUpdate('grupo_operaria', res[0].id, { activo: false, hasta: new Date().toISOString().split('T')[0] });
+        await supaUpdate('grupo_operaria', res[0].id, { activo: false, hasta: hoyLocal() });
       }
     }
   } catch(e) { alert('Error: ' + e.message); }
@@ -446,7 +446,7 @@ async function guardarAvance() {
     const patch = { cantidad_terminada: nuevoTotal };
     if (finalizada) {
       patch.estado = 'terminada';
-      patch.fecha_cerrada = new Date().toISOString().split('T')[0];
+      patch.fecha_cerrada = hoyLocal();
     }
     await supaUpdate('grupo_produccion', tareaId, patch);
     

@@ -158,7 +158,7 @@ function abrirEmpacarPrendaTalla(prenda, talla) {
 }
 
 function renderProduccion() {
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = hoyLocal();
   // Función local: calcular estado efectivo
   function estadoEf(b) {
     if (FASE2_ACTIVA && b.total_etapas > 0) {
@@ -434,7 +434,7 @@ async function terminarBulto(produccionBultoId, cantidadOriginal) {
   try {
     await supaUpdate('produccion_bulto', produccionBultoId, {
       estado: 'terminado',
-      fecha_terminado: new Date().toISOString().split('T')[0],
+      fecha_terminado: hoyLocal(),
       cantidad_final: cantidadFinal,
       observaciones,
       actualizado_en: new Date().toISOString(),
@@ -442,7 +442,7 @@ async function terminarBulto(produccionBultoId, cantidadOriginal) {
     const b = produccionData.find(x => x.produccion_bulto_id === produccionBultoId);
     if (b) {
       b.estado = 'terminado';
-      b.fecha_terminado = new Date().toISOString().split('T')[0];
+      b.fecha_terminado = hoyLocal();
       b.cantidad_final = cantidadFinal;
       b.observaciones = observaciones;
     }
@@ -595,7 +595,7 @@ async function confirmarAutoAcaparar(escId, nombrePrenda, tallaKey) {
       tipo: 'SALIDA_EMPAQUE',
       cod_prenda: cod, nombre_prenda: nombrePrenda, talla_key: tallaKey,
       cantidad: cant, escuela_id: escId,
-      fecha: new Date().toISOString().slice(0,10),
+      fecha: hoyLocal(),
       observaciones: 'Acaparado para escuela (auto desde producción)',
     });
     const movId = Array.isArray(movs) ? movs[0]?.id : movs?.id;
@@ -716,7 +716,7 @@ async function marcarEtapaRapida(bultoId, operacionId) {
       produccion_bulto_id: bultoId,
       operacion_id: operacionId,
       operaria_id: operaria.id,
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: hoyLocal(),
       cantidad_realizada: cantidad,
       tipo: 'normal',
     });
@@ -920,7 +920,7 @@ function operariaTrabajando(o) {
 // ─── Captura ──────────────────────────────────────────────────────
 async function initCaptura() {
   // Fecha de hoy
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = hoyLocal();
   document.getElementById('cap-fecha').value = hoy;
   document.getElementById('lote-fecha').value = hoy;
   document.getElementById('cap-piezas').value = '';
@@ -1152,7 +1152,7 @@ async function guardarCaptura() {
 }
 
 async function cargarRegistrosHoy() {
-  const fecha = document.getElementById('cap-fecha').value || new Date().toISOString().split('T')[0];
+  const fecha = document.getElementById('cap-fecha').value || hoyLocal();
   try {
     registrosHoyCache = await supaFetch('produccion_registro_operacion','GET',null,
       `?fecha=eq.${fecha}&order=creado_en.desc&limit=200`);
@@ -1166,7 +1166,7 @@ async function cargarRegistrosHoy() {
 function renderResumenHoy() {
   const cont = document.getElementById('cap-resumen-hoy');
   if (!cont) return;
-  const fecha = document.getElementById('cap-fecha').value || new Date().toISOString().split('T')[0];
+  const fecha = document.getElementById('cap-fecha').value || hoyLocal();
   const registros = registrosHoyCache || [];
   // Agrupar por operaria
   const porOperaria = {};

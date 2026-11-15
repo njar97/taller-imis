@@ -1,6 +1,6 @@
 // ══════════════════════════════════════════════════════════════════════
 async function initTendido() {
-  document.getElementById('td-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('td-fecha').value = hoyLocal();
   ['td-equipo','td-observaciones'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('td-rollos-container').innerHTML = '';
   document.getElementById('td-paso-2').style.display = 'none';

@@ -999,7 +999,7 @@ function exportarTallasCSV() {
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'tallas-' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.download = 'tallas-' + hoyLocal() + '.csv';
   document.body.appendChild(a);
   a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
