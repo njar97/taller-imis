@@ -848,3 +848,7 @@ body.con-asistencia .btn-ayuda { background: #1f2d3d; color: #fff; }
 .av-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
 .av-botones .btn { min-height: 46px; font-size: 15px; justify-content: center; }
 .av-botones .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+.urge-corte { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; padding: 8px 10px; background: #fff; border: 1px solid #E3E8EE; border-radius: 8px; }
+.urge-corte strong { display: block; font-size: 14px; }
+.urge-corte small { display: block; font-size: 11.5px; color: #667; }
+.urge-corte .btn { min-height: 44px; white-space: nowrap; }

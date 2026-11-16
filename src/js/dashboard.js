@@ -108,6 +108,14 @@ async function cargarHoySigue() {
     }
     _hoySigue = { t: Date.now(), corte: txtCorte, bulto: txtBulto };
     pintar();
+    // Para «Urge»: en qué corte pendiente sale cada talla
+    if (pend.length) {
+      const tz = await supaFetch('trazo', 'GET', null,
+        `?id=in.(${pend.map(x => x.id).join(',')})&select=id,codigo_corte,capas,tallas_tendido`).catch(() => []);
+      tz.sort((a, b) => String(a.codigo_corte || '').localeCompare(String(b.codigo_corte || ''), 'es', { numeric: true }));
+      dashboardCache.trazosPend = tz;
+    } else dashboardCache.trazosPend = [];
+    urgePintar();
   } catch (_) { /* sin estos textos Inicio sigue sirviendo */ }
 }
 
@@ -674,22 +682,87 @@ function _renderComoVamos(plan, prod, totEmp) {
 }
 
 // ─── «Qué urge»: las tallas con más piezas sin empezar (ni cortadas) ──
+// Tocar una talla la abre: sus números y en qué corte pendiente sale, con
+// el botón para ir a tender ese corte. Solo una abierta a la vez.
+let _urgeAbierta = null;
+function urgeToggle(k) {
+  _urgeAbierta = _urgeAbierta === k ? null : k;
+  urgePintar();
+}
+function urgePintar() {
+  const el = document.getElementById('dash-urge');
+  const r = dashboardCache.resumen || {};
+  if (el) el.outerHTML = _renderQueUrge(r.plan);
+}
+// Cortes pendientes donde sale esa prenda y talla: [{id, codigo, porTela, capas}]
+function _urgeCortes(cod, talla) {
+  const n = String(talla || '').replace(/^T/, '');
+  const out = [];
+  for (const t of dashboardCache.trazosPend || []) {
+    let porTela = 0;
+    const re = /(FCE|FB|PB|CC|C|B|P|F|S)(\d{1,2}|\dX)(?:×(\d+))?/g;
+    let m;
+    while ((m = re.exec(String(t.tallas_tendido || '')))) {
+      if (codPedido2026(m[1]) === cod && m[2] === n) porTela += Number(m[3]) || 1;
+    }
+    if (porTela > 0) out.push({ id: t.id, codigo: t.codigo_corte, porTela, capas: Number(t.capas) || 0 });
+  }
+  return out;
+}
+function urgeTender(trazoId) {
+  if (typeof tenderTrazo === 'function') tenderTrazo(trazoId);
+  document.body.classList.add('modo-paso');
+}
 function _renderQueUrge(plan) {
   const filas = (plan || []).filter(f => (Number(f.falta_iniciar) || 0) > 0)
     .sort((a, b) => (Number(b.falta_iniciar) || 0) - (Number(a.falta_iniciar) || 0)).slice(0, 4);
-  if (!filas.length) return '';
+  if (!filas.length) return '<div id="dash-urge"></div>';
+  const max = Math.max(...filas.map(f => Number(f.falta_iniciar) || 0), 1);
   return `
-      <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
+      <div class="card" id="dash-urge" style="padding:0;overflow:hidden;margin-bottom:10px">
         <div style="background:#F5F7FA;padding:8px 12px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px">
-          <span>⏰ Urge</span>
+          <span>⏰ Urge<span class="solo-asistencia"> · tocá una talla para ver en qué corte sale</span></span>
           <button class="btn btn-ghost btn-sm" onclick="dashVerPlan()" style="font-size:11px;padding:4px 8px">Plan ›</button>
         </div>
         <div class="solo-asistencia" style="padding:4px 12px 0;font-size:12px;color:#666">Las tallas con más piezas sin empezar: lo que conviene cortar después.</div>
-        ${filas.map(f => `
-        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 12px;border-top:1px solid #F0F0F0">
-          <span style="font-size:13.5px"><strong>${dashEsc(dashPrendaNombre(f.cod_prenda))} ${dashEsc(f.talla_2026)}</strong>${f.contado === false ? ' <span style="font-size:10.5px;color:#8a4b00" title="Bodega sin contar este año">· sin contar</span>' : ''}</span>
-          <span style="font-size:13px;white-space:nowrap"><strong style="color:${DASH_NARANJA}">${dashNum(f.falta_iniciar)}</strong><span class="solo-asistencia" style="color:#777;font-size:11.5px"> sin empezar de ${dashNum(f.pedido)}</span></span>
-        </div>`).join('')}
+        ${filas.map(f => {
+          const k = f.cod_prenda + '|' + f.talla_2026;
+          const abierta = _urgeAbierta === k;
+          const pedido = Number(f.pedido) || 0, falta = Number(f.falta_hacer) || 0, sin = Number(f.falta_iniciar) || 0;
+          const listo = Math.max(0, pedido - falta), costura = Math.min(Number(f.en_proceso) || 0, falta);
+          let detalle = '';
+          if (abierta) {
+            const cortes = _urgeCortes(f.cod_prenda, f.talla_2026);
+            detalle = `
+          <div class="av-detalle">
+            <div class="av-nums">
+              <div><strong style="color:${DASH_NARANJA}">${dashNum(sin)}</strong><small>Sin empezar</small></div>
+              <div><strong style="color:#B7791F">${dashNum(costura)}</strong><small>En costura</small></div>
+              <div><strong style="color:${CV_VERDE}">${dashNum(listo)}</strong><small>En bodega</small></div>
+              <div><strong>${dashNum(pedido)}</strong><small>Pedido</small></div>
+            </div>
+            ${f.contado === false ? '<div style="font-size:12px;color:#8a4b00;margin-top:6px">La bodega de esta prenda no se ha contado este año: puede haber piezas que bajen este número.</div>' : ''}
+            ${cortes.length ? cortes.map(c => `
+            <div class="urge-corte">
+              <span><strong>${dashEsc(c.codigo)}</strong><small>${c.porTela} por tela${c.capas ? ` · ${dashNum(c.capas)} telas` : ''}</small></span>
+              <button type="button" class="btn btn-primary" onclick="event.stopPropagation();urgeTender('${c.id}')">✂️ Tender</button>
+            </div>`).join('') : `
+            <div class="urge-corte">
+              <span><strong>Sin corte pendiente</strong><small>No sale en ningún tendido del plan</small></span>
+              <button type="button" class="btn btn-ghost" onclick="event.stopPropagation();dashVerPlan()">Plan ›</button>
+            </div>`}
+          </div>`;
+          }
+          return `
+        <div class="av-fila${abierta ? ' abierta' : ''}" role="button" tabindex="0" aria-expanded="${abierta}" onclick="urgeToggle('${k}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();urgeToggle('${k}')}">
+          <div class="av-cab">
+            <span class="av-nombre"><span style="color:#889;display:inline-block;width:14px">${abierta ? '▾' : '▸'}</span>${dashEsc(dashPrendaNombre(f.cod_prenda))} ${dashEsc(f.talla_2026)}${f.contado === false ? ' <span style="font-size:10.5px;font-weight:400;color:#8a4b00">· sin contar</span>' : ''}</span>
+            <span class="av-falta"><strong>${dashNum(sin)}</strong><span class="solo-asistencia"> sin empezar de ${dashNum(pedido)}</span></span>
+          </div>
+          <div class="av-barra"><div style="width:${(100 * sin / max).toFixed(2)}%;background:${DASH_NARANJA}"></div></div>
+          ${detalle}
+        </div>`;
+        }).join('')}
       </div>`;
 }
 
