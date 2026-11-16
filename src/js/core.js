@@ -446,6 +446,10 @@ function switchTab(tab, el) {
   const view = document.getElementById('view-' + tab);
   if (view) view.classList.add('active');
   if (el) el.classList.add('active');
+  // Pantalla única: fuera de Inicio se ve abajo «🏠 Volver a Inicio»; y al
+  // volver a Inicio o a «Todo lo demás» se sale del modo de un solo paso.
+  document.body.classList.toggle('fuera-inicio', tab !== 'inicio');
+  if (tab === 'inicio' || tab === 'mas') document.body.classList.remove('modo-paso');
   // Cada init wrappeado en tryInit — si una falla, las otras tabs siguen
   // funcionando y el usuario ve un toast en vez de UI vacío silencioso.
   if (tab === 'corte')       tryInit('Corte',        typeof initCorte === 'function'      ? initCorte      : null);
@@ -497,6 +501,7 @@ function toggleCortesAnteriores() {
 function irA(seccion) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + seccion).classList.add('active');
+  document.body.classList.add('fuera-inicio');
   window.scrollTo(0, 0);
   if (seccion === 'trazo')   tryInit('Trazo',   typeof initTrazo === 'function'   ? initTrazo   : null);
   if (seccion === 'tendido') tryInit('Tendido', typeof initTendido === 'function' ? initTendido : null);
@@ -514,6 +519,9 @@ function lsGuardar(k, v) {
     else localStorage.setItem(k, String(v));
   } catch (_) { /* sin almacenamiento: se pierde solo la preferencia */ }
 }
+
+// 🏠 de la barra de arriba: vuelve a Inicio desde cualquier pantalla.
+function irInicio() { abrirPestana('inicio'); }
 
 // Abre una pestaña del menú y la deja marcada (switchTab sin el botón no
 // resalta nada en el menú).

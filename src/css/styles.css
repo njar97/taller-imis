@@ -762,3 +762,44 @@ body.temporada-cantidad .oculto-2026 { display: none !important; }
 .dlg-app-input:focus { border-color: var(--azul); outline: none; }
 .dlg-app-botones { display: flex; gap: 8px; margin-top: 18px; }
 .dlg-app-btn { flex: 1; min-height: 48px; font-size: 15px; font-weight: 700; justify-content: center; }
+
+/* ══ PANTALLA ÚNICA (nov-2026) ══════════════════════════════════════════
+   Sin menú de pestañas: se entra por Inicio y «Todo lo demás», se vuelve
+   con 🏠. El menú sigue en el DOM (lo usan abrirPestana y el botón atrás). */
+.nav-tabs { display: none !important; }
+.nav-inicio { width: 40px; height: 40px; flex: none; border: 0; border-radius: 10px; background: rgba(255,255,255,0.2); font-size: 20px; line-height: 1; cursor: pointer; font-family: inherit; }
+.nav-inicio:active { background: rgba(255,255,255,0.35); }
+.nav-inicio:focus-visible { outline: 3px solid #FFB300; outline-offset: 2px; }
+@media (max-width: 640px) {
+  body { padding-bottom: env(safe-area-inset-bottom); }
+  #pwa-update-banner { bottom: calc(12px + env(safe-area-inset-bottom)) !important; }
+  #toast-container { bottom: calc(12px + env(safe-area-inset-bottom)) !important; }
+}
+.cv-prenda:active { background: #F5F9FD; }
+.cv-prenda:focus-visible { outline: 3px solid #FFB300; outline-offset: -3px; }
+/* Lista de «Todo lo demás» */
+.menumas-lista { display: flex; flex-direction: column; gap: 8px; }
+.menumas-btn { margin: 0; box-sizing: border-box; display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px 14px; min-height: 60px; border: 1px solid #D5DCE6; background: #fff; border-radius: 12px; cursor: pointer; font-family: inherit; color: #1f2d3d; }
+.menumas-btn:hover { border-color: var(--azul2); background: #F5F9FD; }
+.menumas-btn:active { transform: scale(0.99); background: var(--azul-claro); }
+.menumas-btn:focus-visible { outline: 3px solid #FFB300; outline-offset: 2px; }
+.menumas-ico { font-size: 26px; line-height: 1; }
+.menumas-btn strong { display: block; font-size: 15px; }
+.menumas-btn small { display: block; font-size: 12px; color: #667; margin-top: 2px; }
+.cv-ver { display: block; width: 100%; margin: 0; padding: 12px; min-height: 44px; border: 0; border-bottom: 1px solid #EEE; background: #fff; color: var(--azul); font-weight: 700; font-size: 14px; text-align: left; cursor: pointer; font-family: inherit; }
+.cv-ver:active { background: #F5F9FD; }
+/* «Modo paso»: entrando por uno de los 4 pasos de Inicio no se ven los sub-menús */
+body.modo-paso #corte-subnav,
+body.modo-paso #prod-subnav { display: none !important; }
+/* «🏠 Volver a Inicio» fijo abajo, al alcance del pulgar (solo celular, fuera de Inicio) */
+.barra-inicio { display: none; }
+@media (max-width: 640px) {
+  body.fuera-inicio .barra-inicio { display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 900; margin: 0; border: 0; padding: 14px 12px calc(14px + env(safe-area-inset-bottom)); background: var(--azul); color: #fff; font-size: 16px; font-weight: 700; font-family: inherit; box-shadow: 0 -2px 12px rgba(0,0,0,0.3); cursor: pointer; }
+  body.fuera-inicio .barra-inicio:active { background: #0d2c4a; }
+  body.fuera-inicio { padding-bottom: calc(62px + env(safe-area-inset-bottom)); }
+  body.fuera-inicio #pwa-update-banner { bottom: calc(70px + env(safe-area-inset-bottom)) !important; }
+  body.fuera-inicio #toast-container { bottom: calc(70px + env(safe-area-inset-bottom)) !important; }
+}
+.listo-fila { display: flex; align-items: center; gap: 10px; width: 100%; margin: 0; padding: 10px 12px; min-height: 52px; border: 0; border-top: 1px solid #F0F0F0; background: #fff; text-align: left; cursor: pointer; font-family: inherit; color: #1f2d3d; font-size: 13.5px; }
+.listo-fila:active { background: #F5F9FD; }
+.listo-fila small { display: block; font-size: 11.5px; color: #777; font-weight: 400; }

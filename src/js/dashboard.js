@@ -23,11 +23,18 @@ async function initDashboard() {
   // Inicio = tareas del día arriba + dashboard "Hoy". Por-escuela e
   // histórico viven en Estadística. Las tareas se pintan antes de cargar
   // datos: si la red falla, igual se puede ir a trabajar.
+  // PANTALLA ÚNICA: 1) cómo vamos · 2) los 4 pasos del día · 3) desglose ·
+  // 4) «Todo lo demás». Los pasos se pintan antes de cargar datos: si la
+  // red falla, igual se puede ir a trabajar.
   cont.innerHTML = `
-    ${tareasInicioHtml()}
-    <div id="dashboard-sub-contenido">
-      <div class="text-muted" style="padding:20px;text-align:center">Cargando dashboard...</div>
+    <div id="dash-como-vamos">
+      <div class="card text-muted" style="padding:20px;text-align:center;margin-bottom:10px">Cargando cómo vamos...</div>
     </div>
+    ${tareasInicioHtml()}
+    <div id="dashboard-sub-contenido"></div>
+    <button type="button" class="menumas-btn" style="margin-top:6px" onclick="switchTab('mas')">
+      <span class="menumas-ico">☰</span><span><strong>Todo lo demás</strong><small>Bodega, registro, estadística, ajustes y las pantallas completas</small></span>
+    </button>
   `;
 
   await cargarDashboardHoy();
@@ -44,32 +51,35 @@ function dashElegirTemporada(id) {
 // Cada uno lleva a la pantalla que ya existe para esa tarea. Los ven
 // todos los roles (el taller es quien los usa).
 // ══════════════════════════════════════════════════════════════════════
+// Solo los 4 pasos del trabajo, en el orden en que pasa. Lo demás (entrada
+// y conteo de bodega, tallas especiales…) se abre desde «Todo lo demás».
+// tareaIr() sigue aceptando los otros ids (los usa el buscador).
 const TAREAS_INICIO = [
-  { id: 'corte',      ico: '✂️', tit: 'Anotar un corte',          sub: 'Lo del cuaderno de tendido' },
-  { id: 'bulto',      ico: '📦', tit: 'Bulto terminado',          sub: 'Pasa de costura a bodega' },
-  { id: 'entrada',    ico: '📥', tit: 'Entró a bodega',           sub: 'Piezas que llegaron' },
-  { id: 'contar',     ico: '🔢', tit: 'Contar bodega',            sub: 'Lo que hay en el estante' },
-  { id: 'empacar',    ico: '🧺', tit: 'Empacar para una escuela', sub: 'Apartar lo de una escuela' },
-  { id: 'entregar',   ico: '🚚', tit: 'Entregar a una escuela',   sub: 'Lo empacado se va' },
-  { id: 'especiales', ico: '📏', tit: 'Tallas especiales',        sub: 'Alumnos con medida propia' },
-  { id: 'avance',     ico: '🧵', tit: '¿Cómo van los bultos?',    sub: 'Qué va terminado y qué falta' },
+  { id: 'corte',    n: 1, ico: '✂️', tit: 'Tender',         sub: 'El corte que sigue' },
+  { id: 'bulto',    n: 2, ico: '🧵', tit: 'Terminar bulto', sub: 'Sale de costura y entra a bodega' },
+  { id: 'empacar',  n: 3, ico: '🧺', tit: 'Empacar',        sub: 'Apartar lo de una escuela' },
+  { id: 'entregar', n: 4, ico: '🚚', tit: 'Entregar',       sub: 'Lo empacado se va a la escuela' },
 ];
+// Texto vivo debajo de cada paso («Sigue Plan T1 · faltan 6»…).
+function tareaSubtitulo(id, txt) {
+  const el = document.getElementById('tarea-sub-' + id);
+  if (el && txt) el.textContent = txt;
+}
 
 function tareasInicioHtml() {
   const ayuda = typeof ayudaHtml === 'function'
-    ? ayudaHtml('inicio', 'Tocá lo que vas a hacer y la app te lleva directo. Los números de la temporada están más abajo.')
+    ? ayudaHtml('inicio', 'Arriba se ve cómo va el trabajo; tocá una prenda para ver sus tallas. Abajo están los cuatro pasos: tocá el que vas a anotar. Con 🏠 se vuelve aquí.')
     : '';
   return `
     <section class="card tareas-card" aria-labelledby="tareas-tit">
       ${ayuda}
-      <h2 class="tareas-tit" id="tareas-tit">¿Qué vas a hacer hoy?</h2>
-      <div id="dash-hoy-sigue" class="hoy-sigue"></div>
+      <h2 class="tareas-tit" id="tareas-tit">¿Qué vas a anotar?</h2>
       <div class="tareas-grid">
         ${TAREAS_INICIO.map(t => `
         <button type="button" class="tarea-btn" data-tarea="${t.id}" onclick="tareaIr('${t.id}')">
           <span class="tarea-ico" aria-hidden="true">${t.ico}</span>
-          <span class="tarea-tit">${t.tit}</span>
-          <span class="tarea-sub">${t.sub}</span>
+          <span class="tarea-tit">${t.n}. ${t.tit}</span>
+          <span class="tarea-sub" id="tarea-sub-${t.id}">${t.sub}</span>
         </button>`).join('')}
       </div>
     </section>`;
@@ -77,40 +87,39 @@ function tareasInicioHtml() {
 
 // ── «Hoy sigue»: el tendido que toca y lo que está en costura ─────────
 // Dos renglones arriba de los botones; se llenan aparte para no frenar Inicio.
-let _hoySigue = { t: 0, html: '' };
+let _hoySigue = { t: 0, corte: '', bulto: '' };
 async function cargarHoySigue() {
-  const el = document.getElementById('dash-hoy-sigue');
-  if (!el) return;
-  if (_hoySigue.html && Date.now() - _hoySigue.t < 60000) { el.innerHTML = _hoySigue.html; return; }
+  const pintar = () => { tareaSubtitulo('corte', _hoySigue.corte); tareaSubtitulo('bulto', _hoySigue.bulto); };
+  if (_hoySigue.t && Date.now() - _hoySigue.t < 60000) { pintar(); return; }
   try {
     const [pend, bultos] = await Promise.all([
       supaFetch('vw_trazos_sin_tendido', 'GET', null, '?select=id,codigo_corte&limit=50').catch(() => []),
       supaFetch('vw_produccion_estado', 'GET', null, '?select=fecha_corte,estado_manual,cantidad_original&limit=2000').catch(() => []),
     ]);
-    const filas = [];
+    let txtCorte = 'No hay tendidos pendientes', txtBulto = 'No hay bultos en costura';
     if (pend.length) {
       pend.sort((a, b) => String(a.codigo_corte || '').localeCompare(String(b.codigo_corte || ''), 'es', { numeric: true }));
-      filas.push(`<button type="button" class="hoy-sigue-fila" onclick="tareaIr('corte')">
-        <span aria-hidden="true">✂️</span>
-        <span><b>Sigue tender: ${dashEsc(pend[0].codigo_corte)}</b> · ${pend.length === 1 ? 'es el último que falta' : 'faltan ' + pend.length + ' tendidos'}</span>
-        <span class="hoy-sigue-ir" aria-hidden="true">›</span></button>`);
+      txtCorte = `Sigue ${pend[0].codigo_corte} · ${pend.length === 1 ? 'es el último' : 'faltan ' + pend.length}`;
     }
     const desde = typeof CORTES_DESDE === 'string' ? CORTES_DESDE : '';
     const enCostura = (bultos || []).filter(b => b.estado_manual !== 'terminado' && (!b.fecha_corte || String(b.fecha_corte) >= desde));
     if (enCostura.length) {
       const pz = enCostura.reduce((s, b) => s + (Number(b.cantidad_original) || 0), 0);
-      filas.push(`<button type="button" class="hoy-sigue-fila" onclick="tareaIr('avance')">
-        <span aria-hidden="true">🧵</span>
-        <span><b>En costura: ${dashNum(enCostura.length)} bultos</b> · ${dashNum(pz)} piezas sin terminar</span>
-        <span class="hoy-sigue-ir" aria-hidden="true">›</span></button>`);
+      txtBulto = `${dashNum(enCostura.length)} bultos en costura · ${dashNum(pz)} piezas`;
     }
-    _hoySigue = { t: Date.now(), html: filas.join('') };
-    const el2 = document.getElementById('dash-hoy-sigue');
-    if (el2) el2.innerHTML = _hoySigue.html;
-  } catch (_) { /* sin estos renglones Inicio sigue sirviendo */ }
+    _hoySigue = { t: Date.now(), corte: txtCorte, bulto: txtBulto };
+    pintar();
+  } catch (_) { /* sin estos textos Inicio sigue sirviendo */ }
 }
 
+// Los 4 pasos de Inicio abren su pantalla en «modo paso»: solo lo de ese
+// paso, sin los sub-menús (css body.modo-paso). Por «Todo lo demás» se
+// entra a la pantalla completa.
 function tareaIr(id) {
+  _tareaIr(id);
+  if (TAREAS_INICIO.some(t => t.id === id)) document.body.classList.add('modo-paso');
+}
+function _tareaIr(id) {
   const ir = typeof abrirPestana === 'function' ? abrirPestana : (t) => switchTab(t);
   switch (id) {
     case 'corte':        // Corte → ▶ Sigue (tendidos que faltan, con «Tender este»)
@@ -351,7 +360,7 @@ async function cargarDashboardHoy() {
       // vw_plan_produccion es el plan de la temporada en curso
       if (sel === activa) {
         tareas.push(['plan', () => supaFetch('vw_plan_produccion', 'GET', null,
-          '?select=cod_prenda,nombre_prenda,talla_2026,pedido,falta_hacer,en_proceso,falta_iniciar')]);
+          '?select=cod_prenda,nombre_prenda,talla_2026,pedido,falta_hacer,en_proceso,falta_iniciar,contado')]);
       }
       await _dashCorrer(tareas, data, fallidos);
     } else if (data.modo === 'alumnos') {
@@ -453,6 +462,8 @@ function renderDashboard() {
   const kpiStock = _dashKpi('Stock en bodega', dashNum(stockTotal), `${dashNum(stockReservado)} reservadas`, 'var(--verde)');
 
   let banner, kpis, cuerpo;
+  let comoVamos = '';          // tarjeta de arriba (solo temporada por pedido)
+  let verStock = true;         // «Stock top 10»: en 2026 se ve en Bodega
   if (r.modo === 'pedido') {
     const lineas = avancePedidoTemporada(r.pedidoTemp?.pedido, r.acap, r.equiv);
     const tot = lineas.reduce((t, l) => {
@@ -466,10 +477,15 @@ function renderDashboard() {
       `<strong>${dashNum(tot.sol)}</strong> piezas pedidas`,
       `<strong>${pctEnt}%</strong> entregado`,
     ], pctEnt, codigos.length ? `Contrato ${codigos.map(dashEsc).join(', ')}` : '');
-    kpis = kpiHoy + kpiStock
-      + _dashKpi('Empacado', dashNum(tot.emp), `faltan ${dashNum(tot.pend)} por empacar`, DASH_NARANJA)
-      + _dashKpi('Entregado', dashNum(tot.ent), `de ${dashNum(tot.sol)} pedidas`, '#333');
-    cuerpo = _renderComoVamos(r.plan, r.produccionHoy)
+    // Pantalla única: sin cartel ni cuadritos; todo eso va dentro de «Cómo vamos».
+    dashboardCache.cvTot = tot;
+    comoVamos = _renderComoVamos(r.plan, r.produccionHoy, tot)
+      || `<div class="card" style="padding:12px;margin-bottom:10px">${dashEsc(sel?.nombre || '')}: ${dashNum(tot.sol)} piezas pedidas · ${dashNum(tot.emp)} empacadas · ${dashNum(tot.ent)} entregadas</div>`;
+    banner = ''; kpis = ''; verStock = false;
+    tareaSubtitulo('empacar', tot.pend > 0 ? `Faltan ${dashNum(tot.pend)} piezas por empacar` : 'Todo está empacado');
+    tareaSubtitulo('entregar', tot.emp > 0 ? `${dashNum(tot.emp)} piezas empacadas por entregar` : 'Todavía no hay nada empacado');
+    cuerpo = _renderQueUrge(r.plan)
+      + '<div id="dash-listo-empacar"></div>'
       + _renderEmpaquePorPrenda(lineas)
       // («Escuelas con más por entregar» repetía «Avance por escuela»: quitada)
       + _renderAvancePedido(r, lineas);
@@ -498,21 +514,24 @@ function renderDashboard() {
     ? `<div class="alert alert-warn" style="font-size:12px;margin-bottom:10px">⚠ No se pudo cargar todo (${dashboardCache.fallidos.map(dashEsc).join(', ')}). Probá 🔄 Refrescar.</div>`
     : '';
 
+  const cv = document.getElementById('dash-como-vamos');
+  if (cv) cv.innerHTML = comoVamos;
+  if (r.modo === 'pedido' && esActiva) setTimeout(cargarListoEmpacar, 0);   // se llena aparte, sin frenar Inicio
+
   cont.innerHTML = `
     ${avisoFallidos}
-    <!-- Fila 1: Temporada -->
+    <!-- Fila 1: Temporada (solo temporadas con alumnos) -->
     ${banner}
-    ${_dashSelectorTemporada(r.temporadas, sel?.id)}
 
     <!-- Fila 2: 4 KPIs -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px">
+    ${kpis ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px">
       ${kpis}
-    </div>
+    </div>` : ''}
 
     ${cuerpo}
 
     <!-- Stock top -->
-    ${stockTop.length > 0 ? `
+    ${verStock && stockTop.length > 0 ? `
       <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
         <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">📦 Stock disponible (top 10)</div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -539,7 +558,8 @@ function renderDashboard() {
     ` : ''}
 
     <!-- (Los accesos rápidos de antes quedaron arriba, en «¿Qué vas a hacer hoy?») -->
-    <div style="text-align:center;margin-top:10px">
+    ${_dashSelectorTemporada(r.temporadas, sel?.id)}
+    <div style="text-align:center;margin:10px 0">
       <button class="btn btn-ghost btn-sm" onclick="initDashboard()">🔄 Refrescar</button>
     </div>
   `;
@@ -567,13 +587,47 @@ function _cvLeyenda(o) {
   const parte = (c, n, txt) => n <= 0 ? '' : `<span style="white-space:nowrap;margin-right:10px">${punto(c)}<strong>${dashNum(n)}</strong> ${txt}</span>`;
   return parte(CV_VERDE, o.listo, 'en bodega') + parte(CV_AMBAR, o.costura, 'en costura') + parte('#B4BCC8', o.sin, 'sin empezar');
 }
-function _renderComoVamos(plan, prod) {
+// Prendas abiertas (se ve su tabla por talla). Tocar la prenda abre o cierra.
+const _cvAbiertas = new Set();
+// El desglose por prenda arranca cerrado: arriba queda solo el total y,
+// enseguida, los 4 pasos. cvToggle() sin código abre o cierra el desglose.
+let _cvPorPrenda = false;
+function cvToggle(cod) {
+  if (!cod) _cvPorPrenda = !_cvPorPrenda;
+  else if (_cvAbiertas.has(cod)) _cvAbiertas.delete(cod); else _cvAbiertas.add(cod);
+  const r = dashboardCache.resumen || {};
+  const cv = document.getElementById('dash-como-vamos');
+  if (cv) cv.innerHTML = _renderComoVamos(r.plan, r.produccionHoy, dashboardCache.cvTot);
+}
+function _cvTallas(o) {
+  const td = 'padding:5px 6px;text-align:right';
+  const filas = o.tallas.slice().sort((a, b) => dashOrdenTalla(a.talla, b.talla));
+  return `
+          <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;background:#FAFBFC;border-radius:8px;overflow:hidden">
+            <thead><tr style="font-size:11px;color:#555">
+              <th style="padding:6px;text-align:left">Talla</th>
+              <th style="${td}">Pedido</th>
+              <th style="${td};color:${CV_VERDE}">En bodega</th>
+              <th style="${td};color:#B7791F">En costura</th>
+              <th style="${td}">Sin empezar</th>
+            </tr></thead>
+            <tbody>${filas.map(t => `
+              <tr style="border-top:1px solid #ECEFF3">
+                <td style="padding:5px 6px;font-weight:700">${dashEsc(t.talla)}</td>
+                <td style="${td}">${dashNum(t.pedido)}</td>
+                <td style="${td}">${dashNum(t.listo)}</td>
+                <td style="${td}">${dashNum(t.costura)}</td>
+                <td style="${td};font-weight:${t.sin > 0 ? 700 : 400}">${dashNum(t.sin)}</td>
+              </tr>`).join('')}</tbody>
+          </table>`;
+}
+function _renderComoVamos(plan, prod, totEmp) {
   if (!plan || plan.length === 0) return '';
   const porPrenda = new Map();
   const tot = { pedido: 0, listo: 0, costura: 0, sin: 0 };
   for (const f of plan) {
     let o = porPrenda.get(f.cod_prenda);
-    if (!o) { o = { cod: f.cod_prenda, pedido: 0, listo: 0, costura: 0, sin: 0 }; porPrenda.set(f.cod_prenda, o); }
+    if (!o) { o = { cod: f.cod_prenda, pedido: 0, listo: 0, costura: 0, sin: 0, tallas: [] }; porPrenda.set(f.cod_prenda, o); }
     const pedido = Number(f.pedido) || 0, falta = Number(f.falta_hacer) || 0;
     const v = {
       pedido,
@@ -582,6 +636,7 @@ function _renderComoVamos(plan, prod) {
       sin: Number(f.falta_iniciar) || 0,                        // ni cortado
     };
     for (const c of Object.keys(tot)) { o[c] += v[c]; tot[c] += v[c]; }
+    o.tallas.push({ talla: f.talla_2026, ...v });
   }
   const filas = [...porPrenda.values()].sort((a, b) => dashOrdenPrenda(a.cod) - dashOrdenPrenda(b.cod));
   const pctListo = o => o.pedido > 0 ? Math.floor(100 * o.listo / o.pedido) : 0;
@@ -590,7 +645,7 @@ function _renderComoVamos(plan, prod) {
       <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
         <div style="background:#F5F7FA;padding:8px 12px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px">
           <span>📊 Cómo vamos</span>
-          <button class="btn btn-ghost btn-sm" onclick="dashVerPlan()" style="font-size:11px;padding:4px 8px">Ver por talla ›</button>
+          <button class="btn btn-ghost btn-sm" onclick="initDashboard()" style="font-size:11px;padding:4px 8px" title="Volver a cargar los números">🔄</button>
         </div>
         <div style="padding:10px 12px 12px;border-bottom:1px solid #EEE">
           <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px">
@@ -600,17 +655,83 @@ function _renderComoVamos(plan, prod) {
           ${_cvBarra(tot, 16)}
           <div style="font-size:12px;margin-top:6px;line-height:1.7">${_cvLeyenda(tot)}</div>
           <div style="font-size:12px;color:#555;margin-top:6px">Terminado hoy: <strong>${dashNum(p.piezas)}</strong> piezas · últimos 7 días: <strong>${dashNum(p.piezas7)}</strong></div>
+          ${totEmp ? `<div style="font-size:12px;color:#555;margin-top:2px">Empacado para escuelas: <strong>${dashNum(totEmp.emp)}</strong> · entregado: <strong>${dashNum(totEmp.ent)}</strong> de ${dashNum(totEmp.sol)}</div>` : ''}
         </div>
-        ${filas.map(o => `
-        <div style="padding:9px 12px;border-bottom:1px solid #F0F0F0">
+        <button type="button" class="cv-ver" aria-expanded="${_cvPorPrenda}" onclick="cvToggle()">
+          <span>${_cvPorPrenda ? '▾ Ocultar el detalle por prenda' : '▸ Ver por prenda y talla'}</span>
+        </button>
+        ${!_cvPorPrenda ? '' : filas.map(o => `
+        <div class="cv-prenda" role="button" tabindex="0" aria-expanded="${_cvAbiertas.has(o.cod)}" onclick="cvToggle('${o.cod}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();cvToggle('${o.cod}')}" style="padding:9px 12px;border-bottom:1px solid #F0F0F0;cursor:pointer">
           <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px">
-            <span style="font-weight:600;font-size:13px">${dashEsc(dashPrendaNombre(o.cod))} <span style="font-weight:400;color:#888;font-size:11px">· ${dashNum(o.pedido)} pedidas</span></span>
+            <span style="font-weight:600;font-size:13px"><span style="color:#889;display:inline-block;width:14px">${_cvAbiertas.has(o.cod) ? '▾' : '▸'}</span>${dashEsc(dashPrendaNombre(o.cod))} <span style="font-weight:400;color:#888;font-size:11px">· ${dashNum(o.pedido)} pedidas</span></span>
             <span style="font-size:12px;font-weight:700;color:${o.listo > 0 ? CV_VERDE : '#999'}">${pctListo(o)}%</span>
           </div>
           ${_cvBarra(o, 10)}
           <div style="font-size:11px;color:#444;margin-top:4px;line-height:1.7">${_cvLeyenda(o)}</div>
+          ${_cvAbiertas.has(o.cod) ? _cvTallas(o) : ''}
         </div>`).join('')}
       </div>`;
+}
+
+// ─── «Qué urge»: las tallas con más piezas sin empezar (ni cortadas) ──
+function _renderQueUrge(plan) {
+  const filas = (plan || []).filter(f => (Number(f.falta_iniciar) || 0) > 0)
+    .sort((a, b) => (Number(b.falta_iniciar) || 0) - (Number(a.falta_iniciar) || 0)).slice(0, 4);
+  if (!filas.length) return '';
+  return `
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
+        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <span>⏰ Qué urge</span>
+          <button class="btn btn-ghost btn-sm" onclick="dashVerPlan()" style="font-size:11px;padding:4px 8px">Ver plan ›</button>
+        </div>
+        <div style="padding:2px 12px 0;font-size:11.5px;color:#666">Las tallas con más piezas sin empezar.</div>
+        ${filas.map(f => `
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 12px;border-top:1px solid #F0F0F0">
+          <span style="font-size:13.5px"><strong>${dashEsc(dashPrendaNombre(f.cod_prenda))} ${dashEsc(f.talla_2026)}</strong>${f.contado === false ? ' <span style="font-size:10.5px;color:#8a4b00">· bodega sin contar</span>' : ''}</span>
+          <span style="font-size:13px;white-space:nowrap"><strong style="color:${DASH_NARANJA}">${dashNum(f.falta_iniciar)}</strong> <span style="color:#777;font-size:11.5px">sin empezar de ${dashNum(f.pedido)}</span></span>
+        </div>`).join('')}
+      </div>`;
+}
+
+// ─── «Listo para empacar»: escuelas a las que ya se les puede empacar
+// algo con lo que hay en bodega (el mismo cálculo de 🧺 Empaque). Varias
+// escuelas pueden contar las mismas piezas: es «lo que se podría», no un reparto.
+async function cargarListoEmpacar() {
+  const el = document.getElementById('dash-listo-empacar');
+  if (!el || typeof emqCargarCant !== 'function') return;
+  try {
+    const ctx = await emqCargarCant(null);
+    const escuelas = (dashboardCache.resumen && dashboardCache.resumen.escuelas) || [];
+    const filas = [];
+    for (const e of escuelas) {
+      if (!ctx.escuelasPedido.has(e.id)) continue;
+      const s = emqSumar(emqLineasEscuela(ctx, e.id));
+      if (s.puede > 0) filas.push({ id: e.id, nombre: e.alias || e.nombre, puede: s.puede, falta: s.falta });
+    }
+    filas.sort((a, b) => b.puede - a.puede);
+    const el2 = document.getElementById('dash-listo-empacar');
+    if (!el2) return;
+    if (!filas.length) { el2.innerHTML = ''; return; }
+    el2.innerHTML = `
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
+        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">🧺 Listo para empacar</div>
+        <div style="padding:2px 12px 0;font-size:11.5px;color:#666">Lo que ya se puede empacar con lo que hay en bodega. Tocá una escuela para empacarla.</div>
+        ${filas.slice(0, 5).map(f => `
+        <button type="button" class="listo-fila" onclick="dashEmpacarEscuela('${f.id}')">
+          <span style="flex:1;min-width:0"><strong>${dashEsc(f.nombre)}</strong><small>le faltan ${dashNum(f.falta)} piezas</small></span>
+          <span style="text-align:right;white-space:nowrap"><strong style="color:${CV_VERDE};font-size:17px">${dashNum(f.puede)}</strong><small>se pueden empacar</small></span>
+          <span aria-hidden="true" style="color:#9aa;font-size:20px">›</span>
+        </button>`).join('')}
+        ${filas.length > 5 ? `<div style="padding:8px 12px;font-size:12px;color:#666;border-top:1px solid #F0F0F0">y ${filas.length - 5} escuela(s) más en «3. Empacar».</div>` : ''}
+      </div>`;
+  } catch (e) {
+    console.warn('[inicio] listo para empacar:', e && e.message || e);
+  }
+}
+function dashEmpacarEscuela(escId) {
+  window._emqHintEscuela = escId;
+  abrirPestana('empaque');
+  document.body.classList.add('modo-paso');
 }
 
 // ─── Empaque y entrega por prenda (solo si ya hay algo) ──────────────

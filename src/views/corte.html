@@ -7,8 +7,8 @@
     <button type="button" class="ayuda-tip-x" onclick="cerrarAyuda('corte')" aria-label="Cerrar esta ayuda" title="Cerrar esta ayuda">✕</button>
   </div>
 
-  <!-- Subnav -->
-  <div class="card" style="padding:6px;margin-bottom:10px">
+  <!-- Subnav (escondido en «modo paso»: entrando por «1. Tender» solo se ve ▶ Sigue) -->
+  <div class="card" id="corte-subnav" style="padding:6px;margin-bottom:10px">
     <div class="subnav-btns" style="display:flex;gap:4px;flex-wrap:wrap">
       <button class="btn btn-primary btn-sm" id="corte-sub-sigue"    onclick="switchSubCorte('sigue')"    style="flex:1;min-width:80px">▶ Sigue</button>
       <button class="btn btn-ghost   btn-sm" id="corte-sub-nuevo"    onclick="switchSubCorte('nuevo')"    style="flex:1;min-width:80px">➕ Nuevo</button>
