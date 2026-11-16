@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-15 21:53 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-15 21:59 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -16550,7 +16550,9 @@ async function registrarEntradaBodegaPorBulto(bulto) {
     await supaFetch('bodega_movimiento', 'POST', {
       tipo: 'ENTRADA_PRODUCCION',
       cod_prenda: bulto.cod_prenda,
-      nombre_prenda: bulto.nombre_prenda || null,
+      // Siempre con el nombre de la prenda: la bodega agrupa por código + nombre +
+      // talla, y una entrada sin nombre salía en renglón aparte de su talla.
+      nombre_prenda: bulto.nombre_prenda || prendaCanon(bulto.cod_prenda) || null,
       talla_key: bulto.talla_salida,
       cantidad: bulto.cantidad_final,
       produccion_bulto_id: bulto.id,
