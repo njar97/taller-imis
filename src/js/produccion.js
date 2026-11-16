@@ -651,7 +651,7 @@ async function confirmarAutoAcaparar(escId, nombrePrenda, tallaKey) {
 }
 
 async function revertirBulto(produccionBultoId) {
-  if (!await confirmar('¿Revertir a pendiente? Se borrará la fecha de terminación.')) return;
+  if (!await confirmar('¿Revertir a pendiente?\n\nEl bulto vuelve a costura y sus piezas salen de bodega.')) return;
   try {
     await supaUpdate('produccion_bulto', produccionBultoId, {
       estado: 'pendiente',
@@ -659,6 +659,11 @@ async function revertirBulto(produccionBultoId) {
       cantidad_final: null,
       actualizado_en: new Date().toISOString(),
     });
+    // Al terminar, el bulto metió sus piezas a bodega (ENTRADA_PRODUCCION).
+    // Si se revierte hay que sacar esa entrada; si no, la bodega queda con
+    // piezas de más y al volver a terminarlo se contarían dos veces.
+    await supaFetch('bodega_movimiento', 'DELETE', null,
+      `?produccion_bulto_id=eq.${produccionBultoId}&tipo=eq.ENTRADA_PRODUCCION`);
     await cargarProduccion();
   } catch(e) {
     alert('Error: ' + e.message);
