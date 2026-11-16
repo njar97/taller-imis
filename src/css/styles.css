@@ -816,3 +816,7 @@ body.modo-paso #prod-subnav { display: none !important; }
 .tareas-grid .tarea-btn { align-items: center; justify-content: center; text-align: center; }
 .tareas-grid .tarea-tit { font-size: 17px; }
 @media (max-width: 640px) { .tareas-grid .tarea-btn { min-height: 96px; } }
+
+/* Tendido: contador de telas, pegado arriba mientras se agregan rollos */
+.td-contador { position: sticky; top: 62px; z-index: 5; background: #fff; padding: 8px 0 6px; margin-bottom: 8px; border-bottom: 1px solid #EEE; }
+.td-contador:empty { display: none; }
