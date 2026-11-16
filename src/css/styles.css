@@ -827,3 +827,24 @@ body.con-asistencia .btn-ayuda { background: #1f2d3d; color: #fff; }
 .td-rollo-nota { font-size: 12.5px; color: #8a4b00; width: 100%; }
 .td-rollo-chip { margin: 0; padding: 8px 12px; min-height: 40px; border: 1px solid #C9D3DF; border-radius: 20px; background: #fff; font-family: inherit; font-size: 13px; cursor: pointer; color: #1f2d3d; }
 .td-rollo-chip.on { background: #E8F6EE; border-color: #2E9E5B; font-weight: 700; }
+
+/* ── Inicio → Escuelas: fila por escuela que se abre al tocarla ── */
+.av-fila { padding: 10px 12px; border-top: 1px solid #F0F0F0; cursor: pointer; }
+.av-fila:active { background: #F5F9FD; }
+.av-fila.abierta { background: #FAFCFE; cursor: default; }
+.av-fila:focus-visible { outline: 3px solid #FFB300; outline-offset: -3px; }
+.av-cab { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; }
+.av-nombre { flex: 1; min-width: 0; font-weight: 600; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.av-fila.abierta .av-nombre { white-space: normal; }
+.av-listo { font-size: 11.5px; color: #2E9E5B; white-space: nowrap; }
+.av-listo:empty { display: none; }
+.av-falta { font-size: 13px; color: #C2660A; white-space: nowrap; }
+.av-barra { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: #D9DEE5; }
+.av-detalle { margin-top: 10px; }
+.av-nums { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; }
+.av-nums > div { background: #fff; border: 1px solid #E3E8EE; border-radius: 8px; padding: 6px 2px; }
+.av-nums strong { display: block; font-size: 17px; }
+.av-nums small { display: block; font-size: 10.5px; color: #667; }
+.av-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.av-botones .btn { min-height: 46px; font-size: 15px; justify-content: center; }
+.av-botones .btn[disabled] { opacity: 0.4; cursor: not-allowed; }

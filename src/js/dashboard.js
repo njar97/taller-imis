@@ -709,6 +709,8 @@ async function cargarListoEmpacar() {
       if (s.puede > 0) filas.push({ id: e.id, nombre: e.alias || e.nombre, puede: s.puede, falta: s.falta });
     }
     filas.sort((a, b) => b.puede - a.puede);
+    dashboardCache.listoPorEsc = new Map(filas.map(f => [f.id, f.puede]));
+    _avPintarListo();
     const el2 = document.getElementById('dash-listo-empacar');
     if (!el2) return;
     if (!filas.length) { el2.innerHTML = ''; return; }
@@ -862,9 +864,32 @@ function _dashMarcoAvance(totalEsc, mostrados, cards) {
   `;
 }
 
-// Temporada por cantidades: pedido vs empacado vs entregado por escuela
+// Temporada por cantidades: una fila por escuela (nombre, barra y lo que
+// falta). Tocar la fila la abre: números, tabla por prenda y los dos botones
+// que llevan a empacar o entregar ESA escuela. Solo una abierta a la vez.
+let _avEscAbierta = null;
+function avEscToggle(escId) {
+  _avEscAbierta = _avEscAbierta === escId ? null : escId;
+  const el = document.getElementById('dash-avance-esc');
+  if (el) el.outerHTML = _renderAvancePedido(dashboardCache.resumen || {}, dashboardCache.avLineas || []);
+  _avPintarListo();
+}
+// «Se pueden empacar ya» por escuela (lo calcula cargarListoEmpacar).
+function _avPintarListo() {
+  const m = dashboardCache.listoPorEsc;
+  if (!m) return;
+  document.querySelectorAll('[data-av-listo]').forEach(el => {
+    const n = m.get(el.getAttribute('data-av-listo')) || 0;
+    el.innerHTML = n > 0 ? `<strong>${dashNum(n)}</strong> listas` : '';
+  });
+}
+function avEscIr(accion, escId) {
+  _avanceEscIrA(accion, escId);
+  document.body.classList.add('modo-paso');
+}
 function _renderAvancePedido(r, lineas) {
   if (!lineas || lineas.length === 0) return '';
+  dashboardCache.avLineas = lineas;
   const escMap = new Map((r.escuelas || []).map(e => [e.id, e]));
   const byEsc = new Map();
   for (const l of lineas) {
@@ -877,62 +902,77 @@ function _renderAvancePedido(r, lineas) {
     o.sol += l.sol; o.emp += l.emp; o.ent += l.ent; o.pend += l.pend;
     o.lineas.push(l);
   }
-  const vel = _dashVelocidades(r.empaquesRec);
-  const conPronostico = r.tempSel === r.tempActiva;  // en temporadas pasadas no se estima
   const lista = [...byEsc.values()];
-  for (const o of lista) {
-    o.pct = o.sol > 0 ? Math.round(100 * o.ent / o.sol) : 0;
-    o.pctEmp = o.sol > 0 ? Math.round(100 * o.emp / o.sol) : 0;
-    o.velocidad = vel[o.escuela.id] || 0;
-  }
-  // Más atrasadas primero; a igual avance, la que más le falta
-  lista.sort((a, b) => a.pct - b.pct || b.pend - a.pend);
-
-  const totalEsc = lista.length;
-  const mostrar = _avanceEscColapsado ? lista.slice(0, 5) : lista;
-  const cards = mostrar.map(o => {
+  // Orden fijo y fácil de seguir: la que más le falta, primero
+  lista.sort((a, b) => b.pend - a.pend || String(a.escuela.alias || a.escuela.nombre || '').localeCompare(String(b.escuela.alias || b.escuela.nombre || ''), 'es'));
+  const pct = (v, t) => t > 0 ? 100 * v / t : 0;
+  const AZ = '#2F6FB5';
+  const filas = lista.map(o => {
     const e = o.escuela;
+    const abierta = _avEscAbierta === e.id;
     const nombre = e.alias || e.nombre || '';
-    const cde = e.codigo_cde ? `CDE ${dashEsc(e.codigo_cde)} · ` : '';
-    const colorPct = o.pct >= 100 ? 'var(--verde)' : (o.pct > 50 ? 'var(--azul)' : (o.pct > 0 ? DASH_NARANJA : '#999'));
-    const falta = o.lineas
-      .filter(l => l.pend > 0)
-      .sort((a, b) => dashOrdenPrenda(a.cod) - dashOrdenPrenda(b.cod) || dashOrdenTalla(a.talla, b.talla))
-      .map(l => `${dashEsc(dashPrendaNombre(l.cod))} ${dashEsc(l.talla)}: <strong>${dashNum(l.pend)}</strong>`);
+    const pctEnt = Math.floor(pct(o.ent, o.sol));
+    let detalle = '';
+    if (abierta) {
+      const porPrenda = new Map();
+      for (const l of o.lineas) {
+        let q = porPrenda.get(l.cod);
+        if (!q) { q = { cod: l.cod, sol: 0, emp: 0, ent: 0, pend: 0 }; porPrenda.set(l.cod, q); }
+        q.sol += l.sol; q.emp += l.emp; q.ent += l.ent; q.pend += l.pend;
+      }
+      const prendas = [...porPrenda.values()].sort((a, b) => dashOrdenPrenda(a.cod) - dashOrdenPrenda(b.cod));
+      const td = 'padding:5px 6px;text-align:right';
+      detalle = `
+        <div class="av-detalle">
+          <div class="av-nums">
+            <div><strong style="color:${DASH_NARANJA}">${dashNum(o.pend)}</strong><small>Falta</small></div>
+            <div><strong style="color:${CV_VERDE}">${dashNum(o.emp)}</strong><small>Empacado</small></div>
+            <div><strong style="color:${AZ}">${dashNum(o.ent)}</strong><small>Entregado</small></div>
+            <div><strong>${dashNum(o.sol)}</strong><small>Pedido</small></div>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px">
+            <thead><tr style="font-size:11px;color:#555">
+              <th style="padding:5px 6px;text-align:left">Prenda</th>
+              <th style="${td}">Pedido</th><th style="${td}">Empacado</th><th style="${td}">Entregado</th><th style="${td}">Falta</th>
+            </tr></thead>
+            <tbody>${prendas.map(q => `
+              <tr style="border-top:1px solid #ECEFF3">
+                <td style="padding:5px 6px">${dashEsc(dashPrendaNombre(q.cod))}</td>
+                <td style="${td}">${dashNum(q.sol)}</td>
+                <td style="${td}">${dashNum(q.emp)}</td>
+                <td style="${td}">${dashNum(q.ent)}</td>
+                <td style="${td};font-weight:700;color:${q.pend > 0 ? DASH_NARANJA : '#888'}">${dashNum(q.pend)}</td>
+              </tr>`).join('')}</tbody>
+          </table>
+          <div class="av-botones">
+            <button type="button" class="btn btn-primary" ${o.pend > 0 ? '' : 'disabled'} onclick="event.stopPropagation();avEscIr('empacar','${e.id}')">🧺 Empacar</button>
+            <button type="button" class="btn btn-success" ${o.emp > 0 ? '' : 'disabled'} onclick="event.stopPropagation();avEscIr('entrega','${e.id}')">🚚 Entregar</button>
+          </div>
+          <div class="solo-asistencia" style="font-size:12px;color:#666;margin-top:6px">«Empacar» abre el empaque de esta escuela. «Entregar» se activa cuando ya hay piezas empacadas.</div>
+        </div>`;
+    }
     return `
-      <div class="card" style="padding:10px;margin-bottom:8px">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:13px">🏫 ${dashEsc(nombre)}</div>
-            <div style="font-size:10px;color:#888">${cde}${dashNum(o.sol)} piezas pedidas</div>
-          </div>
-          <div style="text-align:right;white-space:nowrap">
-            <div style="font-size:18px;font-weight:700;color:${colorPct}">${o.pct}%</div>
-            <div style="font-size:9px;color:#888">entregado</div>
-          </div>
+      <div class="av-fila${abierta ? ' abierta' : ''}" role="button" tabindex="0" aria-expanded="${abierta}" onclick="avEscToggle('${e.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();avEscToggle('${e.id}')}">
+        <div class="av-cab">
+          <span class="av-nombre"><span style="color:#889;display:inline-block;width:14px">${abierta ? '▾' : '▸'}</span>${dashEsc(nombre)}</span>
+          <span class="av-listo" data-av-listo="${e.id}"></span>
+          <span class="av-falta"><strong>${dashNum(o.pend)}</strong><span class="solo-asistencia"> faltan</span></span>
         </div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;font-size:11px">
-          <span style="background:#FFF4E6;color:#a85;padding:2px 6px;border-radius:4px"><strong>${dashNum(o.pend)}</strong> falta empacar</span>
-          <span style="background:#E0F4E5;color:#2a6;padding:2px 6px;border-radius:4px"><strong>${dashNum(o.emp)}</strong> empacadas</span>
-          <span style="background:#E8F0FA;color:#26a;padding:2px 6px;border-radius:4px"><strong>${dashNum(o.ent)}</strong> entregadas</span>
+        <div class="av-barra" title="${pctEnt}% entregado">
+          <div style="width:${pct(o.ent, o.sol).toFixed(2)}%;background:${AZ}"></div>
+          <div style="width:${pct(o.emp, o.sol).toFixed(2)}%;background:${CV_VERDE}"></div>
         </div>
-        <!-- Barra: entregado (azul) + empacado (verde) -->
-        <div style="background:#EEE;height:6px;border-radius:3px;margin-top:6px;overflow:hidden;display:flex"
-             title="${o.pct}% entregado · ${o.pctEmp}% empacado sin entregar">
-          <div style="background:var(--azul);height:100%;width:${o.pct}%"></div>
-          <div style="background:var(--verde);height:100%;width:${o.pctEmp}%"></div>
-        </div>
-        ${falta.length ? `<div style="font-size:11px;color:#555;margin-top:6px;line-height:1.5">Falta empacar · ${falta.join(' · ')}</div>` : ''}
-        ${conPronostico ? _dashPronostico(o.pend, o.velocidad) : ''}
-        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px">
-          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('empacar','${e.id}')" style="font-size:11px;padding:4px 8px" title="Empacar piezas para esta escuela">🧺 Empacar</button>
-          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('entrega','${e.id}')" style="font-size:11px;padding:4px 8px">🚚 Entrega</button>
-        </div>
-      </div>
-    `;
+        ${detalle}
+      </div>`;
   }).join('');
-
-  return _dashMarcoAvance(totalEsc, mostrar.length, cards);
+  return `
+    <div class="card" id="dash-avance-esc" style="padding:0;overflow:hidden;margin-bottom:10px">
+      <div style="background:#F5F7FA;padding:8px 12px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <span>🏫 Escuelas<span class="solo-asistencia"> · tocá una para ver su detalle</span></span>
+        <span style="font-weight:400;font-size:11px;color:#667"><span style="color:${AZ}">■</span> entregado <span style="color:${CV_VERDE}">■</span> empacado</span>
+      </div>
+      ${filas}
+    </div>`;
 }
 
 // Temporadas con alumnos (2025): embudo por alumno
