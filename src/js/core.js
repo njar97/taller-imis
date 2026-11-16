@@ -661,16 +661,35 @@ function aplicarAyudas() {
     el.classList.toggle('oculta', ayudaCerrada(el.getAttribute('data-ayuda')));
   });
 }
-// Botón flotante «?»: muestra la ayuda de la pantalla abierta (el texto de su
-// «¿Cómo se usa?», que ya no se ve solo). Si la pantalla no tiene, dice cómo volver.
-function mostrarAyuda() {
-  const vista = document.querySelector('.view.active');
-  const tip = vista && vista.querySelector('.ayuda-tip-txt');
-  let txt = tip ? tip.textContent.replace(/^\s*¿Cómo se usa\?\s*/, '').trim() : '';
-  if (!txt) txt = 'Esta pantalla no tiene ayuda escrita.';
-  if (!vista || vista.id !== 'view-inicio') txt += '\n\nCon 🏠 se vuelve a Inicio.';
-  alert(txt);
+// Botón flotante «?» = ASISTENCIA. Apagada (por defecto): versión corta, una
+// palabra por botón. Prendida: versión extendida, con las explicaciones, los
+// textos largos (.solo-asistencia) y los «¿Cómo se usa?» de cada pantalla.
+// Queda guardado en ese aparato.
+function asistenciaActiva() { return lsLeer('asistencia') === '1'; }
+function aplicarAsistencia() {
+  const on = asistenciaActiva();
+  document.body.classList.toggle('con-asistencia', on);
+  const b = document.getElementById('btn-ayuda');
+  if (b) { b.textContent = on ? '✕' : '?'; b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.title = on ? 'Quitar las explicaciones' : 'Ver las explicaciones'; }
 }
+function toggleAsistencia() {
+  const on = !asistenciaActiva();
+  lsGuardar('asistencia', on ? '1' : null);
+  if (on) {   // que vuelvan a salir también las ayudas que alguien cerró con ✕
+    try {
+      const claves = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('ayuda_cerrada_')) claves.push(k);
+      }
+      claves.forEach(k => lsGuardar(k, null));
+    } catch (_) {}
+    if (typeof aplicarAyudas === 'function') aplicarAyudas();
+  }
+  aplicarAsistencia();
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', aplicarAsistencia);
+else aplicarAsistencia();
 function cerrarAyuda(id) {
   lsGuardar('ayuda_cerrada_' + id, '1');
   aplicarAyudas();

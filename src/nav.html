@@ -36,7 +36,9 @@
 </nav>
 <!-- Pantalla única: en el celular, botón fijo abajo para volver (css .barra-inicio) -->
 <button type="button" id="barra-inicio" class="barra-inicio" onclick="irInicio()">🏠 Inicio</button>
-<!-- Ayuda a pedido: los textos «¿Cómo se usa?» ya no se ven solos; se leen con este botón -->
-<button type="button" id="btn-ayuda" class="btn-ayuda" onclick="mostrarAyuda()" aria-label="Ayuda de esta pantalla" title="Ayuda">?</button>
+<!-- Asistencia: la app arranca en versión corta (una palabra por botón). Este
+     botón prende o apaga la versión extendida: explicaciones, textos largos y
+     los «¿Cómo se usa?» de cada pantalla (css .solo-asistencia / .ayuda-tip). -->
+<button type="button" id="btn-ayuda" class="btn-ayuda" onclick="toggleAsistencia()" aria-pressed="false" aria-label="Mostrar u ocultar las explicaciones" title="Asistencia">?</button>
 
 <div class="container">

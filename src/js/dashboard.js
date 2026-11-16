@@ -33,7 +33,7 @@ async function initDashboard() {
     ${tareasInicioHtml()}
     <div id="dashboard-sub-contenido"></div>
     <button type="button" class="menumas-btn" style="margin-top:6px" onclick="switchTab('mas')">
-      <span class="menumas-ico">☰</span><span><strong>Más</strong></span>
+      <span class="menumas-ico">☰</span><span><strong>Más</strong><small class="solo-asistencia">Bodega, registro, estadística, ajustes y las pantallas completas</small></span>
     </button>
   `;
 
@@ -55,10 +55,10 @@ function dashElegirTemporada(id) {
 // y conteo de bodega, tallas especiales…) se abre desde «Todo lo demás».
 // tareaIr() sigue aceptando los otros ids (los usa el buscador).
 const TAREAS_INICIO = [
-  { id: 'corte',    n: 1, ico: '✂️', tit: 'Tender' },
-  { id: 'bulto',    n: 2, ico: '🧵', tit: 'Terminar' },
-  { id: 'empacar',  n: 3, ico: '🧺', tit: 'Empacar' },
-  { id: 'entregar', n: 4, ico: '🚚', tit: 'Entregar' },
+  { id: 'corte',    n: 1, ico: '✂️', tit: 'Tender',   sub: 'El corte que sigue' },
+  { id: 'bulto',    n: 2, ico: '🧵', tit: 'Terminar', sub: 'El bulto sale de costura y entra a bodega' },
+  { id: 'empacar',  n: 3, ico: '🧺', tit: 'Empacar',  sub: 'Apartar lo de una escuela' },
+  { id: 'entregar', n: 4, ico: '🚚', tit: 'Entregar', sub: 'Lo empacado se va a la escuela' },
 ];
 // Texto vivo debajo de cada paso («Sigue Plan T1 · faltan 6»…).
 function tareaSubtitulo(id, txt) {
@@ -78,6 +78,7 @@ function tareasInicioHtml() {
         <button type="button" class="tarea-btn" data-tarea="${t.id}" onclick="tareaIr('${t.id}')">
           <span class="tarea-ico" aria-hidden="true">${t.ico}</span>
           <span class="tarea-tit">${t.tit}</span>
+          <span class="tarea-sub solo-asistencia" id="tarea-sub-${t.id}">${t.sub}</span>
         </button>`).join('')}
       </div>
     </section>`;
@@ -647,14 +648,14 @@ function _renderComoVamos(plan, prod, totEmp) {
         </div>
         <div style="padding:10px 12px 12px;border-bottom:1px solid #EEE">
           <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px">
-            <span style="font-size:13px;color:#555">${dashNum(tot.pedido)} piezas</span>
-            <span style="font-size:20px;font-weight:700;color:${CV_VERDE}">${pctListo(tot)}%</span>
+            <span style="font-size:13px;color:#555">${dashNum(tot.pedido)} piezas<span class="solo-asistencia"> pedidas en la temporada</span></span>
+            <span style="font-size:20px;font-weight:700;color:${CV_VERDE}">${pctListo(tot)}%<span class="solo-asistencia"> en bodega</span></span>
           </div>
           ${_cvBarra(tot, 16)}
           <div style="font-size:12px;margin-top:6px;line-height:1.7">${_cvLeyenda(tot)}</div>
         </div>
         <button type="button" class="cv-ver" aria-expanded="${_cvPorPrenda}" onclick="cvToggle()">
-          <span>${_cvPorPrenda ? '▾ Detalle' : '▸ Detalle'}</span>
+          <span>${_cvPorPrenda ? '▾ Detalle' : '▸ Detalle'}<span class="solo-asistencia" style="font-weight:400"> por prenda y talla (tocá una prenda para ver sus tallas)</span></span>
         </button>
         ${!_cvPorPrenda ? '' : `
         <div style="padding:8px 12px;border-bottom:1px solid #F0F0F0;font-size:12px;color:#555">
@@ -683,10 +684,11 @@ function _renderQueUrge(plan) {
           <span>⏰ Urge</span>
           <button class="btn btn-ghost btn-sm" onclick="dashVerPlan()" style="font-size:11px;padding:4px 8px">Plan ›</button>
         </div>
+        <div class="solo-asistencia" style="padding:4px 12px 0;font-size:12px;color:#666">Las tallas con más piezas sin empezar: lo que conviene cortar después.</div>
         ${filas.map(f => `
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 12px;border-top:1px solid #F0F0F0">
           <span style="font-size:13.5px"><strong>${dashEsc(dashPrendaNombre(f.cod_prenda))} ${dashEsc(f.talla_2026)}</strong>${f.contado === false ? ' <span style="font-size:10.5px;color:#8a4b00" title="Bodega sin contar este año">· sin contar</span>' : ''}</span>
-          <span style="font-size:13px;white-space:nowrap"><strong style="color:${DASH_NARANJA}">${dashNum(f.falta_iniciar)}</strong></span>
+          <span style="font-size:13px;white-space:nowrap"><strong style="color:${DASH_NARANJA}">${dashNum(f.falta_iniciar)}</strong><span class="solo-asistencia" style="color:#777;font-size:11.5px"> sin empezar de ${dashNum(f.pedido)}</span></span>
         </div>`).join('')}
       </div>`;
 }
@@ -712,11 +714,12 @@ async function cargarListoEmpacar() {
     if (!filas.length) { el2.innerHTML = ''; return; }
     el2.innerHTML = `
       <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
-        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">🧺 Listo</div>
+        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">🧺 Listo<span class="solo-asistencia"> para empacar</span></div>
+        <div class="solo-asistencia" style="padding:4px 12px 0;font-size:12px;color:#666">Lo que ya se puede empacar con lo que hay en bodega. Tocá una escuela para empacarla.</div>
         ${filas.slice(0, 5).map(f => `
         <button type="button" class="listo-fila" onclick="dashEmpacarEscuela('${f.id}')">
-          <span style="flex:1;min-width:0"><strong>${dashEsc(f.nombre)}</strong></span>
-          <span style="text-align:right;white-space:nowrap"><strong style="color:${CV_VERDE};font-size:17px">${dashNum(f.puede)}</strong></span>
+          <span style="flex:1;min-width:0"><strong>${dashEsc(f.nombre)}</strong><small class="solo-asistencia">le faltan ${dashNum(f.falta)} piezas</small></span>
+          <span style="text-align:right;white-space:nowrap"><strong style="color:${CV_VERDE};font-size:17px">${dashNum(f.puede)}</strong><small class="solo-asistencia">se pueden empacar</small></span>
           <span aria-hidden="true" style="color:#9aa;font-size:20px">›</span>
         </button>`).join('')}
         ${filas.length > 5 ? `<div style="padding:8px 12px;font-size:12px;color:#666;border-top:1px solid #F0F0F0">+${filas.length - 5} más</div>` : ''}
