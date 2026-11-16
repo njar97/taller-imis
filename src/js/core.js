@@ -661,6 +661,16 @@ function aplicarAyudas() {
     el.classList.toggle('oculta', ayudaCerrada(el.getAttribute('data-ayuda')));
   });
 }
+// Botón flotante «?»: muestra la ayuda de la pantalla abierta (el texto de su
+// «¿Cómo se usa?», que ya no se ve solo). Si la pantalla no tiene, dice cómo volver.
+function mostrarAyuda() {
+  const vista = document.querySelector('.view.active');
+  const tip = vista && vista.querySelector('.ayuda-tip-txt');
+  let txt = tip ? tip.textContent.replace(/^\s*¿Cómo se usa\?\s*/, '').trim() : '';
+  if (!txt) txt = 'Esta pantalla no tiene ayuda escrita.';
+  if (!vista || vista.id !== 'view-inicio') txt += '\n\nCon 🏠 se vuelve a Inicio.';
+  alert(txt);
+}
 function cerrarAyuda(id) {
   lsGuardar('ayuda_cerrada_' + id, '1');
   aplicarAyudas();

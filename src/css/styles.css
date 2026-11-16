@@ -803,3 +803,16 @@ body.modo-paso #prod-subnav { display: none !important; }
 .listo-fila { display: flex; align-items: center; gap: 10px; width: 100%; margin: 0; padding: 10px 12px; min-height: 52px; border: 0; border-top: 1px solid #F0F0F0; background: #fff; text-align: left; cursor: pointer; font-family: inherit; color: #1f2d3d; font-size: 13.5px; }
 .listo-fila:active { background: #F5F9FD; }
 .listo-fila small { display: block; font-size: 11.5px; color: #777; font-weight: 400; }
+
+/* ══ MENOS TEXTO (nov-2026): la ayuda se pide con el botón «?» ══════════ */
+.ayuda-tip { display: none !important; }
+.btn-ayuda { position: fixed; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 950; width: 46px; height: 46px; border-radius: 50%; border: 0; background: #FFB300; color: #1f2d3d; font-size: 22px; font-weight: 800; font-family: inherit; box-shadow: 0 3px 10px rgba(0,0,0,0.3); cursor: pointer; }
+.btn-ayuda:active { transform: scale(0.95); }
+.btn-ayuda:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
+@media (max-width: 640px) {
+  body.fuera-inicio .btn-ayuda { bottom: calc(72px + env(safe-area-inset-bottom)); }
+}
+/* Pasos de Inicio: ícono y una palabra */
+.tareas-grid .tarea-btn { align-items: center; justify-content: center; text-align: center; }
+.tareas-grid .tarea-tit { font-size: 17px; }
+@media (max-width: 640px) { .tareas-grid .tarea-btn { min-height: 96px; } }
