@@ -375,12 +375,16 @@ async function cargarDashboardHoy() {
 async function cargarProduccionHoy() {
   const hoy = hoyLocal();
   try {
+    // Hoy y los 6 días anteriores (para «Cómo vamos»)
+    const d = new Date(); d.setDate(d.getDate() - 6);
+    const desde = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const bultos = await supaFetch('produccion_bulto', 'GET', null,
-      `?fecha_terminado=eq.${hoy}&estado=eq.terminado&limit=500`);
-    const total = bultos.reduce((s,b) => s + (b.cantidad_final || 0), 0);
-    return { bultos: bultos.length, piezas: total };
+      `?fecha_terminado=gte.${desde}&estado=eq.terminado&select=fecha_terminado,cantidad_final&limit=2000`);
+    const deHoy = bultos.filter(b => b.fecha_terminado === hoy);
+    const suma = arr => arr.reduce((s,b) => s + (b.cantidad_final || 0), 0);
+    return { bultos: deHoy.length, piezas: suma(deHoy), bultos7: bultos.length, piezas7: suma(bultos) };
   } catch(e) {
-    return { bultos: 0, piezas: 0 };
+    return { bultos: 0, piezas: 0, bultos7: 0, piezas7: 0 };
   }
 }
 
@@ -465,7 +469,7 @@ function renderDashboard() {
     kpis = kpiHoy + kpiStock
       + _dashKpi('Empacado', dashNum(tot.emp), `faltan ${dashNum(tot.pend)} por empacar`, DASH_NARANJA)
       + _dashKpi('Entregado', dashNum(tot.ent), `de ${dashNum(tot.sol)} pedidas`, '#333');
-    cuerpo = _renderProduccionTemporada(r.plan)
+    cuerpo = _renderComoVamos(r.plan, r.produccionHoy)
       + _renderEmpaquePorPrenda(lineas)
       // («Escuelas con más por entregar» repetía «Avance por escuela»: quitada)
       + _renderAvancePedido(r, lineas);
@@ -550,55 +554,62 @@ function dashVerPlan() {
   if (window._prodHintSub && typeof switchSubProd === 'function') { window._prodHintSub = null; switchSubProd('plan'); }
 }
 
-function _renderProduccionTemporada(plan) {
+// «Cómo vamos»: por prenda, una barra con lo que ya está en bodega, lo que
+// está en costura y lo que falta empezar. Las tres partes suman el pedido.
+const CV_VERDE = '#2E9E5B', CV_AMBAR = '#E6A23C', CV_GRIS = '#D9DEE5';
+function _cvBarra(o, alto) {
+  const pct = v => o.pedido > 0 ? (100 * v / o.pedido) : 0;
+  const seg = (v, color) => v > 0 ? `<div style="width:${pct(v).toFixed(2)}%;background:${color}"></div>` : '';
+  return `<div style="display:flex;height:${alto}px;border-radius:${alto / 2}px;overflow:hidden;background:${CV_GRIS}">${seg(o.listo, CV_VERDE)}${seg(o.costura, CV_AMBAR)}</div>`;
+}
+function _cvLeyenda(o) {
+  const punto = c => `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${c};margin-right:4px"></span>`;
+  const parte = (c, n, txt) => n <= 0 ? '' : `<span style="white-space:nowrap;margin-right:10px">${punto(c)}<strong>${dashNum(n)}</strong> ${txt}</span>`;
+  return parte(CV_VERDE, o.listo, 'en bodega') + parte(CV_AMBAR, o.costura, 'en costura') + parte('#B4BCC8', o.sin, 'sin empezar');
+}
+function _renderComoVamos(plan, prod) {
   if (!plan || plan.length === 0) return '';
   const porPrenda = new Map();
-  const tot = { pedido: 0, falta_hacer: 0, en_proceso: 0, falta_iniciar: 0 };
+  const tot = { pedido: 0, listo: 0, costura: 0, sin: 0 };
   for (const f of plan) {
     let o = porPrenda.get(f.cod_prenda);
-    if (!o) {
-      o = { cod: f.cod_prenda, pedido: 0, falta_hacer: 0, en_proceso: 0, falta_iniciar: 0 };
-      porPrenda.set(f.cod_prenda, o);
-    }
-    for (const c of Object.keys(tot)) {
-      const v = Number(f[c]) || 0;
-      o[c] += v;
-      tot[c] += v;
-    }
+    if (!o) { o = { cod: f.cod_prenda, pedido: 0, listo: 0, costura: 0, sin: 0 }; porPrenda.set(f.cod_prenda, o); }
+    const pedido = Number(f.pedido) || 0, falta = Number(f.falta_hacer) || 0;
+    const v = {
+      pedido,
+      listo: Math.max(0, pedido - falta),                       // ya en bodega y sirve
+      costura: Math.min(Number(f.en_proceso) || 0, falta),      // cortado o cosiéndose (sin pasarse de lo que falta)
+      sin: Number(f.falta_iniciar) || 0,                        // ni cortado
+    };
+    for (const c of Object.keys(tot)) { o[c] += v[c]; tot[c] += v[c]; }
   }
   const filas = [...porPrenda.values()].sort((a, b) => dashOrdenPrenda(a.cod) - dashOrdenPrenda(b.cod));
-  const td = 'padding:5px 8px;text-align:right';
-  const fila = (nombre, o, negrita) => `
-            <tr style="border-top:1px solid #EEE;${negrita ? 'font-weight:700' : ''}">
-              <td style="padding:5px 8px">${nombre}</td>
-              <td style="${td}">${dashNum(o.pedido)}</td>
-              <td style="${td};color:var(--azul);font-weight:700">${dashNum(o.falta_hacer)}</td>
-              <td style="${td}">${dashNum(o.en_proceso)}</td>
-              <td style="${td};color:${o.falta_iniciar > 0 ? DASH_NARANJA : '#888'}">${dashNum(o.falta_iniciar)}</td>
-            </tr>`;
+  const pctListo = o => o.pedido > 0 ? Math.floor(100 * o.listo / o.pedido) : 0;
+  const p = prod || {};
   return `
       <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
         <div style="background:#F5F7FA;padding:8px 12px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px">
-          <span>🧵 Producción de la temporada</span>
-          <button class="btn btn-ghost btn-sm" onclick="dashVerPlan()" style="font-size:11px;padding:4px 8px">Ver plan ›</button>
+          <span>📊 Cómo vamos</span>
+          <button class="btn btn-ghost btn-sm" onclick="dashVerPlan()" style="font-size:11px;padding:4px 8px">Ver por talla ›</button>
         </div>
-        <div style="padding:8px 12px 2px;font-size:13px">
-          <span style="font-size:18px;font-weight:700;color:var(--azul)">Falta hacer ${dashNum(tot.falta_hacer)}</span>
-          <span style="color:#666"> · ${dashNum(tot.en_proceso)} en proceso · ${dashNum(tot.falta_iniciar)} sin iniciar</span>
+        <div style="padding:10px 12px 12px;border-bottom:1px solid #EEE">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px">
+            <span style="font-size:13px;color:#555">De ${dashNum(tot.pedido)} piezas pedidas</span>
+            <span style="font-size:20px;font-weight:700;color:${CV_VERDE}">${pctListo(tot)}% en bodega</span>
+          </div>
+          ${_cvBarra(tot, 16)}
+          <div style="font-size:12px;margin-top:6px;line-height:1.7">${_cvLeyenda(tot)}</div>
+          <div style="font-size:12px;color:#555;margin-top:6px">Terminado hoy: <strong>${dashNum(p.piezas)}</strong> piezas · últimos 7 días: <strong>${dashNum(p.piezas7)}</strong></div>
         </div>
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead>
-            <tr style="background:#FAFAFA;font-size:11px">
-              <th style="padding:6px 8px;text-align:left">Prenda</th>
-              <th style="padding:6px 8px;text-align:right">Pedido</th>
-              <th style="padding:6px 8px;text-align:right;color:var(--azul)">Falta hacer</th>
-              <th style="padding:6px 8px;text-align:right">En proceso</th>
-              <th style="padding:6px 8px;text-align:right">Sin iniciar</th>
-            </tr>
-          </thead>
-          <tbody>${filas.map(o => fila(dashEsc(dashPrendaNombre(o.cod)), o, false)).join('')}</tbody>
-          <tfoot>${fila('Total', tot, true)}</tfoot>
-        </table>
+        ${filas.map(o => `
+        <div style="padding:9px 12px;border-bottom:1px solid #F0F0F0">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px">
+            <span style="font-weight:600;font-size:13px">${dashEsc(dashPrendaNombre(o.cod))} <span style="font-weight:400;color:#888;font-size:11px">· ${dashNum(o.pedido)} pedidas</span></span>
+            <span style="font-size:12px;font-weight:700;color:${o.listo > 0 ? CV_VERDE : '#999'}">${pctListo(o)}%</span>
+          </div>
+          ${_cvBarra(o, 10)}
+          <div style="font-size:11px;color:#444;margin-top:4px;line-height:1.7">${_cvLeyenda(o)}</div>
+        </div>`).join('')}
       </div>`;
 }
 
