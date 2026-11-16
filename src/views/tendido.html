@@ -36,7 +36,8 @@
 
     <div class="card">
       <div class="card-title">3. Rollos tendidos</div>
-      <div class="alert alert-info">💡 Agregá rollos en el orden que se tienden. Al guardar, el sistema invierte la numeración: el último tendido queda como bulto #1.</div>
+      <!-- Contador vivo: «van 120 de 304 telas», por color, y avisos de plan y tope -->
+      <div id="td-contador" class="td-contador"></div>
       <div id="td-rollos-container"></div>
       <button class="btn btn-ghost btn-sm mt8" onclick="agregarRolloTendido()">+ Agregar rollo</button>
     </div>

@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-15 22:52 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-15 23:10 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -828,6 +828,30 @@ body.modo-paso #prod-subnav { display: none !important; }
 .listo-fila:active { background: #F5F9FD; }
 .listo-fila small { display: block; font-size: 11.5px; color: #777; font-weight: 400; }
 
+/* ══ MENOS TEXTO (nov-2026): la ayuda se pide con el botón «?» ══════════ */
+body:not(.con-asistencia) .ayuda-tip { display: none !important; }
+body:not(.con-asistencia) .solo-asistencia { display: none !important; }
+body.con-asistencia .btn-ayuda { background: #1f2d3d; color: #fff; }
+.btn-ayuda { position: fixed; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 950; width: 46px; height: 46px; border-radius: 50%; border: 0; background: #FFB300; color: #1f2d3d; font-size: 22px; font-weight: 800; font-family: inherit; box-shadow: 0 3px 10px rgba(0,0,0,0.3); cursor: pointer; }
+.btn-ayuda:active { transform: scale(0.95); }
+.btn-ayuda:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
+@media (max-width: 640px) {
+  body.fuera-inicio .btn-ayuda { bottom: calc(72px + env(safe-area-inset-bottom)); }
+}
+/* Pasos de Inicio: ícono y una palabra */
+.tareas-grid .tarea-btn { align-items: center; justify-content: center; text-align: center; }
+.tareas-grid .tarea-tit { font-size: 17px; }
+@media (max-width: 640px) { .tareas-grid .tarea-btn { min-height: 96px; } }
+
+/* Tendido: contador de telas, pegado arriba mientras se agregan rollos */
+.td-contador { position: sticky; top: 62px; z-index: 5; background: #fff; padding: 8px 0 6px; margin-bottom: 8px; border-bottom: 1px solid #EEE; }
+.td-contador:empty { display: none; }
+.td-rollo-caja { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 4px; }
+.td-rollo-caja:empty { display: none; }
+.td-rollo-nota { font-size: 12.5px; color: #8a4b00; width: 100%; }
+.td-rollo-chip { margin: 0; padding: 8px 12px; min-height: 40px; border: 1px solid #C9D3DF; border-radius: 20px; background: #fff; font-family: inherit; font-size: 13px; cursor: pointer; color: #1f2d3d; }
+.td-rollo-chip.on { background: #E8F6EE; border-color: #2E9E5B; font-weight: 700; }
+
 </style>
 </head>
 
@@ -868,7 +892,11 @@ body.modo-paso #prod-subnav { display: none !important; }
   </div>
 </nav>
 <!-- Pantalla única: en el celular, botón fijo abajo para volver (css .barra-inicio) -->
-<button type="button" id="barra-inicio" class="barra-inicio" onclick="irInicio()">🏠 Volver a Inicio</button>
+<button type="button" id="barra-inicio" class="barra-inicio" onclick="irInicio()">🏠 Inicio</button>
+<!-- Asistencia: la app arranca en versión corta (una palabra por botón). Este
+     botón prende o apaga la versión extendida: explicaciones, textos largos y
+     los «¿Cómo se usa?» de cada pantalla (css .solo-asistencia / .ayuda-tip). -->
+<button type="button" id="btn-ayuda" class="btn-ayuda" onclick="toggleAsistencia()" aria-pressed="false" aria-label="Mostrar u ocultar las explicaciones" title="Asistencia">?</button>
 
 <div class="container">
 
@@ -882,16 +910,15 @@ body.modo-paso #prod-subnav { display: none !important; }
 <!-- ══════════ TODO LO DEMÁS: las pantallas completas ══════════ -->
 <div id="view-mas" class="view">
   <div class="card" style="padding:14px">
-    <div style="font-size:17px;font-weight:700;margin-bottom:4px">Todo lo demás</div>
-    <div class="text-muted" style="font-size:12.5px;margin-bottom:10px">Las pantallas completas, para cuando haga falta. Con 🏠 se vuelve a Inicio.</div>
+    <div style="font-size:17px;font-weight:700;margin-bottom:10px">Más</div>
     <div class="menumas-lista">
-      <button type="button" class="menumas-btn" onclick="abrirPestana('corte')"><span class="menumas-ico">✂️</span><span><strong>Corte</strong><small>Trazos, tendidos, bultos y hojas de corte</small></span></button>
-      <button type="button" class="menumas-btn" onclick="abrirPestana('produccion')"><span class="menumas-ico">🏭</span><span><strong>Producción</strong><small>Bultos, plan por talla y operarias</small></span></button>
-      <button type="button" class="menumas-btn" onclick="abrirPestana('bodega')"><span class="menumas-ico">📦</span><span><strong>Bodega</strong><small>Lo que hay en el estante, entradas y conteo</small></span></button>
-      <button type="button" class="menumas-btn" onclick="abrirPestana('empaque')"><span class="menumas-ico">🧺</span><span><strong>Empaque</strong><small>Apartar lo de cada escuela</small></span></button>
-      <button type="button" class="menumas-btn" onclick="abrirPestana('registro')"><span class="menumas-ico">📋</span><span><strong>Registro</strong><small>Escuelas, pedido y tallas especiales</small></span></button>
-      <button type="button" class="menumas-btn" onclick="abrirPestana('estadistica')"><span class="menumas-ico">📊</span><span><strong>Estadística</strong><small>Números por escuela y por talla</small></span></button>
-      <button type="button" class="menumas-btn" onclick="abrirPestana('config')"><span class="menumas-ico">⚙️</span><span><strong>Ajustes</strong><small>Configuración de la app</small></span></button>
+      <button type="button" class="menumas-btn" onclick="abrirPestana('corte')"><span class="menumas-ico">✂️</span><span><strong>Corte</strong><small class="solo-asistencia">Trazos, tendidos, bultos y hojas de corte</small></span></button>
+      <button type="button" class="menumas-btn" onclick="abrirPestana('produccion')"><span class="menumas-ico">🏭</span><span><strong>Producción</strong><small class="solo-asistencia">Bultos, plan por talla y operarias</small></span></button>
+      <button type="button" class="menumas-btn" onclick="abrirPestana('bodega')"><span class="menumas-ico">📦</span><span><strong>Bodega</strong><small class="solo-asistencia">Lo que hay en el estante, entradas y conteo</small></span></button>
+      <button type="button" class="menumas-btn" onclick="abrirPestana('empaque')"><span class="menumas-ico">🧺</span><span><strong>Empaque</strong><small class="solo-asistencia">Apartar lo de cada escuela</small></span></button>
+      <button type="button" class="menumas-btn" onclick="abrirPestana('registro')"><span class="menumas-ico">📋</span><span><strong>Registro</strong><small class="solo-asistencia">Escuelas, pedido y tallas especiales</small></span></button>
+      <button type="button" class="menumas-btn" onclick="abrirPestana('estadistica')"><span class="menumas-ico">📊</span><span><strong>Estadística</strong><small class="solo-asistencia">Números por escuela y por talla</small></span></button>
+      <button type="button" class="menumas-btn" onclick="abrirPestana('config')"><span class="menumas-ico">⚙️</span><span><strong>Ajustes</strong><small class="solo-asistencia">Configuración de la app</small></span></button>
     </div>
   </div>
 </div>
@@ -1095,7 +1122,8 @@ body.modo-paso #prod-subnav { display: none !important; }
 
     <div class="card">
       <div class="card-title">3. Rollos tendidos</div>
-      <div class="alert alert-info">💡 Agregá rollos en el orden que se tienden. Al guardar, el sistema invierte la numeración: el último tendido queda como bulto #1.</div>
+      <!-- Contador vivo: «van 120 de 304 telas», por color, y avisos de plan y tope -->
+      <div id="td-contador" class="td-contador"></div>
       <div id="td-rollos-container"></div>
       <button class="btn btn-ghost btn-sm mt8" onclick="agregarRolloTendido()">+ Agregar rollo</button>
     </div>
@@ -3802,6 +3830,35 @@ function aplicarAyudas() {
     el.classList.toggle('oculta', ayudaCerrada(el.getAttribute('data-ayuda')));
   });
 }
+// Botón flotante «?» = ASISTENCIA. Apagada (por defecto): versión corta, una
+// palabra por botón. Prendida: versión extendida, con las explicaciones, los
+// textos largos (.solo-asistencia) y los «¿Cómo se usa?» de cada pantalla.
+// Queda guardado en ese aparato.
+function asistenciaActiva() { return lsLeer('asistencia') === '1'; }
+function aplicarAsistencia() {
+  const on = asistenciaActiva();
+  document.body.classList.toggle('con-asistencia', on);
+  const b = document.getElementById('btn-ayuda');
+  if (b) { b.textContent = on ? '✕' : '?'; b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.title = on ? 'Quitar las explicaciones' : 'Ver las explicaciones'; }
+}
+function toggleAsistencia() {
+  const on = !asistenciaActiva();
+  lsGuardar('asistencia', on ? '1' : null);
+  if (on) {   // que vuelvan a salir también las ayudas que alguien cerró con ✕
+    try {
+      const claves = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('ayuda_cerrada_')) claves.push(k);
+      }
+      claves.forEach(k => lsGuardar(k, null));
+    } catch (_) {}
+    if (typeof aplicarAyudas === 'function') aplicarAyudas();
+  }
+  aplicarAsistencia();
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', aplicarAsistencia);
+else aplicarAsistencia();
 function cerrarAyuda(id) {
   lsGuardar('ayuda_cerrada_' + id, '1');
   aplicarAyudas();
@@ -4364,7 +4421,7 @@ async function initDashboard() {
     ${tareasInicioHtml()}
     <div id="dashboard-sub-contenido"></div>
     <button type="button" class="menumas-btn" style="margin-top:6px" onclick="switchTab('mas')">
-      <span class="menumas-ico">☰</span><span><strong>Todo lo demás</strong><small>Bodega, registro, estadística, ajustes y las pantallas completas</small></span>
+      <span class="menumas-ico">☰</span><span><strong>Más</strong><small class="solo-asistencia">Bodega, registro, estadística, ajustes y las pantallas completas</small></span>
     </button>
   `;
 
@@ -4386,10 +4443,10 @@ function dashElegirTemporada(id) {
 // y conteo de bodega, tallas especiales…) se abre desde «Todo lo demás».
 // tareaIr() sigue aceptando los otros ids (los usa el buscador).
 const TAREAS_INICIO = [
-  { id: 'corte',    n: 1, ico: '✂️', tit: 'Tender',         sub: 'El corte que sigue' },
-  { id: 'bulto',    n: 2, ico: '🧵', tit: 'Terminar bulto', sub: 'Sale de costura y entra a bodega' },
-  { id: 'empacar',  n: 3, ico: '🧺', tit: 'Empacar',        sub: 'Apartar lo de una escuela' },
-  { id: 'entregar', n: 4, ico: '🚚', tit: 'Entregar',       sub: 'Lo empacado se va a la escuela' },
+  { id: 'corte',    n: 1, ico: '✂️', tit: 'Tender',   sub: 'El corte que sigue' },
+  { id: 'bulto',    n: 2, ico: '🧵', tit: 'Terminar', sub: 'El bulto sale de costura y entra a bodega' },
+  { id: 'empacar',  n: 3, ico: '🧺', tit: 'Empacar',  sub: 'Apartar lo de una escuela' },
+  { id: 'entregar', n: 4, ico: '🚚', tit: 'Entregar', sub: 'Lo empacado se va a la escuela' },
 ];
 // Texto vivo debajo de cada paso («Sigue Plan T1 · faltan 6»…).
 function tareaSubtitulo(id, txt) {
@@ -4399,18 +4456,17 @@ function tareaSubtitulo(id, txt) {
 
 function tareasInicioHtml() {
   const ayuda = typeof ayudaHtml === 'function'
-    ? ayudaHtml('inicio', 'Arriba se ve cómo va el trabajo; tocá una prenda para ver sus tallas. Abajo están los cuatro pasos: tocá el que vas a anotar. Con 🏠 se vuelve aquí.')
+    ? ayudaHtml('inicio', 'Arriba, cómo va el trabajo: verde es lo que ya está en bodega, amarillo lo que está en costura y gris lo que falta empezar. «Detalle» lo abre por prenda y por talla. Los cuatro botones son los pasos del trabajo: tocá el que vas a anotar. «Urge» son las tallas con más piezas sin empezar. «Listo» son las escuelas a las que ya se les puede empacar algo; el número es cuántas piezas. «Más» abre el resto de pantallas. Con 🏠 se vuelve aquí.')
     : '';
   return `
-    <section class="card tareas-card" aria-labelledby="tareas-tit">
+    <section class="card tareas-card" aria-label="Pasos del trabajo">
       ${ayuda}
-      <h2 class="tareas-tit" id="tareas-tit">¿Qué vas a anotar?</h2>
       <div class="tareas-grid">
         ${TAREAS_INICIO.map(t => `
         <button type="button" class="tarea-btn" data-tarea="${t.id}" onclick="tareaIr('${t.id}')">
           <span class="tarea-ico" aria-hidden="true">${t.ico}</span>
-          <span class="tarea-tit">${t.n}. ${t.tit}</span>
-          <span class="tarea-sub" id="tarea-sub-${t.id}">${t.sub}</span>
+          <span class="tarea-tit">${t.tit}</span>
+          <span class="tarea-sub solo-asistencia" id="tarea-sub-${t.id}">${t.sub}</span>
         </button>`).join('')}
       </div>
     </section>`;
@@ -4980,18 +5036,19 @@ function _renderComoVamos(plan, prod, totEmp) {
         </div>
         <div style="padding:10px 12px 12px;border-bottom:1px solid #EEE">
           <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px">
-            <span style="font-size:13px;color:#555">De ${dashNum(tot.pedido)} piezas pedidas</span>
-            <span style="font-size:20px;font-weight:700;color:${CV_VERDE}">${pctListo(tot)}% en bodega</span>
+            <span style="font-size:13px;color:#555">${dashNum(tot.pedido)} piezas<span class="solo-asistencia"> pedidas en la temporada</span></span>
+            <span style="font-size:20px;font-weight:700;color:${CV_VERDE}">${pctListo(tot)}%<span class="solo-asistencia"> en bodega</span></span>
           </div>
           ${_cvBarra(tot, 16)}
           <div style="font-size:12px;margin-top:6px;line-height:1.7">${_cvLeyenda(tot)}</div>
-          <div style="font-size:12px;color:#555;margin-top:6px">Terminado hoy: <strong>${dashNum(p.piezas)}</strong> piezas · últimos 7 días: <strong>${dashNum(p.piezas7)}</strong></div>
-          ${totEmp ? `<div style="font-size:12px;color:#555;margin-top:2px">Empacado para escuelas: <strong>${dashNum(totEmp.emp)}</strong> · entregado: <strong>${dashNum(totEmp.ent)}</strong> de ${dashNum(totEmp.sol)}</div>` : ''}
         </div>
         <button type="button" class="cv-ver" aria-expanded="${_cvPorPrenda}" onclick="cvToggle()">
-          <span>${_cvPorPrenda ? '▾ Ocultar el detalle por prenda' : '▸ Ver por prenda y talla'}</span>
+          <span>${_cvPorPrenda ? '▾ Detalle' : '▸ Detalle'}<span class="solo-asistencia" style="font-weight:400"> por prenda y talla (tocá una prenda para ver sus tallas)</span></span>
         </button>
-        ${!_cvPorPrenda ? '' : filas.map(o => `
+        ${!_cvPorPrenda ? '' : `
+        <div style="padding:8px 12px;border-bottom:1px solid #F0F0F0;font-size:12px;color:#555">
+          Hoy <strong>${dashNum(p.piezas)}</strong> · 7 días <strong>${dashNum(p.piezas7)}</strong>${totEmp ? ` · Empacado <strong>${dashNum(totEmp.emp)}</strong> · Entregado <strong>${dashNum(totEmp.ent)}</strong>` : ''}
+        </div>` + filas.map(o => `
         <div class="cv-prenda" role="button" tabindex="0" aria-expanded="${_cvAbiertas.has(o.cod)}" onclick="cvToggle('${o.cod}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();cvToggle('${o.cod}')}" style="padding:9px 12px;border-bottom:1px solid #F0F0F0;cursor:pointer">
           <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px">
             <span style="font-weight:600;font-size:13px"><span style="color:#889;display:inline-block;width:14px">${_cvAbiertas.has(o.cod) ? '▾' : '▸'}</span>${dashEsc(dashPrendaNombre(o.cod))} <span style="font-weight:400;color:#888;font-size:11px">· ${dashNum(o.pedido)} pedidas</span></span>
@@ -5012,14 +5069,14 @@ function _renderQueUrge(plan) {
   return `
       <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
         <div style="background:#F5F7FA;padding:8px 12px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px">
-          <span>⏰ Qué urge</span>
-          <button class="btn btn-ghost btn-sm" onclick="dashVerPlan()" style="font-size:11px;padding:4px 8px">Ver plan ›</button>
+          <span>⏰ Urge</span>
+          <button class="btn btn-ghost btn-sm" onclick="dashVerPlan()" style="font-size:11px;padding:4px 8px">Plan ›</button>
         </div>
-        <div style="padding:2px 12px 0;font-size:11.5px;color:#666">Las tallas con más piezas sin empezar.</div>
+        <div class="solo-asistencia" style="padding:4px 12px 0;font-size:12px;color:#666">Las tallas con más piezas sin empezar: lo que conviene cortar después.</div>
         ${filas.map(f => `
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 12px;border-top:1px solid #F0F0F0">
-          <span style="font-size:13.5px"><strong>${dashEsc(dashPrendaNombre(f.cod_prenda))} ${dashEsc(f.talla_2026)}</strong>${f.contado === false ? ' <span style="font-size:10.5px;color:#8a4b00">· bodega sin contar</span>' : ''}</span>
-          <span style="font-size:13px;white-space:nowrap"><strong style="color:${DASH_NARANJA}">${dashNum(f.falta_iniciar)}</strong> <span style="color:#777;font-size:11.5px">sin empezar de ${dashNum(f.pedido)}</span></span>
+          <span style="font-size:13.5px"><strong>${dashEsc(dashPrendaNombre(f.cod_prenda))} ${dashEsc(f.talla_2026)}</strong>${f.contado === false ? ' <span style="font-size:10.5px;color:#8a4b00" title="Bodega sin contar este año">· sin contar</span>' : ''}</span>
+          <span style="font-size:13px;white-space:nowrap"><strong style="color:${DASH_NARANJA}">${dashNum(f.falta_iniciar)}</strong><span class="solo-asistencia" style="color:#777;font-size:11.5px"> sin empezar de ${dashNum(f.pedido)}</span></span>
         </div>`).join('')}
       </div>`;
 }
@@ -5045,15 +5102,15 @@ async function cargarListoEmpacar() {
     if (!filas.length) { el2.innerHTML = ''; return; }
     el2.innerHTML = `
       <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
-        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">🧺 Listo para empacar</div>
-        <div style="padding:2px 12px 0;font-size:11.5px;color:#666">Lo que ya se puede empacar con lo que hay en bodega. Tocá una escuela para empacarla.</div>
+        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">🧺 Listo<span class="solo-asistencia"> para empacar</span></div>
+        <div class="solo-asistencia" style="padding:4px 12px 0;font-size:12px;color:#666">Lo que ya se puede empacar con lo que hay en bodega. Tocá una escuela para empacarla.</div>
         ${filas.slice(0, 5).map(f => `
         <button type="button" class="listo-fila" onclick="dashEmpacarEscuela('${f.id}')">
-          <span style="flex:1;min-width:0"><strong>${dashEsc(f.nombre)}</strong><small>le faltan ${dashNum(f.falta)} piezas</small></span>
-          <span style="text-align:right;white-space:nowrap"><strong style="color:${CV_VERDE};font-size:17px">${dashNum(f.puede)}</strong><small>se pueden empacar</small></span>
+          <span style="flex:1;min-width:0"><strong>${dashEsc(f.nombre)}</strong><small class="solo-asistencia">le faltan ${dashNum(f.falta)} piezas</small></span>
+          <span style="text-align:right;white-space:nowrap"><strong style="color:${CV_VERDE};font-size:17px">${dashNum(f.puede)}</strong><small class="solo-asistencia">se pueden empacar</small></span>
           <span aria-hidden="true" style="color:#9aa;font-size:20px">›</span>
         </button>`).join('')}
-        ${filas.length > 5 ? `<div style="padding:8px 12px;font-size:12px;color:#666;border-top:1px solid #F0F0F0">y ${filas.length - 5} escuela(s) más en «3. Empacar».</div>` : ''}
+        ${filas.length > 5 ? `<div style="padding:8px 12px;font-size:12px;color:#666;border-top:1px solid #F0F0F0">+${filas.length - 5} más</div>` : ''}
       </div>`;
   } catch (e) {
     console.warn('[inicio] listo para empacar:', e && e.message || e);
@@ -8962,7 +9019,168 @@ async function guardarTrazo() {
 
 // +++++++++++++++++++ tendido.js +++++++++++++++++++
 // ══════════════════════════════════════════════════════════════════════
+// ── Rollos de bodega (tela_rollo) ─────────────────────────────────────
+// Al tender se elige el rollo de una lista: las yardas se llenan solas y,
+// al guardar, al rollo se le deja lo que sobró (0 = agotado, ya no sale).
+const TD_TOPE_TELAS = 320;          // máximo de telas por tendido
+let tdRollosBodega = [];            // rollos con yardas disponibles
+function tdEsc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function tdNombreRollo(r) {
+  const quien = r.persona === 'Javier' ? 'JAV' : (r.persona || '');
+  return [quien, r._escuela || '', r.numero_rollo || ''].filter(Boolean).join(' ');
+}
+async function tdCargarRollosBodega() {
+  try {
+    const [rollos, escuelas] = await Promise.all([
+      supaFetchAll('tela_rollo', '?estado=eq.en_bodega&yardas_disponibles=gt.0' +
+        '&select=id,persona,escuela_id,numero_rollo,color,yardas,yardas_disponibles&order=color,persona,numero_rollo'),
+      supaFetchAll('escuela', '?select=id,alias,nombre'),
+    ]);
+    const esc = new Map((escuelas || []).map(e => [e.id, e.alias || e.nombre || '']));
+    tdRollosBodega = (rollos || []).map(r => ({ ...r, _escuela: esc.get(r.escuela_id) || '' }));
+  } catch (e) {
+    tdRollosBodega = [];
+    console.warn('[tendido] no se pudieron cargar los rollos de bodega:', e && e.message || e);
+  }
+}
+// Rollos que sirven para el trazo elegido (por color de tela).
+function tdRollosDelTrazo() {
+  const cols = ((trazoSeleccionado && trazoSeleccionado.trazo.colores_tela) || []).map(c => String(c).toUpperCase());
+  return cols.length ? tdRollosBodega.filter(r => cols.includes(String(r.color || '').toUpperCase())) : tdRollosBodega;
+}
+// Yardas que gasta una tela (lienzo) del trazo elegido.
+function tdYardasPorTela() {
+  const cm = trazoSeleccionado ? Number(trazoSeleccionado.trazo.largo_cm) || 0 : 0;
+  return cm > 0 ? cm / 91.44 : 0;
+}
+// El rollo se busca SOLO por su cantidad de tela: se escriben las yardas y
+// salen los rollos de bodega con esa medida (del color del trazo). Si hay uno
+// solo, queda elegido; si hay varios, se toca cuál. Si no hay ninguno, se
+// anota igual como rollo que no está en la lista.
+function tdBuscarRollo(rolloId) {
+  const card = document.getElementById('trollo-' + rolloId);
+  if (!card) return;
+  const yd = parseFloat(card.querySelector('[data-tfield="yardas_rollo"]').value);
+  const caja = card.querySelector('[data-tmatches]');
+  const usados = new Set([...document.querySelectorAll('.rollo-card')]
+    .filter(c => c !== card).map(c => c.dataset.telaId).filter(Boolean));
+  const iguales = !(yd > 0) ? [] : tdRollosDelTrazo()
+    .filter(r => !usados.has(r.id) && Math.abs(Number(r.yardas_disponibles) - yd) < 0.01);
+  let elegido = iguales.find(r => r.id === card.dataset.telaId) || null;
+  if (!elegido && iguales.length === 1) elegido = iguales[0];
+  if (elegido) { card.dataset.telaId = elegido.id; card.dataset.telaColor = String(elegido.color || '').toUpperCase(); }
+  else { delete card.dataset.telaId; delete card.dataset.telaColor; }
+  if (!caja) return;
+  const bonito = c => { c = String(c || ''); return c.charAt(0).toUpperCase() + c.slice(1).toLowerCase(); };
+  if (!(yd > 0)) { caja.innerHTML = ''; return; }
+  if (!iguales.length) {
+    caja.innerHTML = '<span class="td-rollo-nota">No está en la lista: se anota como rollo nuevo.</span>';
+    return;
+  }
+  caja.innerHTML = (iguales.length > 1 && !elegido ? `<span class="td-rollo-nota">Hay ${iguales.length} de ${yd} yd. Tocá cuál:</span>` : '')
+    + iguales.slice(0, 8).map(r => `<button type="button" class="td-rollo-chip${elegido && elegido.id === r.id ? ' on' : ''}" onclick="tdElegirRollo(${rolloId},'${r.id}')">${elegido && elegido.id === r.id ? '✓ ' : ''}${tdEsc(bonito(r.color))} · ${tdEsc(tdNombreRollo(r))}</button>`).join('');
+}
+function tdElegirRollo(rolloId, telaId) {
+  const card = document.getElementById('trollo-' + rolloId);
+  if (!card) return;
+  card.dataset.telaId = telaId;
+  tdRefrescarListas();
+  recalcTotalesTendido();
+}
+function tdRefrescarListas() {
+  document.querySelectorAll('.rollo-card').forEach(c => tdBuscarRollo(c.id.replace('trollo-', '')));
+}
+function onYardasRollo(rolloId) {
+  tdRefrescarListas();
+  tdTelasAuto(rolloId);
+  onCapasChange(rolloId);
+}
+// El tendido se va llenando solo con lo del plan: al poner las yardas, las
+// telas son las que da el rollo (sin pasarse de lo que falta del plan; en
+// número par si el trazo lleva tallas en par). Si la persona escribe las
+// telas a mano, se respeta lo que escribió.
+function tdTelasAuto(rolloId) {
+  const card = document.getElementById('trollo-' + rolloId);
+  if (!card) return;
+  const telas = card.querySelector('[data-tfield="lienzos_salidos"]');
+  if (telas.dataset.manual === '1') return;
+  const yd = parseFloat(card.querySelector('[data-tfield="yardas_rollo"]').value) || 0;
+  const porTela = tdYardasPorTela();
+  if (!(yd > 0 && porTela > 0)) { telas.value = ''; return; }
+  let n = Math.floor(yd / porTela);
+  const plan = trazoSeleccionado ? Number(trazoSeleccionado.trazo.capas) || 0 : 0;
+  if (plan > 0) {
+    let otras = 0;
+    document.querySelectorAll('.rollo-card').forEach(c => {
+      if (c !== card) otras += parseInt(c.querySelector('[data-tfield="lienzos_salidos"]').value) || 0;
+    });
+    n = Math.min(n, Math.max(0, plan - otras));
+  }
+  if (trazoSeleccionado && trazoSeleccionado.tallas.some(t => t.tipo === 'par')) n -= n % 2;
+  telas.value = n > 0 ? n : '';
+}
+// Cuando el último rollo ya tiene yardas y telas y todavía falta para el
+// plan, aparece solo el renglón del rollo que sigue.
+function tdAutoAgregar() {
+  const cards = [...document.querySelectorAll('.rollo-card')];
+  const ult = cards[cards.length - 1];
+  if (!ult) return;
+  const val = f => parseFloat(ult.querySelector(`[data-tfield="${f}"]`).value) || 0;
+  if (!(val('yardas_rollo') > 0 && val('lienzos_salidos') > 0)) return;
+  let van = 0;
+  cards.forEach(c => { van += parseInt(c.querySelector('[data-tfield="lienzos_salidos"]').value) || 0; });
+  const plan = trazoSeleccionado ? Number(trazoSeleccionado.trazo.capas) || 0 : 0;
+  if (plan > 0 && van < plan && van < TD_TOPE_TELAS) agregarRolloTendido();
+}
+// Sobrante = yardas del rollo − telas × largo del trazo (de media en media
+// yarda, hacia abajo). Si la persona lo escribe a mano, se respeta.
+function tdSobranteAuto(rolloId) {
+  const card = document.getElementById('trollo-' + rolloId);
+  if (!card) return;
+  const get = f => card.querySelector(`[data-tfield="${f}"]`);
+  const yd = parseFloat(get('yardas_rollo').value) || 0;
+  const capas = parseInt(get('lienzos_salidos').value) || 0;
+  const porTela = tdYardasPorTela();
+  const pista = card.querySelector('[data-tpista]');
+  if (pista) pista.textContent = (yd > 0 && porTela > 0) ? `Da para ${Math.floor(yd / porTela)} telas` : '';
+  const sob = get('yardas_sobrantes');
+  if (sob.dataset.manual === '1' || !(yd > 0 && porTela > 0 && capas > 0)) return;
+  sob.value = Math.max(0, Math.floor((yd - capas * porTela) * 2) / 2);
+}
+function tdPintarContador() {
+  const el = document.getElementById('td-contador');
+  if (!el) return;
+  const plan = trazoSeleccionado ? Number(trazoSeleccionado.trazo.capas) || 0 : 0;
+  let van = 0; const porColor = new Map();
+  document.querySelectorAll('.rollo-card').forEach(c => {
+    const n = parseInt(c.querySelector('[data-tfield="lienzos_salidos"]').value) || 0;
+    van += n;
+    const col = c.dataset.telaColor || '';
+    if (n && col) porColor.set(col, (porColor.get(col) || 0) + n);
+  });
+  const meta = plan || TD_TOPE_TELAS;
+  const pct = Math.min(100, meta ? 100 * van / meta : 0);
+  const pasaTope = van > TD_TOPE_TELAS, llego = plan > 0 && van >= plan;
+  const color = pasaTope ? '#C0392B' : (llego ? '#2E9E5B' : 'var(--azul)');
+  const colores = [...porColor].map(([c, n]) => `${tdEsc(c.charAt(0) + c.slice(1).toLowerCase())} ${n}`).join(' · ');
+  let aviso = '';
+  if (pasaTope) aviso = `⚠ Pasa el tope de ${TD_TOPE_TELAS} telas`;
+  else if (plan && van > plan) aviso = `Van ${van - plan} de más`;
+  else if (llego) aviso = '✓ Completo';
+  else if (plan) aviso = `Faltan ${plan - van}`;
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+      <span style="font-size:20px;font-weight:700;color:${color}">${van}${plan ? ` de ${plan}` : ''} telas</span>
+      <span style="font-size:13px;font-weight:700;color:${color}">${aviso}</span>
+    </div>
+    <div style="height:10px;border-radius:5px;background:#D9DEE5;overflow:hidden;margin:6px 0 4px"><div style="height:100%;width:${pct.toFixed(1)}%;background:${color}"></div></div>
+    ${colores ? `<div style="font-size:12px;color:#555">${colores}</div>` : ''}`;
+}
+
 async function initTendido() {
+  tdCargarRollosBodega().then(() => tdRefrescarListas());
   document.getElementById('td-fecha').value = hoyLocal();
   ['td-equipo','td-observaciones'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('td-rollos-container').innerHTML = '';
@@ -9034,6 +9252,7 @@ async function onElegirTrazo() {
     if (document.querySelectorAll('.rollo-card').length === 0) {
       agregarRolloTendido();
     }
+    tdRefrescarListas();   // la lista depende del color de tela del trazo
     recalcTotalesTendido();
   } catch(e) {
     mostrarAlerta('tendido','error','Error: ' + e.message);
@@ -9085,13 +9304,15 @@ function agregarRolloTendido() {
         <div class="rollo-num">Rollo #${id} <span class="text-muted" style="font-weight:400">(orden de tendido)</span></div>
         <div class="equivalencia-pares" id="pares-${id}">0 pares</div>
       </div>
-      ${id>1?`<button class="btn btn-danger" onclick="document.getElementById('trollo-${id}').remove();recalcTotalesTendido()">✕</button>`:''}
+      ${id>1?`<button class="btn btn-danger" onclick="document.getElementById('trollo-${id}').remove();tdRefrescarListas();recalcTotalesTendido()">✕</button>`:''}
     </div>
     <div class="row3">
-      <div class="field"><label>Yardas del rollo</label><input type="number" step="0.5" data-trollo="${id}" data-tfield="yardas_rollo" oninput="recalcTotalesTendido()"></div>
-      <div class="field"><label>Capas (lienzos)</label><input type="number" min="0" data-trollo="${id}" data-tfield="lienzos_salidos" oninput="onCapasChange(${id})"></div>
-      <div class="field"><label>Yardas sobrantes</label><input type="number" step="0.5" data-trollo="${id}" data-tfield="yardas_sobrantes" oninput="recalcTotalesTendido()"></div>
+      <div class="field"><label>Yardas del rollo</label><input type="number" step="0.5" inputmode="decimal" data-trollo="${id}" data-tfield="yardas_rollo" oninput="onYardasRollo(${id})"></div>
+      <div class="field"><label>Telas tendidas</label><input type="number" min="0" inputmode="numeric" data-trollo="${id}" data-tfield="lienzos_salidos" oninput="this.dataset.manual=this.value===''?'':'1';onCapasChange(${id})"></div>
+      <div class="field"><label>Yardas sobrantes</label><input type="number" step="0.5" data-trollo="${id}" data-tfield="yardas_sobrantes" oninput="this.dataset.manual=this.value===''?'':'1';recalcTotalesTendido()"></div>
     </div>
+    <div data-tmatches class="td-rollo-caja"></div>
+    <div class="text-muted" data-tpista style="font-size:12px;margin:2px 0 6px"></div>
     <div class="field"><label>Observaciones del rollo</label><textarea data-trollo="${id}" data-tfield="observacion_tono" placeholder="Tono, detalles, código físico si lo hay..."></textarea></div>
   `;
   document.getElementById('td-rollos-container').appendChild(div);
@@ -9104,8 +9325,10 @@ function onCapasChange(rolloId) {
   const sobra = capas % 2;
   const paresText = `${pares} pares${sobra? ' + 1 lienzo sobrante':''}`;
   document.getElementById(`pares-${rolloId}`).textContent = paresText;
+  tdSobranteAuto(rolloId);
   recalcTotalesTendido();
   revisarWarnings();
+  tdAutoAgregar();
 }
 
 function recalcTotalesTendido() {
@@ -9122,6 +9345,7 @@ function recalcTotalesTendido() {
   document.getElementById('td-total-capas').textContent = capas;
   document.getElementById('td-total-pares').textContent = pares;
   document.getElementById('td-total-rollos').textContent = seen.size;
+  tdPintarContador();
 }
 
 function revisarWarnings() {
@@ -9150,7 +9374,9 @@ async function guardarTendido() {
     document.getElementById('td-letra').focus();
     return;
   }
-  const rollos = document.querySelectorAll('.rollo-card');
+  // Solo los rollos con algo escrito (el renglón vacío del final no cuenta)
+  const rollos = [...document.querySelectorAll('.rollo-card')].filter(c =>
+    ['yardas_rollo','lienzos_salidos'].some(f => (c.querySelector(`[data-tfield="${f}"]`).value || '') !== ''));
   if (!rollos.length) { mostrarAlerta('tendido','error','Agregá al menos 1 rollo.'); return; }
 
   const btn = document.getElementById('btn-guardar-tendido');
@@ -9209,7 +9435,18 @@ async function guardarTendido() {
         const v = inp.value;
         campos[f] = ['yardas_rollo','lienzos_salidos','yardas_sobrantes'].includes(f) ? (v ? parseFloat(v) : null) : (v || null);
       });
+      const tela = el.dataset.telaId ? tdRollosBodega.find(r => r.id === el.dataset.telaId) : null;
+      if (tela) campos.codigo_rollo = tdNombreRollo(tela);
       await supaFetch('tendido_rollo','POST',campos);
+      // Descontar de bodega: al rollo le queda lo que sobró; con 0 queda agotado.
+      if (tela) {
+        const queda = Math.max(0, Number(campos.yardas_sobrantes) || 0);
+        await supaFetch('tela_rollo','PATCH',{
+          yardas_disponibles: queda,
+          estado: queda > 0 ? 'en_bodega' : 'agotado',
+          actualizado_en: new Date().toISOString(),
+        },`?id=eq.${tela.id}`);
+      }
     }
 
     mostrarAlerta('tendido','success',`✅ Tendido guardado. ${n} rollo(s) renumerados (último tendido = bulto #1).`);
