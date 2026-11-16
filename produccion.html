@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-15 21:37 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-15 21:53 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -11114,6 +11114,8 @@ function renderProduccion() {
   const hoy = hoyLocal();
   // Función local: calcular estado efectivo
   function estadoEf(b) {
+    // Terminado con el botón «✓ Terminar»: manda aunque no tenga operaciones marcadas.
+    if (b.estado_manual === 'terminado') return 'terminado';
     if (FASE2_ACTIVA && b.total_etapas > 0) {
       if (b.etapas_hechas === 0) return 'pendiente';
       if (b.etapas_hechas >= b.total_etapas) return 'terminado';
@@ -11275,7 +11277,8 @@ function actualizarFiltrosProd() {
 function renderProdBulto(b) {
   // Estado efectivo: si Fase 2 ON y hay etapas, se deriva
   let estadoEfectivo = b.estado_manual || b.estado || 'pendiente';
-  if (FASE2_ACTIVA && b.total_etapas > 0) {
+  if (b.estado_manual === 'terminado') estadoEfectivo = 'terminado';   // lo terminaron con el botón
+  else if (FASE2_ACTIVA && b.total_etapas > 0) {
     if (b.etapas_hechas === 0) estadoEfectivo = 'pendiente';
     else if (b.etapas_hechas >= b.total_etapas) estadoEfectivo = 'terminado';
     else estadoEfectivo = 'en_proceso';
@@ -11406,6 +11409,7 @@ async function terminarBulto(produccionBultoId, cantidadOriginal) {
     const b = produccionData.find(x => x.produccion_bulto_id === produccionBultoId);
     if (b) {
       b.estado = 'terminado';
+      b.estado_manual = 'terminado';
       b.fecha_terminado = hoyLocal();
       b.cantidad_final = cantidadFinal;
       b.observaciones = observaciones;
