@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-15 22:49 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-15 22:52 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -824,6 +824,9 @@ body.modo-paso #prod-subnav { display: none !important; }
   body.fuera-inicio #pwa-update-banner { bottom: calc(70px + env(safe-area-inset-bottom)) !important; }
   body.fuera-inicio #toast-container { bottom: calc(70px + env(safe-area-inset-bottom)) !important; }
 }
+.listo-fila { display: flex; align-items: center; gap: 10px; width: 100%; margin: 0; padding: 10px 12px; min-height: 52px; border: 0; border-top: 1px solid #F0F0F0; background: #fff; text-align: left; cursor: pointer; font-family: inherit; color: #1f2d3d; font-size: 13.5px; }
+.listo-fila:active { background: #F5F9FD; }
+.listo-fila small { display: block; font-size: 11.5px; color: #777; font-weight: 400; }
 
 </style>
 </head>
@@ -4688,7 +4691,7 @@ async function cargarDashboardHoy() {
       // vw_plan_produccion es el plan de la temporada en curso
       if (sel === activa) {
         tareas.push(['plan', () => supaFetch('vw_plan_produccion', 'GET', null,
-          '?select=cod_prenda,nombre_prenda,talla_2026,pedido,falta_hacer,en_proceso,falta_iniciar')]);
+          '?select=cod_prenda,nombre_prenda,talla_2026,pedido,falta_hacer,en_proceso,falta_iniciar,contado')]);
       }
       await _dashCorrer(tareas, data, fallidos);
     } else if (data.modo === 'alumnos') {
@@ -4812,7 +4815,9 @@ function renderDashboard() {
     banner = ''; kpis = ''; verStock = false;
     tareaSubtitulo('empacar', tot.pend > 0 ? `Faltan ${dashNum(tot.pend)} piezas por empacar` : 'Todo está empacado');
     tareaSubtitulo('entregar', tot.emp > 0 ? `${dashNum(tot.emp)} piezas empacadas por entregar` : 'Todavía no hay nada empacado');
-    cuerpo = _renderEmpaquePorPrenda(lineas)
+    cuerpo = _renderQueUrge(r.plan)
+      + '<div id="dash-listo-empacar"></div>'
+      + _renderEmpaquePorPrenda(lineas)
       // («Escuelas con más por entregar» repetía «Avance por escuela»: quitada)
       + _renderAvancePedido(r, lineas);
   } else {
@@ -4842,6 +4847,7 @@ function renderDashboard() {
 
   const cv = document.getElementById('dash-como-vamos');
   if (cv) cv.innerHTML = comoVamos;
+  if (r.modo === 'pedido' && esActiva) setTimeout(cargarListoEmpacar, 0);   // se llena aparte, sin frenar Inicio
 
   cont.innerHTML = `
     ${avisoFallidos}
@@ -4996,6 +5002,67 @@ function _renderComoVamos(plan, prod, totEmp) {
           ${_cvAbiertas.has(o.cod) ? _cvTallas(o) : ''}
         </div>`).join('')}
       </div>`;
+}
+
+// ─── «Qué urge»: las tallas con más piezas sin empezar (ni cortadas) ──
+function _renderQueUrge(plan) {
+  const filas = (plan || []).filter(f => (Number(f.falta_iniciar) || 0) > 0)
+    .sort((a, b) => (Number(b.falta_iniciar) || 0) - (Number(a.falta_iniciar) || 0)).slice(0, 4);
+  if (!filas.length) return '';
+  return `
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
+        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <span>⏰ Qué urge</span>
+          <button class="btn btn-ghost btn-sm" onclick="dashVerPlan()" style="font-size:11px;padding:4px 8px">Ver plan ›</button>
+        </div>
+        <div style="padding:2px 12px 0;font-size:11.5px;color:#666">Las tallas con más piezas sin empezar.</div>
+        ${filas.map(f => `
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 12px;border-top:1px solid #F0F0F0">
+          <span style="font-size:13.5px"><strong>${dashEsc(dashPrendaNombre(f.cod_prenda))} ${dashEsc(f.talla_2026)}</strong>${f.contado === false ? ' <span style="font-size:10.5px;color:#8a4b00">· bodega sin contar</span>' : ''}</span>
+          <span style="font-size:13px;white-space:nowrap"><strong style="color:${DASH_NARANJA}">${dashNum(f.falta_iniciar)}</strong> <span style="color:#777;font-size:11.5px">sin empezar de ${dashNum(f.pedido)}</span></span>
+        </div>`).join('')}
+      </div>`;
+}
+
+// ─── «Listo para empacar»: escuelas a las que ya se les puede empacar
+// algo con lo que hay en bodega (el mismo cálculo de 🧺 Empaque). Varias
+// escuelas pueden contar las mismas piezas: es «lo que se podría», no un reparto.
+async function cargarListoEmpacar() {
+  const el = document.getElementById('dash-listo-empacar');
+  if (!el || typeof emqCargarCant !== 'function') return;
+  try {
+    const ctx = await emqCargarCant(null);
+    const escuelas = (dashboardCache.resumen && dashboardCache.resumen.escuelas) || [];
+    const filas = [];
+    for (const e of escuelas) {
+      if (!ctx.escuelasPedido.has(e.id)) continue;
+      const s = emqSumar(emqLineasEscuela(ctx, e.id));
+      if (s.puede > 0) filas.push({ id: e.id, nombre: e.alias || e.nombre, puede: s.puede, falta: s.falta });
+    }
+    filas.sort((a, b) => b.puede - a.puede);
+    const el2 = document.getElementById('dash-listo-empacar');
+    if (!el2) return;
+    if (!filas.length) { el2.innerHTML = ''; return; }
+    el2.innerHTML = `
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
+        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">🧺 Listo para empacar</div>
+        <div style="padding:2px 12px 0;font-size:11.5px;color:#666">Lo que ya se puede empacar con lo que hay en bodega. Tocá una escuela para empacarla.</div>
+        ${filas.slice(0, 5).map(f => `
+        <button type="button" class="listo-fila" onclick="dashEmpacarEscuela('${f.id}')">
+          <span style="flex:1;min-width:0"><strong>${dashEsc(f.nombre)}</strong><small>le faltan ${dashNum(f.falta)} piezas</small></span>
+          <span style="text-align:right;white-space:nowrap"><strong style="color:${CV_VERDE};font-size:17px">${dashNum(f.puede)}</strong><small>se pueden empacar</small></span>
+          <span aria-hidden="true" style="color:#9aa;font-size:20px">›</span>
+        </button>`).join('')}
+        ${filas.length > 5 ? `<div style="padding:8px 12px;font-size:12px;color:#666;border-top:1px solid #F0F0F0">y ${filas.length - 5} escuela(s) más en «3. Empacar».</div>` : ''}
+      </div>`;
+  } catch (e) {
+    console.warn('[inicio] listo para empacar:', e && e.message || e);
+  }
+}
+function dashEmpacarEscuela(escId) {
+  window._emqHintEscuela = escId;
+  abrirPestana('empaque');
+  document.body.classList.add('modo-paso');
 }
 
 // ─── Empaque y entrega por prenda (solo si ya hay algo) ──────────────

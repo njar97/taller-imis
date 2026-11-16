@@ -800,3 +800,6 @@ body.modo-paso #prod-subnav { display: none !important; }
   body.fuera-inicio #pwa-update-banner { bottom: calc(70px + env(safe-area-inset-bottom)) !important; }
   body.fuera-inicio #toast-container { bottom: calc(70px + env(safe-area-inset-bottom)) !important; }
 }
+.listo-fila { display: flex; align-items: center; gap: 10px; width: 100%; margin: 0; padding: 10px 12px; min-height: 52px; border: 0; border-top: 1px solid #F0F0F0; background: #fff; text-align: left; cursor: pointer; font-family: inherit; color: #1f2d3d; font-size: 13.5px; }
+.listo-fila:active { background: #F5F9FD; }
+.listo-fila small { display: block; font-size: 11.5px; color: #777; font-weight: 400; }
