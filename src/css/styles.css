@@ -820,3 +820,8 @@ body.modo-paso #prod-subnav { display: none !important; }
 /* Tendido: contador de telas, pegado arriba mientras se agregan rollos */
 .td-contador { position: sticky; top: 62px; z-index: 5; background: #fff; padding: 8px 0 6px; margin-bottom: 8px; border-bottom: 1px solid #EEE; }
 .td-contador:empty { display: none; }
+.td-rollo-caja { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 4px; }
+.td-rollo-caja:empty { display: none; }
+.td-rollo-nota { font-size: 12.5px; color: #8a4b00; width: 100%; }
+.td-rollo-chip { margin: 0; padding: 8px 12px; min-height: 40px; border: 1px solid #C9D3DF; border-radius: 20px; background: #fff; font-family: inherit; font-size: 13px; cursor: pointer; color: #1f2d3d; }
+.td-rollo-chip.on { background: #E8F6EE; border-color: #2E9E5B; font-weight: 700; }

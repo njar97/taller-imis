@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-15 23:00 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-15 23:04 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -844,6 +844,11 @@ body.modo-paso #prod-subnav { display: none !important; }
 /* Tendido: contador de telas, pegado arriba mientras se agregan rollos */
 .td-contador { position: sticky; top: 62px; z-index: 5; background: #fff; padding: 8px 0 6px; margin-bottom: 8px; border-bottom: 1px solid #EEE; }
 .td-contador:empty { display: none; }
+.td-rollo-caja { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 4px; }
+.td-rollo-caja:empty { display: none; }
+.td-rollo-nota { font-size: 12.5px; color: #8a4b00; width: 100%; }
+.td-rollo-chip { margin: 0; padding: 8px 12px; min-height: 40px; border: 1px solid #C9D3DF; border-radius: 20px; background: #fff; font-family: inherit; font-size: 13px; cursor: pointer; color: #1f2d3d; }
+.td-rollo-chip.on { background: #E8F6EE; border-color: #2E9E5B; font-weight: 700; }
 
 </style>
 </head>
@@ -9024,46 +9029,44 @@ function tdYardasPorTela() {
   const cm = trazoSeleccionado ? Number(trazoSeleccionado.trazo.largo_cm) || 0 : 0;
   return cm > 0 ? cm / 91.44 : 0;
 }
-function tdOpcionesRollo(rolloId) {
+// El rollo se busca SOLO por su cantidad de tela: se escriben las yardas y
+// salen los rollos de bodega con esa medida (del color del trazo). Si hay uno
+// solo, queda elegido; si hay varios, se toca cuál. Si no hay ninguno, se
+// anota igual como rollo que no está en la lista.
+function tdBuscarRollo(rolloId) {
+  const card = document.getElementById('trollo-' + rolloId);
+  if (!card) return;
+  const yd = parseFloat(card.querySelector('[data-tfield="yardas_rollo"]').value);
+  const caja = card.querySelector('[data-tmatches]');
   const usados = new Set([...document.querySelectorAll('.rollo-card')]
-    .filter(c => c.id !== 'trollo-' + rolloId).map(c => c.dataset.telaId).filter(Boolean));
-  const mio = (document.getElementById('trollo-' + rolloId) || {}).dataset || {};
-  const porColor = new Map();
-  for (const r of tdRollosDelTrazo()) {
-    if (usados.has(r.id)) continue;
-    const c = String(r.color || '').toUpperCase();
-    if (!porColor.has(c)) porColor.set(c, []);
-    porColor.get(c).push(r);
+    .filter(c => c !== card).map(c => c.dataset.telaId).filter(Boolean));
+  const iguales = !(yd > 0) ? [] : tdRollosDelTrazo()
+    .filter(r => !usados.has(r.id) && Math.abs(Number(r.yardas_disponibles) - yd) < 0.01);
+  let elegido = iguales.find(r => r.id === card.dataset.telaId) || null;
+  if (!elegido && iguales.length === 1) elegido = iguales[0];
+  if (elegido) { card.dataset.telaId = elegido.id; card.dataset.telaColor = String(elegido.color || '').toUpperCase(); }
+  else { delete card.dataset.telaId; delete card.dataset.telaColor; }
+  if (!caja) return;
+  const bonito = c => { c = String(c || ''); return c.charAt(0).toUpperCase() + c.slice(1).toLowerCase(); };
+  if (!(yd > 0)) { caja.innerHTML = ''; return; }
+  if (!iguales.length) {
+    caja.innerHTML = '<span class="td-rollo-nota">No está en la lista: se anota como rollo nuevo.</span>';
+    return;
   }
-  let html = '<option value="">— Elegir rollo —</option>';
-  for (const [color, lista] of porColor) {
-    html += `<optgroup label="${tdEsc(color)}">` + lista.map(r =>
-      `<option value="${r.id}"${mio.telaId === r.id ? ' selected' : ''}>${tdEsc(tdNombreRollo(r))} · ${Number(r.yardas_disponibles)} yd</option>`).join('') + '</optgroup>';
-  }
-  return html + `<option value="otro"${mio.telaOtro ? ' selected' : ''}>Otro (no está en la lista)</option>`;
+  caja.innerHTML = (iguales.length > 1 && !elegido ? `<span class="td-rollo-nota">Hay ${iguales.length} de ${yd} yd. Tocá cuál:</span>` : '')
+    + iguales.slice(0, 8).map(r => `<button type="button" class="td-rollo-chip${elegido && elegido.id === r.id ? ' on' : ''}" onclick="tdElegirRollo(${rolloId},'${r.id}')">${elegido && elegido.id === r.id ? '✓ ' : ''}${tdEsc(bonito(r.color))} · ${tdEsc(tdNombreRollo(r))}</button>`).join('');
+}
+function tdElegirRollo(rolloId, telaId) {
+  const card = document.getElementById('trollo-' + rolloId);
+  if (!card) return;
+  card.dataset.telaId = telaId;
+  tdRefrescarListas();
+  recalcTotalesTendido();
 }
 function tdRefrescarListas() {
-  document.querySelectorAll('.rollo-card').forEach(c => {
-    const sel = c.querySelector('[data-tsel]');
-    if (sel) sel.innerHTML = tdOpcionesRollo(c.id.replace('trollo-', ''));
-  });
+  document.querySelectorAll('.rollo-card').forEach(c => tdBuscarRollo(c.id.replace('trollo-', '')));
 }
-function onElegirRolloBodega(rolloId) {
-  const card = document.getElementById('trollo-' + rolloId);
-  const sel = card.querySelector('[data-tsel]');
-  const yd = card.querySelector('[data-tfield="yardas_rollo"]');
-  const r = tdRollosBodega.find(x => x.id === sel.value);
-  delete card.dataset.telaId; delete card.dataset.telaOtro; delete card.dataset.telaColor;
-  if (r) {
-    card.dataset.telaId = r.id;
-    card.dataset.telaColor = String(r.color || '').toUpperCase();
-    yd.value = Number(r.yardas_disponibles);
-    yd.readOnly = true;
-  } else {
-    if (sel.value === 'otro') card.dataset.telaOtro = '1';
-    yd.readOnly = false;
-    if (sel.value !== 'otro') yd.value = '';
-  }
+function onYardasRollo(rolloId) {
   tdRefrescarListas();
   tdSobranteAuto(rolloId);
   recalcTotalesTendido();
@@ -9240,16 +9243,13 @@ function agregarRolloTendido() {
       </div>
       ${id>1?`<button class="btn btn-danger" onclick="document.getElementById('trollo-${id}').remove();tdRefrescarListas();recalcTotalesTendido()">✕</button>`:''}
     </div>
-    <div class="field">
-      <label>Rollo de bodega</label>
-      <select data-tsel="${id}" onchange="onElegirRolloBodega(${id})">${tdOpcionesRollo(id)}</select>
-      <div class="text-muted" data-tpista style="font-size:12px;margin-top:3px"></div>
-    </div>
     <div class="row3">
-      <div class="field"><label>Yardas del rollo</label><input type="number" step="0.5" data-trollo="${id}" data-tfield="yardas_rollo" oninput="tdSobranteAuto(${id});recalcTotalesTendido()"></div>
+      <div class="field"><label>Yardas del rollo</label><input type="number" step="0.5" inputmode="decimal" data-trollo="${id}" data-tfield="yardas_rollo" oninput="onYardasRollo(${id})"></div>
       <div class="field"><label>Telas tendidas</label><input type="number" min="0" data-trollo="${id}" data-tfield="lienzos_salidos" oninput="onCapasChange(${id})"></div>
       <div class="field"><label>Yardas sobrantes</label><input type="number" step="0.5" data-trollo="${id}" data-tfield="yardas_sobrantes" oninput="this.dataset.manual=this.value===''?'':'1';recalcTotalesTendido()"></div>
     </div>
+    <div data-tmatches class="td-rollo-caja"></div>
+    <div class="text-muted" data-tpista style="font-size:12px;margin:2px 0 6px"></div>
     <div class="field"><label>Observaciones del rollo</label><textarea data-trollo="${id}" data-tfield="observacion_tono" placeholder="Tono, detalles, código físico si lo hay..."></textarea></div>
   `;
   document.getElementById('td-rollos-container').appendChild(div);
