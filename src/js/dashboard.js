@@ -112,7 +112,14 @@ async function cargarHoySigue() {
   } catch (_) { /* sin estos textos Inicio sigue sirviendo */ }
 }
 
+// Los 4 pasos de Inicio abren su pantalla en «modo paso»: solo lo de ese
+// paso, sin los sub-menús (css body.modo-paso). Por «Todo lo demás» se
+// entra a la pantalla completa.
 function tareaIr(id) {
+  _tareaIr(id);
+  if (TAREAS_INICIO.some(t => t.id === id)) document.body.classList.add('modo-paso');
+}
+function _tareaIr(id) {
   const ir = typeof abrirPestana === 'function' ? abrirPestana : (t) => switchTab(t);
   switch (id) {
     case 'corte':        // Corte → ▶ Sigue (tendidos que faltan, con «Tender este»)

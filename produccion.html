@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-15 22:43 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-15 22:49 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -812,6 +812,18 @@ body.temporada-cantidad .oculto-2026 { display: none !important; }
 .menumas-btn small { display: block; font-size: 12px; color: #667; margin-top: 2px; }
 .cv-ver { display: block; width: 100%; margin: 0; padding: 12px; min-height: 44px; border: 0; border-bottom: 1px solid #EEE; background: #fff; color: var(--azul); font-weight: 700; font-size: 14px; text-align: left; cursor: pointer; font-family: inherit; }
 .cv-ver:active { background: #F5F9FD; }
+/* «Modo paso»: entrando por uno de los 4 pasos de Inicio no se ven los sub-menús */
+body.modo-paso #corte-subnav,
+body.modo-paso #prod-subnav { display: none !important; }
+/* «🏠 Volver a Inicio» fijo abajo, al alcance del pulgar (solo celular, fuera de Inicio) */
+.barra-inicio { display: none; }
+@media (max-width: 640px) {
+  body.fuera-inicio .barra-inicio { display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 900; margin: 0; border: 0; padding: 14px 12px calc(14px + env(safe-area-inset-bottom)); background: var(--azul); color: #fff; font-size: 16px; font-weight: 700; font-family: inherit; box-shadow: 0 -2px 12px rgba(0,0,0,0.3); cursor: pointer; }
+  body.fuera-inicio .barra-inicio:active { background: #0d2c4a; }
+  body.fuera-inicio { padding-bottom: calc(62px + env(safe-area-inset-bottom)); }
+  body.fuera-inicio #pwa-update-banner { bottom: calc(70px + env(safe-area-inset-bottom)) !important; }
+  body.fuera-inicio #toast-container { bottom: calc(70px + env(safe-area-inset-bottom)) !important; }
+}
 
 </style>
 </head>
@@ -852,6 +864,8 @@ body.temporada-cantidad .oculto-2026 { display: none !important; }
     <div class="nav-tab" onclick="switchTab('config',this)"><span class="nav-tab-ico">⚙️</span><span class="nav-tab-lbl">Ajustes</span></div>
   </div>
 </nav>
+<!-- Pantalla única: en el celular, botón fijo abajo para volver (css .barra-inicio) -->
+<button type="button" id="barra-inicio" class="barra-inicio" onclick="irInicio()">🏠 Volver a Inicio</button>
 
 <div class="container">
 
@@ -888,8 +902,8 @@ body.temporada-cantidad .oculto-2026 { display: none !important; }
     <button type="button" class="ayuda-tip-x" onclick="cerrarAyuda('corte')" aria-label="Cerrar esta ayuda" title="Cerrar esta ayuda">✕</button>
   </div>
 
-  <!-- Subnav -->
-  <div class="card" style="padding:6px;margin-bottom:10px">
+  <!-- Subnav (escondido en «modo paso»: entrando por «1. Tender» solo se ve ▶ Sigue) -->
+  <div class="card" id="corte-subnav" style="padding:6px;margin-bottom:10px">
     <div class="subnav-btns" style="display:flex;gap:4px;flex-wrap:wrap">
       <button class="btn btn-primary btn-sm" id="corte-sub-sigue"    onclick="switchSubCorte('sigue')"    style="flex:1;min-width:80px">▶ Sigue</button>
       <button class="btn btn-ghost   btn-sm" id="corte-sub-nuevo"    onclick="switchSubCorte('nuevo')"    style="flex:1;min-width:80px">➕ Nuevo</button>
@@ -3570,6 +3584,10 @@ function switchTab(tab, el) {
   const view = document.getElementById('view-' + tab);
   if (view) view.classList.add('active');
   if (el) el.classList.add('active');
+  // Pantalla única: fuera de Inicio se ve abajo «🏠 Volver a Inicio»; y al
+  // volver a Inicio o a «Todo lo demás» se sale del modo de un solo paso.
+  document.body.classList.toggle('fuera-inicio', tab !== 'inicio');
+  if (tab === 'inicio' || tab === 'mas') document.body.classList.remove('modo-paso');
   // Cada init wrappeado en tryInit — si una falla, las otras tabs siguen
   // funcionando y el usuario ve un toast en vez de UI vacío silencioso.
   if (tab === 'corte')       tryInit('Corte',        typeof initCorte === 'function'      ? initCorte      : null);
@@ -3621,6 +3639,7 @@ function toggleCortesAnteriores() {
 function irA(seccion) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + seccion).classList.add('active');
+  document.body.classList.add('fuera-inicio');
   window.scrollTo(0, 0);
   if (seccion === 'trazo')   tryInit('Trazo',   typeof initTrazo === 'function'   ? initTrazo   : null);
   if (seccion === 'tendido') tryInit('Tendido', typeof initTendido === 'function' ? initTendido : null);
@@ -4421,7 +4440,14 @@ async function cargarHoySigue() {
   } catch (_) { /* sin estos textos Inicio sigue sirviendo */ }
 }
 
+// Los 4 pasos de Inicio abren su pantalla en «modo paso»: solo lo de ese
+// paso, sin los sub-menús (css body.modo-paso). Por «Todo lo demás» se
+// entra a la pantalla completa.
 function tareaIr(id) {
+  _tareaIr(id);
+  if (TAREAS_INICIO.some(t => t.id === id)) document.body.classList.add('modo-paso');
+}
+function _tareaIr(id) {
   const ir = typeof abrirPestana === 'function' ? abrirPestana : (t) => switchTab(t);
   switch (id) {
     case 'corte':        // Corte → ▶ Sigue (tendidos que faltan, con «Tender este»)

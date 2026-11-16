@@ -788,3 +788,15 @@ body.temporada-cantidad .oculto-2026 { display: none !important; }
 .menumas-btn small { display: block; font-size: 12px; color: #667; margin-top: 2px; }
 .cv-ver { display: block; width: 100%; margin: 0; padding: 12px; min-height: 44px; border: 0; border-bottom: 1px solid #EEE; background: #fff; color: var(--azul); font-weight: 700; font-size: 14px; text-align: left; cursor: pointer; font-family: inherit; }
 .cv-ver:active { background: #F5F9FD; }
+/* «Modo paso»: entrando por uno de los 4 pasos de Inicio no se ven los sub-menús */
+body.modo-paso #corte-subnav,
+body.modo-paso #prod-subnav { display: none !important; }
+/* «🏠 Volver a Inicio» fijo abajo, al alcance del pulgar (solo celular, fuera de Inicio) */
+.barra-inicio { display: none; }
+@media (max-width: 640px) {
+  body.fuera-inicio .barra-inicio { display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 900; margin: 0; border: 0; padding: 14px 12px calc(14px + env(safe-area-inset-bottom)); background: var(--azul); color: #fff; font-size: 16px; font-weight: 700; font-family: inherit; box-shadow: 0 -2px 12px rgba(0,0,0,0.3); cursor: pointer; }
+  body.fuera-inicio .barra-inicio:active { background: #0d2c4a; }
+  body.fuera-inicio { padding-bottom: calc(62px + env(safe-area-inset-bottom)); }
+  body.fuera-inicio #pwa-update-banner { bottom: calc(70px + env(safe-area-inset-bottom)) !important; }
+  body.fuera-inicio #toast-container { bottom: calc(70px + env(safe-area-inset-bottom)) !important; }
+}
