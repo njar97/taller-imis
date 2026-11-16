@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-15 23:04 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-15 23:06 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -9068,8 +9068,45 @@ function tdRefrescarListas() {
 }
 function onYardasRollo(rolloId) {
   tdRefrescarListas();
-  tdSobranteAuto(rolloId);
-  recalcTotalesTendido();
+  tdTelasAuto(rolloId);
+  onCapasChange(rolloId);
+}
+// El tendido se va llenando solo con lo del plan: al poner las yardas, las
+// telas son las que da el rollo (sin pasarse de lo que falta del plan; en
+// número par si el trazo lleva tallas en par). Si la persona escribe las
+// telas a mano, se respeta lo que escribió.
+function tdTelasAuto(rolloId) {
+  const card = document.getElementById('trollo-' + rolloId);
+  if (!card) return;
+  const telas = card.querySelector('[data-tfield="lienzos_salidos"]');
+  if (telas.dataset.manual === '1') return;
+  const yd = parseFloat(card.querySelector('[data-tfield="yardas_rollo"]').value) || 0;
+  const porTela = tdYardasPorTela();
+  if (!(yd > 0 && porTela > 0)) { telas.value = ''; return; }
+  let n = Math.floor(yd / porTela);
+  const plan = trazoSeleccionado ? Number(trazoSeleccionado.trazo.capas) || 0 : 0;
+  if (plan > 0) {
+    let otras = 0;
+    document.querySelectorAll('.rollo-card').forEach(c => {
+      if (c !== card) otras += parseInt(c.querySelector('[data-tfield="lienzos_salidos"]').value) || 0;
+    });
+    n = Math.min(n, Math.max(0, plan - otras));
+  }
+  if (trazoSeleccionado && trazoSeleccionado.tallas.some(t => t.tipo === 'par')) n -= n % 2;
+  telas.value = n > 0 ? n : '';
+}
+// Cuando el último rollo ya tiene yardas y telas y todavía falta para el
+// plan, aparece solo el renglón del rollo que sigue.
+function tdAutoAgregar() {
+  const cards = [...document.querySelectorAll('.rollo-card')];
+  const ult = cards[cards.length - 1];
+  if (!ult) return;
+  const val = f => parseFloat(ult.querySelector(`[data-tfield="${f}"]`).value) || 0;
+  if (!(val('yardas_rollo') > 0 && val('lienzos_salidos') > 0)) return;
+  let van = 0;
+  cards.forEach(c => { van += parseInt(c.querySelector('[data-tfield="lienzos_salidos"]').value) || 0; });
+  const plan = trazoSeleccionado ? Number(trazoSeleccionado.trazo.capas) || 0 : 0;
+  if (plan > 0 && van < plan && van < TD_TOPE_TELAS) agregarRolloTendido();
 }
 // Sobrante = yardas del rollo − telas × largo del trazo (de media en media
 // yarda, hacia abajo). Si la persona lo escribe a mano, se respeta.
@@ -9245,7 +9282,7 @@ function agregarRolloTendido() {
     </div>
     <div class="row3">
       <div class="field"><label>Yardas del rollo</label><input type="number" step="0.5" inputmode="decimal" data-trollo="${id}" data-tfield="yardas_rollo" oninput="onYardasRollo(${id})"></div>
-      <div class="field"><label>Telas tendidas</label><input type="number" min="0" data-trollo="${id}" data-tfield="lienzos_salidos" oninput="onCapasChange(${id})"></div>
+      <div class="field"><label>Telas tendidas</label><input type="number" min="0" inputmode="numeric" data-trollo="${id}" data-tfield="lienzos_salidos" oninput="this.dataset.manual=this.value===''?'':'1';onCapasChange(${id})"></div>
       <div class="field"><label>Yardas sobrantes</label><input type="number" step="0.5" data-trollo="${id}" data-tfield="yardas_sobrantes" oninput="this.dataset.manual=this.value===''?'':'1';recalcTotalesTendido()"></div>
     </div>
     <div data-tmatches class="td-rollo-caja"></div>
@@ -9265,6 +9302,7 @@ function onCapasChange(rolloId) {
   tdSobranteAuto(rolloId);
   recalcTotalesTendido();
   revisarWarnings();
+  tdAutoAgregar();
 }
 
 function recalcTotalesTendido() {
@@ -9310,7 +9348,9 @@ async function guardarTendido() {
     document.getElementById('td-letra').focus();
     return;
   }
-  const rollos = document.querySelectorAll('.rollo-card');
+  // Solo los rollos con algo escrito (el renglón vacío del final no cuenta)
+  const rollos = [...document.querySelectorAll('.rollo-card')].filter(c =>
+    ['yardas_rollo','lienzos_salidos'].some(f => (c.querySelector(`[data-tfield="${f}"]`).value || '') !== ''));
   if (!rollos.length) { mostrarAlerta('tendido','error','Agregá al menos 1 rollo.'); return; }
 
   const btn = document.getElementById('btn-guardar-tendido');
