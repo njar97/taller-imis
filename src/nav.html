@@ -2,7 +2,7 @@
 
 <nav>
   <div class="nav-top">
-    <div style="width:32px;height:32px;background:rgba(255,255,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">T</div>
+    <button type="button" id="nav-inicio" class="nav-inicio" onclick="irInicio()" title="Volver a Inicio" aria-label="Volver a Inicio">🏠</button>
     <h1 class="nav-brand">
       <span class="nav-brand-app">Taller IMIS</span>
       <span class="nav-brand-section">Uniformes</span>
@@ -19,6 +19,10 @@
        Sistema). Etiquetas en palabras simples.
        En móvil (≤640px) esta misma barra se fija ABAJO estilo bottom-nav
        (ícono arriba, label abajo) — ver styles.css. -->
+  <!-- PANTALLA ÚNICA (nov-2026): el menú de pestañas ya NO se muestra (css
+       .nav-tabs{display:none}). Se deja en el DOM porque abrirPestana, el
+       botón atrás y el buscador buscan aquí el botón de cada pantalla. Se
+       entra por Inicio (4 pasos) y por «Todo lo demás»; se vuelve con 🏠. -->
   <div class="nav-tabs">
     <div class="nav-tab active" onclick="switchTab('inicio',this)"><span class="nav-tab-ico">🏠</span><span class="nav-tab-lbl">Inicio</span></div>
     <div class="nav-tab" id="tab-corte" onclick="switchTab('corte',this)"><span class="nav-tab-ico">✂️</span><span class="nav-tab-lbl">Corte</span></div>

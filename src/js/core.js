@@ -515,6 +515,9 @@ function lsGuardar(k, v) {
   } catch (_) { /* sin almacenamiento: se pierde solo la preferencia */ }
 }
 
+// 🏠 de la barra de arriba: vuelve a Inicio desde cualquier pantalla.
+function irInicio() { abrirPestana('inicio'); }
+
 // Abre una pestaña del menú y la deja marcada (switchTab sin el botón no
 // resalta nada en el menú).
 function abrirPestana(tab) {
