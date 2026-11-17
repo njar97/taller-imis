@@ -429,11 +429,11 @@ async function guardarTendido() {
       }
     }
 
-    mostrarAlerta('tendido','success',`✅ Tendido guardado. ${n} rollo(s) renumerados (último tendido = bulto #1).`);
-    setTimeout(() => { btn.textContent='💾 Guardar tendido (invierte numeración)'; btn.disabled=false; volverNuevo(); }, 2200);
+    mostrarAlerta('tendido','success',`Tendido guardado. ${n} rollo(s) renumerados (último tendido = bulto #1).`);
+    setTimeout(() => { btn.textContent='Guardar tendido (invierte numeración)'; btn.disabled=false; volverNuevo(); }, 2200);
   } catch(e) {
     mostrarAlerta('tendido','error','Error: ' + e.message);
-    btn.textContent = '💾 Guardar tendido (invierte numeración)';
+    btn.textContent = 'Guardar tendido (invierte numeración)';
     btn.disabled = false;
   }
 }

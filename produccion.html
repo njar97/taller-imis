@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-16 22:47 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-16 23:01 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -981,6 +981,27 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
 .tj-ambar { background: var(--c-terminar-bg); color: var(--c-terminar); }
 .menumas-btn { border-color: var(--linea); border-radius: 14px; color: var(--tinta); }
 .menumas-lista .tj-ico { width: 40px; height: 40px; border-radius: 12px; font-size: 22px; }
+/* ── DISEÑO nov-2026 · Corte: menú de arriba, «Lo que sigue», «Nuevo» ── */
+.btn .ico, .btn-mini .ico { font-size: 1.15em; }
+#corte-subnav { padding: 6px; border-radius: 16px; }
+#corte-subnav .btn { border-radius: 11px; gap: 5px; }
+#corte-subnav .btn-ghost { background: transparent; border-color: transparent; color: var(--tinta2); }
+#corte-subnav .btn-primary { background: var(--c-tender); box-shadow: 0 2px 8px rgba(31,95,168,.3); }
+.card-title .tj-ico { margin-right: 2px; }
+.sigue-item { border: 1px solid var(--linea); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+.sigue-item.sigue-primero { border: 2px solid #2E9E5B; background: #F3FBF5; }
+.sigue-etiqueta { display: inline-block; font-size: 10.5px; letter-spacing: .6px; color: var(--c-empacar); background: var(--c-empacar-bg); border-radius: 999px; padding: 2px 9px; margin-bottom: 4px; }
+.sigue-titulo { color: var(--tinta); letter-spacing: -.2px; }
+.sigue-datos { color: var(--tinta2); }
+.sigue-foto { border-radius: 10px; border-color: var(--linea); }
+.sigue-primero .btn-success { background: #2E9E5B; }
+.menu-tarjeta { padding: 16px; border: 1px solid var(--linea); border-radius: 14px; }
+.menu-tarjeta:hover { border-color: var(--c-tender); }
+.menu-icono.tj-ico { width: 48px; height: 48px; border-radius: 14px; font-size: 26px; }
+.menu-titulo { color: var(--tinta); }
+.menu-desc { color: var(--tinta2); }
+.menu-ir { font-size: 20px; color: #A9B4C0; }
+.empty-icon .ico { color: var(--c-empacar); }
 
 </style>
 </head>
@@ -1003,6 +1024,19 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
   <symbol id="i-bodega" viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13"/><path d="M7 21v-8h10v8"/><path d="M7 17h10"/></symbol>
   <symbol id="i-lista" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3"/></symbol>
   <symbol id="i-ajustes" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h8M16 18h4"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="14" cy="18" r="2"/></symbol>
+  <symbol id="i-sumar" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></symbol>
+  <symbol id="i-capas" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></symbol>
+  <symbol id="i-regla" viewBox="0 0 24 24"><path d="M3 17 17 3l4 4L7 21z"/><path d="m7.5 12.5 2 2M10.5 9.5l2 2M13.5 6.5l2 2"/></symbol>
+  <symbol id="i-lapiz" viewBox="0 0 24 24"><path d="M4 20h4L20 8l-4-4L4 16z"/><path d="m14 6 4 4"/></symbol>
+  <symbol id="i-imprimir" viewBox="0 0 24 24"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></symbol>
+  <symbol id="i-camara" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/></symbol>
+  <symbol id="i-gota" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.500 6-11 6-11z"/></symbol>
+  <symbol id="i-etiqueta" viewBox="0 0 24 24"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/></symbol>
+  <symbol id="i-calc" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/></symbol>
+  <symbol id="i-volver" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+  <symbol id="i-listo" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></symbol>
   <symbol id="i-mas" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></symbol>
 </svg>
 
@@ -1078,26 +1112,26 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
   <div id="alert-corte"></div>
   <div class="ayuda-tip" data-ayuda="corte" role="note">
     <span class="ayuda-tip-ico" aria-hidden="true">💡</span>
-    <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> En <b>▶ Sigue</b> están los tendidos que faltan, en orden. Tocá <b>Tender este</b> y copiá lo del cuaderno, rollo por rollo con sus capas.</span>
+    <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> En <b>Sigue</b> están los tendidos que faltan, en orden. Tocá <b>Tender este</b> y copiá lo del cuaderno, rollo por rollo con sus capas.</span>
     <button type="button" class="ayuda-tip-x" onclick="cerrarAyuda('corte')" aria-label="Cerrar esta ayuda" title="Cerrar esta ayuda">✕</button>
   </div>
 
   <!-- Subnav (escondido en «modo paso»: entrando por «1. Tender» solo se ve ▶ Sigue) -->
   <div class="card" id="corte-subnav" style="padding:6px;margin-bottom:10px">
     <div class="subnav-btns" style="display:flex;gap:4px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" id="corte-sub-sigue"    onclick="switchSubCorte('sigue')"    style="flex:1;min-width:80px">▶ Sigue</button>
-      <button class="btn btn-ghost   btn-sm" id="corte-sub-nuevo"    onclick="switchSubCorte('nuevo')"    style="flex:1;min-width:80px">➕ Nuevo</button>
-      <button class="btn btn-ghost   btn-sm" id="corte-sub-trazos"   onclick="switchSubCorte('trazos')"   style="flex:1;min-width:80px">✂️ Trazos</button>
-      <button class="btn btn-ghost   btn-sm" id="corte-sub-tendidos" onclick="switchSubCorte('tendidos')" style="flex:1;min-width:80px">📋 Tendidos</button>
-      <button class="btn btn-ghost   btn-sm" id="corte-sub-bultos"   onclick="switchSubCorte('bultos')"   style="flex:1;min-width:80px">📦 Bultos</button>
-      <button class="btn btn-ghost   btn-sm" id="corte-sub-hojas"    onclick="switchSubCorte('hojas')"    style="flex:1;min-width:80px">📐 Hojas</button>
+      <button class="btn btn-primary btn-sm" id="corte-sub-sigue"    onclick="switchSubCorte('sigue')"    style="flex:1;min-width:80px"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg> Sigue</button>
+      <button class="btn btn-ghost   btn-sm" id="corte-sub-nuevo"    onclick="switchSubCorte('nuevo')"    style="flex:1;min-width:80px"><svg class="ico" aria-hidden="true"><use href="#i-sumar"/></svg> Nuevo</button>
+      <button class="btn btn-ghost   btn-sm" id="corte-sub-trazos"   onclick="switchSubCorte('trazos')"   style="flex:1;min-width:80px"><svg class="ico" aria-hidden="true"><use href="#i-tijera"/></svg> Trazos</button>
+      <button class="btn btn-ghost   btn-sm" id="corte-sub-tendidos" onclick="switchSubCorte('tendidos')" style="flex:1;min-width:80px"><svg class="ico" aria-hidden="true"><use href="#i-capas"/></svg> Tendidos</button>
+      <button class="btn btn-ghost   btn-sm" id="corte-sub-bultos"   onclick="switchSubCorte('bultos')"   style="flex:1;min-width:80px"><svg class="ico" aria-hidden="true"><use href="#i-caja"/></svg> Bultos</button>
+      <button class="btn btn-ghost   btn-sm" id="corte-sub-hojas"    onclick="switchSubCorte('hojas')"    style="flex:1;min-width:80px"><svg class="ico" aria-hidden="true"><use href="#i-regla"/></svg> Hojas</button>
     </div>
   </div>
 
   <!-- SUB: Lo que sigue (trazos pendientes de tender, en orden) -->
   <div id="corte-sub-sigue-view">
     <div class="card">
-      <div class="card-title">▶ Lo que sigue</div>
+      <div class="card-title"><span class="tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg></span> Lo que sigue</div>
       <div class="card-sub">Tendidos que faltan, en orden. Tocá <b>Tender este</b> cuando se vaya a tender.</div>
       <div id="corte-sigue-content"><div class="loading">Cargando...</div></div>
     </div>
@@ -1106,32 +1140,32 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
   <!-- SUB: Nuevo -->
   <div id="corte-sub-nuevo-view" style="display:none">
     <div class="card">
-      <div class="card-title">➕ Nuevo registro de corte</div>
+      <div class="card-title"><span class="tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-sumar"/></svg></span> Nuevo registro de corte</div>
       <div class="card-sub">Elegí qué querés registrar según el momento del taller.</div>
       <div class="menu-nuevo">
         <div class="menu-tarjeta" onclick="irA('trazo')">
-          <div class="menu-icono">✂️</div>
+          <div class="menu-icono tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-tijera"/></svg></div>
           <div class="menu-info">
             <div class="menu-titulo">Trazo</div>
             <div class="menu-desc">Imelda dibuja la plancha con las tallas marcadas. Se puede dejar pendiente de tender para después.</div>
           </div>
-          <div style="font-size:22px;color:#ccc">›</div>
+          <div class="menu-ir"><svg class="ico" aria-hidden="true"><use href="#i-ir"/></svg></div>
         </div>
         <div class="menu-tarjeta" onclick="irA('tendido')">
-          <div class="menu-icono">📋</div>
+          <div class="menu-icono tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-capas"/></svg></div>
           <div class="menu-info">
             <div class="menu-titulo">Tendido</div>
             <div class="menu-desc">Sobre un trazo existente. Registrar rollo por rollo mientras se tiende.</div>
           </div>
-          <div style="font-size:22px;color:#ccc">›</div>
+          <div class="menu-ir"><svg class="ico" aria-hidden="true"><use href="#i-ir"/></svg></div>
         </div>
         <div class="menu-tarjeta" onclick="irA('bulto')">
-          <div class="menu-icono">📦</div>
+          <div class="menu-icono tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-caja"/></svg></div>
           <div class="menu-info">
             <div class="menu-titulo">Bulto</div>
             <div class="menu-desc">Después del corte. Propone bultos automáticamente; Paty confirma, divide o sustituye.</div>
           </div>
-          <div style="font-size:22px;color:#ccc">›</div>
+          <div class="menu-ir"><svg class="ico" aria-hidden="true"><use href="#i-ir"/></svg></div>
         </div>
       </div>
     </div>
@@ -1156,8 +1190,8 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
 
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <div class="card-title" style="margin:0">✂️ Nuevo Trazo</div>
-      <button class="btn btn-ghost btn-sm" onclick="volverNuevo()">← Volver</button>
+      <div class="card-title" style="margin:0"><span class="tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-tijera"/></svg></span> Nuevo Trazo</div>
+      <button class="btn btn-ghost btn-sm" onclick="volverNuevo()"><svg class="ico" aria-hidden="true"><use href="#i-volver"/></svg> Volver</button>
     </div>
     <div class="row2">
       <div class="field"><label>Fecha</label><input type="date" id="t-fecha"></div>
@@ -1171,14 +1205,14 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
 
   <!-- Color de tela -->
   <div class="card">
-    <div class="card-title">🎨 Color de la tela</div>
+    <div class="card-title"><svg class="ico" aria-hidden="true"><use href="#i-gota"/></svg> Color de la tela</div>
     <div class="text-muted mb8">Elegí el color que se va a tender. Se pueden combinar Blanco+Celeste o Azul+Beige.</div>
     <div class="color-chips" id="t-color-chips"></div>
   </div>
 
   <!-- Capas + yardas + conversor -->
   <div class="card">
-    <div class="card-title">📏 Medidas del trazo</div>
+    <div class="card-title"><svg class="ico" aria-hidden="true"><use href="#i-regla"/></svg> Medidas del trazo</div>
     <div class="row2">
       <div class="field">
         <label>Capas planeadas</label>
@@ -1193,7 +1227,7 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
       <label>Yardas estimadas totales</label>
       <div class="conversor">
         <input type="number" id="t-yardas" step="0.5" placeholder="Se calcula auto">
-        <button class="btn btn-ghost btn-sm" onclick="aplicarYardasCalc()" title="Aplicar cálculo">🧮 Calc</button>
+        <button class="btn btn-ghost btn-sm" onclick="aplicarYardasCalc()" title="Aplicar cálculo"><svg class="ico" aria-hidden="true"><use href="#i-calc"/></svg> Calc</button>
       </div>
       <div class="text-muted" id="t-yardas-hint">Tip: capas × yardas por lienzo. Editable si preferís otro valor.</div>
     </div>
@@ -1201,18 +1235,18 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
 
   <!-- Tallas marcadas -->
   <div class="card">
-    <div class="card-title">🏷️ Tallas marcadas en el trazo</div>
-    <div class="alert alert-info">💡 Una fila por cada talla dibujada. Si marcaste la misma talla 2 veces, agregala 2 veces (llevará letras distintas). <strong>Completa</strong>: 1 lienzo = 1 pieza. <strong>Par</strong>: 2 lienzos = 1 pieza (elegí cuál talla la complementa).</div>
+    <div class="card-title"><svg class="ico" aria-hidden="true"><use href="#i-etiqueta"/></svg> Tallas marcadas en el trazo</div>
+    <div class="alert alert-info">Una fila por cada talla dibujada. Si marcaste la misma talla 2 veces, agregala 2 veces (llevará letras distintas). <strong>Completa</strong>: 1 lienzo = 1 pieza. <strong>Par</strong>: 2 lienzos = 1 pieza (elegí cuál talla la complementa).</div>
     <div id="t-tallas-container"></div>
     <button class="btn btn-ghost btn-sm mt8" onclick="agregarTallaTrazo()">+ Agregar talla marcada</button>
   </div>
 
   <!-- Foto -->
   <div class="card">
-    <div class="card-title">📷 Foto del trazo (opcional)</div>
+    <div class="card-title"><svg class="ico" aria-hidden="true"><use href="#i-camara"/></svg> Foto del trazo (opcional)</div>
     <div class="foto-upload" onclick="document.getElementById('t-foto-input').click()">
       <input type="file" id="t-foto-input" accept="image/*" capture="environment" onchange="previewFoto(this,'t-foto-preview','t-foto-label')">
-      <div style="font-size:32px;margin-bottom:8px">📷</div>
+      <div style="font-size:32px;margin-bottom:8px;color:#9AA7B5"><svg class="ico" aria-hidden="true"><use href="#i-camara"/></svg></div>
       <div id="t-foto-label" class="text-muted">Toca para tomar o adjuntar foto</div>
       <img id="t-foto-preview" class="foto-preview" style="display:none">
     </div>
@@ -1220,7 +1254,7 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
 
   <!-- Video -->
   <div class="card">
-    <div class="card-title">🎥 Video del trazo (opcional)</div>
+    <div class="card-title"><svg class="ico" aria-hidden="true"><use href="#i-video"/></svg> Video del trazo (opcional)</div>
     <input type="url" id="t-video-url" placeholder="https://youtube.com/... o https://drive.google.com/...">
   </div>
 
@@ -1229,7 +1263,7 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
     <div class="field"><label>Observaciones</label><textarea id="t-observaciones" placeholder="Cualquier detalle relevante..."></textarea></div>
   </div>
 
-  <button class="btn btn-success btn-block" id="btn-guardar-trazo" onclick="guardarTrazo()">💾 Guardar trazo</button>
+  <button class="btn btn-success btn-block" id="btn-guardar-trazo" onclick="guardarTrazo()">Guardar trazo</button>
 </div>
 
 <!-- ═══ TENDIDO ═══ -->
@@ -1239,8 +1273,8 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
 
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <div class="card-title" style="margin:0">📋 Asistente de Tendido</div>
-      <button class="btn btn-ghost btn-sm" onclick="volverNuevo()">← Volver</button>
+      <div class="card-title" style="margin:0"><span class="tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-capas"/></svg></span> Asistente de Tendido</div>
+      <button class="btn btn-ghost btn-sm" onclick="volverNuevo()"><svg class="ico" aria-hidden="true"><use href="#i-volver"/></svg> Volver</button>
     </div>
 
     <!-- Paso 1: elegir trazo -->
@@ -1302,7 +1336,7 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
 
     <div id="td-warnings"></div>
 
-    <button class="btn btn-success btn-block" id="btn-guardar-tendido" onclick="guardarTendido()">💾 Guardar tendido (invierte numeración)</button>
+    <button class="btn btn-success btn-block" id="btn-guardar-tendido" onclick="guardarTendido()">Guardar tendido (invierte numeración)</button>
   </div>
 </div>
 
@@ -1313,8 +1347,8 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
 
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <div class="card-title" style="margin:0">📦 Asistente de Bulto</div>
-      <button class="btn btn-ghost btn-sm" onclick="volverNuevo()">← Volver</button>
+      <div class="card-title" style="margin:0"><span class="tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-caja"/></svg></span> Asistente de Bulto</div>
+      <button class="btn btn-ghost btn-sm" onclick="volverNuevo()"><svg class="ico" aria-hidden="true"><use href="#i-volver"/></svg> Volver</button>
     </div>
 
     <!-- Paso 1: elegir tendido -->
@@ -1333,7 +1367,7 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
   <div id="bu-paso-2" style="display:none">
     <div class="card">
       <div class="card-title">Bultos propuestos</div>
-      <div class="alert alert-info">💡 Paty confirma cada bulto conforme corta. Puede <strong>dividir</strong> (ej: partir 15 en 7+8 de distinta talla), <strong>sustituir</strong> la talla (ej: P1595 → P1590), o <strong>confirmar</strong> si salió tal cual.</div>
+      <div class="alert alert-info">Paty confirma cada bulto conforme corta. Puede <strong>dividir</strong> (ej: partir 15 en 7+8 de distinta talla), <strong>sustituir</strong> la talla (ej: P1595 → P1590), o <strong>confirmar</strong> si salió tal cual.</div>
       <div id="bu-bultos-container"></div>
     </div>
 
@@ -1346,7 +1380,7 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
       </div>
     </div>
 
-    <button class="btn btn-success btn-block" id="btn-guardar-bulto" onclick="guardarBultos()">💾 Guardar bultos confirmados</button>
+    <button class="btn btn-success btn-block" id="btn-guardar-bulto" onclick="guardarBultos()">Guardar bultos confirmados</button>
   </div>
 </div>
 
@@ -5821,10 +5855,10 @@ function switchSubCorte(sub) {
   nuevoView.style.display = 'none';
   listaView.style.display = '';
 
-  const titulos = { trazos: '✂️ Trazos', tendidos: '📋 Tendidos', bultos: '📦 Bultos' };
+  const titulos = { trazos: '<span class="tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-tijera"/></svg></span> Trazos', tendidos: '<span class="tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-capas"/></svg></span> Tendidos', bultos: '<span class="tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-caja"/></svg></span> Bultos' };
   const tipos   = { trazos: 'trazo',     tendidos: 'tendido',     bultos: 'bulto' };
   const tit = document.getElementById('corte-lista-titulo');
-  if (tit) tit.textContent = titulos[sub] || '';
+  if (tit) tit.innerHTML = titulos[sub] || '';
 
   // Reutilizamos historial.js: renderea dentro de #historial-content.
   // Como ese div vive en otra view, lo puenteamos creando el div temporal.
@@ -5847,8 +5881,8 @@ async function cargarLoQueSigue() {
   try {
     const pend = await supaFetch('vw_trazos_sin_tendido', 'GET', null, '?limit=50');
     if (!pend.length) {
-      cont.innerHTML = `<div class="empty"><div class="empty-icon">✅</div>No hay tendidos pendientes.<br>
-        <button class="btn btn-ghost btn-sm mt8" onclick="switchSubCorte('nuevo')">➕ Anotar un trazo nuevo</button></div>`;
+      cont.innerHTML = `<div class="empty"><div class="empty-icon"><svg class="ico" aria-hidden="true"><use href="#i-listo"/></svg></div>No hay tendidos pendientes.<br>
+        <button class="btn btn-ghost btn-sm mt8" onclick="switchSubCorte('nuevo')"><svg class="ico" aria-hidden="true"><use href="#i-sumar"/></svg> Anotar un trazo nuevo</button></div>`;
       return;
     }
     const ids = pend.map(p => p.id).join(',');
@@ -5872,7 +5906,7 @@ async function cargarLoQueSigue() {
             <div class="sigue-titulo">${corteEsc(t.codigo_corte || t.fecha)}</div>
             <div class="sigue-datos">${datos}</div>
             <div class="sigue-botones">
-              <button class="btn ${primero ? 'btn-success' : 'btn-ghost'} btn-sm" onclick="tenderTrazo('${t.id}')">▶ Tender este</button>
+              <button class="btn ${primero ? 'btn-success' : 'btn-ghost'} btn-sm" onclick="tenderTrazo('${t.id}')"><svg class="ico" aria-hidden="true"><use href="#i-tijera"/></svg> Tender este</button>
               <button class="btn btn-ghost btn-sm" onclick="verDetalle('trazo','${t.id}')">Ver ficha</button>
             </div>
           </div>
@@ -5937,14 +5971,14 @@ function initHojasCorte() {
   ).join('');
   cont.innerHTML = `
     <div class="card">
-      <div class="card-title">👖 Bolsa delantera · pantalón</div>
+      <div class="card-title"><span class="tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-regla"/></svg></span> Bolsa delantera · pantalón</div>
       <div class="card-sub">Separación (A) y abertura (B) según la tabla MINED 2026. Hoja carta, blanco y negro, números grandes.</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0">${chips}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" onclick="hcSetTallas(HC_TEMPORADA)">Tallas de la temporada</button>
         <button class="btn btn-ghost btn-sm" onclick="hcSetTallas(Object.keys(HC_BOLSA_DEL))">Todas</button>
       </div>
-      <button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="hcImprimirBolsaDelantera()">🖨 Imprimir hoja</button>
+      <button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="hcImprimirBolsaDelantera()"><svg class="ico" aria-hidden="true"><use href="#i-imprimir"/></svg> Imprimir hoja</button>
     </div>`;
 }
 
@@ -8575,7 +8609,7 @@ function recalcYardas() {
   const calc = capas * ydLienzo;
   const hint = document.getElementById('t-yardas-hint');
   if (capas > 0 && ydLienzo > 0) {
-    hint.innerHTML = `Cálculo: ${capas} × ${ydLienzo} = <strong>${calc.toFixed(1)} yd</strong>. Tocá "🧮 Calc" para aplicar.`;
+    hint.innerHTML = `Cálculo: ${capas} × ${ydLienzo} = <strong>${calc.toFixed(1)} yd</strong>. Tocá «Calc» para aplicar.`;
   } else {
     hint.textContent = 'Tip: capas × yardas por lienzo. Editable si preferís otro valor.';
   }
@@ -8796,7 +8830,7 @@ function onKeyInput(id) {
   if (q && !existeExacta) {
     html += `
       <div class="key-option nueva" onmousedown="agregarKeyCatalogo(${id},'${q.replace(/'/g,"\\'")}','${prenda}')">
-        ➕ Agregar "${q}" al catálogo de ${CATALOGO[prenda].nombre}
+        + Agregar "${q}" al catálogo de ${CATALOGO[prenda].nombre}
       </div>
     `;
   }
@@ -9285,11 +9319,11 @@ async function guardarTrazo() {
       } catch(e) { console.warn('Foto:', e); }
     }
 
-    mostrarAlerta('trazo','success',`✅ Trazo ${letraCorte} guardado con ${tallas.length} talla(s).`);
-    setTimeout(() => { btn.textContent='💾 Guardar trazo'; btn.disabled=false; initTrazo(); }, 1800);
+    mostrarAlerta('trazo','success',`Trazo ${letraCorte} guardado con ${tallas.length} talla(s).`);
+    setTimeout(() => { btn.textContent='Guardar trazo'; btn.disabled=false; initTrazo(); }, 1800);
   } catch(e) {
     mostrarAlerta('trazo','error','Error: ' + e.message);
-    btn.textContent = '💾 Guardar trazo';
+    btn.textContent = 'Guardar trazo';
     btn.disabled = false;
   }
 }
@@ -9729,11 +9763,11 @@ async function guardarTendido() {
       }
     }
 
-    mostrarAlerta('tendido','success',`✅ Tendido guardado. ${n} rollo(s) renumerados (último tendido = bulto #1).`);
-    setTimeout(() => { btn.textContent='💾 Guardar tendido (invierte numeración)'; btn.disabled=false; volverNuevo(); }, 2200);
+    mostrarAlerta('tendido','success',`Tendido guardado. ${n} rollo(s) renumerados (último tendido = bulto #1).`);
+    setTimeout(() => { btn.textContent='Guardar tendido (invierte numeración)'; btn.disabled=false; volverNuevo(); }, 2200);
   } catch(e) {
     mostrarAlerta('tendido','error','Error: ' + e.message);
-    btn.textContent = '💾 Guardar tendido (invierte numeración)';
+    btn.textContent = 'Guardar tendido (invierte numeración)';
     btn.disabled = false;
   }
 }
@@ -9833,7 +9867,7 @@ function renderBultos() {
 
   cont.innerHTML = Object.entries(porRollo).map(([num, bultos]) => `
     <div style="margin-bottom:16px">
-      <div style="font-weight:700;color:var(--azul);margin-bottom:8px;font-size:13px">🧻 Rollo / Bulto #${num} (${bultos[0].capas} capas)</div>
+      <div style="font-weight:700;color:var(--azul);margin-bottom:8px;font-size:13px"><svg class="ico" aria-hidden="true"><use href="#i-capas"/></svg> Rollo / Bulto #${num} (${bultos[0].capas} capas)</div>
       ${bultos.map(b => renderBulto(b, letraCorte)).join('')}
     </div>
   `).join('');
@@ -9867,17 +9901,17 @@ function renderBulto(b, letraCorte) {
   // Badge de rol en par complementado
   let badgeRol = '';
   if (b.rol_par === 'principal' && b.hermano_key) {
-    badgeRol = `<span class="rbadge rbadge-trazo" title="Bulto principal del par, hermano: ${b.hermano_key}">🔗 par-P</span>`;
+    badgeRol = `<span class="rbadge rbadge-trazo" title="Bulto principal del par, hermano: ${b.hermano_key}">par-P</span>`;
   } else if (b.rol_par === 'complemento' && b.hermano_key) {
-    badgeRol = `<span class="rbadge rbadge-trazo" title="Bulto complemento del par, hermano: ${b.hermano_key}">🔗 par-C</span>`;
+    badgeRol = `<span class="rbadge rbadge-trazo" title="Bulto complemento del par, hermano: ${b.hermano_key}">par-C</span>`;
   }
 
   let acciones = '';
   if (b.estado === 'propuesto') {
     acciones = `
       <button class="btn-mini btn-mini-success" onclick="confirmarBulto('${b.uid}')">✓ Confirmar</button>
-      <button class="btn-mini btn-mini-primary" onclick="sustituirBulto('${b.uid}')">🔄 Sustituir</button>
-      <button class="btn-mini" onclick="dividirBulto('${b.uid}')">✂️ Dividir</button>
+      <button class="btn-mini btn-mini-primary" onclick="sustituirBulto('${b.uid}')"><svg class="ico" aria-hidden="true"><use href="#i-recargar"/></svg> Sustituir</button>
+      <button class="btn-mini" onclick="dividirBulto('${b.uid}')"><svg class="ico" aria-hidden="true"><use href="#i-tijera"/></svg> Dividir</button>
     `;
   } else if (b.estado === 'sustituido') {
     acciones = `<button class="btn-mini btn-mini-danger" onclick="resetBulto('${b.uid}')">↶ Revertir</button>`;
@@ -10068,11 +10102,11 @@ async function guardarBultos() {
       }
     }
 
-    mostrarAlerta('bulto','success',`✅ ${total} bulto(s) guardado(s).`);
-    setTimeout(() => { btn.textContent='💾 Guardar bultos confirmados'; btn.disabled=false; volverNuevo(); }, 2000);
+    mostrarAlerta('bulto','success',`${total} bulto(s) guardado(s).`);
+    setTimeout(() => { btn.textContent='Guardar bultos confirmados'; btn.disabled=false; volverNuevo(); }, 2000);
   } catch(e) {
     mostrarAlerta('bulto','error','Error: ' + e.message);
-    btn.textContent = '💾 Guardar bultos confirmados';
+    btn.textContent = 'Guardar bultos confirmados';
     btn.disabled = false;
   }
 }
@@ -10630,7 +10664,7 @@ async function renderFichaCorte(trazoId) {
   const talla = t => `${t.talla ? 'T' + t.talla : ''} <span class="text-muted">(${escH(t.talla_key_original)})</span>`;
   let html = '';
   if (trazo.foto_url) {
-    html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo">✂️ Trazo</div>
+    html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo"><svg class="ico" aria-hidden="true"><use href="#i-tijera"/></svg> Trazo</div>
       <a href="${escH(trazo.foto_url)}" target="_blank" rel="noopener"><img src="${escH(trazo.foto_url)}" style="width:100%;border-radius:8px;border:1px solid #ddd" alt="Trazo del corte ${escH(trazo.letra_corte)}"></a>
       <div class="text-muted" style="font-size:11px;margin-top:4px">Tocá la imagen para verla grande.</div></div>`;
   }
@@ -10639,7 +10673,7 @@ async function renderFichaCorte(trazoId) {
     : ultAc ? `Último acomodo guardado: v${ultAc.version} · ${new Date(ultAc.creado_en).toLocaleString('es-SV', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}${ultAc.largo_cm ? ' · ' + (ultAc.largo_cm / 100).toFixed(2) + ' m' : ''}`
     : 'Todavía no tiene acomodo guardado: empezás con la tela vacía.';
   html += `<div class="detalle-seccion">
-      <button class="btn btn-primary btn-block" style="font-size:15px;padding:14px 16px" onclick="abrirEditorTrazo('${escH(trazoId)}')">✏️ Abrir en el editor de trazo</button>
+      <button class="btn btn-primary btn-block" style="font-size:15px;padding:14px 16px" onclick="abrirEditorTrazo('${escH(trazoId)}')"><svg class="ico" aria-hidden="true"><use href="#i-lapiz"/></svg> Abrir en el editor de trazo</button>
       <div class="text-muted" id="ficha-ed-ver" style="font-size:11px;margin-top:4px;text-align:center">${escH(txtAc)}</div></div>`;
   html += `<div class="detalle-seccion">
       <div class="detalle-seccion-titulo">Datos del trazo</div>
@@ -10657,7 +10691,7 @@ async function renderFichaCorte(trazoId) {
 
   if (!tendidos.length) {
     html += `<div class="detalle-seccion"><div class="alert alert-info">Este trazo todavía no se tiende.</div>
-      <button class="btn btn-success btn-block" style="font-size:15px;padding:14px 16px" onclick="tenderTrazo('${escH(trazoId)}')">▶ Tender este trazo</button></div>`;
+      <button class="btn btn-success btn-block" style="font-size:15px;padding:14px 16px" onclick="tenderTrazo('${escH(trazoId)}')"><svg class="ico" aria-hidden="true"><use href="#i-tijera"/></svg> Tender este trazo</button></div>`;
   }
   for (const tend of tendidos) {
     const [rollos, bultos] = await Promise.all([
@@ -10669,7 +10703,7 @@ async function renderFichaCorte(trazoId) {
     const lz = rollos.reduce((s, r) => s + (r.lienzos_salidos || 0), 0);
     const pares = rollos.reduce((s, r) => s + paresDe(r), 0);
     html += `<div class="detalle-seccion">
-      <div class="detalle-seccion-titulo">📋 Tendido · ${escH(tend.fecha)}${tend.equipo ? ' · ' + escH(tend.equipo) : ''}</div>
+      <div class="detalle-seccion-titulo"><svg class="ico" aria-hidden="true"><use href="#i-capas"/></svg> Tendido · ${escH(tend.fecha)}${tend.equipo ? ' · ' + escH(tend.equipo) : ''}</div>
       <div class="row3" style="font-size:12px;margin-bottom:6px">
         <div><div class="text-muted">Rollos</div><strong>${rollos.length}</strong></div>
         <div><div class="text-muted">Pares / lienzos</div><strong>${pares} / ${lz}</strong></div>
@@ -10694,14 +10728,14 @@ async function renderFichaCorte(trazoId) {
       const est = { pendiente: 0, en_proceso: 0, terminado: 0 };
       bultos.forEach(b => { const e = b.estado_manual || 'pendiente'; est[e] = (est[e] || 0) + 1; });
       html += `<div class="detalle-seccion">
-        <div class="detalle-seccion-titulo">📦 Bultos → producción (${bultos.length})</div>
+        <div class="detalle-seccion-titulo"><svg class="ico" aria-hidden="true"><use href="#i-caja"/></svg> Bultos → producción (${bultos.length})</div>
         <div class="text-muted" style="font-size:12px;margin-bottom:6px">⬜ pendiente ${est.pendiente} · 🟨 en proceso ${est.en_proceso} · 🟩 terminado ${est.terminado}</div>
         ${Object.values(porTalla).map(g => `
           <div style="margin-bottom:8px">
             <div style="font-size:12px"><strong style="color:var(--azul)">${escH(g.letra)}</strong> · ${escH(g.key)} · <strong>${g.piezas}</strong> piezas en ${g.bultos.length} bulto(s)</div>
             <div class="tallas-inline">${g.bultos.map(b => `<span class="talla-pill" style="background:${color(b.estado_manual)}" title="${b.etapas_hechas || 0}/${b.total_etapas || 0} operaciones">${escH(b.codigo_bulto)}${b.total_etapas ? ' · ' + (b.etapas_hechas || 0) + '/' + b.total_etapas : ''}</span>`).join('')}</div>
           </div>`).join('')}
-        <div class="text-muted" style="font-size:11px">El avance de cada bulto (operaciones hechas) se marca en 🏭 Producción.</div>
+        <div class="text-muted" style="font-size:11px">El avance de cada bulto (operaciones hechas) se marca en Producción.</div>
       </div>`;
     } else {
       html += `<div class="detalle-seccion"><div class="alert alert-info">Bultos de este tendido pendientes de capturar.</div></div>`;
@@ -10715,7 +10749,7 @@ async function renderFichaCorte(trazoId) {
 // Seguimiento del corte: lo que se va diciendo y haciendo, con fecha, quién y foto.
 async function renderSeguimientoCorte(box, ref) {
   if (!box) return;
-  box.innerHTML = '<div class="detalle-seccion"><div class="detalle-seccion-titulo">📝 Seguimiento</div><div class="loading">Cargando...</div></div>';
+  box.innerHTML = '<div class="detalle-seccion"><div class="detalle-seccion-titulo"><svg class="ico" aria-hidden="true"><use href="#i-lista"/></svg> Seguimiento</div><div class="loading">Cargando...</div></div>';
   const filtro = ref.trazo_id && ref.tendido_id ? `?or=(trazo_id.eq.${ref.trazo_id},tendido_id.eq.${ref.tendido_id})`
                : ref.trazo_id ? `?trazo_id=eq.${ref.trazo_id}` : `?tendido_id=eq.${ref.tendido_id}`;
   let notas = [];
@@ -10723,7 +10757,7 @@ async function renderSeguimientoCorte(box, ref) {
   const tz = ref.trazo_id ? `'${ref.trazo_id}'` : 'null';
   const td = ref.tendido_id ? `'${ref.tendido_id}'` : 'null';
   box.innerHTML = `<div class="detalle-seccion">
-    <div class="detalle-seccion-titulo">📝 Seguimiento (${notas.length})</div>
+    <div class="detalle-seccion-titulo"><svg class="ico" aria-hidden="true"><use href="#i-lista"/></svg> Seguimiento (${notas.length})</div>
     ${notas.length ? notas.map(n => `
       <div style="border-left:3px solid var(--azul);padding:4px 0 6px 8px;margin-bottom:8px">
         <div class="text-muted" style="font-size:11px">${escH(n.fecha)}${n.quien ? ' · <strong>' + escH(n.quien) + '</strong>' : ''}</div>
@@ -10737,7 +10771,7 @@ async function renderSeguimientoCorte(box, ref) {
         <input id="seg-fecha" type="date" value="${hoyLocal()}" style="width:140px">
       </div>
       <input id="seg-foto" type="file" accept="image/*" style="margin-top:6px">
-      <button class="btn btn-primary btn-sm btn-block" style="margin-top:6px" id="seg-btn" onclick="agregarSeguimientoCorte(${tz}, ${td})">➕ Agregar al seguimiento</button>
+      <button class="btn btn-primary btn-sm btn-block" style="margin-top:6px" id="seg-btn" onclick="agregarSeguimientoCorte(${tz}, ${td})">+ Agregar al seguimiento</button>
     </div>
   </div>`;
 }
@@ -10767,7 +10801,7 @@ async function agregarSeguimientoCorte(trazoId, tendidoId) {
     });
     renderSeguimientoCorte(document.getElementById('seg-corte-box'), { trazo_id: trazoId, tendido_id: tendidoId });
   } catch (e) {
-    btn.disabled = false; btn.textContent = '➕ Agregar al seguimiento';
+    btn.disabled = false; btn.textContent = '+ Agregar al seguimiento';
     if (typeof showToast === 'function') showToast('Error: ' + e.message, 'error'); else alert(e.message);
   }
 }

@@ -89,7 +89,7 @@ function renderBultos() {
 
   cont.innerHTML = Object.entries(porRollo).map(([num, bultos]) => `
     <div style="margin-bottom:16px">
-      <div style="font-weight:700;color:var(--azul);margin-bottom:8px;font-size:13px">🧻 Rollo / Bulto #${num} (${bultos[0].capas} capas)</div>
+      <div style="font-weight:700;color:var(--azul);margin-bottom:8px;font-size:13px"><svg class="ico" aria-hidden="true"><use href="#i-capas"/></svg> Rollo / Bulto #${num} (${bultos[0].capas} capas)</div>
       ${bultos.map(b => renderBulto(b, letraCorte)).join('')}
     </div>
   `).join('');
@@ -123,17 +123,17 @@ function renderBulto(b, letraCorte) {
   // Badge de rol en par complementado
   let badgeRol = '';
   if (b.rol_par === 'principal' && b.hermano_key) {
-    badgeRol = `<span class="rbadge rbadge-trazo" title="Bulto principal del par, hermano: ${b.hermano_key}">🔗 par-P</span>`;
+    badgeRol = `<span class="rbadge rbadge-trazo" title="Bulto principal del par, hermano: ${b.hermano_key}">par-P</span>`;
   } else if (b.rol_par === 'complemento' && b.hermano_key) {
-    badgeRol = `<span class="rbadge rbadge-trazo" title="Bulto complemento del par, hermano: ${b.hermano_key}">🔗 par-C</span>`;
+    badgeRol = `<span class="rbadge rbadge-trazo" title="Bulto complemento del par, hermano: ${b.hermano_key}">par-C</span>`;
   }
 
   let acciones = '';
   if (b.estado === 'propuesto') {
     acciones = `
       <button class="btn-mini btn-mini-success" onclick="confirmarBulto('${b.uid}')">✓ Confirmar</button>
-      <button class="btn-mini btn-mini-primary" onclick="sustituirBulto('${b.uid}')">🔄 Sustituir</button>
-      <button class="btn-mini" onclick="dividirBulto('${b.uid}')">✂️ Dividir</button>
+      <button class="btn-mini btn-mini-primary" onclick="sustituirBulto('${b.uid}')"><svg class="ico" aria-hidden="true"><use href="#i-recargar"/></svg> Sustituir</button>
+      <button class="btn-mini" onclick="dividirBulto('${b.uid}')"><svg class="ico" aria-hidden="true"><use href="#i-tijera"/></svg> Dividir</button>
     `;
   } else if (b.estado === 'sustituido') {
     acciones = `<button class="btn-mini btn-mini-danger" onclick="resetBulto('${b.uid}')">↶ Revertir</button>`;
@@ -324,11 +324,11 @@ async function guardarBultos() {
       }
     }
 
-    mostrarAlerta('bulto','success',`✅ ${total} bulto(s) guardado(s).`);
-    setTimeout(() => { btn.textContent='💾 Guardar bultos confirmados'; btn.disabled=false; volverNuevo(); }, 2000);
+    mostrarAlerta('bulto','success',`${total} bulto(s) guardado(s).`);
+    setTimeout(() => { btn.textContent='Guardar bultos confirmados'; btn.disabled=false; volverNuevo(); }, 2000);
   } catch(e) {
     mostrarAlerta('bulto','error','Error: ' + e.message);
-    btn.textContent = '💾 Guardar bultos confirmados';
+    btn.textContent = 'Guardar bultos confirmados';
     btn.disabled = false;
   }
 }

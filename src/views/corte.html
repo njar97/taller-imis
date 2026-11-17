@@ -3,26 +3,26 @@
   <div id="alert-corte"></div>
   <div class="ayuda-tip" data-ayuda="corte" role="note">
     <span class="ayuda-tip-ico" aria-hidden="true">💡</span>
-    <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> En <b>▶ Sigue</b> están los tendidos que faltan, en orden. Tocá <b>Tender este</b> y copiá lo del cuaderno, rollo por rollo con sus capas.</span>
+    <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> En <b>Sigue</b> están los tendidos que faltan, en orden. Tocá <b>Tender este</b> y copiá lo del cuaderno, rollo por rollo con sus capas.</span>
     <button type="button" class="ayuda-tip-x" onclick="cerrarAyuda('corte')" aria-label="Cerrar esta ayuda" title="Cerrar esta ayuda">✕</button>
   </div>
 
   <!-- Subnav (escondido en «modo paso»: entrando por «1. Tender» solo se ve ▶ Sigue) -->
   <div class="card" id="corte-subnav" style="padding:6px;margin-bottom:10px">
     <div class="subnav-btns" style="display:flex;gap:4px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" id="corte-sub-sigue"    onclick="switchSubCorte('sigue')"    style="flex:1;min-width:80px">▶ Sigue</button>
-      <button class="btn btn-ghost   btn-sm" id="corte-sub-nuevo"    onclick="switchSubCorte('nuevo')"    style="flex:1;min-width:80px">➕ Nuevo</button>
-      <button class="btn btn-ghost   btn-sm" id="corte-sub-trazos"   onclick="switchSubCorte('trazos')"   style="flex:1;min-width:80px">✂️ Trazos</button>
-      <button class="btn btn-ghost   btn-sm" id="corte-sub-tendidos" onclick="switchSubCorte('tendidos')" style="flex:1;min-width:80px">📋 Tendidos</button>
-      <button class="btn btn-ghost   btn-sm" id="corte-sub-bultos"   onclick="switchSubCorte('bultos')"   style="flex:1;min-width:80px">📦 Bultos</button>
-      <button class="btn btn-ghost   btn-sm" id="corte-sub-hojas"    onclick="switchSubCorte('hojas')"    style="flex:1;min-width:80px">📐 Hojas</button>
+      <button class="btn btn-primary btn-sm" id="corte-sub-sigue"    onclick="switchSubCorte('sigue')"    style="flex:1;min-width:80px"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg> Sigue</button>
+      <button class="btn btn-ghost   btn-sm" id="corte-sub-nuevo"    onclick="switchSubCorte('nuevo')"    style="flex:1;min-width:80px"><svg class="ico" aria-hidden="true"><use href="#i-sumar"/></svg> Nuevo</button>
+      <button class="btn btn-ghost   btn-sm" id="corte-sub-trazos"   onclick="switchSubCorte('trazos')"   style="flex:1;min-width:80px"><svg class="ico" aria-hidden="true"><use href="#i-tijera"/></svg> Trazos</button>
+      <button class="btn btn-ghost   btn-sm" id="corte-sub-tendidos" onclick="switchSubCorte('tendidos')" style="flex:1;min-width:80px"><svg class="ico" aria-hidden="true"><use href="#i-capas"/></svg> Tendidos</button>
+      <button class="btn btn-ghost   btn-sm" id="corte-sub-bultos"   onclick="switchSubCorte('bultos')"   style="flex:1;min-width:80px"><svg class="ico" aria-hidden="true"><use href="#i-caja"/></svg> Bultos</button>
+      <button class="btn btn-ghost   btn-sm" id="corte-sub-hojas"    onclick="switchSubCorte('hojas')"    style="flex:1;min-width:80px"><svg class="ico" aria-hidden="true"><use href="#i-regla"/></svg> Hojas</button>
     </div>
   </div>
 
   <!-- SUB: Lo que sigue (trazos pendientes de tender, en orden) -->
   <div id="corte-sub-sigue-view">
     <div class="card">
-      <div class="card-title">▶ Lo que sigue</div>
+      <div class="card-title"><span class="tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg></span> Lo que sigue</div>
       <div class="card-sub">Tendidos que faltan, en orden. Tocá <b>Tender este</b> cuando se vaya a tender.</div>
       <div id="corte-sigue-content"><div class="loading">Cargando...</div></div>
     </div>
@@ -31,32 +31,32 @@
   <!-- SUB: Nuevo -->
   <div id="corte-sub-nuevo-view" style="display:none">
     <div class="card">
-      <div class="card-title">➕ Nuevo registro de corte</div>
+      <div class="card-title"><span class="tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-sumar"/></svg></span> Nuevo registro de corte</div>
       <div class="card-sub">Elegí qué querés registrar según el momento del taller.</div>
       <div class="menu-nuevo">
         <div class="menu-tarjeta" onclick="irA('trazo')">
-          <div class="menu-icono">✂️</div>
+          <div class="menu-icono tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-tijera"/></svg></div>
           <div class="menu-info">
             <div class="menu-titulo">Trazo</div>
             <div class="menu-desc">Imelda dibuja la plancha con las tallas marcadas. Se puede dejar pendiente de tender para después.</div>
           </div>
-          <div style="font-size:22px;color:#ccc">›</div>
+          <div class="menu-ir"><svg class="ico" aria-hidden="true"><use href="#i-ir"/></svg></div>
         </div>
         <div class="menu-tarjeta" onclick="irA('tendido')">
-          <div class="menu-icono">📋</div>
+          <div class="menu-icono tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-capas"/></svg></div>
           <div class="menu-info">
             <div class="menu-titulo">Tendido</div>
             <div class="menu-desc">Sobre un trazo existente. Registrar rollo por rollo mientras se tiende.</div>
           </div>
-          <div style="font-size:22px;color:#ccc">›</div>
+          <div class="menu-ir"><svg class="ico" aria-hidden="true"><use href="#i-ir"/></svg></div>
         </div>
         <div class="menu-tarjeta" onclick="irA('bulto')">
-          <div class="menu-icono">📦</div>
+          <div class="menu-icono tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-caja"/></svg></div>
           <div class="menu-info">
             <div class="menu-titulo">Bulto</div>
             <div class="menu-desc">Después del corte. Propone bultos automáticamente; Paty confirma, divide o sustituye.</div>
           </div>
-          <div style="font-size:22px;color:#ccc">›</div>
+          <div class="menu-ir"><svg class="ico" aria-hidden="true"><use href="#i-ir"/></svg></div>
         </div>
       </div>
     </div>

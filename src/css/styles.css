@@ -957,3 +957,24 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
 .tj-ambar { background: var(--c-terminar-bg); color: var(--c-terminar); }
 .menumas-btn { border-color: var(--linea); border-radius: 14px; color: var(--tinta); }
 .menumas-lista .tj-ico { width: 40px; height: 40px; border-radius: 12px; font-size: 22px; }
+/* ── DISEÑO nov-2026 · Corte: menú de arriba, «Lo que sigue», «Nuevo» ── */
+.btn .ico, .btn-mini .ico { font-size: 1.15em; }
+#corte-subnav { padding: 6px; border-radius: 16px; }
+#corte-subnav .btn { border-radius: 11px; gap: 5px; }
+#corte-subnav .btn-ghost { background: transparent; border-color: transparent; color: var(--tinta2); }
+#corte-subnav .btn-primary { background: var(--c-tender); box-shadow: 0 2px 8px rgba(31,95,168,.3); }
+.card-title .tj-ico { margin-right: 2px; }
+.sigue-item { border: 1px solid var(--linea); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+.sigue-item.sigue-primero { border: 2px solid #2E9E5B; background: #F3FBF5; }
+.sigue-etiqueta { display: inline-block; font-size: 10.5px; letter-spacing: .6px; color: var(--c-empacar); background: var(--c-empacar-bg); border-radius: 999px; padding: 2px 9px; margin-bottom: 4px; }
+.sigue-titulo { color: var(--tinta); letter-spacing: -.2px; }
+.sigue-datos { color: var(--tinta2); }
+.sigue-foto { border-radius: 10px; border-color: var(--linea); }
+.sigue-primero .btn-success { background: #2E9E5B; }
+.menu-tarjeta { padding: 16px; border: 1px solid var(--linea); border-radius: 14px; }
+.menu-tarjeta:hover { border-color: var(--c-tender); }
+.menu-icono.tj-ico { width: 48px; height: 48px; border-radius: 14px; font-size: 26px; }
+.menu-titulo { color: var(--tinta); }
+.menu-desc { color: var(--tinta2); }
+.menu-ir { font-size: 20px; color: #A9B4C0; }
+.empty-icon .ico { color: var(--c-empacar); }

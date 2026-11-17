@@ -83,7 +83,7 @@ function recalcYardas() {
   const calc = capas * ydLienzo;
   const hint = document.getElementById('t-yardas-hint');
   if (capas > 0 && ydLienzo > 0) {
-    hint.innerHTML = `Cálculo: ${capas} × ${ydLienzo} = <strong>${calc.toFixed(1)} yd</strong>. Tocá "🧮 Calc" para aplicar.`;
+    hint.innerHTML = `Cálculo: ${capas} × ${ydLienzo} = <strong>${calc.toFixed(1)} yd</strong>. Tocá «Calc» para aplicar.`;
   } else {
     hint.textContent = 'Tip: capas × yardas por lienzo. Editable si preferís otro valor.';
   }
@@ -304,7 +304,7 @@ function onKeyInput(id) {
   if (q && !existeExacta) {
     html += `
       <div class="key-option nueva" onmousedown="agregarKeyCatalogo(${id},'${q.replace(/'/g,"\\'")}','${prenda}')">
-        ➕ Agregar "${q}" al catálogo de ${CATALOGO[prenda].nombre}
+        + Agregar "${q}" al catálogo de ${CATALOGO[prenda].nombre}
       </div>
     `;
   }
@@ -793,11 +793,11 @@ async function guardarTrazo() {
       } catch(e) { console.warn('Foto:', e); }
     }
 
-    mostrarAlerta('trazo','success',`✅ Trazo ${letraCorte} guardado con ${tallas.length} talla(s).`);
-    setTimeout(() => { btn.textContent='💾 Guardar trazo'; btn.disabled=false; initTrazo(); }, 1800);
+    mostrarAlerta('trazo','success',`Trazo ${letraCorte} guardado con ${tallas.length} talla(s).`);
+    setTimeout(() => { btn.textContent='Guardar trazo'; btn.disabled=false; initTrazo(); }, 1800);
   } catch(e) {
     mostrarAlerta('trazo','error','Error: ' + e.message);
-    btn.textContent = '💾 Guardar trazo';
+    btn.textContent = 'Guardar trazo';
     btn.disabled = false;
   }
 }
