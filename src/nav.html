@@ -1,14 +1,34 @@
 <body class="modo-operario">
 
+<!-- Iconos dibujados (un solo estilo, de línea). Se usan con ico('nombre') o <svg class="ico"><use href="#i-nombre"/></svg> -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-casa" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-buscar" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-tijera" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><path d="M14.8 14.8 20 20"/></symbol>
+  <symbol id="i-hilo" viewBox="0 0 24 24"><path d="M6 4h12M6 20h12M8 4v16M16 4v16M8 9.5l8-2.5M8 13.5l8-2.5M8 17.5l8-2.5"/></symbol>
+  <symbol id="i-caja" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></symbol>
+  <symbol id="i-camion" viewBox="0 0 24 24"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></symbol>
+  <symbol id="i-avance" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-reloj" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-escuela" viewBox="0 0 24 24"><path d="M3 21h18M5 21V9l7-5 7 5v12M10 21v-5h4v5"/></symbol>
+  <symbol id="i-recargar" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15.5-6.3L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.3L3 16"/><path d="M3 21v-5h5"/></symbol>
+  <symbol id="i-ir" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-bodega" viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13"/><path d="M7 21v-8h10v8"/><path d="M7 17h10"/></symbol>
+  <symbol id="i-lista" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3"/></symbol>
+  <symbol id="i-ajustes" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h8M16 18h4"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="14" cy="18" r="2"/></symbol>
+  <symbol id="i-mas" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></symbol>
+</svg>
+
 <nav>
   <div class="nav-top">
-    <button type="button" id="nav-inicio" class="nav-inicio" onclick="irInicio()" title="Volver a Inicio" aria-label="Volver a Inicio">🏠</button>
+    <button type="button" id="nav-inicio" class="nav-inicio" onclick="irInicio()" title="Volver a Inicio" aria-label="Volver a Inicio"><svg class="ico" aria-hidden="true"><use href="#i-casa"/></svg></button>
     <h1 class="nav-brand">
       <span class="nav-brand-app">Taller IMIS</span>
       <span class="nav-brand-section">Uniformes</span>
     </h1>
     <div id="buscador-wrap" class="buscador-wrap">
-      <input type="text" id="buscador-input" placeholder="🔍 Buscar escuela o pantalla"
+      <svg class="ico buscador-ico" aria-hidden="true"><use href="#i-buscar"/></svg>
+      <input type="text" id="buscador-input" placeholder="Buscar" aria-label="Buscar escuela o pantalla"
              oninput="buscadorOnInput(event)" onfocus="buscadorOnInput(event)"
              autocomplete="off" title="Buscá una escuela, un alumno de talla especial o una pantalla de la app · Atajo: Ctrl/⌘ + K">
       <div id="buscador-results" class="buscador-results" style="display:none"></div>
@@ -35,7 +55,7 @@
   </div>
 </nav>
 <!-- Pantalla única: en el celular, botón fijo abajo para volver (css .barra-inicio) -->
-<button type="button" id="barra-inicio" class="barra-inicio" onclick="irInicio()">🏠 Inicio</button>
+<button type="button" id="barra-inicio" class="barra-inicio" onclick="irInicio()"><svg class="ico" aria-hidden="true"><use href="#i-casa"/></svg> Inicio</button>
 <!-- Asistencia: la app arranca en versión corta (una palabra por botón). Este
      botón prende o apaga la versión extendida: explicaciones, textos largos y
      los «¿Cómo se usa?» de cada pantalla (css .solo-asistencia / .ayuda-tip). -->
