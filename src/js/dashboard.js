@@ -32,8 +32,8 @@ async function initDashboard() {
     </div>
     ${tareasInicioHtml()}
     <div id="dashboard-sub-contenido"></div>
-    <button type="button" class="menumas-btn" style="margin-top:6px" onclick="switchTab('mas')">
-      <span class="menumas-ico">☰</span><span><strong>Más</strong><small class="solo-asistencia">Bodega, registro, estadística, ajustes y las pantallas completas</small></span>
+    <button type="button" class="menumas-btn mas-inicio" onclick="switchTab('mas')">
+      <span class="tj-ico tj-gris">${ico('mas')}</span><span class="mas-txt"><strong>Más</strong><small class="solo-asistencia">Bodega, registro, estadística, ajustes y las pantallas completas</small></span>${ico('ir')}
     </button>
   `;
 
@@ -54,11 +54,13 @@ function dashElegirTemporada(id) {
 // Solo los 4 pasos del trabajo, en el orden en que pasa. Lo demás (entrada
 // y conteo de bodega, tallas especiales…) se abre desde «Todo lo demás».
 // tareaIr() sigue aceptando los otros ids (los usa el buscador).
+// Icono dibujado del sprite de nav.html (#i-nombre). Toma el color del texto.
+function ico(n) { return `<svg class="ico" aria-hidden="true"><use href="#i-${n}"/></svg>`; }
 const TAREAS_INICIO = [
-  { id: 'corte',    n: 1, ico: '✂️', tit: 'Tender',   sub: 'El corte que sigue' },
-  { id: 'bulto',    n: 2, ico: '🧵', tit: 'Terminar', sub: 'El bulto sale de costura y entra a bodega' },
-  { id: 'empacar',  n: 3, ico: '🧺', tit: 'Empacar',  sub: 'Apartar lo de una escuela' },
-  { id: 'entregar', n: 4, ico: '🚚', tit: 'Entregar', sub: 'Lo empacado se va a la escuela' },
+  { id: 'corte',    n: 1, ico: 'tijera', tit: 'Tender',   sub: 'El corte que sigue' },
+  { id: 'bulto',    n: 2, ico: 'hilo', tit: 'Terminar', sub: 'El bulto sale de costura y entra a bodega' },
+  { id: 'empacar',  n: 3, ico: 'caja', tit: 'Empacar',  sub: 'Apartar lo de una escuela' },
+  { id: 'entregar', n: 4, ico: 'camion', tit: 'Entregar', sub: 'Lo empacado se va a la escuela' },
 ];
 // Texto vivo debajo de cada paso («Sigue Plan T1 · faltan 6»…).
 function tareaSubtitulo(id, txt) {
@@ -68,15 +70,16 @@ function tareaSubtitulo(id, txt) {
 
 function tareasInicioHtml() {
   const ayuda = typeof ayudaHtml === 'function'
-    ? ayudaHtml('inicio', 'Arriba, cómo va el trabajo: verde es lo que ya está en bodega, amarillo lo que está en costura y gris lo que falta empezar. «Detalle» lo abre por prenda y por talla. Los cuatro botones son los pasos del trabajo: tocá el que vas a anotar. «Urge» son las tallas con más piezas sin empezar. «Listo» son las escuelas a las que ya se les puede empacar algo; el número es cuántas piezas. «Más» abre el resto de pantallas. Con 🏠 se vuelve aquí.')
+    ? ayudaHtml('inicio', 'Arriba, cómo va el trabajo: verde es lo que ya está en bodega, amarillo lo que está en costura y gris lo que falta empezar. «Detalle» lo abre por prenda y por talla. Los cuatro botones son los pasos del trabajo: tocá el que vas a anotar. «Urge» son las tallas con más piezas sin empezar. «Listo» son las escuelas a las que ya se les puede empacar algo; el número es cuántas piezas. «Más» abre el resto de pantallas. Con la casita de arriba se vuelve aquí.')
     : '';
   return `
     <section class="card tareas-card" aria-label="Pasos del trabajo">
       ${ayuda}
       <div class="tareas-grid">
         ${TAREAS_INICIO.map(t => `
-        <button type="button" class="tarea-btn" data-tarea="${t.id}" onclick="tareaIr('${t.id}')">
-          <span class="tarea-ico" aria-hidden="true">${t.ico}</span>
+        <button type="button" class="tarea-btn paso-${t.n}" data-tarea="${t.id}" onclick="tareaIr('${t.id}')">
+          <span class="paso-n" aria-hidden="true">${t.n}</span>
+          <span class="tarea-ico" aria-hidden="true">${ico(t.ico)}</span>
           <span class="tarea-tit">${t.tit}</span>
           <span class="tarea-sub solo-asistencia" id="tarea-sub-${t.id}">${t.sub}</span>
         </button>`).join('')}
@@ -567,7 +570,7 @@ function renderDashboard() {
     <!-- (Los accesos rápidos de antes quedaron arriba, en «¿Qué vas a hacer hoy?») -->
     ${_dashSelectorTemporada(r.temporadas, sel?.id)}
     <div style="text-align:center;margin:10px 0">
-      <button class="btn btn-ghost btn-sm" onclick="initDashboard()">🔄 Refrescar</button>
+      <button class="btn btn-ghost btn-sm" onclick="initDashboard()">${ico('recargar')} Refrescar</button>
     </div>
   `;
 }
@@ -583,7 +586,8 @@ function dashVerPlan() {
 
 // «Cómo vamos»: por prenda, una barra con lo que ya está en bodega, lo que
 // está en costura y lo que falta empezar. Las tres partes suman el pedido.
-const CV_VERDE = '#2E9E5B', CV_AMBAR = '#E6A23C', CV_GRIS = '#D9DEE5';
+const CV_VERDE = '#2E9E5B', CV_AMBAR = '#F0A531', CV_GRIS = '#E3E8EF';
+const CV_MORADO = '#6B3FA0';   // lo entregado (mismo color que el paso «Entregar»)
 function _cvBarra(o, alto) {
   const pct = v => o.pedido > 0 ? (100 * v / o.pedido) : 0;
   const seg = (v, color) => v > 0 ? `<div style="width:${pct(v).toFixed(2)}%;background:${color}"></div>` : '';
@@ -649,21 +653,26 @@ function _renderComoVamos(plan, prod, totEmp) {
   const pctListo = o => o.pedido > 0 ? Math.floor(100 * o.listo / o.pedido) : 0;
   const p = prod || {};
   return `
-      <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
-        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px">
-          <span>📊 Cómo vamos</span>
-          <button class="btn btn-ghost btn-sm" onclick="initDashboard()" style="font-size:11px;padding:4px 8px" title="Volver a cargar los números">🔄</button>
+      <div class="card tj">
+        <div class="tj-cab">
+          <span class="tj-ico tj-verde">${ico('avance')}</span>
+          <h2>Cómo vamos</h2>
+          <button type="button" class="tj-accion redondo" onclick="initDashboard()" title="Volver a cargar los números" aria-label="Volver a cargar los números">${ico('recargar')}</button>
         </div>
-        <div style="padding:10px 12px 12px;border-bottom:1px solid #EEE">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px">
-            <span style="font-size:13px;color:#555">${dashNum(tot.pedido)} piezas<span class="solo-asistencia"> pedidas en la temporada</span></span>
-            <span style="font-size:20px;font-weight:700;color:${CV_VERDE}">${pctListo(tot)}%<span class="solo-asistencia"> en bodega</span></span>
+        <div class="cv">
+          <div class="cv-top">
+            <div class="cv-pct">${pctListo(tot)}<small>%</small><span>en bodega</span></div>
+            <div class="cv-total"><strong>${dashNum(tot.pedido)}</strong>piezas<span class="solo-asistencia"> pedidas en la temporada</span></div>
           </div>
-          ${_cvBarra(tot, 16)}
-          <div style="font-size:12px;margin-top:6px;line-height:1.7">${_cvLeyenda(tot)}</div>
+          ${_cvBarra(tot, 14)}
+          <div class="cv-nums">
+            <div style="--p:${CV_VERDE}"><b>${dashNum(tot.listo)}</b><small>En bodega</small></div>
+            <div style="--p:${CV_AMBAR}"><b>${dashNum(tot.costura)}</b><small>En costura</small></div>
+            <div style="--p:#B9C2CD"><b>${dashNum(tot.sin)}</b><small>Sin empezar</small></div>
+          </div>
         </div>
-        <button type="button" class="cv-ver" aria-expanded="${_cvPorPrenda}" onclick="cvToggle()">
-          <span>${_cvPorPrenda ? '▾ Detalle' : '▸ Detalle'}<span class="solo-asistencia" style="font-weight:400"> por prenda y talla (tocá una prenda para ver sus tallas)</span></span>
+        <button type="button" class="cv-ver${_cvPorPrenda ? ' abierta' : ''}" aria-expanded="${_cvPorPrenda}" onclick="cvToggle()">
+          <span>Detalle<span class="solo-asistencia" style="font-weight:400"> por prenda y talla (tocá una prenda para ver sus tallas)</span></span>${ico('ir')}
         </button>
         ${!_cvPorPrenda ? '' : `
         <div style="padding:8px 12px;border-bottom:1px solid #F0F0F0;font-size:12px;color:#555">
@@ -671,7 +680,7 @@ function _renderComoVamos(plan, prod, totEmp) {
         </div>` + filas.map(o => `
         <div class="cv-prenda" role="button" tabindex="0" aria-expanded="${_cvAbiertas.has(o.cod)}" onclick="cvToggle('${o.cod}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();cvToggle('${o.cod}')}" style="padding:9px 12px;border-bottom:1px solid #F0F0F0;cursor:pointer">
           <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px">
-            <span style="font-weight:600;font-size:13px"><span style="color:#889;display:inline-block;width:14px">${_cvAbiertas.has(o.cod) ? '▾' : '▸'}</span>${dashEsc(dashPrendaNombre(o.cod))} <span style="font-weight:400;color:#888;font-size:11px">· ${dashNum(o.pedido)} pedidas</span></span>
+            <span style="font-weight:600;font-size:13px"><span class="fl-flecha${_cvAbiertas.has(o.cod) ? ' abierta' : ''}">${ico('ir')}</span>${dashEsc(dashPrendaNombre(o.cod))} <span style="font-weight:400;color:#888;font-size:11px">· ${dashNum(o.pedido)} pedidas</span></span>
             <span style="font-size:12px;font-weight:700;color:${o.listo > 0 ? CV_VERDE : '#999'}">${pctListo(o)}%</span>
           </div>
           ${_cvBarra(o, 10)}
@@ -719,10 +728,11 @@ function _renderQueUrge(plan) {
   if (!filas.length) return '<div id="dash-urge"></div>';
   const max = Math.max(...filas.map(f => Number(f.falta_iniciar) || 0), 1);
   return `
-      <div class="card" id="dash-urge" style="padding:0;overflow:hidden;margin-bottom:10px">
-        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px">
-          <span>⏰ Urge<span class="solo-asistencia"> · tocá una talla para ver en qué corte sale</span></span>
-          <button class="btn btn-ghost btn-sm" onclick="dashVerPlan()" style="font-size:11px;padding:4px 8px">Plan ›</button>
+      <div class="card tj" id="dash-urge">
+        <div class="tj-cab">
+          <span class="tj-ico tj-naranja">${ico('reloj')}</span>
+          <h2>Urge<span class="solo-asistencia"> · tocá una talla para ver en qué corte sale</span></h2>
+          <button type="button" class="tj-accion" onclick="dashVerPlan()">Plan ${ico('ir')}</button>
         </div>
         <div class="solo-asistencia" style="padding:4px 12px 0;font-size:12px;color:#666">Las tallas con más piezas sin empezar: lo que conviene cortar después.</div>
         ${filas.map(f => {
@@ -745,7 +755,7 @@ function _renderQueUrge(plan) {
             ${cortes.length ? cortes.map(c => `
             <div class="urge-corte">
               <span><strong>${dashEsc(c.codigo)}</strong><small>${c.porTela} por tela${c.capas ? ` · ${dashNum(c.capas)} telas` : ''}</small></span>
-              <button type="button" class="btn btn-primary" onclick="event.stopPropagation();urgeTender('${c.id}')">✂️ Tender</button>
+              <button type="button" class="btn btn-primary" onclick="event.stopPropagation();urgeTender('${c.id}')">${ico('tijera')} Tender</button>
             </div>`).join('') : `
             <div class="urge-corte">
               <span><strong>Sin corte pendiente</strong><small>No sale en ningún tendido del plan</small></span>
@@ -756,10 +766,10 @@ function _renderQueUrge(plan) {
           return `
         <div class="av-fila${abierta ? ' abierta' : ''}" role="button" tabindex="0" aria-expanded="${abierta}" onclick="urgeToggle('${k}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();urgeToggle('${k}')}">
           <div class="av-cab">
-            <span class="av-nombre"><span style="color:#889;display:inline-block;width:14px">${abierta ? '▾' : '▸'}</span>${dashEsc(dashPrendaNombre(f.cod_prenda))} ${dashEsc(f.talla_2026)}${f.contado === false ? ' <span style="font-size:10.5px;font-weight:400;color:#8a4b00">· sin contar</span>' : ''}</span>
+            <span class="av-nombre"><span class="fl-flecha${abierta ? ' abierta' : ''}">${ico('ir')}</span>${dashEsc(dashPrendaNombre(f.cod_prenda))} ${dashEsc(f.talla_2026)}${f.contado === false ? ' <span style="font-size:10.5px;font-weight:400;color:#8a4b00">· sin contar</span>' : ''}</span>
             <span class="av-falta"><strong>${dashNum(sin)}</strong><span class="solo-asistencia"> sin empezar de ${dashNum(pedido)}</span></span>
           </div>
-          <div class="av-barra"><div style="width:${(100 * sin / max).toFixed(2)}%;background:${DASH_NARANJA}"></div></div>
+          <div class="av-barra"><div style="width:${(100 * sin / max).toFixed(2)}%;background:#E8853A"></div></div>
           ${detalle}
         </div>`;
         }).join('')}
@@ -788,14 +798,17 @@ async function cargarListoEmpacar() {
     if (!el2) return;
     if (!filas.length) { el2.innerHTML = ''; return; }
     el2.innerHTML = `
-      <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
-        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">🧺 Listo<span class="solo-asistencia"> para empacar</span></div>
+      <div class="card tj">
+        <div class="tj-cab">
+          <span class="tj-ico tj-verde">${ico('caja')}</span>
+          <h2>Listo<span class="solo-asistencia"> para empacar</span></h2>
+        </div>
         <div class="solo-asistencia" style="padding:4px 12px 0;font-size:12px;color:#666">Lo que ya se puede empacar con lo que hay en bodega. Tocá una escuela para empacarla.</div>
         ${filas.slice(0, 5).map(f => `
         <button type="button" class="listo-fila" onclick="dashEmpacarEscuela('${f.id}')">
           <span style="flex:1;min-width:0"><strong>${dashEsc(f.nombre)}</strong><small class="solo-asistencia">le faltan ${dashNum(f.falta)} piezas</small></span>
           <span style="text-align:right;white-space:nowrap"><strong style="color:${CV_VERDE};font-size:17px">${dashNum(f.puede)}</strong><small class="solo-asistencia">se pueden empacar</small></span>
-          <span aria-hidden="true" style="color:#9aa;font-size:20px">›</span>
+          ${ico('ir')}
         </button>`).join('')}
         ${filas.length > 5 ? `<div style="padding:8px 12px;font-size:12px;color:#666;border-top:1px solid #F0F0F0">+${filas.length - 5} más</div>` : ''}
       </div>`;
@@ -821,8 +834,11 @@ function _renderEmpaquePorPrenda(lineas) {
   if (!filas.some(o => o.emp > 0 || o.ent > 0)) return '';
   const td = 'padding:5px 8px;text-align:right';
   return `
-      <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
-        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">📦 Empaque y entrega por prenda</div>
+      <div class="card tj">
+        <div class="tj-cab">
+          <span class="tj-ico tj-verde">${ico('caja')}</span>
+          <h2>Empaque y entrega por prenda</h2>
+        </div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead>
             <tr style="background:#FAFAFA;font-size:11px">
@@ -839,7 +855,7 @@ function _renderEmpaquePorPrenda(lineas) {
               <td style="padding:5px 8px">${dashEsc(dashPrendaNombre(o.cod))}</td>
               <td style="${td}">${dashNum(o.sol)}</td>
               <td style="${td};color:var(--success-text)">${dashNum(o.emp)}</td>
-              <td style="${td};color:var(--azul)">${dashNum(o.ent)}</td>
+              <td style="${td};color:${CV_MORADO}">${dashNum(o.ent)}</td>
               <td style="${td};color:${o.pend > 0 ? DASH_NARANJA : '#888'};font-weight:700">${dashNum(o.pend)}</td>
             </tr>`).join('')}
           </tbody>
@@ -979,7 +995,7 @@ function _renderAvancePedido(r, lineas) {
   // Orden fijo y fácil de seguir: la que más le falta, primero
   lista.sort((a, b) => b.pend - a.pend || String(a.escuela.alias || a.escuela.nombre || '').localeCompare(String(b.escuela.alias || b.escuela.nombre || ''), 'es'));
   const pct = (v, t) => t > 0 ? 100 * v / t : 0;
-  const AZ = '#2F6FB5';
+  const AZ = CV_MORADO;   // entregado
   const filas = lista.map(o => {
     const e = o.escuela;
     const abierta = _avEscAbierta === e.id;
@@ -1018,8 +1034,8 @@ function _renderAvancePedido(r, lineas) {
               </tr>`).join('')}</tbody>
           </table>
           <div class="av-botones">
-            <button type="button" class="btn btn-primary" ${o.pend > 0 ? '' : 'disabled'} onclick="event.stopPropagation();avEscIr('empacar','${e.id}')">🧺 Empacar</button>
-            <button type="button" class="btn btn-success" ${o.emp > 0 ? '' : 'disabled'} onclick="event.stopPropagation();avEscIr('entrega','${e.id}')">🚚 Entregar</button>
+            <button type="button" class="btn btn-primary" ${o.pend > 0 ? '' : 'disabled'} onclick="event.stopPropagation();avEscIr('empacar','${e.id}')">${ico('caja')} Empacar</button>
+            <button type="button" class="btn btn-success" ${o.emp > 0 ? '' : 'disabled'} onclick="event.stopPropagation();avEscIr('entrega','${e.id}')">${ico('camion')} Entregar</button>
           </div>
           <div class="solo-asistencia" style="font-size:12px;color:#666;margin-top:6px">«Empacar» abre el empaque de esta escuela. «Entregar» se activa cuando ya hay piezas empacadas.</div>
         </div>`;
@@ -1027,7 +1043,7 @@ function _renderAvancePedido(r, lineas) {
     return `
       <div class="av-fila${abierta ? ' abierta' : ''}" role="button" tabindex="0" aria-expanded="${abierta}" onclick="avEscToggle('${e.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();avEscToggle('${e.id}')}">
         <div class="av-cab">
-          <span class="av-nombre"><span style="color:#889;display:inline-block;width:14px">${abierta ? '▾' : '▸'}</span>${dashEsc(nombre)}</span>
+          <span class="av-nombre"><span class="fl-flecha${abierta ? ' abierta' : ''}">${ico('ir')}</span>${dashEsc(nombre)}</span>
           <span class="av-listo" data-av-listo="${e.id}"></span>
           <span class="av-falta"><strong>${dashNum(o.pend)}</strong><span class="solo-asistencia"> faltan</span></span>
         </div>
@@ -1039,10 +1055,11 @@ function _renderAvancePedido(r, lineas) {
       </div>`;
   }).join('');
   return `
-    <div class="card" id="dash-avance-esc" style="padding:0;overflow:hidden;margin-bottom:10px">
-      <div style="background:#F5F7FA;padding:8px 12px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px">
-        <span>🏫 Escuelas<span class="solo-asistencia"> · tocá una para ver su detalle</span></span>
-        <span style="font-weight:400;font-size:11px;color:#667"><span style="color:${AZ}">■</span> entregado <span style="color:${CV_VERDE}">■</span> empacado</span>
+    <div class="card tj" id="dash-avance-esc">
+      <div class="tj-cab">
+        <span class="tj-ico tj-azul">${ico('escuela')}</span>
+        <h2>Escuelas<span class="solo-asistencia"> · tocá una para ver su detalle</span></h2>
+        <span class="tj-leyenda"><span><i style="background:${AZ}"></i>entregado</span><span><i style="background:${CV_VERDE}"></i>empacado</span></span>
       </div>
       ${filas}
     </div>`;

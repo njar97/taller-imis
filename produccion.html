@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-15 23:17 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-16 22:47 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -49,8 +49,9 @@
     --space-lg: 16px;
     --radius: 6px;
     --radius-lg: 10px;
+    --letra: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
-  body { font-family: Arial, sans-serif; background: #F0F4F8; color: var(--texto); min-height: 100vh; padding-bottom: 60px; }
+  body { font-family: var(--letra); background: #F0F4F8; color: var(--texto); min-height: 100vh; padding-bottom: 60px; }
 
   /* Modo operario: oculta datos sensibles (contrato, montos, costos) a roles
      no-admin. Por defecto el <body> arranca con la clase (fail-closed) y se
@@ -81,13 +82,13 @@
 
   .field { margin-bottom: 12px; }
   label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-  input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--borde); border-radius: 8px; font-size: 14px; font-family: Arial, sans-serif; color: var(--texto); background: white; }
+  input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--borde); border-radius: 8px; font-size: 14px; font-family: var(--letra); color: var(--texto); background: white; }
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--azul2); box-shadow: 0 0 0 3px rgba(46,117,182,0.15); }
   textarea { resize: vertical; min-height: 60px; }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 
-  .btn { padding: 10px 16px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: Arial, sans-serif; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn { padding: 10px 16px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--letra); transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
   .btn-primary { background: var(--azul); color: white; }
   .btn-success { background: var(--verde); color: white; }
   .btn-danger { background: var(--rojo); color: white; font-size: 12px; padding: 6px 10px; }
@@ -498,7 +499,7 @@
   .ed-overlay .ed-grupo { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; padding-right: 8px; border-right: 1px solid var(--border-light); }
   .ed-overlay .ed-grupo:last-child { border-right: 0; }
   .ed-overlay .ed-grupo > span { font-size: 11px; color: #777; margin-right: 2px; }
-  .ed-overlay .ed-b { font-family: Arial, sans-serif; font-size: 14px; color: var(--texto); background: var(--gris); border: 1px solid var(--borde); border-radius: 8px; padding: 6px 10px; min-height: 40px; min-width: 40px; cursor: pointer; touch-action: manipulation; }
+  .ed-overlay .ed-b { font-family: var(--letra); font-size: 14px; color: var(--texto); background: var(--gris); border: 1px solid var(--borde); border-radius: 8px; padding: 6px 10px; min-height: 40px; min-width: 40px; cursor: pointer; touch-action: manipulation; }
   .ed-overlay .ed-b:hover:not(:disabled) { border-color: var(--azul2); }
   .ed-overlay .ed-b:disabled { opacity: .4; cursor: default; }
   .ed-overlay .ed-b.primario { background: var(--azul); color: white; border-color: var(--azul); font-weight: 700; }
@@ -877,20 +878,144 @@ body.con-asistencia .btn-ayuda { background: #1f2d3d; color: #fff; }
 .urge-corte small { display: block; font-size: 11.5px; color: #667; }
 .urge-corte .btn { min-height: 44px; white-space: nowrap; }
 
+/* ══ DISEÑO nov-2026: iconos dibujados, tarjetas con aire, un color por paso ══
+   Tender azul · Terminar ámbar · Empacar verde · Entregar morado (lo
+   entregado se pinta morado en toda la app). Solo cambia cómo se ve. */
+:root {
+  --tinta: #10293F; --tinta2: #5B6B7C; --linea: #E6EBF1;
+  --c-tender: #1F5FA8;   --c-tender-bg: #E3EEFB;
+  --c-terminar: #B26A00; --c-terminar-bg: #FFF0D6;
+  --c-empacar: #1E8A4F;  --c-empacar-bg: #DFF4E7;
+  --c-entregar: #6B3FA0; --c-entregar-bg: #EEE5F8;
+  --sombra: 0 1px 2px rgba(16,41,63,.06), 0 8px 24px rgba(16,41,63,.07);
+}
+body { background: #EEF2F7; color: var(--tinta); -webkit-font-smoothing: antialiased; }
+.ico { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; display: inline-block; vertical-align: -0.14em; }
+
+/* Barra de arriba */
+nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%); box-shadow: 0 2px 14px rgba(16,41,63,.28); }
+.nav-top { padding: 12px 16px; }
+.nav-inicio { display: grid; place-items: center; color: #fff; background: rgba(255,255,255,.16); border-radius: 12px; font-size: 21px; }
+.nav-brand-app { letter-spacing: 1.2px; opacity: .7; }
+.nav-brand-section { font-size: 18px; letter-spacing: -.2px; }
+.buscador-ico { position: absolute; left: 11px; top: 50%; margin-top: -8px; font-size: 16px; color: rgba(255,255,255,.75); pointer-events: none; }
+.buscador-wrap input { border-radius: 999px; padding-left: 34px; }
+.barra-inicio .ico { font-size: 18px; margin-right: 4px; }
+
+/* Tarjetas */
+.card { border-radius: 18px; box-shadow: var(--sombra); }
+.card.tj { padding: 0; overflow: hidden; margin-bottom: 14px; }
+.tj-cab { display: flex; align-items: center; gap: 10px; padding: 14px 16px 12px; }
+.tj-cab h2 { font-size: 16px; font-weight: 700; flex: 1; min-width: 0; letter-spacing: -.1px; color: var(--tinta); }
+.tj-ico { width: 32px; height: 32px; flex: none; border-radius: 10px; display: grid; place-items: center; font-size: 18px; }
+.tj-verde { background: var(--c-empacar-bg); color: var(--c-empacar); }
+.tj-azul { background: var(--c-tender-bg); color: var(--c-tender); }
+.tj-naranja { background: #FDE9D9; color: #C2660A; }
+.tj-gris { background: #EDF1F6; color: var(--tinta2); }
+.tj-accion { margin: 0; border: 0; background: #F1F4F8; color: var(--tinta2); border-radius: 999px; padding: 7px 12px; min-height: 34px; font-size: 12.5px; font-weight: 600; font-family: inherit; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.tj-accion:active { background: #E3E8EF; }
+.tj-accion.redondo { width: 36px; height: 36px; padding: 0; justify-content: center; font-size: 16px; }
+.tj-leyenda { font-size: 11.5px; color: var(--tinta2); display: flex; gap: 10px; white-space: nowrap; }
+.tj-leyenda i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+
+/* Cómo vamos */
+.cv { padding: 0 16px 14px; }
+.cv-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.cv-pct { font-size: 46px; font-weight: 800; line-height: 1; letter-spacing: -1.5px; color: var(--c-empacar); font-variant-numeric: tabular-nums; }
+.cv-pct small { font-size: 20px; font-weight: 700; margin-left: 2px; letter-spacing: 0; }
+.cv-pct span { display: block; font-size: 12.5px; font-weight: 600; color: var(--tinta2); letter-spacing: 0; margin-top: 5px; }
+.cv-total { text-align: right; font-size: 12.5px; color: var(--tinta2); }
+.cv-total strong { display: block; font-size: 20px; color: var(--tinta); font-variant-numeric: tabular-nums; }
+.cv-nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.cv-nums div { background: #F6F8FB; border-radius: 12px; padding: 9px 10px; min-width: 0; }
+.cv-nums b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+.cv-nums small { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--tinta2); margin-top: 1px; white-space: nowrap; }
+.cv-nums small::before { content: ""; width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--p); }
+.cv-ver { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 13px 16px; border-top: 1px solid var(--linea); border-bottom: 0; color: var(--c-tender); font-weight: 600; }
+.cv-ver .ico { font-size: 18px; color: #9AA7B5; transition: transform .15s; }
+.cv-ver.abierta { border-bottom: 1px solid var(--linea); }
+.cv-ver.abierta .ico { transform: rotate(90deg); }
+
+/* Los 4 pasos */
+.tareas-card { background: none; box-shadow: none; padding: 0; margin-bottom: 14px; border-radius: 0; }
+.tareas-grid { gap: 12px; }
+.tareas-grid .tarea-btn { position: relative; overflow: hidden; align-items: flex-start; justify-content: flex-start; text-align: left; gap: 12px; min-height: 0; padding: 14px 14px 15px; border: 0; border-radius: 18px; background: #fff; box-shadow: var(--sombra); color: var(--tinta); }
+.tareas-grid .tarea-btn:hover { background: #fff; }
+.tareas-grid .tarea-btn:active { background: #F6F8FB; }
+.tareas-grid .tarea-btn::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--c); opacity: .85; }
+.tareas-grid .tarea-ico { width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center; font-size: 30px; background: var(--bg); color: var(--c); }
+.tareas-grid .tarea-tit { font-size: 17px; color: var(--tinta); letter-spacing: -.2px; }
+.paso-n { position: absolute; right: 13px; top: 12px; font-size: 12px; font-weight: 700; color: #A9B4C0; }
+.paso-1 { --c: var(--c-tender);   --bg: var(--c-tender-bg); }
+.paso-2 { --c: var(--c-terminar); --bg: var(--c-terminar-bg); }
+.paso-3 { --c: var(--c-empacar);  --bg: var(--c-empacar-bg); }
+.paso-4 { --c: var(--c-entregar); --bg: var(--c-entregar-bg); }
+@media (max-width: 640px) { .tareas-grid .tarea-btn { min-height: 0; } }
+
+/* Filas que se abren (Urge, Escuelas, prendas) */
+.av-fila { padding: 11px 16px; border-top: 1px solid var(--linea); }
+.av-cab { margin-bottom: 7px; }
+.av-nombre { font-size: 14.5px; }
+.av-barra { height: 7px; background: #E9EDF2; }
+.av-barra > div { border-radius: 4px; }
+.av-falta { font-size: 15px; }
+.av-listo { font-size: 11.5px; font-weight: 700; color: var(--c-empacar); background: var(--c-empacar-bg); border-radius: 999px; padding: 2px 8px; }
+.fl-flecha { display: inline-block; width: 16px; margin-left: -3px; color: #A9B4C0; font-size: 14px; }
+.fl-flecha .ico { transition: transform .15s; }
+.fl-flecha.abierta .ico { transform: rotate(90deg); }
+.listo-fila { padding: 13px 16px; border-top: 1px solid var(--linea); font-size: 14.5px; color: var(--tinta); }
+.listo-fila > .ico { font-size: 18px; color: #A9B4C0; }
+.av-botones .btn .ico, .urge-corte .btn .ico { font-size: 18px; }
+
+/* «Más» en Inicio */
+.mas-inicio { margin-top: 0; border: 0; border-radius: 18px; box-shadow: var(--sombra); padding: 13px 16px; }
+.mas-inicio .mas-txt { flex: 1; min-width: 0; }
+.mas-inicio .mas-txt strong { font-size: 16px; }
+.mas-inicio > .ico { font-size: 19px; color: #A9B4C0; }
+
+/* Botón «?» */
+.btn-ayuda { background: #fff; color: var(--c-tender); box-shadow: 0 4px 16px rgba(16,41,63,.25); font-size: 21px; }
+
+.tj-cab h2 .solo-asistencia { font-weight: 400; font-size: 12.5px; color: var(--tinta2); }
+/* Lista de «Más»: iconos dibujados con su color */
+.tj-ambar { background: var(--c-terminar-bg); color: var(--c-terminar); }
+.menumas-btn { border-color: var(--linea); border-radius: 14px; color: var(--tinta); }
+.menumas-lista .tj-ico { width: 40px; height: 40px; border-radius: 12px; font-size: 22px; }
+
 </style>
 </head>
 
 <body class="modo-operario">
 
+<!-- Iconos dibujados (un solo estilo, de línea). Se usan con ico('nombre') o <svg class="ico"><use href="#i-nombre"/></svg> -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-casa" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-buscar" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-tijera" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><path d="M14.8 14.8 20 20"/></symbol>
+  <symbol id="i-hilo" viewBox="0 0 24 24"><path d="M6 4h12M6 20h12M8 4v16M16 4v16M8 9.5l8-2.5M8 13.5l8-2.5M8 17.5l8-2.5"/></symbol>
+  <symbol id="i-caja" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></symbol>
+  <symbol id="i-camion" viewBox="0 0 24 24"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></symbol>
+  <symbol id="i-avance" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-reloj" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-escuela" viewBox="0 0 24 24"><path d="M3 21h18M5 21V9l7-5 7 5v12M10 21v-5h4v5"/></symbol>
+  <symbol id="i-recargar" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15.5-6.3L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.3L3 16"/><path d="M3 21v-5h5"/></symbol>
+  <symbol id="i-ir" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-bodega" viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13"/><path d="M7 21v-8h10v8"/><path d="M7 17h10"/></symbol>
+  <symbol id="i-lista" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3"/></symbol>
+  <symbol id="i-ajustes" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h8M16 18h4"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="14" cy="18" r="2"/></symbol>
+  <symbol id="i-mas" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></symbol>
+</svg>
+
 <nav>
   <div class="nav-top">
-    <button type="button" id="nav-inicio" class="nav-inicio" onclick="irInicio()" title="Volver a Inicio" aria-label="Volver a Inicio">🏠</button>
+    <button type="button" id="nav-inicio" class="nav-inicio" onclick="irInicio()" title="Volver a Inicio" aria-label="Volver a Inicio"><svg class="ico" aria-hidden="true"><use href="#i-casa"/></svg></button>
     <h1 class="nav-brand">
       <span class="nav-brand-app">Taller IMIS</span>
       <span class="nav-brand-section">Uniformes</span>
     </h1>
     <div id="buscador-wrap" class="buscador-wrap">
-      <input type="text" id="buscador-input" placeholder="🔍 Buscar escuela o pantalla"
+      <svg class="ico buscador-ico" aria-hidden="true"><use href="#i-buscar"/></svg>
+      <input type="text" id="buscador-input" placeholder="Buscar" aria-label="Buscar escuela o pantalla"
              oninput="buscadorOnInput(event)" onfocus="buscadorOnInput(event)"
              autocomplete="off" title="Buscá una escuela, un alumno de talla especial o una pantalla de la app · Atajo: Ctrl/⌘ + K">
       <div id="buscador-results" class="buscador-results" style="display:none"></div>
@@ -917,7 +1042,7 @@ body.con-asistencia .btn-ayuda { background: #1f2d3d; color: #fff; }
   </div>
 </nav>
 <!-- Pantalla única: en el celular, botón fijo abajo para volver (css .barra-inicio) -->
-<button type="button" id="barra-inicio" class="barra-inicio" onclick="irInicio()">🏠 Inicio</button>
+<button type="button" id="barra-inicio" class="barra-inicio" onclick="irInicio()"><svg class="ico" aria-hidden="true"><use href="#i-casa"/></svg> Inicio</button>
 <!-- Asistencia: la app arranca en versión corta (una palabra por botón). Este
      botón prende o apaga la versión extendida: explicaciones, textos largos y
      los «¿Cómo se usa?» de cada pantalla (css .solo-asistencia / .ayuda-tip). -->
@@ -937,13 +1062,13 @@ body.con-asistencia .btn-ayuda { background: #1f2d3d; color: #fff; }
   <div class="card" style="padding:14px">
     <div style="font-size:17px;font-weight:700;margin-bottom:10px">Más</div>
     <div class="menumas-lista">
-      <button type="button" class="menumas-btn" onclick="abrirPestana('corte')"><span class="menumas-ico">✂️</span><span><strong>Corte</strong><small class="solo-asistencia">Trazos, tendidos, bultos y hojas de corte</small></span></button>
-      <button type="button" class="menumas-btn" onclick="abrirPestana('produccion')"><span class="menumas-ico">🏭</span><span><strong>Producción</strong><small class="solo-asistencia">Bultos, plan por talla y operarias</small></span></button>
-      <button type="button" class="menumas-btn" onclick="abrirPestana('bodega')"><span class="menumas-ico">📦</span><span><strong>Bodega</strong><small class="solo-asistencia">Lo que hay en el estante, entradas y conteo</small></span></button>
-      <button type="button" class="menumas-btn" onclick="abrirPestana('empaque')"><span class="menumas-ico">🧺</span><span><strong>Empaque</strong><small class="solo-asistencia">Apartar lo de cada escuela</small></span></button>
-      <button type="button" class="menumas-btn" onclick="abrirPestana('registro')"><span class="menumas-ico">📋</span><span><strong>Registro</strong><small class="solo-asistencia">Escuelas, pedido y tallas especiales</small></span></button>
-      <button type="button" class="menumas-btn" onclick="abrirPestana('estadistica')"><span class="menumas-ico">📊</span><span><strong>Estadística</strong><small class="solo-asistencia">Números por escuela y por talla</small></span></button>
-      <button type="button" class="menumas-btn" onclick="abrirPestana('config')"><span class="menumas-ico">⚙️</span><span><strong>Ajustes</strong><small class="solo-asistencia">Configuración de la app</small></span></button>
+      <button type="button" class="menumas-btn" onclick="abrirPestana('corte')"><span class="tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-tijera"/></svg></span><span><strong>Corte</strong><small class="solo-asistencia">Trazos, tendidos, bultos y hojas de corte</small></span></button>
+      <button type="button" class="menumas-btn" onclick="abrirPestana('produccion')"><span class="tj-ico tj-ambar"><svg class="ico" aria-hidden="true"><use href="#i-hilo"/></svg></span><span><strong>Producción</strong><small class="solo-asistencia">Bultos, plan por talla y operarias</small></span></button>
+      <button type="button" class="menumas-btn" onclick="abrirPestana('bodega')"><span class="tj-ico tj-verde"><svg class="ico" aria-hidden="true"><use href="#i-bodega"/></svg></span><span><strong>Bodega</strong><small class="solo-asistencia">Lo que hay en el estante, entradas y conteo</small></span></button>
+      <button type="button" class="menumas-btn" onclick="abrirPestana('empaque')"><span class="tj-ico tj-verde"><svg class="ico" aria-hidden="true"><use href="#i-caja"/></svg></span><span><strong>Empaque</strong><small class="solo-asistencia">Apartar lo de cada escuela</small></span></button>
+      <button type="button" class="menumas-btn" onclick="abrirPestana('registro')"><span class="tj-ico tj-gris"><svg class="ico" aria-hidden="true"><use href="#i-lista"/></svg></span><span><strong>Registro</strong><small class="solo-asistencia">Escuelas, pedido y tallas especiales</small></span></button>
+      <button type="button" class="menumas-btn" onclick="abrirPestana('estadistica')"><span class="tj-ico tj-gris"><svg class="ico" aria-hidden="true"><use href="#i-avance"/></svg></span><span><strong>Estadística</strong><small class="solo-asistencia">Números por escuela y por talla</small></span></button>
+      <button type="button" class="menumas-btn" onclick="abrirPestana('config')"><span class="tj-ico tj-gris"><svg class="ico" aria-hidden="true"><use href="#i-ajustes"/></svg></span><span><strong>Ajustes</strong><small class="solo-asistencia">Configuración de la app</small></span></button>
     </div>
   </div>
 </div>
@@ -4445,8 +4570,8 @@ async function initDashboard() {
     </div>
     ${tareasInicioHtml()}
     <div id="dashboard-sub-contenido"></div>
-    <button type="button" class="menumas-btn" style="margin-top:6px" onclick="switchTab('mas')">
-      <span class="menumas-ico">☰</span><span><strong>Más</strong><small class="solo-asistencia">Bodega, registro, estadística, ajustes y las pantallas completas</small></span>
+    <button type="button" class="menumas-btn mas-inicio" onclick="switchTab('mas')">
+      <span class="tj-ico tj-gris">${ico('mas')}</span><span class="mas-txt"><strong>Más</strong><small class="solo-asistencia">Bodega, registro, estadística, ajustes y las pantallas completas</small></span>${ico('ir')}
     </button>
   `;
 
@@ -4467,11 +4592,13 @@ function dashElegirTemporada(id) {
 // Solo los 4 pasos del trabajo, en el orden en que pasa. Lo demás (entrada
 // y conteo de bodega, tallas especiales…) se abre desde «Todo lo demás».
 // tareaIr() sigue aceptando los otros ids (los usa el buscador).
+// Icono dibujado del sprite de nav.html (#i-nombre). Toma el color del texto.
+function ico(n) { return `<svg class="ico" aria-hidden="true"><use href="#i-${n}"/></svg>`; }
 const TAREAS_INICIO = [
-  { id: 'corte',    n: 1, ico: '✂️', tit: 'Tender',   sub: 'El corte que sigue' },
-  { id: 'bulto',    n: 2, ico: '🧵', tit: 'Terminar', sub: 'El bulto sale de costura y entra a bodega' },
-  { id: 'empacar',  n: 3, ico: '🧺', tit: 'Empacar',  sub: 'Apartar lo de una escuela' },
-  { id: 'entregar', n: 4, ico: '🚚', tit: 'Entregar', sub: 'Lo empacado se va a la escuela' },
+  { id: 'corte',    n: 1, ico: 'tijera', tit: 'Tender',   sub: 'El corte que sigue' },
+  { id: 'bulto',    n: 2, ico: 'hilo', tit: 'Terminar', sub: 'El bulto sale de costura y entra a bodega' },
+  { id: 'empacar',  n: 3, ico: 'caja', tit: 'Empacar',  sub: 'Apartar lo de una escuela' },
+  { id: 'entregar', n: 4, ico: 'camion', tit: 'Entregar', sub: 'Lo empacado se va a la escuela' },
 ];
 // Texto vivo debajo de cada paso («Sigue Plan T1 · faltan 6»…).
 function tareaSubtitulo(id, txt) {
@@ -4481,15 +4608,16 @@ function tareaSubtitulo(id, txt) {
 
 function tareasInicioHtml() {
   const ayuda = typeof ayudaHtml === 'function'
-    ? ayudaHtml('inicio', 'Arriba, cómo va el trabajo: verde es lo que ya está en bodega, amarillo lo que está en costura y gris lo que falta empezar. «Detalle» lo abre por prenda y por talla. Los cuatro botones son los pasos del trabajo: tocá el que vas a anotar. «Urge» son las tallas con más piezas sin empezar. «Listo» son las escuelas a las que ya se les puede empacar algo; el número es cuántas piezas. «Más» abre el resto de pantallas. Con 🏠 se vuelve aquí.')
+    ? ayudaHtml('inicio', 'Arriba, cómo va el trabajo: verde es lo que ya está en bodega, amarillo lo que está en costura y gris lo que falta empezar. «Detalle» lo abre por prenda y por talla. Los cuatro botones son los pasos del trabajo: tocá el que vas a anotar. «Urge» son las tallas con más piezas sin empezar. «Listo» son las escuelas a las que ya se les puede empacar algo; el número es cuántas piezas. «Más» abre el resto de pantallas. Con la casita de arriba se vuelve aquí.')
     : '';
   return `
     <section class="card tareas-card" aria-label="Pasos del trabajo">
       ${ayuda}
       <div class="tareas-grid">
         ${TAREAS_INICIO.map(t => `
-        <button type="button" class="tarea-btn" data-tarea="${t.id}" onclick="tareaIr('${t.id}')">
-          <span class="tarea-ico" aria-hidden="true">${t.ico}</span>
+        <button type="button" class="tarea-btn paso-${t.n}" data-tarea="${t.id}" onclick="tareaIr('${t.id}')">
+          <span class="paso-n" aria-hidden="true">${t.n}</span>
+          <span class="tarea-ico" aria-hidden="true">${ico(t.ico)}</span>
           <span class="tarea-tit">${t.tit}</span>
           <span class="tarea-sub solo-asistencia" id="tarea-sub-${t.id}">${t.sub}</span>
         </button>`).join('')}
@@ -4980,7 +5108,7 @@ function renderDashboard() {
     <!-- (Los accesos rápidos de antes quedaron arriba, en «¿Qué vas a hacer hoy?») -->
     ${_dashSelectorTemporada(r.temporadas, sel?.id)}
     <div style="text-align:center;margin:10px 0">
-      <button class="btn btn-ghost btn-sm" onclick="initDashboard()">🔄 Refrescar</button>
+      <button class="btn btn-ghost btn-sm" onclick="initDashboard()">${ico('recargar')} Refrescar</button>
     </div>
   `;
 }
@@ -4996,7 +5124,8 @@ function dashVerPlan() {
 
 // «Cómo vamos»: por prenda, una barra con lo que ya está en bodega, lo que
 // está en costura y lo que falta empezar. Las tres partes suman el pedido.
-const CV_VERDE = '#2E9E5B', CV_AMBAR = '#E6A23C', CV_GRIS = '#D9DEE5';
+const CV_VERDE = '#2E9E5B', CV_AMBAR = '#F0A531', CV_GRIS = '#E3E8EF';
+const CV_MORADO = '#6B3FA0';   // lo entregado (mismo color que el paso «Entregar»)
 function _cvBarra(o, alto) {
   const pct = v => o.pedido > 0 ? (100 * v / o.pedido) : 0;
   const seg = (v, color) => v > 0 ? `<div style="width:${pct(v).toFixed(2)}%;background:${color}"></div>` : '';
@@ -5062,21 +5191,26 @@ function _renderComoVamos(plan, prod, totEmp) {
   const pctListo = o => o.pedido > 0 ? Math.floor(100 * o.listo / o.pedido) : 0;
   const p = prod || {};
   return `
-      <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
-        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px">
-          <span>📊 Cómo vamos</span>
-          <button class="btn btn-ghost btn-sm" onclick="initDashboard()" style="font-size:11px;padding:4px 8px" title="Volver a cargar los números">🔄</button>
+      <div class="card tj">
+        <div class="tj-cab">
+          <span class="tj-ico tj-verde">${ico('avance')}</span>
+          <h2>Cómo vamos</h2>
+          <button type="button" class="tj-accion redondo" onclick="initDashboard()" title="Volver a cargar los números" aria-label="Volver a cargar los números">${ico('recargar')}</button>
         </div>
-        <div style="padding:10px 12px 12px;border-bottom:1px solid #EEE">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px">
-            <span style="font-size:13px;color:#555">${dashNum(tot.pedido)} piezas<span class="solo-asistencia"> pedidas en la temporada</span></span>
-            <span style="font-size:20px;font-weight:700;color:${CV_VERDE}">${pctListo(tot)}%<span class="solo-asistencia"> en bodega</span></span>
+        <div class="cv">
+          <div class="cv-top">
+            <div class="cv-pct">${pctListo(tot)}<small>%</small><span>en bodega</span></div>
+            <div class="cv-total"><strong>${dashNum(tot.pedido)}</strong>piezas<span class="solo-asistencia"> pedidas en la temporada</span></div>
           </div>
-          ${_cvBarra(tot, 16)}
-          <div style="font-size:12px;margin-top:6px;line-height:1.7">${_cvLeyenda(tot)}</div>
+          ${_cvBarra(tot, 14)}
+          <div class="cv-nums">
+            <div style="--p:${CV_VERDE}"><b>${dashNum(tot.listo)}</b><small>En bodega</small></div>
+            <div style="--p:${CV_AMBAR}"><b>${dashNum(tot.costura)}</b><small>En costura</small></div>
+            <div style="--p:#B9C2CD"><b>${dashNum(tot.sin)}</b><small>Sin empezar</small></div>
+          </div>
         </div>
-        <button type="button" class="cv-ver" aria-expanded="${_cvPorPrenda}" onclick="cvToggle()">
-          <span>${_cvPorPrenda ? '▾ Detalle' : '▸ Detalle'}<span class="solo-asistencia" style="font-weight:400"> por prenda y talla (tocá una prenda para ver sus tallas)</span></span>
+        <button type="button" class="cv-ver${_cvPorPrenda ? ' abierta' : ''}" aria-expanded="${_cvPorPrenda}" onclick="cvToggle()">
+          <span>Detalle<span class="solo-asistencia" style="font-weight:400"> por prenda y talla (tocá una prenda para ver sus tallas)</span></span>${ico('ir')}
         </button>
         ${!_cvPorPrenda ? '' : `
         <div style="padding:8px 12px;border-bottom:1px solid #F0F0F0;font-size:12px;color:#555">
@@ -5084,7 +5218,7 @@ function _renderComoVamos(plan, prod, totEmp) {
         </div>` + filas.map(o => `
         <div class="cv-prenda" role="button" tabindex="0" aria-expanded="${_cvAbiertas.has(o.cod)}" onclick="cvToggle('${o.cod}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();cvToggle('${o.cod}')}" style="padding:9px 12px;border-bottom:1px solid #F0F0F0;cursor:pointer">
           <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px">
-            <span style="font-weight:600;font-size:13px"><span style="color:#889;display:inline-block;width:14px">${_cvAbiertas.has(o.cod) ? '▾' : '▸'}</span>${dashEsc(dashPrendaNombre(o.cod))} <span style="font-weight:400;color:#888;font-size:11px">· ${dashNum(o.pedido)} pedidas</span></span>
+            <span style="font-weight:600;font-size:13px"><span class="fl-flecha${_cvAbiertas.has(o.cod) ? ' abierta' : ''}">${ico('ir')}</span>${dashEsc(dashPrendaNombre(o.cod))} <span style="font-weight:400;color:#888;font-size:11px">· ${dashNum(o.pedido)} pedidas</span></span>
             <span style="font-size:12px;font-weight:700;color:${o.listo > 0 ? CV_VERDE : '#999'}">${pctListo(o)}%</span>
           </div>
           ${_cvBarra(o, 10)}
@@ -5132,10 +5266,11 @@ function _renderQueUrge(plan) {
   if (!filas.length) return '<div id="dash-urge"></div>';
   const max = Math.max(...filas.map(f => Number(f.falta_iniciar) || 0), 1);
   return `
-      <div class="card" id="dash-urge" style="padding:0;overflow:hidden;margin-bottom:10px">
-        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px">
-          <span>⏰ Urge<span class="solo-asistencia"> · tocá una talla para ver en qué corte sale</span></span>
-          <button class="btn btn-ghost btn-sm" onclick="dashVerPlan()" style="font-size:11px;padding:4px 8px">Plan ›</button>
+      <div class="card tj" id="dash-urge">
+        <div class="tj-cab">
+          <span class="tj-ico tj-naranja">${ico('reloj')}</span>
+          <h2>Urge<span class="solo-asistencia"> · tocá una talla para ver en qué corte sale</span></h2>
+          <button type="button" class="tj-accion" onclick="dashVerPlan()">Plan ${ico('ir')}</button>
         </div>
         <div class="solo-asistencia" style="padding:4px 12px 0;font-size:12px;color:#666">Las tallas con más piezas sin empezar: lo que conviene cortar después.</div>
         ${filas.map(f => {
@@ -5158,7 +5293,7 @@ function _renderQueUrge(plan) {
             ${cortes.length ? cortes.map(c => `
             <div class="urge-corte">
               <span><strong>${dashEsc(c.codigo)}</strong><small>${c.porTela} por tela${c.capas ? ` · ${dashNum(c.capas)} telas` : ''}</small></span>
-              <button type="button" class="btn btn-primary" onclick="event.stopPropagation();urgeTender('${c.id}')">✂️ Tender</button>
+              <button type="button" class="btn btn-primary" onclick="event.stopPropagation();urgeTender('${c.id}')">${ico('tijera')} Tender</button>
             </div>`).join('') : `
             <div class="urge-corte">
               <span><strong>Sin corte pendiente</strong><small>No sale en ningún tendido del plan</small></span>
@@ -5169,10 +5304,10 @@ function _renderQueUrge(plan) {
           return `
         <div class="av-fila${abierta ? ' abierta' : ''}" role="button" tabindex="0" aria-expanded="${abierta}" onclick="urgeToggle('${k}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();urgeToggle('${k}')}">
           <div class="av-cab">
-            <span class="av-nombre"><span style="color:#889;display:inline-block;width:14px">${abierta ? '▾' : '▸'}</span>${dashEsc(dashPrendaNombre(f.cod_prenda))} ${dashEsc(f.talla_2026)}${f.contado === false ? ' <span style="font-size:10.5px;font-weight:400;color:#8a4b00">· sin contar</span>' : ''}</span>
+            <span class="av-nombre"><span class="fl-flecha${abierta ? ' abierta' : ''}">${ico('ir')}</span>${dashEsc(dashPrendaNombre(f.cod_prenda))} ${dashEsc(f.talla_2026)}${f.contado === false ? ' <span style="font-size:10.5px;font-weight:400;color:#8a4b00">· sin contar</span>' : ''}</span>
             <span class="av-falta"><strong>${dashNum(sin)}</strong><span class="solo-asistencia"> sin empezar de ${dashNum(pedido)}</span></span>
           </div>
-          <div class="av-barra"><div style="width:${(100 * sin / max).toFixed(2)}%;background:${DASH_NARANJA}"></div></div>
+          <div class="av-barra"><div style="width:${(100 * sin / max).toFixed(2)}%;background:#E8853A"></div></div>
           ${detalle}
         </div>`;
         }).join('')}
@@ -5201,14 +5336,17 @@ async function cargarListoEmpacar() {
     if (!el2) return;
     if (!filas.length) { el2.innerHTML = ''; return; }
     el2.innerHTML = `
-      <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
-        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">🧺 Listo<span class="solo-asistencia"> para empacar</span></div>
+      <div class="card tj">
+        <div class="tj-cab">
+          <span class="tj-ico tj-verde">${ico('caja')}</span>
+          <h2>Listo<span class="solo-asistencia"> para empacar</span></h2>
+        </div>
         <div class="solo-asistencia" style="padding:4px 12px 0;font-size:12px;color:#666">Lo que ya se puede empacar con lo que hay en bodega. Tocá una escuela para empacarla.</div>
         ${filas.slice(0, 5).map(f => `
         <button type="button" class="listo-fila" onclick="dashEmpacarEscuela('${f.id}')">
           <span style="flex:1;min-width:0"><strong>${dashEsc(f.nombre)}</strong><small class="solo-asistencia">le faltan ${dashNum(f.falta)} piezas</small></span>
           <span style="text-align:right;white-space:nowrap"><strong style="color:${CV_VERDE};font-size:17px">${dashNum(f.puede)}</strong><small class="solo-asistencia">se pueden empacar</small></span>
-          <span aria-hidden="true" style="color:#9aa;font-size:20px">›</span>
+          ${ico('ir')}
         </button>`).join('')}
         ${filas.length > 5 ? `<div style="padding:8px 12px;font-size:12px;color:#666;border-top:1px solid #F0F0F0">+${filas.length - 5} más</div>` : ''}
       </div>`;
@@ -5234,8 +5372,11 @@ function _renderEmpaquePorPrenda(lineas) {
   if (!filas.some(o => o.emp > 0 || o.ent > 0)) return '';
   const td = 'padding:5px 8px;text-align:right';
   return `
-      <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
-        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">📦 Empaque y entrega por prenda</div>
+      <div class="card tj">
+        <div class="tj-cab">
+          <span class="tj-ico tj-verde">${ico('caja')}</span>
+          <h2>Empaque y entrega por prenda</h2>
+        </div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead>
             <tr style="background:#FAFAFA;font-size:11px">
@@ -5252,7 +5393,7 @@ function _renderEmpaquePorPrenda(lineas) {
               <td style="padding:5px 8px">${dashEsc(dashPrendaNombre(o.cod))}</td>
               <td style="${td}">${dashNum(o.sol)}</td>
               <td style="${td};color:var(--success-text)">${dashNum(o.emp)}</td>
-              <td style="${td};color:var(--azul)">${dashNum(o.ent)}</td>
+              <td style="${td};color:${CV_MORADO}">${dashNum(o.ent)}</td>
               <td style="${td};color:${o.pend > 0 ? DASH_NARANJA : '#888'};font-weight:700">${dashNum(o.pend)}</td>
             </tr>`).join('')}
           </tbody>
@@ -5392,7 +5533,7 @@ function _renderAvancePedido(r, lineas) {
   // Orden fijo y fácil de seguir: la que más le falta, primero
   lista.sort((a, b) => b.pend - a.pend || String(a.escuela.alias || a.escuela.nombre || '').localeCompare(String(b.escuela.alias || b.escuela.nombre || ''), 'es'));
   const pct = (v, t) => t > 0 ? 100 * v / t : 0;
-  const AZ = '#2F6FB5';
+  const AZ = CV_MORADO;   // entregado
   const filas = lista.map(o => {
     const e = o.escuela;
     const abierta = _avEscAbierta === e.id;
@@ -5431,8 +5572,8 @@ function _renderAvancePedido(r, lineas) {
               </tr>`).join('')}</tbody>
           </table>
           <div class="av-botones">
-            <button type="button" class="btn btn-primary" ${o.pend > 0 ? '' : 'disabled'} onclick="event.stopPropagation();avEscIr('empacar','${e.id}')">🧺 Empacar</button>
-            <button type="button" class="btn btn-success" ${o.emp > 0 ? '' : 'disabled'} onclick="event.stopPropagation();avEscIr('entrega','${e.id}')">🚚 Entregar</button>
+            <button type="button" class="btn btn-primary" ${o.pend > 0 ? '' : 'disabled'} onclick="event.stopPropagation();avEscIr('empacar','${e.id}')">${ico('caja')} Empacar</button>
+            <button type="button" class="btn btn-success" ${o.emp > 0 ? '' : 'disabled'} onclick="event.stopPropagation();avEscIr('entrega','${e.id}')">${ico('camion')} Entregar</button>
           </div>
           <div class="solo-asistencia" style="font-size:12px;color:#666;margin-top:6px">«Empacar» abre el empaque de esta escuela. «Entregar» se activa cuando ya hay piezas empacadas.</div>
         </div>`;
@@ -5440,7 +5581,7 @@ function _renderAvancePedido(r, lineas) {
     return `
       <div class="av-fila${abierta ? ' abierta' : ''}" role="button" tabindex="0" aria-expanded="${abierta}" onclick="avEscToggle('${e.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();avEscToggle('${e.id}')}">
         <div class="av-cab">
-          <span class="av-nombre"><span style="color:#889;display:inline-block;width:14px">${abierta ? '▾' : '▸'}</span>${dashEsc(nombre)}</span>
+          <span class="av-nombre"><span class="fl-flecha${abierta ? ' abierta' : ''}">${ico('ir')}</span>${dashEsc(nombre)}</span>
           <span class="av-listo" data-av-listo="${e.id}"></span>
           <span class="av-falta"><strong>${dashNum(o.pend)}</strong><span class="solo-asistencia"> faltan</span></span>
         </div>
@@ -5452,10 +5593,11 @@ function _renderAvancePedido(r, lineas) {
       </div>`;
   }).join('');
   return `
-    <div class="card" id="dash-avance-esc" style="padding:0;overflow:hidden;margin-bottom:10px">
-      <div style="background:#F5F7FA;padding:8px 12px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px">
-        <span>🏫 Escuelas<span class="solo-asistencia"> · tocá una para ver su detalle</span></span>
-        <span style="font-weight:400;font-size:11px;color:#667"><span style="color:${AZ}">■</span> entregado <span style="color:${CV_VERDE}">■</span> empacado</span>
+    <div class="card tj" id="dash-avance-esc">
+      <div class="tj-cab">
+        <span class="tj-ico tj-azul">${ico('escuela')}</span>
+        <h2>Escuelas<span class="solo-asistencia"> · tocá una para ver su detalle</span></h2>
+        <span class="tj-leyenda"><span><i style="background:${AZ}"></i>entregado</span><span><i style="background:${CV_VERDE}"></i>empacado</span></span>
       </div>
       ${filas}
     </div>`;
