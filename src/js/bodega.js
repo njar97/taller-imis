@@ -25,10 +25,10 @@ function renderBodegaTabs() {
   if (!cont) return;
   cont.innerHTML = `
     <div class="sub-tabs">
-      <div class="sub-tab ${bodegaCache.vistaActual==='stock'?'active':''}" onclick="cambiarVistaBodega('stock')">📦 Stock</div>
-      <div class="sub-tab oculto-2026 ${bodegaCache.vistaActual==='vs_demanda'?'active':''}" onclick="cambiarVistaBodega('vs_demanda')" title="Demanda por alumnos (temporadas con lista de alumnos)">📊 Stock vs Demanda</div>
-      <div class="sub-tab ${bodegaCache.vistaActual==='movimientos'?'active':''}" onclick="cambiarVistaBodega('movimientos')">🔄 Movimientos</div>
-      <div class="sub-tab ${bodegaCache.vistaActual==='materiales'?'active':''}" onclick="cambiarVistaBodega('materiales')" title="Hilo, botón, zipper, elástico, entretela">🧵 Materiales</div>
+      <div class="sub-tab ${bodegaCache.vistaActual==='stock'?'active':''}" onclick="cambiarVistaBodega('stock')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> Stock</div>
+      <div class="sub-tab oculto-2026 ${bodegaCache.vistaActual==='vs_demanda'?'active':''}" onclick="cambiarVistaBodega('vs_demanda')" title="Demanda por alumnos (temporadas con lista de alumnos)"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-avance"/></svg> Stock vs Demanda</div>
+      <div class="sub-tab ${bodegaCache.vistaActual==='movimientos'?'active':''}" onclick="cambiarVistaBodega('movimientos')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg> Movimientos</div>
+      <div class="sub-tab ${bodegaCache.vistaActual==='materiales'?'active':''}" onclick="cambiarVistaBodega('materiales')" title="Hilo, botón, zipper, elástico, entretela"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-hilo"/></svg> Materiales</div>
     </div>
   `;
 }
@@ -125,22 +125,22 @@ function renderStock() {
                  demota a "Otras" (el caso normal es 🔒 Reservar en la sesión). -->
             <!-- Las 4 del día a día, con los mismos nombres que las tareas de Inicio -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px">
-              <button class="btn btn-success" onclick="switchTab('empaque')" title="Escuela → cuántas piezas de cada talla → empacar" style="text-align:left;min-height:44px">🧺 Empacar para una escuela</button>
-              <button class="btn btn-primary" onclick="abrirEntregaModal()" title="Lo empacado de una escuela pasa a entregado, con fecha" style="text-align:left;min-height:44px">🚚 Entregar a una escuela</button>
-              <button class="btn btn-ghost" onclick="abrirEntradaManual()" title="Piezas que llegaron a bodega" style="text-align:left;min-height:44px">📥 Entró a bodega</button>
-              <button class="btn btn-ghost" onclick="abrirConteoModal()" title="Poner lo que hay de verdad en el estante" style="text-align:left;min-height:44px">🔢 Contar bodega</button>
+              <button class="btn btn-success" onclick="switchTab('empaque')" title="Escuela → cuántas piezas de cada talla → empacar" style="text-align:left;min-height:44px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> Empacar para una escuela</button>
+              <button class="btn btn-primary" onclick="abrirEntregaModal()" title="Lo empacado de una escuela pasa a entregado, con fecha" style="text-align:left;min-height:44px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camion"/></svg> Entregar a una escuela</button>
+              <button class="btn btn-ghost" onclick="abrirEntradaManual()" title="Piezas que llegaron a bodega" style="text-align:left;min-height:44px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-entrada"/></svg> Entró a bodega</button>
+              <button class="btn btn-ghost" onclick="abrirConteoModal()" title="Poner lo que hay de verdad en el estante" style="text-align:left;min-height:44px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-calc"/></svg> Contar bodega</button>
             </div>
             <!-- Otras acciones (menos frecuentes) -->
             <details style="margin-top:6px">
               <summary style="cursor:pointer;list-style:none;font-size:13px;color:#666;padding:10px 2px;user-select:none">⋯ Otras acciones</summary>
               <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;margin-top:4px">
-                <button class="btn btn-warning btn-sm" onclick="emqAbrirReserva()" title="Apartar stock por talla y cantidad para una escuela (elegís escuela y prenda en el modal)" style="text-align:left">🔒 Reservar tallas</button>
+                <button class="btn btn-warning btn-sm" onclick="emqAbrirReserva()" title="Apartar stock por talla y cantidad para una escuela (elegís escuela y prenda en el modal)" style="text-align:left"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-candado"/></svg> Reservar tallas</button>
                 <button class="btn btn-ghost btn-sm" onclick="abrirSalidaModal()" title="Salida sin alumnos" style="text-align:left">↗ Salida rápida</button>
               </div>
             </details>
           </div>
         </details>
-        <button class="btn btn-ghost btn-sm" onclick="cargarBodegaStock()" title="Refrescar lista" style="padding:10px 12px">🔄</button>
+        <button class="btn btn-ghost btn-sm" onclick="cargarBodegaStock()" title="Refrescar lista" style="padding:10px 12px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg></button>
       </div>
     </div>
   `;
@@ -218,7 +218,7 @@ function renderVsDemanda(data) {
       </div>
     </div>
     <div class="card" style="padding:0;overflow:hidden">
-      <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">📊 Por talla</div>
+      <div style="background:#F5F7FA;padding:8px 12px;font-weight:600"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-avance"/></svg> Por talla</div>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead>
           <tr style="background:#FAFAFA">
@@ -269,9 +269,9 @@ function renderMovimientos(movs) {
   if (!movs || movs.length === 0) {
     cont.innerHTML = `
       <div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()">📥 + Entrada</button>
-        <button class="btn btn-success btn-sm" onclick="switchTab('empaque')" title="Escuela → marcar piezas → reservar o empacar → entrega">🧺 Sesión de empaque</button>
-        <button class="btn btn-ghost btn-sm" onclick="abrirSalidaModal()" title="Salida genérica (sin alumnos)">🚚 Salida rápida</button>
+        <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-entrada"/></svg> + Entrada</button>
+        <button class="btn btn-success btn-sm" onclick="switchTab('empaque')" title="Escuela → marcar piezas → reservar o empacar → entrega"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> Sesión de empaque</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirSalidaModal()" title="Salida genérica (sin alumnos)"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camion"/></svg> Salida rápida</button>
       </div>
       <div class="alert alert-info">Sin movimientos registrados.</div>`;
     return;
@@ -296,8 +296,8 @@ function renderMovimientos(movs) {
   
   cont.innerHTML = `
     <div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">
-      <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()">📥 + Entrada</button>
-      <button class="btn btn-primary btn-sm" onclick="abrirSalidaModal()">🚚 Salida a escuela</button>
+      <button class="btn btn-success btn-sm" onclick="abrirEntradaManual()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-entrada"/></svg> + Entrada</button>
+      <button class="btn btn-primary btn-sm" onclick="abrirSalidaModal()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camion"/></svg> Salida a escuela</button>
     </div>
     <div class="card" style="padding:0;overflow:hidden">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -1007,7 +1007,7 @@ async function onEntregaEscuelaCambio() {
         const lineas = emqLineasEscuela(ctx, escId).filter(L => L.empacado > 0);
         emqSelInit('bent', lineas.map(L => [L.k, L.empacado]), true);
         info.innerHTML = lineas.length
-          ? '<div style="margin-bottom:4px">📋 Escuela <strong>por pedido</strong>. Empacado sin entregar (ajustá si es entrega parcial):</div>'
+          ? '<div style="margin-bottom:4px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> Escuela <strong>por pedido</strong>. Empacado sin entregar (ajustá si es entrega parcial):</div>'
             + emqListaEntregaHtml(lineas, 'bent')
           : '<span style="color:#c44">⚠ Esta escuela no tiene piezas empacadas. Empacalas primero en 🧺 Sesión de empaque.</span>';
         return;
@@ -1285,7 +1285,7 @@ function _salidaPedidoHtml(escId, prenda, talla) {
   const cod = _salidaCodPrenda(prenda);
   const lineas = emqLineasEscuela(ctx, escId).filter(L => L.cod === cod);
   if (!talla) {
-    if (!lineas.length) return `<span style="color:#a60">📋 Esta escuela no tiene pedido de ${prenda}.</span>`;
+    if (!lineas.length) return `<span style="color:#a60"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> Esta escuela no tiene pedido de ${prenda}.</span>`;
     const pend = lineas.filter(L => L.falta > 0);
     return pend.length
       ? `📋 Le falta de ${prenda}: ` + pend.map(L => `<strong>${L.talla}</strong> ${L.falta}`).join(' · ')
@@ -1293,7 +1293,7 @@ function _salidaPedidoHtml(escId, prenda, talla) {
   }
   const m = emqTallaDeBodega(cod, talla, ctx.eqMap);
   const L = m && lineas.find(x => x.t === m.t);
-  if (!L) return `<span style="color:#a60">📋 Esta escuela no tiene pedido de ${prenda} ${talla}.</span>`;
+  if (!L) return `<span style="color:#a60"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> Esta escuela no tiene pedido de ${prenda} ${talla}.</span>`;
   return `📋 Pedido de la escuela · <strong>${L.talla}</strong>${talla !== L.talla ? ` <span style="color:#888">(bodega ${talla})</span>` : ''}:
       pedido <strong>${L.pedido}</strong> · entregado <strong>${L.entregado}</strong>${L.empacado ? ` · empacado <strong>${L.empacado}</strong>` : ''}
       · <span style="color:var(--naranja);font-weight:700">falta ${L.falta}</span>`

@@ -543,7 +543,7 @@ function renderDashboard() {
     <!-- Stock top -->
     ${verStock && stockTop.length > 0 ? `
       <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
-        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">📦 Stock disponible (top 10)</div>
+        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> Stock disponible (top 10)</div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead>
             <tr style="background:#FAFAFA">
@@ -941,7 +941,7 @@ function _dashMarcoAvance(totalEsc, mostrados, cards) {
   return `
     <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
       <div style="background:#F5F7FA;padding:8px 12px;font-weight:600;display:flex;justify-content:space-between;align-items:center">
-        <span>🏫 Avance por escuela ${colapsado && totalEsc > 5 ? `(top ${mostrados} de ${totalEsc})` : `(${totalEsc})`}</span>
+        <span><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-escuela"/></svg> Avance por escuela ${colapsado && totalEsc > 5 ? `(top ${mostrados} de ${totalEsc})` : `(${totalEsc})`}</span>
         ${totalEsc > 5 ? `
           <button class="btn btn-ghost btn-sm" onclick="toggleAvanceEsc()" style="font-size:11px">
             ${colapsado ? `Ver todas (${totalEsc}) ▼` : 'Colapsar ▲'}
@@ -1132,7 +1132,7 @@ function _renderAvancePorEscuela(r) {
       <div class="card" style="padding:10px;margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
           <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:13px">🏫 ${dashEsc(alias)}</div>
+            <div style="font-weight:700;font-size:13px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-escuela"/></svg> ${dashEsc(alias)}</div>
             <div style="font-size:10px;color:#888">${cde} · ${o.total} alumnos</div>
           </div>
           <div style="font-size:18px;font-weight:700;color:${barraColor};white-space:nowrap">${o.pct}%</div>
@@ -1152,12 +1152,12 @@ function _renderAvancePorEscuela(r) {
         ${conPronostico ? _dashPronostico(o.pendientes, o.velocidad) : ''}
         <!-- Atajos -->
         <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px">
-          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('registro','${e.id}')" style="font-size:11px;padding:4px 8px">📋 Registro</button>
-          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('empacar','${e.id}')" style="font-size:11px;padding:4px 8px" title="Sesión de empaque: marcar piezas, reservar o empacar">🧺 Empacar</button>
-          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('entrega','${e.id}')" style="font-size:11px;padding:4px 8px">🚚 Entrega</button>
-          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('lista','${e.id}')" style="font-size:11px;padding:4px 8px" title="Descargar PDF de la lista de empaque">🖨 Lista</button>
-          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('resumen','${e.id}')" style="font-size:11px;padding:4px 8px" title="Descargar resumen ejecutivo PDF (2 hojas)">📑 Resumen</button>
-          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('bolsa','${e.id}')" style="font-size:11px;padding:4px 8px" title="Etiquetas grandes para bolsa (2 por hoja)">🏷 Bolsa</button>
+          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('registro','${e.id}')" style="font-size:11px;padding:4px 8px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> Registro</button>
+          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('empacar','${e.id}')" style="font-size:11px;padding:4px 8px" title="Sesión de empaque: marcar piezas, reservar o empacar"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> Empacar</button>
+          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('entrega','${e.id}')" style="font-size:11px;padding:4px 8px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camion"/></svg> Entrega</button>
+          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('lista','${e.id}')" style="font-size:11px;padding:4px 8px" title="Descargar PDF de la lista de empaque"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-imprimir"/></svg> Lista</button>
+          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('resumen','${e.id}')" style="font-size:11px;padding:4px 8px" title="Descargar resumen ejecutivo PDF (2 hojas)"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-hoja"/></svg> Resumen</button>
+          <button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('bolsa','${e.id}')" style="font-size:11px;padding:4px 8px" title="Etiquetas grandes para bolsa (2 por hoja)"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-etiqueta"/></svg> Bolsa</button>
         </div>
       </div>
     `;

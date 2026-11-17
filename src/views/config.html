@@ -7,11 +7,11 @@
        · 🛠 Sistema   — PWA, backups, conexión, fases, auditoría (rara vez)
        · 🗄 Más       — lo de temporadas con alumnos (2025) y volver a ver las ayudas -->
   <div class="card" style="padding:8px 10px;margin-bottom:10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-    <button id="cfg-nav-reportes" class="btn btn-sm btn-primary" onclick="switchSubConfig('reportes')">📊 Reportes</button>
-    <button id="cfg-nav-catalogos" class="btn btn-sm btn-ghost" onclick="switchSubConfig('catalogos')">📚 Catálogos</button>
-    <button id="cfg-nav-usuarios" class="btn btn-sm btn-ghost" onclick="switchSubConfig('usuarios')">👥 Usuarios</button>
-    <button id="cfg-nav-sistema" class="btn btn-sm btn-ghost" onclick="switchSubConfig('sistema')">🛠 Sistema</button>
-    <button id="cfg-nav-mas" class="btn btn-sm btn-ghost" onclick="switchSubConfig('mas')" title="Temporadas anteriores y avanzado">🗄 Más</button>
+    <button id="cfg-nav-reportes" class="btn btn-sm btn-primary" onclick="switchSubConfig('reportes')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-avance"/></svg> Reportes</button>
+    <button id="cfg-nav-catalogos" class="btn btn-sm btn-ghost" onclick="switchSubConfig('catalogos')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> Catálogos</button>
+    <button id="cfg-nav-usuarios" class="btn btn-sm btn-ghost" onclick="switchSubConfig('usuarios')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-personas"/></svg> Usuarios</button>
+    <button id="cfg-nav-sistema" class="btn btn-sm btn-ghost" onclick="switchSubConfig('sistema')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-ajustes"/></svg> Sistema</button>
+    <button id="cfg-nav-mas" class="btn btn-sm btn-ghost" onclick="switchSubConfig('mas')" title="Temporadas anteriores y avanzado"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-carpeta"/></svg> Más</button>
   </div>
 
   <!-- ════════════ SUB: 📊 REPORTES ════════════ -->
@@ -19,55 +19,55 @@
 
     <!-- Índice de reportes: lista única que apunta a TODOS los reportes -->
     <div class="card">
-      <div class="card-title">🗂️ Índice de reportes</div>
+      <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-carpeta"/></svg> Índice de reportes</div>
       <div class="text-muted mb8" style="font-size:12px">Todos los reportes de la app en un solo lugar. El botón te lleva a donde está cada uno.</div>
       <div style="display:flex;flex-direction:column;gap:6px">
 
         <div class="oculto-2026" style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
-          <div style="flex:1"><div style="font-weight:600;font-size:13px">📊 Por talla</div><div style="font-size:11px;color:#666">Demanda por talla cruzada con corte / bodega / pool (incluye 🔥 críticas).</div></div>
+          <div style="flex:1"><div style="font-weight:600;font-size:13px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-avance"/></svg> Por talla</div><div style="font-size:11px;color:#666">Demanda por talla cruzada con corte / bodega / pool (incluye 🔥 críticas).</div></div>
           <button class="btn btn-ghost btn-sm" onclick="switchTab('estadistica'); if(typeof switchSubEst==='function') switchSubEst('tallas')">Abrir →</button>
         </div>
 
         <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
-          <div style="flex:1"><div style="font-weight:600;font-size:13px">📋 Por escuela</div><div style="font-size:11px;color:#666">Tallaje + Contrato + Tela/Yardaje de una escuela (o todas).</div></div>
+          <div style="flex:1"><div style="font-weight:600;font-size:13px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> Por escuela</div><div style="font-size:11px;color:#666">Tallaje + Contrato + Tela/Yardaje de una escuela (o todas).</div></div>
           <button class="btn btn-ghost btn-sm" onclick="switchTab('estadistica'); if(typeof switchSubEst==='function') switchSubEst('escuela')">Abrir →</button>
         </div>
 
         <div class="oculto-2026" style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
-          <div style="flex:1"><div style="font-weight:600;font-size:13px">🔮 Pronóstico de tallas</div><div style="font-size:11px;color:#666">Distribución histórica aplicada a una cantidad nueva a producir.</div></div>
+          <div style="flex:1"><div style="font-weight:600;font-size:13px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-avance"/></svg> Pronóstico de tallas</div><div style="font-size:11px;color:#666">Distribución histórica aplicada a una cantidad nueva a producir.</div></div>
           <button class="btn btn-ghost btn-sm" onclick="switchTab('estadistica'); if(typeof switchSubEst==='function') switchSubEst('pronostico')">Abrir →</button>
         </div>
 
         <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
-          <div style="flex:1"><div style="font-weight:600;font-size:13px">📈 Histórico</div><div style="font-size:11px;color:#666">Comparativo entre temporadas. Acá abajo, en este mismo grupo.</div></div>
+          <div style="flex:1"><div style="font-weight:600;font-size:13px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-avance"/></svg> Histórico</div><div style="font-size:11px;color:#666">Comparativo entre temporadas. Acá abajo, en este mismo grupo.</div></div>
           <button class="btn btn-ghost btn-sm" onclick="var d=document.getElementById('cfg-rep-historico'); if(d){d.open=true; d.scrollIntoView({behavior:'smooth',block:'center'});}">Abrir ↓</button>
         </div>
 
         <div class="dato-sensible oculto-2026" style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
-          <div style="flex:1"><div style="font-weight:600;font-size:13px">💰 Costos</div><div style="font-size:11px;color:#666">Mano de obra por nivel × sexo. Acá abajo, en este mismo grupo.</div></div>
+          <div style="flex:1"><div style="font-weight:600;font-size:13px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-moneda"/></svg> Costos</div><div style="font-size:11px;color:#666">Mano de obra por nivel × sexo. Acá abajo, en este mismo grupo.</div></div>
           <button class="btn btn-ghost btn-sm" onclick="var d=document.getElementById('cfg-rep-costos'); if(d){d.open=true; d.scrollIntoView({behavior:'smooth',block:'center'});}">Abrir ↓</button>
         </div>
 
         <div class="oculto-2026" style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
-          <div style="flex:1"><div style="font-weight:600;font-size:13px">📄 Hoja de entrega (PDF director)</div><div style="font-size:11px;color:#666">Reporte imprimible por escuela. Acá abajo, en este mismo grupo.</div></div>
+          <div style="flex:1"><div style="font-weight:600;font-size:13px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-hoja"/></svg> Hoja de entrega (PDF director)</div><div style="font-size:11px;color:#666">Reporte imprimible por escuela. Acá abajo, en este mismo grupo.</div></div>
           <button class="btn btn-ghost btn-sm" onclick="var d=document.getElementById('cfg-rep-hoja'); if(d){d.scrollIntoView({behavior:'smooth',block:'center'});}">Abrir ↓</button>
         </div>
 
         <div class="oculto-2026" style="padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
           <div style="display:flex;gap:10px;align-items:center">
-            <div style="flex:1"><div style="font-weight:600;font-size:13px">🧾 Reportes PDF por escuela</div><div style="font-size:11px;color:#666">Hoja de tallaje, lista de empaque y hoja de entrega.</div></div>
+            <div style="flex:1"><div style="font-weight:600;font-size:13px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-hoja"/></svg> Reportes PDF por escuela</div><div style="font-size:11px;color:#666">Hoja de tallaje, lista de empaque y hoja de entrega.</div></div>
           </div>
           <div style="display:flex;gap:6px;align-items:center;margin-top:8px">
             <select id="cfg-rep-pdf-escuela" style="flex:1;min-width:160px;padding:6px 8px">
               <option value="">Tocá 🔄 para cargar las escuelas…</option>
             </select>
-            <button class="btn btn-ghost btn-sm" onclick="cfgCargarEscuelasPDF()" title="Cargar lista de escuelas">🔄</button>
-            <button class="btn btn-primary btn-sm" onclick="cfgAbrirReportesPDF()">🖨 Generar PDF</button>
+            <button class="btn btn-ghost btn-sm" onclick="cfgCargarEscuelasPDF()" title="Cargar lista de escuelas"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg></button>
+            <button class="btn btn-primary btn-sm" onclick="cfgAbrirReportesPDF()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-imprimir"/></svg> Generar PDF</button>
           </div>
         </div>
 
         <div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--borde);border-radius:8px">
-          <div style="flex:1"><div style="font-weight:600;font-size:13px">⬇️ Exportar a CSV/Excel</div><div style="font-size:11px;color:#666">Alumnos, Pedidos, Stock y Movimientos. Desde Registro / Bodega.</div></div>
+          <div style="flex:1"><div style="font-weight:600;font-size:13px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-entrada"/></svg> Exportar a CSV/Excel</div><div style="font-size:11px;color:#666">Alumnos, Pedidos, Stock y Movimientos. Desde Registro / Bodega.</div></div>
           <button class="btn btn-ghost btn-sm" onclick="switchTab('registro')">Ir a Registro →</button>
         </div>
 
@@ -76,19 +76,19 @@
 
     <!-- Histórico y Costos (se cargan al abrir cada sección) -->
     <div class="card">
-      <div class="card-title">📊 Reportes administrativos</div>
+      <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-avance"/></svg> Reportes administrativos</div>
       <div class="text-muted mb8" style="font-size:12px">De revisión ocasional. Se cargan al abrir cada sección.</div>
 
       <details id="cfg-rep-historico" style="margin-bottom:8px" ontoggle="if(this.open && typeof initHistorico==='function') initHistorico()">
         <summary style="cursor:pointer;list-style:none;padding:10px 12px;background:#F5F7FA;border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
-          <span>📈 Histórico <span style="font-weight:400;color:#888;font-size:11px">— comparativo entre temporadas</span></span><span style="opacity:0.6;font-size:11px">▼</span>
+          <span><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-avance"/></svg> Histórico <span style="font-weight:400;color:#888;font-size:11px">— comparativo entre temporadas</span></span><span style="opacity:0.6;font-size:11px">▼</span>
         </summary>
         <div id="historico-contenido" style="padding-top:10px"><div class="text-muted" style="padding:16px;text-align:center">Abrí esta sección para cargar el histórico…</div></div>
       </details>
 
       <details id="cfg-rep-costos" class="dato-sensible oculto-2026" ontoggle="if(this.open && typeof initCostos==='function') initCostos()">
         <summary style="cursor:pointer;list-style:none;padding:10px 12px;background:#F5F7FA;border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
-          <span>💰 Costos <span style="font-weight:400;color:#888;font-size:11px">— mano de obra por nivel × sexo</span></span><span style="opacity:0.6;font-size:11px">▼</span>
+          <span><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-moneda"/></svg> Costos <span style="font-weight:400;color:#888;font-size:11px">— mano de obra por nivel × sexo</span></span><span style="opacity:0.6;font-size:11px">▼</span>
         </summary>
         <div id="est-sub-costos-view" style="padding-top:10px"><div class="text-muted" style="padding:16px;text-align:center">Abrí esta sección para cargar los costos…</div></div>
       </details>
@@ -96,7 +96,7 @@
 
     <!-- Hoja de entrega por escuela (PDF para director) -->
     <div class="card oculto-2026" id="cfg-rep-hoja">
-      <div class="card-title">📄 Hoja de entrega por escuela</div>
+      <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-hoja"/></svg> Hoja de entrega por escuela</div>
       <div class="text-muted mb8" style="font-size:12px">
         Reporte interno para entregar al director de la institución. Incluye detalle por grado (♀/♂/total), comparación contrato vs entregado por nivel educativo, totales y tela contratada. Carta vertical, listo para imprimir.
       </div>
@@ -107,8 +107,8 @@
             <option value="">Cargá la lista primero…</option>
           </select>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="cargarEscuelasHE()" title="Cargar lista de escuelas">🔄 Cargar</button>
-        <button class="btn btn-primary btn-sm" onclick="exportarHojaEntregaPDF()" id="he-pdf-btn" disabled>📥 Generar PDF</button>
+        <button class="btn btn-ghost btn-sm" onclick="cargarEscuelasHE()" title="Cargar lista de escuelas"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg> Cargar</button>
+        <button class="btn btn-primary btn-sm" onclick="exportarHojaEntregaPDF()" id="he-pdf-btn" disabled><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-entrada"/></svg> Generar PDF</button>
       </div>
     </div>
   </div>
@@ -117,19 +117,19 @@
   <div id="cfg-sub-catalogos" style="display:none">
 
     <div class="card">
-      <div class="card-title">📚 Catálogos</div>
+      <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> Catálogos</div>
       <div class="text-muted mb8" style="font-size:12px">Datos maestros que la app usa para todo lo demás. Se editan de vez en cuando.</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px">
         <button class="btn btn-ghost oculto-2026" onclick="abrirCatalogoGrados()" style="padding:10px;text-align:left">
-          <div style="font-weight:600">🎓 Grados → Nivel/Ciclo</div>
+          <div style="font-weight:600"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-escuela"/></svg> Grados → Nivel/Ciclo</div>
           <div style="font-size:11px;color:#666;margin-top:2px">Qué nivel y ciclo corresponde a cada grado</div>
         </button>
         <button class="btn btn-ghost" onclick="abrirCatalogoOperarias()" style="padding:10px;text-align:left">
-          <div style="font-weight:600">👷 Operarias</div>
+          <div style="font-weight:600"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-persona"/></svg> Operarias</div>
           <div style="font-size:11px;color:#666;margin-top:2px">Listado y alta de operarias (módulo Producción)</div>
         </button>
         <button class="btn btn-ghost oculto-2026" onclick="abrirCatalogoGrupos()" style="padding:10px;text-align:left">
-          <div style="font-weight:600">👥 Grupos de producción</div>
+          <div style="font-weight:600"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-personas"/></svg> Grupos de producción</div>
           <div style="font-size:11px;color:#666;margin-top:2px">Equipos de trabajo (módulo Producción)</div>
         </button>
       </div>
@@ -138,10 +138,10 @@
     <!-- Grupos de escuelas (asignación masiva) -->
     <div class="card">
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
-        <span>🏫 Grupos de escuelas</span>
+        <span><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-escuela"/></svg> Grupos de escuelas</span>
         <div style="display:flex;gap:6px">
-          <button class="btn btn-success btn-sm" onclick="abrirAutoGrupos()" title="Repartir escuelas en N grupos equilibrados por cantidad de alumnos">🪄 Agrupar auto</button>
-          <button class="btn btn-ghost btn-sm" onclick="cargarGruposEscuelas()" title="Refrescar lista">🔄</button>
+          <button class="btn btn-success btn-sm" onclick="abrirAutoGrupos()" title="Repartir escuelas en N grupos equilibrados por cantidad de alumnos"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-chispa"/></svg> Agrupar auto</button>
+          <button class="btn btn-ghost btn-sm" onclick="cargarGruposEscuelas()" title="Refrescar lista"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg></button>
         </div>
       </div>
       <div class="text-muted mb8" style="font-size:12px">
@@ -155,10 +155,10 @@
     <!-- Catálogo de grados (oculto, se abre por botón) -->
     <div id="cfg-grados-card" class="card oculto-2026" style="display:none">
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
-        <span>🎓 Catálogo de grados</span>
+        <span><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-escuela"/></svg> Catálogo de grados</span>
         <div style="display:flex;gap:6px">
           <button class="btn btn-success btn-sm" onclick="nuevoGrado()">+ Nuevo</button>
-          <button class="btn btn-ghost btn-sm" onclick="cargarGradosCatalogo()">🔄</button>
+          <button class="btn btn-ghost btn-sm" onclick="cargarGradosCatalogo()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg></button>
           <button class="btn btn-ghost btn-sm" onclick="document.getElementById('cfg-grados-card').style.display='none'">✕</button>
         </div>
       </div>
@@ -167,7 +167,7 @@
         Para corregir alumnos ya cargados con un nivel/ciclo viejo, usar el botón "Aplicar a alumnos existentes" arriba.
       </div>
       <div style="margin-bottom:10px">
-        <button class="btn btn-primary btn-sm" onclick="aplicarCatalogoAExistentes()" title="Corre un UPDATE en alumno para alinear nivel/ciclo con el catálogo actual">⚡ Aplicar catálogo a alumnos existentes</button>
+        <button class="btn btn-primary btn-sm" onclick="aplicarCatalogoAExistentes()" title="Corre un UPDATE en alumno para alinear nivel/ciclo con el catálogo actual"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-rayo"/></svg> Aplicar catálogo a alumnos existentes</button>
       </div>
       <div id="cfg-grados-lista"><div class="loading">Cargando...</div></div>
     </div>
@@ -180,7 +180,7 @@
     <div class="card" id="cfg-session-card" style="display:none">
       <div class="config-item">
         <div>
-          <div class="config-label">👤 Sesión</div>
+          <div class="config-label"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-persona"/></svg> Sesión</div>
           <div class="config-sub" id="cfg-session-email">—</div>
           <div class="config-sub" id="cfg-session-rol" style="margin-top:2px;font-weight:600">—</div>
         </div>
@@ -191,7 +191,7 @@
     <!-- Invitar a alguien del taller (solo admin). La invitación por correo
          sigue igual: edge function invite-user con email + rol. -->
     <div id="cfg-invitar-card" class="card" style="display:none">
-      <div class="card-title">➕ Invitar a alguien del taller</div>
+      <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-sumar"/></svg> Invitar a alguien del taller</div>
       <div class="text-muted mb8" style="font-size:13px">
         Le llega un correo con un enlace para que ponga su contraseña. El enlace dura 24 horas.
       </div>
@@ -211,29 +211,29 @@
       <div class="inv-roles" role="radiogroup" aria-label="Qué va a poder hacer">
         <label class="inv-rol">
           <input type="radio" name="cfg-inv-role" value="operador" checked>
-          <div><b>🧵 Taller</b><span>Anota cortes, bultos, bodega, empaque y entregas.</span></div>
+          <div><b><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-hilo"/></svg> Taller</b><span>Anota cortes, bultos, bodega, empaque y entregas.</span></div>
         </label>
         <label class="inv-rol">
           <input type="radio" name="cfg-inv-role" value="admin">
-          <div><b>🔑 Administrador</b><span>Además borra y configura.</span></div>
+          <div><b><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-candado"/></svg> Administrador</b><span>Además borra y configura.</span></div>
         </label>
       </div>
 
-      <button class="btn btn-primary btn-block" id="cfg-inv-btn" onclick="invitarUsuario()" style="min-height:48px;font-size:15px">📩 Enviar invitación</button>
+      <button class="btn btn-primary btn-block" id="cfg-inv-btn" onclick="invitarUsuario()" style="min-height:48px;font-size:15px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-entrada"/></svg> Enviar invitación</button>
       <div id="cfg-inv-alert" style="margin-top:10px"></div>
     </div>
 
     <!-- Quien no es administrador: cómo pedir una cuenta para alguien -->
     <div id="cfg-invitar-noadmin" class="card" style="display:none">
-      <div class="card-title">➕ Invitar a alguien del taller</div>
+      <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-sumar"/></svg> Invitar a alguien del taller</div>
       <div class="text-muted" style="font-size:13px">Solo un administrador puede invitar. Pedíselo y pasale el nombre y el correo de la persona.</div>
     </div>
 
     <!-- Lista de usuarios (solo admin) -->
     <div id="cfg-usuarios-card" class="card" style="display:none">
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
-        <span>👤 Usuarios</span>
-        <button class="btn btn-ghost btn-sm" onclick="cargarUsuarios()">🔄</button>
+        <span><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-persona"/></svg> Usuarios</span>
+        <button class="btn btn-ghost btn-sm" onclick="cargarUsuarios()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg></button>
       </div>
       <div class="text-muted mb8" style="font-size:12px">
         Cambiá qué puede hacer cada persona con la lista, o tocá 🗑 para quitarle el acceso. No te podés quitar a vos mismo ni dejar la app sin administrador.
@@ -250,11 +250,11 @@
 
     <!-- App / PWA -->
     <div class="card">
-      <div class="card-title">📱 App (PWA)</div>
+      <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-celular"/></svg> App (PWA)</div>
       <div class="text-muted mb8" style="font-size:12px">
         Esta app funciona como PWA — se puede instalar desde el menú del navegador. Cuando hay una versión nueva normalmente aparece un banner azul; si querés forzar la búsqueda ahora, tocá el botón.
       </div>
-      <button class="btn btn-primary btn-sm" onclick="window.PWA && window.PWA.checkUpdate(document.getElementById('pwa-update-status'))">🔄 Buscar actualizaciones</button>
+      <button class="btn btn-primary btn-sm" onclick="window.PWA && window.PWA.checkUpdate(document.getElementById('pwa-update-status'))"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg> Buscar actualizaciones</button>
       <div id="pwa-update-status" style="margin-top:8px;font-size:12px;color:#666"></div>
 
       <div style="margin-top:12px;border-top:1px dashed #E0E0E0;padding-top:10px">
@@ -270,21 +270,21 @@
 
     <!-- Backup manual -->
     <div class="card">
-      <div class="card-title">💾 Backup y exportar</div>
+      <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-guardar"/></svg> Backup y exportar</div>
       <div class="text-muted mb8" style="font-size:12px">Bajar todas las tablas de la app a un archivo Excel. Útil como respaldo manual o para compartir info con terceros.</div>
-      <button class="btn btn-primary" onclick="descargarBackupExcel()" id="btn-backup-excel">📥 Descargar respaldo (Excel)</button>
+      <button class="btn btn-primary" onclick="descargarBackupExcel()" id="btn-backup-excel"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-entrada"/></svg> Descargar respaldo (Excel)</button>
       <div id="backup-status" style="margin-top:8px;font-size:12px;color:#666"></div>
     </div>
 
     <!-- Backups automáticos (solo admin) -->
     <div id="cfg-backups-card" class="card" style="display:none">
-      <div class="card-title">💾 Backups automáticos</div>
+      <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-guardar"/></svg> Backups automáticos</div>
       <div class="text-muted mb8" style="font-size:12px">
         Cada semana (domingo 3am UTC) se hace un backup automático con las tablas clave. Se guarda comprimido en el bucket privado <code>backups</code>. Solo admins pueden listar y descargar.
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <button class="btn btn-primary btn-sm" onclick="ejecutarBackupAhora()">▶ Ejecutar backup ahora</button>
-        <button class="btn btn-ghost btn-sm" onclick="cargarListaBackups()">🔄 Refrescar lista</button>
+        <button class="btn btn-ghost btn-sm" onclick="cargarListaBackups()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg> Refrescar lista</button>
       </div>
       <div id="cfg-backups-lista">
         <div class="text-muted" style="font-size:12px">Tocá refrescar para cargar.</div>
@@ -293,7 +293,7 @@
 
     <!-- Fases del módulo Producción -->
     <div class="card">
-      <div class="card-title">🚀 Funciones de producción (por etapas)</div>
+      <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-rayo"/></svg> Funciones de producción (por etapas)</div>
       <div class="text-muted mb8" style="font-size:12px">Del módulo avanzado 🏭 Producción. Activá las funciones solo cuando la Fase 1 esté funcionando bien. Si hay problemas, podés volver a desactivarlas.</div>
 
       <div class="config-item">
@@ -325,19 +325,19 @@
           <span class="switch-slider"></span>
         </label>
       </div>
-      <div class="text-muted" style="font-size:11px;margin-top:8px">💡 Si desactivás una fase, los datos quedan guardados y se pueden volver a usar al reactivarla.</div>
+      <div class="text-muted" style="font-size:11px;margin-top:8px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-idea"/></svg> Si desactivás una fase, los datos quedan guardados y se pueden volver a usar al reactivarla.</div>
     </div>
 
     <!-- Auditoría (solo admin) -->
     <div class="card" id="cfg-audit-acceso-card">
-      <div class="card-title">🕵️ Auditoría</div>
+      <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-buscar"/></svg> Auditoría</div>
       <div class="text-muted mb8" style="font-size:12px">Historial de quién cambió qué y cuándo, con opción de deshacer cambios puntuales.</div>
-      <button id="cfg-acceso-audit" class="btn btn-ghost btn-sm" onclick="switchTab('auditoria')" style="display:none">🔍 Abrir audit log →</button>
+      <button id="cfg-acceso-audit" class="btn btn-ghost btn-sm" onclick="switchTab('auditoria')" style="display:none"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-buscar"/></svg> Abrir audit log →</button>
     </div>
 
     <!-- Conexión (técnico, casi nunca se toca) -->
     <div class="card">
-      <div class="card-title">🔌 Conexión a la base de datos</div>
+      <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-enlace"/></svg> Conexión a la base de datos</div>
       <div class="text-muted mb8" style="font-size:12px">Datos técnicos de Supabase. Solo tocar si se migra el proyecto — con valores incorrectos la app deja de cargar datos.</div>
       <div class="config-item">
         <div>
@@ -363,7 +363,7 @@
   <!-- ════════════ SUB: 🗄 MÁS — temporadas anteriores y avanzado ════════════ -->
   <div id="cfg-sub-mas" style="display:none">
     <div class="card">
-      <div class="card-title">🗄 Temporadas anteriores (por alumno)</div>
+      <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-carpeta"/></svg> Temporadas anteriores (por alumno)</div>
       <div class="text-muted mb8" style="font-size:13px">
         En 2026 el pedido viene por cantidades, sin lista de alumnos. Lo que solo servía con alumnos (2025) quedó guardado acá para que no estorbe. No se borró nada.
       </div>
@@ -382,9 +382,9 @@
     </div>
 
     <div class="card">
-      <div class="card-title">💡 Ayudas «¿Cómo se usa?»</div>
+      <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-idea"/></svg> Ayudas «¿Cómo se usa?»</div>
       <div class="text-muted mb8" style="font-size:13px">Si cerraste las ayudas de arriba de cada pantalla, las podés volver a ver.</div>
-      <button class="btn btn-ghost" onclick="mostrarAyudasOtraVez()" style="min-height:44px">💡 Volver a mostrar las ayudas</button>
+      <button class="btn btn-ghost" onclick="mostrarAyudasOtraVez()" style="min-height:44px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-idea"/></svg> Volver a mostrar las ayudas</button>
     </div>
   </div>
 
@@ -394,7 +394,7 @@
   <div id="auto-grupos-modal" class="modal" style="display:none">
     <div class="modal-content" style="max-width:520px">
       <div class="modal-header">
-        <div class="card-title">🪄 Agrupar automáticamente</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-chispa"/></svg> Agrupar automáticamente</div>
         <button class="btn btn-ghost btn-sm" onclick="cerrarAutoGrupos()">✕</button>
       </div>
       <div class="modal-body">
@@ -412,7 +412,7 @@
             <div style="font-size:10px;color:#888">→ G1, G2…</div>
           </div>
           <div class="field" style="margin:0;flex:1;text-align:right">
-            <button class="btn btn-primary btn-sm" onclick="calcularAutoGrupos()">📊 Calcular sugerencia</button>
+            <button class="btn btn-primary btn-sm" onclick="calcularAutoGrupos()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-avance"/></svg> Calcular sugerencia</button>
           </div>
         </div>
         <div id="ag-preview" style="margin-top:12px"></div>

@@ -2,12 +2,12 @@
 <div id="view-bodega" class="view">
   <div id="alert-bodega"></div>
   <div class="ayuda-tip" data-ayuda="bodega" role="note">
-    <span class="ayuda-tip-ico" aria-hidden="true">💡</span>
+    <span class="ayuda-tip-ico" aria-hidden="true"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-idea"/></svg></span>
     <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> Tocá <b>✚ Acciones de bodega</b> para anotar lo que entró, contar lo que hay, empacar o entregar a una escuela.</span>
     <button type="button" class="ayuda-tip-x" onclick="cerrarAyuda('bodega')" aria-label="Cerrar esta ayuda" title="Cerrar esta ayuda">✕</button>
   </div>
   <div class="card">
-    <div class="card-title">📦 Bodega</div>
+    <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> Bodega</div>
     <div id="bodega-tabs"></div>
   </div>
   <div id="bodega-contenido"></div>
@@ -16,7 +16,7 @@
   <div id="bodega-entrada-modal" class="modal" style="display:none">
     <div class="modal-content" style="max-width:500px">
       <div class="modal-header">
-        <div class="card-title">📥 Entró a bodega</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-entrada"/></svg> Entró a bodega</div>
         <button class="btn btn-ghost btn-sm" onclick="cerrarEntradaManual()">✕</button>
       </div>
       <div class="modal-body">
@@ -43,7 +43,7 @@
           </select>
           <div id="ent-talla-otra-wrap" style="display:none;margin-top:6px">
             <input type="text" id="ent-talla-otra" placeholder="Escribí la KEY exacta (ej: P1075)">
-            <div style="font-size:11px;color:#c60;margin-top:2px">⚠️ Talla fuera del catálogo: revisá dos veces — crea un código nuevo en bodega.</div>
+            <div style="font-size:11px;color:#c60;margin-top:2px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-alerta"/></svg> Talla fuera del catálogo: revisá dos veces — crea un código nuevo en bodega.</div>
           </div>
           <!-- Visor: cruce con corte/producción para no registrar a ciegas -->
           <div id="ent-info" style="display:none;margin-top:6px;padding:6px 10px;background:#F0F7F0;border:1px solid #CDE5CD;border-radius:6px;font-size:12px"></div>
@@ -69,7 +69,7 @@
     <div class="modal-content" style="max-width:720px">
       <div class="modal-header">
         <div>
-          <div class="card-title" style="margin:0">🔢 Contar bodega</div>
+          <div class="card-title" style="margin:0"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-calc"/></svg> Contar bodega</div>
           <div style="font-size:12px;color:#666;margin-top:2px">Poné cuántas piezas hay de verdad en el estante, talla por talla. La app deja la bodega en ese número.</div>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="cerrarConteoModal()">✕</button>
@@ -111,7 +111,7 @@
     <div class="modal-content" style="max-width:520px">
       <div class="modal-header">
         <div>
-          <div class="card-title" style="margin:0">🚚 Entregar a una escuela</div>
+          <div class="card-title" style="margin:0"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camion"/></svg> Entregar a una escuela</div>
           <div style="font-size:12px;color:#666;margin-top:2px">Pasa lo EMPACADO de la escuela a ENTREGADO, con fecha. Por pedido (sin nombres) se puede entregar parcial.</div>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="cerrarEntregaModal()">✕</button>
@@ -141,7 +141,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="cerrarEntregaModal()">Cancelar</button>
-        <button class="btn btn-success" id="ent-btn-guardar" onclick="guardarEntrega()">🚚 Marcar entregado</button>
+        <button class="btn btn-success" id="ent-btn-guardar" onclick="guardarEntrega()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camion"/></svg> Marcar entregado</button>
       </div>
     </div>
   </div>
@@ -150,7 +150,7 @@
   <div id="mat-mov-modal" class="modal" style="display:none">
     <div class="modal-content" style="max-width:480px">
       <div class="modal-header">
-        <div class="card-title">🧵 Movimiento de material</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-hilo"/></svg> Movimiento de material</div>
         <button class="btn btn-ghost btn-sm" onclick="cerrarMatMov()">✕</button>
       </div>
       <div class="modal-body">
@@ -270,7 +270,7 @@
     <div class="modal-content" style="max-width:540px">
       <div class="modal-header">
         <div>
-          <div class="card-title" style="margin:0">🚚 Salida a escuela</div>
+          <div class="card-title" style="margin:0"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camion"/></svg> Salida a escuela</div>
           <div style="font-size:12px;color:#666;margin-top:2px">Registrar entrega de piezas terminadas. Descuenta del stock y suma al pedido de la escuela.</div>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="cerrarSalidaModal()">✕</button>
@@ -310,7 +310,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="cerrarSalidaModal()">Cancelar</button>
-        <button class="btn btn-success" id="sal-btn-guardar" onclick="guardarSalida()">🚚 Registrar salida</button>
+        <button class="btn btn-success" id="sal-btn-guardar" onclick="guardarSalida()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camion"/></svg> Registrar salida</button>
       </div>
     </div>
   </div>

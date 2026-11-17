@@ -17,7 +17,7 @@ async function cargarHistorial(tipo) {
       const data = filtrarCortesVigentes(await supaFetch('vw_bulto_derivado','GET',null,'?order=fecha.desc,numero_rollo,letra_talla&limit=100'), 'fecha');
       const linkAnt = linkCortesAnteriores('bultos');
       if (!data.length) {
-        container.innerHTML = `<div class="empty"><div class="empty-icon">📭</div>Sin bultos todavía</div>` + linkAnt;
+        container.innerHTML = `<div class="empty"><div class="empty-icon"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg></div>Sin bultos todavía</div>` + linkAnt;
         return;
       }
       // Agrupar por tendido
@@ -42,7 +42,7 @@ async function cargarHistorial(tipo) {
     const data = filtrarCortesVigentes(await supaFetch(tipo,'GET',null,'?order=creado_en.desc&limit=50'), 'fecha');
     const linkAnt = linkCortesAnteriores(tipo === 'trazo' ? 'trazos' : 'tendidos');
     if (!data.length) {
-      container.innerHTML = `<div class="empty"><div class="empty-icon">📭</div>Sin registros</div>` + linkAnt;
+      container.innerHTML = `<div class="empty"><div class="empty-icon"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg></div>Sin registros</div>` + linkAnt;
       return;
     }
     container.innerHTML = data.map(r => {
@@ -55,8 +55,8 @@ async function cargarHistorial(tipo) {
           <div class="registro-meta">${meta}</div>
           <div class="registro-badges">
             <span class="rbadge rbadge-${tipo}">${tipo}</span>
-            ${r.foto_url?'<span class="rbadge rbadge-foto">📷</span>':''}
-            ${r.video_url?'<span class="rbadge rbadge-video">🎥</span>':''}
+            ${r.foto_url?'<span class="rbadge rbadge-foto"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camara"/></svg></span>':''}
+            ${r.video_url?'<span class="rbadge rbadge-video"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-video"/></svg></span>':''}
           </div>
         </div>
       `;
@@ -124,7 +124,7 @@ async function verDetalle(tipo, id) {
                 <div><div class="text-muted">Pares</div><strong>${Math.floor((r.lienzos_salidos||0)/2)}</strong></div>
                 <div><div class="text-muted">Yardas</div><strong>${r.yardas_rollo||'—'}</strong></div>
               </div>
-              ${r.observacion_tono?`<div class="text-muted mt8">⚠️ ${r.observacion_tono}</div>`:''}
+              ${r.observacion_tono?`<div class="text-muted mt8"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-alerta"/></svg> ${r.observacion_tono}</div>`:''}
             </div>
           `).join('')}
         </div>
@@ -143,7 +143,7 @@ async function verDetalle(tipo, id) {
         html += `<div class="detalle-seccion"><div class="alert alert-info">Bultos pendientes de capturar (usá el asistente de Bulto).</div></div>`;
       }
       if (tend.observaciones_generales) html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo">Observaciones</div><p>${tend.observaciones_generales}</p></div>`;
-      if (tend.trazo_id) html += `<div class="detalle-seccion"><button class="btn btn-ghost btn-sm btn-block" onclick="verDetalle('trazo','${tend.trazo_id}')">📂 Ver la ficha completa del corte (trazo → producción)</button></div>`;
+      if (tend.trazo_id) html += `<div class="detalle-seccion"><button class="btn btn-ghost btn-sm btn-block" onclick="verDetalle('trazo','${tend.trazo_id}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-carpeta"/></svg> Ver la ficha completa del corte (trazo → producción)</button></div>`;
       html += `<div id="seg-corte-box"></div>`;
       document.getElementById('det-contenido').innerHTML = html;
       renderSeguimientoCorte(document.getElementById('seg-corte-box'), { trazo_id: tend.trazo_id || null, tendido_id: id });

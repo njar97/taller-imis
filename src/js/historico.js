@@ -174,7 +174,7 @@ function renderHistorico() {
   // Tabla comparativa resumida
   const tablaComp = `
     <div class="card" style="padding:0;overflow:auto;margin-top:12px">
-      <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">📊 Resumen comparativo</div>
+      <div style="background:#F5F7FA;padding:8px 12px;font-weight:600"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-avance"/></svg> Resumen comparativo</div>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead>
           <tr style="background:#FAFAFA">
@@ -223,7 +223,7 @@ function renderHistorico() {
     
     comparativo = `
       <div class="card" style="padding:0;overflow:hidden;margin-top:12px">
-        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">📈 Variación entre temporadas</div>
+        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-avance"/></svg> Variación entre temporadas</div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead>
             <tr style="background:#FAFAFA">
@@ -258,7 +258,7 @@ function renderHistorico() {
   if (prendasUnicas.length > 0) {
     tablaPrenda = `
       <div class="card" style="padding:0;overflow:auto;margin-top:12px">
-        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">👕 Por prenda (entregadas / contratadas)</div>
+        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camisa"/></svg> Por prenda (entregadas / contratadas)</div>
         <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:480px">
           <thead>
             <tr style="background:#FAFAFA">
@@ -326,7 +326,7 @@ function renderHistorico() {
     ${tablaCiclo}
     ${comparativo}
     <div style="text-align:center;margin-top:10px">
-      <button class="btn btn-ghost btn-sm" onclick="historicoCache.datosPorTemporada={}; initHistorico()">🔄 Refrescar</button>
+      <button class="btn btn-ghost btn-sm" onclick="historicoCache.datosPorTemporada={}; initHistorico()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg> Refrescar</button>
     </div>
   `;
 }

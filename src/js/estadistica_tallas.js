@@ -311,27 +311,27 @@ function renderTallasResumen() {
     <!-- Toolbar siempre visible: resumen + acciones (PDF + refrescar) -->
     <div class="card" style="padding:8px 12px;margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <div style="display:flex;flex-direction:column;flex:1;min-width:160px">
-        <div style="font-size:12px;color:#555;font-weight:600">📊 Reporte por talla</div>
+        <div style="font-size:12px;color:#555;font-weight:600"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-avance"/></svg> Reporte por talla</div>
         <div style="font-size:11px;color:#888">${resumenStr}</div>
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        <button class="btn btn-sm ${f.soloCriticas ? 'btn-primary' : 'btn-ghost'}" onclick="onTallasFiltro('soloCriticas', ${!f.soloCriticas})" title="Mostrar solo las tallas que faltan o están al límite (balance ≤ 0), las más críticas arriba" style="font-weight:${f.soloCriticas ? '700' : '600'}">🔥 Solo críticas</button>
+        <button class="btn btn-sm ${f.soloCriticas ? 'btn-primary' : 'btn-ghost'}" onclick="onTallasFiltro('soloCriticas', ${!f.soloCriticas})" title="Mostrar solo las tallas que faltan o están al límite (balance ≤ 0), las más críticas arriba" style="font-weight:${f.soloCriticas ? '700' : '600'}"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-alerta"/></svg> Solo críticas</button>
         <button class="btn btn-sm ${f.modoTotal ? 'btn-primary' : 'btn-ghost'}" onclick="onTallasFiltro('modoTotal', ${!f.modoTotal})" title="Σ Total temporada: cuenta TODAS las piezas (incluye empacadas/entregadas), como el TOTAL del Excel. Apagado = solo lo pendiente.">Σ Total</button>
-        <button class="btn btn-ghost btn-sm" onclick="copiarTallasTabla()" title="Copiar la tabla al portapapeles — pegala directo en Excel o WhatsApp">📋 Copiar</button>
-        <button class="btn btn-ghost btn-sm" onclick="exportarTallasCSV()" title="Descargar la tabla como CSV (abre en Excel)">⬇️ CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="copiarTallasTabla()" title="Copiar la tabla al portapapeles — pegala directo en Excel o WhatsApp"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> Copiar</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportarTallasCSV()" title="Descargar la tabla como CSV (abre en Excel)"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-entrada"/></svg> CSV</button>
         <select onchange="onTallasFiltro('orientacionPDF', this.value)" title="Orientación del PDF" style="padding:6px 8px;font-size:12px;border:1px solid var(--borde);border-radius:6px;background:white">
           <option value="horizontal" ${(f.orientacionPDF||'horizontal')==='horizontal'?'selected':''}>📄 Horizontal</option>
           <option value="vertical" ${f.orientacionPDF==='vertical'?'selected':''}>📃 Vertical</option>
         </select>
-        <button class="btn btn-primary btn-sm" onclick="exportarTallasPDF()" title="Descargar el reporte actual (con los filtros aplicados) en PDF">📥 PDF</button>
-        <button class="btn btn-ghost btn-sm" onclick="initTallasResumen()" title="Recargar datos">🔄</button>
+        <button class="btn btn-primary btn-sm" onclick="exportarTallasPDF()" title="Descargar el reporte actual (con los filtros aplicados) en PDF"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-entrada"/></svg> PDF</button>
+        <button class="btn btn-ghost btn-sm" onclick="initTallasResumen()" title="Recargar datos"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg></button>
       </div>
     </div>
 
     <!-- Filtros colapsables: por defecto cerrados si hay filtros (no tapar al user) -->
     <details ${_panelOpen ? 'open' : ''} ontoggle="tallasResumenCache._panelFiltrosOpen = this.open" style="margin-bottom:10px">
       <summary style="cursor:pointer;list-style:none;padding:10px 14px;background:white;border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;align-items:center;justify-content:space-between;user-select:none;border:1px solid var(--borde)">
-        <span>🎛 Filtros ${filtrosActivos > 0 ? `<span style="background:var(--azul);color:white;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px">${filtrosActivos}</span>` : '<span style="color:#888;font-weight:400;margin-left:4px;font-size:11px">(ninguno)</span>'}</span>
+        <span><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-ajustes"/></svg> Filtros ${filtrosActivos > 0 ? `<span style="background:var(--azul);color:white;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px">${filtrosActivos}</span>` : '<span style="color:#888;font-weight:400;margin-left:4px;font-size:11px">(ninguno)</span>'}</span>
         <span style="opacity:0.6;font-size:11px">▼</span>
       </summary>
       <div style="padding:12px;background:white;border:1px solid var(--borde);border-top:none;border-radius:0 0 8px 8px;display:flex;flex-direction:column;gap:12px">
@@ -339,7 +339,7 @@ function renderTallasResumen() {
         <!-- Prendas (chips multi) -->
         <div>
           <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">
-            <span>👕 Prendas (multi)</span>
+            <span><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camisa"/></svg> Prendas (multi)</span>
             ${prendasFiltradas.size > 0
               ? `<button class="btn btn-ghost btn-sm" onclick="limpiarPrendasTallas()" style="font-size:10px;padding:2px 8px">✕ Limpiar</button>`
               : `<span style="font-size:10px;color:#888;font-weight:400;text-transform:none">Ninguna = todas</span>`}
@@ -351,7 +351,7 @@ function renderTallasResumen() {
 
         <!-- Talla + escuelas (filtros de scope) -->
         <div style="padding-top:8px;border-top:1px dashed #E0E0E0">
-          <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">📐 Talla y escuelas</div>
+          <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-regla"/></svg> Talla y escuelas</div>
           <div class="field" style="margin-bottom:6px">
             <label>Talla específica</label>
             <select onchange="onTallasFiltro('talla', this.value)">
@@ -373,30 +373,30 @@ function renderTallasResumen() {
 
         <!-- Qué incluir en el cálculo de suministro -->
         <div style="padding-top:8px;border-top:1px dashed #E0E0E0">
-          <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">📊 Incluir en suministro</div>
+          <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-avance"/></svg> Incluir en suministro</div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;font-size:13px">
             <label style="display:flex;gap:6px;align-items:center;cursor:pointer;padding:6px 8px;background:#F5F7FA;border-radius:6px">
               <input type="checkbox" ${f.incluirCorte?'checked':''} onchange="onTallasFiltro('incluirCorte', this.checked)" style="width:auto">
-              <span>✂️ Corte</span>
+              <span><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-tijera"/></svg> Corte</span>
             </label>
             <label style="display:flex;gap:6px;align-items:center;cursor:pointer;padding:6px 8px;background:#F5F7FA;border-radius:6px">
               <input type="checkbox" ${f.incluirProd?'checked':''} onchange="onTallasFiltro('incluirProd', this.checked)" style="width:auto">
-              <span>🏭 Producción</span>
+              <span><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-hilo"/></svg> Producción</span>
             </label>
             <label style="display:flex;gap:6px;align-items:center;cursor:pointer;padding:6px 8px;background:#F5F7FA;border-radius:6px">
               <input type="checkbox" ${f.incluirBodega?'checked':''} onchange="onTallasFiltro('incluirBodega', this.checked)" style="width:auto">
-              <span>📦 Bodega</span>
+              <span><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> Bodega</span>
             </label>
             <label style="display:flex;gap:6px;align-items:center;cursor:pointer;padding:6px 8px;background:#F5F7FA;border-radius:6px">
               <input type="checkbox" ${f.incluirPool?'checked':''} onchange="onTallasFiltro('incluirPool', this.checked)" style="width:auto">
-              <span>📥 Pool acaparado</span>
+              <span><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-entrada"/></svg> Pool acaparado</span>
             </label>
           </div>
         </div>
 
         <!-- Opciones de visualización -->
         <div style="padding-top:8px;border-top:1px dashed #E0E0E0">
-          <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">⚙️ Visualización del reporte</div>
+          <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-ajustes"/></svg> Visualización del reporte</div>
           <div style="display:flex;flex-direction:column;gap:6px;font-size:13px">
             <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
               <input type="checkbox" ${f.ocultarCubiertas?'checked':''} onchange="onTallasFiltro('ocultarCubiertas', this.checked)" style="width:auto">
@@ -465,17 +465,17 @@ function renderTallasResumen() {
                 };
                 return thSort('prenda','Prenda','left') + thSort('talla','Talla','left') + thSort('demanda', modoTotal?'Total':'Necesidad','right');
               })()}
-              ${escuelasCols.map(e => `<th style="padding:6px 8px;text-align:right;font-size:11px" title="${e.nombre||''}">🏫 ${e.alias || e.nombre}</th>`).join('')}
-              ${ver.corte ? `<th style="padding:6px 8px;text-align:right" title="Bultos cortados sin etapas iniciadas">✂️ Corte</th>` : ''}
-              ${ver.prod ? `<th style="padding:6px 8px;text-align:right">🏭 Producción</th>` : ''}
-              ${ver.bodega ? `<th style="padding:6px 8px;text-align:right">📦 Bodega</th>` : ''}
-              ${ver.pool ? `<th style="padding:6px 8px;text-align:right">📥 Pool</th>` : ''}
+              ${escuelasCols.map(e => `<th style="padding:6px 8px;text-align:right;font-size:11px" title="${e.nombre||''}"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-escuela"/></svg> ${e.alias || e.nombre}</th>`).join('')}
+              ${ver.corte ? `<th style="padding:6px 8px;text-align:right" title="Bultos cortados sin etapas iniciadas"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-tijera"/></svg> Corte</th>` : ''}
+              ${ver.prod ? `<th style="padding:6px 8px;text-align:right"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-hilo"/></svg> Producción</th>` : ''}
+              ${ver.bodega ? `<th style="padding:6px 8px;text-align:right"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> Bodega</th>` : ''}
+              ${ver.pool ? `<th style="padding:6px 8px;text-align:right"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-entrada"/></svg> Pool</th>` : ''}
               ${(() => {
                 const act = f.ordenCol === 'balance';
                 const flecha = act ? (f.ordenDir === 'asc' ? ' ▲' : ' ▼') : '';
                 return `<th style="padding:6px 8px;text-align:right;cursor:pointer;user-select:none;${act?'color:var(--azul)':''}" onclick="ordenarTallasPor('balance')" title="Ordenar por balance">Balance${flecha}</th>`;
               })()}
-              <th style="padding:6px 8px;width:36px" title="Ver los alumnos de esa talla en Registro">👥</th>
+              <th style="padding:6px 8px;width:36px" title="Ver los alumnos de esa talla en Registro"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-personas"/></svg></th>
             </tr>
           </thead>
           <tbody>
@@ -500,7 +500,7 @@ function renderTallasResumen() {
                   ${ver.pool ? `<td style="padding:5px 8px;text-align:right;color:#a82">${r.pool || 0}</td>` : ''}
                   <td style="padding:5px 8px;text-align:right;font-weight:700;color:${balanceColor}">${r.balance>=0?'+':''}${r.balance}</td>
                   <td style="padding:5px 4px;text-align:center" onclick="event.stopPropagation()">
-                    <button class="btn-mini" onclick="verAlumnosPorTalla('${r.talla.replace(/'/g,"\\'")}')" title="Ver en Registro los alumnos con talla ${r.talla}">👥</button>
+                    <button class="btn-mini" onclick="verAlumnosPorTalla('${r.talla.replace(/'/g,"\\'")}')" title="Ver en Registro los alumnos con talla ${r.talla}"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-personas"/></svg></button>
                   </td>
                 </tr>
               `;

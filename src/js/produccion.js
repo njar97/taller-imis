@@ -162,10 +162,10 @@ function _badgeDemandaProd(cod_prenda, talla_key) {
       <span style="background:#FFF4E6;border:1px solid #F2C97D;padding:2px 6px;border-radius:4px">
         🏫 ${d.escuelas} escuela${d.escuelas===1?'':'s'} · ${d.pendientes} pend
       </span>
-      ${d.corte > 0 ? `<span style="background:#FFEEDD;border:1px solid #E0B080;padding:2px 6px;border-radius:4px">✂️ corte ${d.corte}</span>` : ''}
-      ${d.prod > 0 ? `<span style="background:#E6F4E0;border:1px solid #8CC56F;padding:2px 6px;border-radius:4px">🏭 prod ${d.prod}</span>` : ''}
-      ${d.pool > 0 ? `<span style="background:#FFF9E6;border:1px solid #FFD24D;padding:2px 6px;border-radius:4px">📥 pool ${d.pool}</span>` : ''}
-      ${d.stock > 0 ? `<span style="background:#E8F0FA;border:1px solid #99c;padding:2px 6px;border-radius:4px">📦 stock ${d.stock}</span>` : ''}
+      ${d.corte > 0 ? `<span style="background:#FFEEDD;border:1px solid #E0B080;padding:2px 6px;border-radius:4px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-tijera"/></svg> corte ${d.corte}</span>` : ''}
+      ${d.prod > 0 ? `<span style="background:#E6F4E0;border:1px solid #8CC56F;padding:2px 6px;border-radius:4px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-hilo"/></svg> prod ${d.prod}</span>` : ''}
+      ${d.pool > 0 ? `<span style="background:#FFF9E6;border:1px solid #FFD24D;padding:2px 6px;border-radius:4px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-entrada"/></svg> pool ${d.pool}</span>` : ''}
+      ${d.stock > 0 ? `<span style="background:#E8F0FA;border:1px solid #99c;padding:2px 6px;border-radius:4px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> stock ${d.stock}</span>` : ''}
       <span style="background:transparent;color:${colorEst};font-weight:700">${lblEst}</span>
     </div>
   `;
@@ -375,14 +375,14 @@ function renderProdBulto(b) {
   // Badges de trazabilidad
   let badges = '';
   if (b.sufijo_division) {
-    badges += `<span class="prod-badge prod-badge-div">✂️ derivado ${b.sufijo_division}</span>`;
+    badges += `<span class="prod-badge prod-badge-div"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-tijera"/></svg> derivado ${b.sufijo_division}</span>`;
   }
   // Chip compacto de asignaciones (solo si Fase 2 activa y hay asignaciones)
   if (FASE2_ACTIVA && asignacionesPorBulto[b.produccion_bulto_id]?.length > 0) {
     const asigs = asignacionesPorBulto[b.produccion_bulto_id];
     const iniciales = asigs.map(a => (a.operaria_nombre || '?')[0].toUpperCase()).join('·');
     const tooltip = asigs.map(a => `${a.operaria_nombre}: ${a.operacion_nombre}`).join(' | ');
-    badges += `<span class="prod-badge prod-badge-asig" title="${tooltip}">📋 ${iniciales}</span>`;
+    badges += `<span class="prod-badge prod-badge-asig" title="${tooltip}"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> ${iniciales}</span>`;
   }
 
   // Chip de asignaciones (si hay)
@@ -390,7 +390,7 @@ function renderProdBulto(b) {
   const asignaciones = asignacionesPorBulto[b.produccion_bulto_id] || [];
   if (asignaciones.length > 0) {
     const texto = asignaciones.map(a => `${a.operaria_nombre} (${a.operacion_nombre})`).join(' · ');
-    asigHtml = `<div style="font-size:11px;color:#0D47A1;margin-top:4px;background:#E3F2FD;padding:3px 6px;border-radius:4px;border-left:3px solid #1976D2">📋 ${texto}</div>`;
+    asigHtml = `<div style="font-size:11px;color:#0D47A1;margin-top:4px;background:#E3F2FD;padding:3px 6px;border-radius:4px;border-left:3px solid #1976D2"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> ${texto}</div>`;
   }
 
   // Acciones
@@ -407,10 +407,10 @@ function renderProdBulto(b) {
   // Lo de todos los días es «Terminar»; lo demás va detrás de «⋯».
   let mas = '';
   if (estadoEfectivo !== 'terminado' && cantActual > 1) {
-    mas += `<button class="prod-btn-accion prod-btn-dividir" onclick="abrirDividir('${b.produccion_bulto_id}', ${cantActual}, '${b.codigo_bulto}')">✂️ Dividir</button>`;
+    mas += `<button class="prod-btn-accion prod-btn-dividir" onclick="abrirDividir('${b.produccion_bulto_id}', ${cantActual}, '${b.codigo_bulto}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-tijera"/></svg> Dividir</button>`;
   }
   if (estadoEfectivo !== 'terminado') {
-    mas += `<button class="prod-btn-accion prod-btn-unir" onclick="abrirUnir('${b.produccion_bulto_id}', '${b.talla_key_salida}', '${b.codigo_bulto}')">🔗 Unir</button>`;
+    mas += `<button class="prod-btn-accion prod-btn-unir" onclick="abrirUnir('${b.produccion_bulto_id}', '${b.talla_key_salida}', '${b.codigo_bulto}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-enlace"/></svg> Unir</button>`;
   }
   // Botón expandir etapas (solo si Fase 2 activa)
   if (FASE2_ACTIVA && b.total_etapas > 0) {
@@ -421,7 +421,7 @@ function renderProdBulto(b) {
   }
 
   const fechaInfo = estadoEfectivo === 'terminado' && b.fecha_terminado ? ` · ${b.fecha_terminado}` : '';
-  const obsInfo = b.observaciones ? `<div style="font-size:11px;color:#856404;margin-top:4px">⚠️ ${b.observaciones}</div>` : '';
+  const obsInfo = b.observaciones ? `<div style="font-size:11px;color:#856404;margin-top:4px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-alerta"/></svg> ${b.observaciones}</div>` : '';
 
   return `
     <div class="prod-bulto-row ${clase}" id="bulto-row-${b.produccion_bulto_id}">
@@ -590,7 +590,7 @@ async function sugerirAutoAcaparar(nombrePrenda, tallaKey, cantidadEntrada) {
           return `
             <div style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #E0E4EA;border-radius:6px">
               <div style="flex:1;min-width:0">
-                <div style="font-weight:700;font-size:13px">🏫 ${escapeHtmlProd(f.alias)}</div>
+                <div style="font-weight:700;font-size:13px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-escuela"/></svg> ${escapeHtmlProd(f.alias)}</div>
                 <div style="font-size:11px;color:#666">Necesita ${f.necesita} · Ya acaparado ${f.acaparado} · Falta ${f.falta}</div>
               </div>
               <input type="number" min="0" max="${Math.min(f.falta, libre)}" value="${sugerido}"
@@ -1261,9 +1261,9 @@ function renderRegistrosHoy() {
         <div style="flex:1;min-width:0">
           <div style="font-size:13px"><strong>${opName}</strong> · ${operacionName}</div>
           <div style="font-size:11px;color:#666;font-family:monospace">${bultoCode} · ${r.cantidad_realizada}pz</div>
-          ${r.observaciones?`<div style="font-size:11px;color:#856404">⚠️ ${r.observaciones}</div>`:''}
+          ${r.observaciones?`<div style="font-size:11px;color:#856404"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-alerta"/></svg> ${r.observaciones}</div>`:''}
         </div>
-        <button class="btn-mini btn-mini-danger" onclick="eliminarRegistro2('${r.id}')">🗑</button>
+        <button class="btn-mini btn-mini-danger" onclick="eliminarRegistro2('${r.id}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-basura"/></svg></button>
       </div>
     `;
   }).join('');

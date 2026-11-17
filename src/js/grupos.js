@@ -36,9 +36,9 @@ function renderGruposHeader() {
   if (!cont) return;
   cont.innerHTML = `
     <div class="sub-tabs">
-      <div class="sub-tab ${gruposCache.vista==='grupos'?'active':''}" onclick="cambiarVistaGrupos('grupos')">👥 Grupos</div>
-      <div class="sub-tab ${gruposCache.vista==='tareas'?'active':''}" onclick="cambiarVistaGrupos('tareas')">📝 Tareas activas</div>
-      <div class="sub-tab ${gruposCache.vista==='productividad'?'active':''}" onclick="cambiarVistaGrupos('productividad')">📊 Productividad</div>
+      <div class="sub-tab ${gruposCache.vista==='grupos'?'active':''}" onclick="cambiarVistaGrupos('grupos')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-personas"/></svg> Grupos</div>
+      <div class="sub-tab ${gruposCache.vista==='tareas'?'active':''}" onclick="cambiarVistaGrupos('tareas')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lapiz"/></svg> Tareas activas</div>
+      <div class="sub-tab ${gruposCache.vista==='productividad'?'active':''}" onclick="cambiarVistaGrupos('productividad')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-avance"/></svg> Productividad</div>
     </div>
   `;
 }
@@ -61,7 +61,7 @@ function renderVistaGrupos() {
     <div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">
       <button class="btn btn-primary btn-sm" onclick="abrirNuevoGrupo('permanente')">+ Grupo permanente</button>
       <button class="btn btn-ghost btn-sm" onclick="abrirNuevoGrupo('adhoc')">+ Grupo ad-hoc</button>
-      <button class="btn btn-ghost btn-sm" onclick="initGrupos()">🔄</button>
+      <button class="btn btn-ghost btn-sm" onclick="initGrupos()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg></button>
     </div>
     
     ${grupos.length === 0 ? `
@@ -81,8 +81,8 @@ function renderVistaGrupos() {
               <div style="font-size:10px;color:${tipoColor};font-weight:600">${tipoLabel}</div>
             </div>
             <div style="display:flex;gap:4px">
-              <button class="btn-mini" onclick="abrirMiembros('${g.grupo_id}')">👥 Miembros</button>
-              <button class="btn-mini" onclick="abrirEditarGrupo('${g.grupo_id}')">✏</button>
+              <button class="btn-mini" onclick="abrirMiembros('${g.grupo_id}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-personas"/></svg> Miembros</button>
+              <button class="btn-mini" onclick="abrirEditarGrupo('${g.grupo_id}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lapiz"/></svg></button>
               <button class="btn-mini btn-mini-danger" onclick="archivarGrupo('${g.grupo_id}', '${g.nombre}')">✗</button>
             </div>
           </div>
@@ -249,7 +249,7 @@ function renderVistaTareas(tareas) {
     
     ${enCurso.length > 0 ? `
       <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
-        <div style="background:#E6F0FF;padding:8px 12px;font-weight:600">📝 En curso (${enCurso.length})</div>
+        <div style="background:#E6F0FF;padding:8px 12px;font-weight:600"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lapiz"/></svg> En curso (${enCurso.length})</div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead>
             <tr style="background:#F5F7FA">
@@ -278,8 +278,8 @@ function renderVistaTareas(tareas) {
                   </td>
                   <td style="padding:6px 8px;text-align:right;font-size:11px;color:#666">${t.fecha_asignada}</td>
                   <td style="padding:6px 8px;text-align:center">
-                    <button class="btn-mini btn-mini-success" onclick="registrarAvanceTarea('${t.id}')">📝 Avance</button>
-                    <button class="btn-mini" onclick="verContribuciones('${t.id}')">👥</button>
+                    <button class="btn-mini btn-mini-success" onclick="registrarAvanceTarea('${t.id}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lapiz"/></svg> Avance</button>
+                    <button class="btn-mini" onclick="verContribuciones('${t.id}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-personas"/></svg></button>
                   </td>
                 </tr>
               `;
@@ -501,7 +501,7 @@ async function cargarVistaProductividad() {
       </div>
       
       <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
-        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">👤 Por operaria</div>
+        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-persona"/></svg> Por operaria</div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead>
             <tr style="background:#FAFAFA">
@@ -525,7 +525,7 @@ async function cargarVistaProductividad() {
       </div>
       
       <div class="card" style="padding:0;overflow:hidden">
-        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600">👥 Por grupo</div>
+        <div style="background:#F5F7FA;padding:8px 12px;font-weight:600"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-personas"/></svg> Por grupo</div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead>
             <tr style="background:#FAFAFA">

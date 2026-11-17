@@ -959,10 +959,12 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
 .menumas-lista .tj-ico { width: 40px; height: 40px; border-radius: 12px; font-size: 22px; }
 /* ── DISEÑO nov-2026 · Corte: menú de arriba, «Lo que sigue», «Nuevo» ── */
 .btn .ico, .btn-mini .ico { font-size: 1.15em; }
-#corte-subnav { padding: 6px; border-radius: 16px; }
-#corte-subnav .btn { border-radius: 11px; gap: 5px; }
-#corte-subnav .btn-ghost { background: transparent; border-color: transparent; color: var(--tinta2); }
-#corte-subnav .btn-primary { background: var(--c-tender); box-shadow: 0 2px 8px rgba(31,95,168,.3); }
+#corte-subnav, #prod-subnav { padding: 6px; border-radius: 16px; }
+.subnav-btns .btn { border-radius: 11px; gap: 5px; }
+.subnav-btns .btn-ghost { background: transparent; border-color: transparent; color: var(--tinta2); }
+.subnav-btns .btn-primary { background: var(--c-tender); box-shadow: 0 2px 8px rgba(31,95,168,.3); }
+.sub-tab .ico, .card-title > .ico, .search-section .ico { margin-right: 3px; }
+.ayuda-tip-ico .ico { color: #B26A00; }
 .card-title .tj-ico { margin-right: 2px; }
 .sigue-item { border: 1px solid var(--linea); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
 .sigue-item.sigue-primero { border: 2px solid #2E9E5B; background: #F3FBF5; }

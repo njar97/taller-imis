@@ -164,8 +164,8 @@ function renderGrillaPadron(cont, header, lista) {
 
   cont.innerHTML = header + `
     <div class="card" style="padding:8px 10px;margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <button class="btn btn-sm btn-ghost" onclick="toggleVistaGrilla()">📇 Volver a tarjetas</button>
-      <button class="btn btn-sm btn-primary" onclick="gpIrProximoSinTallar()" title="Salta al primer alumno del filtro al que le falta alguna talla y abre el editor ahí">🎯 Próximo sin tallar</button>
+      <button class="btn btn-sm btn-ghost" onclick="toggleVistaGrilla()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> Volver a tarjetas</button>
+      <button class="btn btn-sm btn-primary" onclick="gpIrProximoSinTallar()" title="Salta al primer alumno del filtro al que le falta alguna talla y abre el editor ahí"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-objetivo"/></svg> Próximo sin tallar</button>
       <span id="gp-status" style="font-size:12px;color:#888">${gpStatusTxt()}</span>
       <button class="btn btn-sm btn-ghost" style="margin-left:auto" onclick="gpToggleResumen()">
         ${gpState.resumenAbierto ? '▤ Ocultar resumen' : '▤ Resumen de tallas'}</button>
@@ -268,7 +268,7 @@ function gpResumenHtml(lista) {
       <div style="font-weight:700;font-size:13px;margin-bottom:2px">▤ Tallas pendientes</div>
       <div style="font-size:10px;color:#888;margin-bottom:8px">Del filtro actual · misma cuenta que Estadística→Por talla</div>
       ${bloques || '<div style="color:#aaa;font-size:12px">Sin tallas aún</div>'}
-      ${(sinTop || sinBot) ? `<div style="font-size:11px;color:#c44;border-top:1px dashed var(--borde);padding-top:6px">⚠️ Falta top: ${sinTop} · bottom: ${sinBot}</div>` : ''}
+      ${(sinTop || sinBot) ? `<div style="font-size:11px;color:#c44;border-top:1px dashed var(--borde);padding-top:6px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-alerta"/></svg> Falta top: ${sinTop} · bottom: ${sinBot}</div>` : ''}
     </div>`;
 }
 
