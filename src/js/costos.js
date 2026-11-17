@@ -108,7 +108,7 @@ function renderCostos() {
             ${escuelas.map(e => `<option value="${e.id}" ${costosCache.escuelaSel === e.id ? 'selected' : ''}>${e.alias || e.nombre}${e.codigo_cde ? ' · '+e.codigo_cde : ''}</option>`).join('')}
           </select>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="initCostos()">🔄 Refrescar</button>
+        <button class="btn btn-ghost btn-sm" onclick="initCostos()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg> Refrescar</button>
       </div>
     </div>
 

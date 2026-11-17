@@ -203,7 +203,7 @@ async function buscadorRun(q) {
   }
   let html = '';
   if (herr.length > 0) {
-    html += '<div class="search-section">🧭 Herramientas</div>';
+    html += '<div class="search-section"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-mas"/></svg> Herramientas</div>';
     for (const h of herr) {
       const idx = HERRAMIENTAS.indexOf(h);
       html += `<div class="search-result" onclick="buscadorIrHerramienta(${idx})">
@@ -221,7 +221,7 @@ async function buscadorRun(q) {
     }
   }
   if (esps.length > 0) {
-    html += '<div class="search-section">📏 Tallas especiales (' + esps.length + ')</div>';
+    html += '<div class="search-section"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-regla"/></svg> Tallas especiales (' + esps.length + ')</div>';
     for (const r of esps) {
       const e = escMap[r.escuela_id] || (typeof regCant !== 'undefined' && regCant.escuelas.get(r.escuela_id));
       const escLbl = e ? (e.alias || e.nombre || '') : '';

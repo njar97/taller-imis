@@ -73,11 +73,11 @@ function renderMateriales() {
         </label>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px">
-        <button class="btn btn-success btn-sm" onclick="abrirMatMov('CONTEO')" title="Anotar lo que contaste: el stock queda en ese número">📊 Conteo</button>
-        <button class="btn btn-primary btn-sm" onclick="abrirMatMov('COMPRA')" title="Llegó material del proveedor">🛒 Compra recibida</button>
+        <button class="btn btn-success btn-sm" onclick="abrirMatMov('CONTEO')" title="Anotar lo que contaste: el stock queda en ese número"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-avance"/></svg> Conteo</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirMatMov('COMPRA')" title="Llegó material del proveedor"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-carrito"/></svg> Compra recibida</button>
         <button class="btn btn-warning btn-sm" onclick="abrirMatMov('SALIDA')" title="Se sacó material para producción">↗ Salida</button>
         <button class="btn btn-ghost btn-sm" onclick="abrirMatEditar(null)" title="Agregar un material al catálogo">+ Material</button>
-        <button class="btn btn-ghost btn-sm" onclick="cargarMateriales()" title="Refrescar">🔄</button>
+        <button class="btn btn-ghost btn-sm" onclick="cargarMateriales()" title="Refrescar"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg></button>
       </div>
     </div>`;
 
@@ -127,7 +127,7 @@ function matFilaHtml(m) {
       <td style="padding:5px 8px;text-align:right">${matNum(m.necesidad_lote1)}</td>
       <td style="padding:5px 8px;text-align:right;font-weight:700;color:${falta>0?'var(--naranja)':'var(--verde)'}">${falta > 0 ? matNum(falta) : '✓'}</td>
       <td style="padding:5px 4px;text-align:center;white-space:nowrap" onclick="event.stopPropagation()">
-        <button class="btn-mini" onclick="abrirMatEditar('${m.id}')" title="Editar material (nombre, lote 1, pedido)">✏️</button>
+        <button class="btn-mini" onclick="abrirMatEditar('${m.id}')" title="Editar material (nombre, lote 1, pedido)"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lapiz"/></svg></button>
       </td>
     </tr>`;
   if (!abierto) return fila;
@@ -150,8 +150,8 @@ function matFilaHtml(m) {
       <div style="display:flex;gap:6px;padding:6px 12px;flex-wrap:wrap;align-items:center">
         <span style="font-size:11px;color:#666">${m.presentacion ? 'Se compra por ' + matEsc(m.presentacion) + ' · ' : ''}${m.precio_ref ? '$' + matNum(m.precio_ref) + '/' + matEsc(m.unidad) + ' · ' : ''}último conteo ${matEsc(m.ultimo_conteo || '—')}</span>
         <span style="margin-left:auto;display:flex;gap:4px">
-          <button class="btn-mini" onclick="abrirMatMov('CONTEO','${m.id}')">📊</button>
-          <button class="btn-mini" onclick="abrirMatMov('COMPRA','${m.id}')">🛒</button>
+          <button class="btn-mini" onclick="abrirMatMov('CONTEO','${m.id}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-avance"/></svg></button>
+          <button class="btn-mini" onclick="abrirMatMov('COMPRA','${m.id}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-carrito"/></svg></button>
           <button class="btn-mini" onclick="abrirMatMov('SALIDA','${m.id}')">↗</button>
         </span>
       </div>

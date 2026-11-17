@@ -117,7 +117,7 @@ function renderEstEscuela() {
             ${escuelas.map(e => `<option value="${e.id}" ${c.escuelaSel === e.id ? 'selected' : ''}>${e.alias || e.nombre}${e.codigo_cde ? ' · '+e.codigo_cde : ''}</option>`).join('')}
           </select>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="refrescarEstEscuela()">🔄 Refrescar</button>
+        <button class="btn btn-ghost btn-sm" onclick="refrescarEstEscuela()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg> Refrescar</button>
       </div>
       ${esc ? `
         <div style="margin-top:10px;padding:10px 12px;border-radius:8px;background:linear-gradient(135deg,#0065CC,#004999);color:white">
@@ -150,7 +150,7 @@ function renderEstEscuela() {
   const tallajeHtml = `
     <details open style="margin-bottom:10px">
       <summary style="cursor:pointer;list-style:none;padding:10px 14px;background:white;border:1px solid var(--borde);border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
-        <span>📊 Tallaje por nivel × sexo</span><span style="opacity:0.6;font-size:11px">▼</span>
+        <span><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-avance"/></svg> Tallaje por nivel × sexo</span><span style="opacity:0.6;font-size:11px">▼</span>
       </summary>
       <div style="border:1px solid var(--borde);border-top:none;border-radius:0 0 8px 8px;padding:10px;background:white">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:10px">
@@ -211,7 +211,7 @@ function renderEstEscuela() {
   const contratoHtml = `
     <details ${esc ? 'open' : ''} class="dato-sensible" style="margin-bottom:10px">
       <summary style="cursor:pointer;list-style:none;padding:10px 14px;background:white;border:1px solid var(--borde);border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
-        <span>📑 Contrato vs entregado <span style="font-weight:400;color:#888;font-size:11px">(${c.temporadaAnio})</span></span><span style="opacity:0.6;font-size:11px">▼</span>
+        <span><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-hoja"/></svg> Contrato vs entregado <span style="font-weight:400;color:#888;font-size:11px">(${c.temporadaAnio})</span></span><span style="opacity:0.6;font-size:11px">▼</span>
       </summary>
       <div style="border:1px solid var(--borde);border-top:none;border-radius:0 0 8px 8px;padding:10px;background:white">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:${esc?'0':'10px'}">
@@ -280,7 +280,7 @@ function renderEstEscuela() {
   const telaHtml = `
     <details style="margin-bottom:10px">
       <summary style="cursor:pointer;list-style:none;padding:10px 14px;background:white;border:1px solid var(--borde);border-radius:8px;font-weight:600;font-size:13px;color:#1F4E79;display:flex;justify-content:space-between;align-items:center;user-select:none">
-        <span>📐 Tela / Yardaje — necesaria vs recibida</span><span style="opacity:0.6;font-size:11px">▼</span>
+        <span><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-regla"/></svg> Tela / Yardaje — necesaria vs recibida</span><span style="opacity:0.6;font-size:11px">▼</span>
       </summary>
       <div style="border:1px solid var(--borde);border-top:none;border-radius:0 0 8px 8px;padding:10px;background:white">
         <div style="overflow-x:auto">
@@ -313,7 +313,7 @@ function renderEstEscuela() {
           </table>
         </div>
         <div style="padding:8px 4px 0;font-size:11px;color:#666">
-          💡 <strong>↩ devolver</strong>: sobra tela · <strong>➕ solicitar</strong>: falta pedir.
+          💡 <strong>↩ devolver</strong>: sobra tela · <strong><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-sumar"/></svg> solicitar</strong>: falta pedir.
           Si la tela recibida está en 0, cargala en 📋 Registro → ✏️ escuela → "Tela recibida".
         </div>
       </div>

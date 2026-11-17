@@ -307,7 +307,7 @@ function renderAlumnosGlobal() {
         <button class="btn btn-success btn-sm" onclick="abrirNuevoAlumno()">+ Nuevo alumno</button>
         <button class="btn btn-sm ${c.vistaGrilla ? 'btn-primary' : 'btn-ghost'}" onclick="toggleVistaGrilla()"
           title="Grilla tipo Excel: edición inline con teclado y pegado de columnas">⚡ Grilla</button>
-        <button class="btn btn-ghost btn-sm" onclick="initAlumnosGlobal()" title="Refrescar">🔄</button>
+        <button class="btn btn-ghost btn-sm" onclick="initAlumnosGlobal()" title="Refrescar"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg></button>
       </div>
 
       <!-- Fila 2: ESCUELAS como chips deslizables (el filtro más usado, siempre a la vista) -->
@@ -325,9 +325,9 @@ function renderAlumnosGlobal() {
       ${unaEscuela ? `
       <!-- Acciones de la escuela elegida -->
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;font-size:12px">
-        <button class="btn btn-ghost btn-sm" onclick="verEstadisticaEscuela('${unaEscuela}')" title="Tallaje, contrato y tela de esta escuela">📊 Su estadística</button>
-        <button class="btn btn-ghost btn-sm" onclick="window._emqHintEscuela='${unaEscuela}';switchTab('empaque')" title="Sesión de empaque de esta escuela">🧺 Empacarla</button>
-        <button class="btn btn-ghost btn-sm" onclick="editarEscuela('${unaEscuela}')" title="Alias y datos de la escuela">✏️ Editar escuela</button>
+        <button class="btn btn-ghost btn-sm" onclick="verEstadisticaEscuela('${unaEscuela}')" title="Tallaje, contrato y tela de esta escuela"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-avance"/></svg> Su estadística</button>
+        <button class="btn btn-ghost btn-sm" onclick="window._emqHintEscuela='${unaEscuela}';switchTab('empaque')" title="Sesión de empaque de esta escuela"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> Empacarla</button>
+        <button class="btn btn-ghost btn-sm" onclick="editarEscuela('${unaEscuela}')" title="Alias y datos de la escuela"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lapiz"/></svg> Editar escuela</button>
       </div>` : '<div style="margin-bottom:6px"></div>'}
 
       <!-- Fila 3: chips de estado + contador -->
@@ -338,7 +338,7 @@ function renderAlumnosGlobal() {
           onclick="aplicarFiltroEstado('sin_tallas')">⚠️ Falta tallar (${sinTallas})</button>
         <button class="btn btn-sm ${c.filtroEstado==='completo'?'btn-primary':'btn-ghost'}"
           onclick="aplicarFiltroEstado('completo')">✅ Completos (${completos})</button>
-        ${c.filtroTalla ? `<span class="btn btn-sm btn-primary" style="cursor:default" title="Filtro por talla (vino de Estadística)">📐 ${c.filtroTalla} <span style="margin-left:4px;cursor:pointer" onclick="alumnosGlobalCache.filtroTalla='';alumnosGlobalCache.pagina=1;renderAlumnosGlobal()">✕</span></span>` : ''}
+        ${c.filtroTalla ? `<span class="btn btn-sm btn-primary" style="cursor:default" title="Filtro por talla (vino de Estadística)"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-regla"/></svg> ${c.filtroTalla} <span style="margin-left:4px;cursor:pointer" onclick="alumnosGlobalCache.filtroTalla='';alumnosGlobalCache.pagina=1;renderAlumnosGlobal()">✕</span></span>` : ''}
         ${algunFiltro ? `<button class="btn btn-ghost btn-sm" onclick="limpiarFiltros()" title="Quitar todos los filtros">✗</button>` : ''}
         <span style="margin-left:auto;color:#888;font-size:11px;align-self:center">${totMostrando.toLocaleString()} mostrando</span>
       </div>
@@ -346,7 +346,7 @@ function renderAlumnosGlobal() {
       <!-- Colapsado: acciones + filtros avanzados + orden -->
       <details ${masFiltrosAbierto ? 'open' : ''} ontoggle="alumnosGlobalCache.masFiltrosAbierto = this.open">
         <summary style="cursor:pointer;list-style:none;padding:8px 12px;background:#F5F7FA;border-radius:6px;font-size:13px;font-weight:600;color:#555;display:flex;align-items:center;justify-content:space-between;user-select:none">
-          <span>🎛 Más opciones${filtrosActivos > 0 ? ` <span style="background:var(--azul);color:white;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px">${filtrosActivos} filtro${filtrosActivos>1?'s':''}</span>` : ''}</span>
+          <span><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-ajustes"/></svg> Más opciones${filtrosActivos > 0 ? ` <span style="background:var(--azul);color:white;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px">${filtrosActivos} filtro${filtrosActivos>1?'s':''}</span>` : ''}</span>
           <span style="opacity:0.6">▼</span>
         </summary>
         <div style="padding:10px 4px 0 4px;display:flex;flex-direction:column;gap:8px">
@@ -354,9 +354,9 @@ function renderAlumnosGlobal() {
           <div>
             <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Acciones</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-              <button class="btn btn-primary btn-sm" onclick="generarEtiquetasDirecto()" title="PDF de etiquetas con los filtros y orden actuales">🏷 Imprimir etiquetas</button>
-              ${typeof abrirModalExport === 'function' ? '<button class="btn btn-ghost btn-sm" onclick="abrirModalExport()" title="Descargar alumnos/pedidos/stock en CSV">💾 Exportar datos</button>' : ''}
-              <button class="btn btn-ghost btn-sm" onclick="nuevaEscuela()" title="Crear escuela nueva">🏫 + Nueva escuela</button>
+              <button class="btn btn-primary btn-sm" onclick="generarEtiquetasDirecto()" title="PDF de etiquetas con los filtros y orden actuales"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-etiqueta"/></svg> Imprimir etiquetas</button>
+              ${typeof abrirModalExport === 'function' ? '<button class="btn btn-ghost btn-sm" onclick="abrirModalExport()" title="Descargar alumnos/pedidos/stock en CSV"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-guardar"/></svg> Exportar datos</button>' : ''}
+              <button class="btn btn-ghost btn-sm" onclick="nuevaEscuela()" title="Crear escuela nueva"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-escuela"/></svg> + Nueva escuela</button>
             </div>
           </div>
 
@@ -448,7 +448,7 @@ function renderAlumnosGlobal() {
           <span style="font-weight:700;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${gkey}</span>
           <span style="font-size:11px;color:#666">${arr.length}</span>
           ${sinT ? `<span style="font-size:11px;color:#c44" title="Sin tallar">⚠${sinT}</span>` : ''}
-          ${comp ? `<span style="font-size:11px;color:var(--verde)" title="Completos">✅${comp}</span>` : ''}
+          ${comp ? `<span style="font-size:11px;color:var(--verde)" title="Completos"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-listo"/></svg>${comp}</span>` : ''}
         </summary>
         <div class="ag-grupo-body">${abierto ? agFilasGrupo(arr) : ''}</div>
       </details>`;
@@ -458,7 +458,7 @@ function renderAlumnosGlobal() {
     <div class="card" style="padding:0;overflow:hidden">
       <div style="display:flex;gap:6px;align-items:center;padding:8px 12px;font-size:11px;color:#888;flex-wrap:wrap">
         <span style="flex:1;min-width:150px">${grupos.size} grupo(s) · ${lista.length.toLocaleString()} alumno(s) · tap nombre = ficha · <strong>tap talla = cambiarla</strong></span>
-        <button class="btn btn-primary btn-sm" onclick="agProximoSinTallar()" style="font-size:10px;padding:2px 8px" title="Salta al primer alumno con talla faltante y abre el selector">🎯 Sin tallar</button>
+        <button class="btn btn-primary btn-sm" onclick="agProximoSinTallar()" style="font-size:10px;padding:2px 8px" title="Salta al primer alumno con talla faltante y abre el selector"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-objetivo"/></svg> Sin tallar</button>
         <button class="btn btn-ghost btn-sm" onclick="agAbrirTodos(true)" style="font-size:10px;padding:2px 8px">▼ Abrir todo</button>
         <button class="btn btn-ghost btn-sm" onclick="agAbrirTodos(false)" style="font-size:10px;padding:2px 8px">▲ Cerrar</button>
       </div>
@@ -1645,7 +1645,7 @@ async function generarPdfDirecto(html, filename) {
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;display:flex;align-items:center;justify-content:center;color:white;font-size:18px;text-align:center;padding:20px';
   overlay.innerHTML = `
     <div>
-      <div style="font-size:48px;margin-bottom:10px">📄</div>
+      <div style="font-size:48px;margin-bottom:10px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-hoja"/></svg></div>
       <div id="pdf-progress-msg">Generando PDF de ${numEtiq.toLocaleString()} etiqueta(s)...</div>
       <div style="font-size:14px;opacity:0.7;margin-top:8px">No cierres esta página</div>
     </div>

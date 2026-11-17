@@ -52,10 +52,10 @@ function switchSubCorte(sub) {
   nuevoView.style.display = 'none';
   listaView.style.display = '';
 
-  const titulos = { trazos: '✂️ Trazos', tendidos: '📋 Tendidos', bultos: '📦 Bultos' };
+  const titulos = { trazos: '<span class="tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-tijera"/></svg></span> Trazos', tendidos: '<span class="tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-capas"/></svg></span> Tendidos', bultos: '<span class="tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-caja"/></svg></span> Bultos' };
   const tipos   = { trazos: 'trazo',     tendidos: 'tendido',     bultos: 'bulto' };
   const tit = document.getElementById('corte-lista-titulo');
-  if (tit) tit.textContent = titulos[sub] || '';
+  if (tit) tit.innerHTML = titulos[sub] || '';
 
   // Reutilizamos historial.js: renderea dentro de #historial-content.
   // Como ese div vive en otra view, lo puenteamos creando el div temporal.
@@ -78,8 +78,8 @@ async function cargarLoQueSigue() {
   try {
     const pend = await supaFetch('vw_trazos_sin_tendido', 'GET', null, '?limit=50');
     if (!pend.length) {
-      cont.innerHTML = `<div class="empty"><div class="empty-icon">✅</div>No hay tendidos pendientes.<br>
-        <button class="btn btn-ghost btn-sm mt8" onclick="switchSubCorte('nuevo')">➕ Anotar un trazo nuevo</button></div>`;
+      cont.innerHTML = `<div class="empty"><div class="empty-icon"><svg class="ico" aria-hidden="true"><use href="#i-listo"/></svg></div>No hay tendidos pendientes.<br>
+        <button class="btn btn-ghost btn-sm mt8" onclick="switchSubCorte('nuevo')"><svg class="ico" aria-hidden="true"><use href="#i-sumar"/></svg> Anotar un trazo nuevo</button></div>`;
       return;
     }
     const ids = pend.map(p => p.id).join(',');
@@ -103,7 +103,7 @@ async function cargarLoQueSigue() {
             <div class="sigue-titulo">${corteEsc(t.codigo_corte || t.fecha)}</div>
             <div class="sigue-datos">${datos}</div>
             <div class="sigue-botones">
-              <button class="btn ${primero ? 'btn-success' : 'btn-ghost'} btn-sm" onclick="tenderTrazo('${t.id}')">▶ Tender este</button>
+              <button class="btn ${primero ? 'btn-success' : 'btn-ghost'} btn-sm" onclick="tenderTrazo('${t.id}')"><svg class="ico" aria-hidden="true"><use href="#i-tijera"/></svg> Tender este</button>
               <button class="btn btn-ghost btn-sm" onclick="verDetalle('trazo','${t.id}')">Ver ficha</button>
             </div>
           </div>

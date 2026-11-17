@@ -117,7 +117,7 @@ function renderRegistroHeader() {
   }
   cont.innerHTML = `
     <div class="rc-temporadas">
-      <span class="rc-temporadas-lbl">📅 Temporada</span>
+      <span class="rc-temporadas-lbl"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-calendario"/></svg> Temporada</span>
       ${temps.map(t => `
         <button class="btn btn-sm ${t.id === registroCache.temporadaActual ? 'btn-primary' : 'btn-ghost'}"
           onclick="cambiarTemporadaRegistro('${t.id}')">${rcEsc(t.codigo || t.anio)}${t.estado === 'activa' ? ' · activa' : ''}</button>`).join('')}

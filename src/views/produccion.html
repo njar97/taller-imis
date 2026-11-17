@@ -3,7 +3,7 @@
   <div class="modal-content" style="max-width:560px">
     <div class="modal-header">
       <div>
-        <div class="card-title" style="margin:0">🎯 ¿Acaparar para alguna escuela?</div>
+        <div class="card-title" style="margin:0"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-objetivo"/></svg> ¿Acaparar para alguna escuela?</div>
         <div id="auto-aca-subt" style="font-size:12px;color:#666;margin-top:2px"></div>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="cerrarAutoAcaparar()">✕</button>
@@ -22,7 +22,7 @@
 <div id="view-produccion" class="view">
   <div id="alert-produccion"></div>
   <div class="ayuda-tip" data-ayuda="produccion" role="note">
-    <span class="ayuda-tip-ico" aria-hidden="true">💡</span>
+    <span class="ayuda-tip-ico" aria-hidden="true"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-idea"/></svg></span>
     <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> Cuando un bulto sale de costura, abrí su talla y tocá <b>✓ Terminar</b>: las piezas entran solas a bodega.</span>
     <button type="button" class="ayuda-tip-x" onclick="cerrarAyuda('produccion')" aria-label="Cerrar esta ayuda" title="Cerrar esta ayuda">✕</button>
   </div>
@@ -31,18 +31,18 @@
        (2026); vuelve con 2025 o en Ajustes → 🗄 Más. -->
   <div class="card" id="prod-subnav" style="padding:6px;margin-bottom:10px">
     <div class="subnav-btns" style="display:flex;gap:4px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" id="prod-sub-dashboard" onclick="switchSubProd('dashboard')" style="flex:1;min-width:80px">📦 Bultos</button>
-      <button class="btn btn-ghost btn-sm oculto-2026" id="prod-sub-asignaciones" onclick="switchSubProd('asignaciones')" style="flex:1;min-width:80px">📋 Asignar</button>
-      <button class="btn btn-ghost btn-sm" id="prod-sub-captura" onclick="switchSubProd('captura')" style="flex:1;min-width:80px">📝 Captura</button>
-      <button class="btn btn-ghost btn-sm" id="prod-sub-plan" onclick="switchSubProd('plan')" style="flex:1;min-width:80px">📐 Plan</button>
-      <button class="btn btn-ghost btn-sm" id="prod-sub-operarias" onclick="switchSubProd('operarias')" style="flex:1;min-width:80px">👷 Operarias</button>
+      <button class="btn btn-primary btn-sm" id="prod-sub-dashboard" onclick="switchSubProd('dashboard')" style="flex:1;min-width:80px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> Bultos</button>
+      <button class="btn btn-ghost btn-sm oculto-2026" id="prod-sub-asignaciones" onclick="switchSubProd('asignaciones')" style="flex:1;min-width:80px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> Asignar</button>
+      <button class="btn btn-ghost btn-sm" id="prod-sub-captura" onclick="switchSubProd('captura')" style="flex:1;min-width:80px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lapiz"/></svg> Captura</button>
+      <button class="btn btn-ghost btn-sm" id="prod-sub-plan" onclick="switchSubProd('plan')" style="flex:1;min-width:80px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-regla"/></svg> Plan</button>
+      <button class="btn btn-ghost btn-sm" id="prod-sub-operarias" onclick="switchSubProd('operarias')" style="flex:1;min-width:80px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-persona"/></svg> Operarias</button>
     </div>
   </div>
 
   <!-- SUB: Dashboard -->
   <div id="prod-sub-dashboard-view">
     <div class="card">
-      <div class="card-title">🏭 Producción</div>
+      <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-hilo"/></svg> Producción</div>
       <div id="prod-resumen-hoy" class="alert alert-info" style="margin-bottom:10px">Cargando resumen...</div>
 
       <!-- Visible siempre: chips de estado (los más usados día a día) -->
@@ -55,7 +55,7 @@
       <!-- Filtros secundarios (corte/prenda): colapsados por defecto -->
       <details id="prod-filtros-extras" ontoggle="window._prodFiltrosExtrasOpen = this.open">
         <summary style="cursor:pointer;list-style:none;padding:8px 12px;background:#F5F7FA;border-radius:6px;font-size:12px;font-weight:600;color:#555;display:flex;align-items:center;justify-content:space-between;user-select:none">
-          <span id="prod-filtros-extras-label">🎛 Filtrar por corte o prenda</span>
+          <span id="prod-filtros-extras-label"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-ajustes"/></svg> Filtrar por corte o prenda</span>
           <span style="opacity:0.6">▼</span>
         </summary>
         <div class="row2" style="padding:10px 4px 0 4px">
@@ -83,13 +83,13 @@
     <!-- Toolbar -->
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="card-title" style="margin:0">📋 Asignaciones</div>
+        <div class="card-title" style="margin:0"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> Asignaciones</div>
         <button class="btn btn-success btn-sm" onclick="abrirNuevaAsignacion()">+ Nueva</button>
       </div>
       <div class="text-muted mb8" style="font-size:12px">Planificá: a qué operaria le toca qué operación sobre qué bultos.</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn btn-primary btn-sm" id="asig-tab-activas" onclick="cambiarTabAsignaciones('activas')">🟢 Activas</button>
-        <button class="btn btn-ghost btn-sm" id="asig-tab-completadas" onclick="cambiarTabAsignaciones('completadas')">✅ Completadas</button>
+        <button class="btn btn-ghost btn-sm" id="asig-tab-completadas" onclick="cambiarTabAsignaciones('completadas')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-listo"/></svg> Completadas</button>
         <button class="btn btn-ghost btn-sm" id="asig-tab-canceladas" onclick="cambiarTabAsignaciones('canceladas')">✖ Canceladas</button>
       </div>
     </div>
@@ -101,7 +101,7 @@
     <div id="asig-modal" class="modal" style="display:none">
       <div class="modal-content" style="max-width:600px">
         <div class="modal-header">
-          <div class="card-title">📋 Nueva asignación</div>
+          <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> Nueva asignación</div>
           <button class="btn btn-ghost btn-sm" onclick="cerrarNuevaAsignacion()">✕</button>
         </div>
         <div class="modal-body">
@@ -174,14 +174,14 @@
   <div id="prod-sub-captura-view" style="display:none">
     <!-- Resumen del día -->
     <div class="card">
-      <div class="card-title">📅 Hoy</div>
+      <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-calendario"/></svg> Hoy</div>
       <div id="cap-resumen-hoy" class="alert alert-info" style="margin:0">Cargando...</div>
     </div>
 
     <!-- Captura rápida (modo default) -->
     <div class="card" id="cap-modo-rapido">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="card-title" style="margin:0">⚡ Captura rápida</div>
+        <div class="card-title" style="margin:0"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-rayo"/></svg> Captura rápida</div>
         <button class="btn btn-ghost btn-sm" onclick="cambiarModoCap('lote')">Cambiar a lote ▸</button>
       </div>
       <div class="text-muted mb8" style="font-size:12px">Un registro individual. Para marcar varios bultos de un corte, usá "Lote".</div>
@@ -231,7 +231,7 @@
     <!-- Captura por lote (modo alternativo) -->
     <div class="card" id="cap-modo-lote" style="display:none">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="card-title" style="margin:0">📦 Captura por lote</div>
+        <div class="card-title" style="margin:0"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> Captura por lote</div>
         <button class="btn btn-ghost btn-sm" onclick="cambiarModoCap('rapido')">◂ Cambiar a rápido</button>
       </div>
       <div class="text-muted mb8" style="font-size:12px">Marca la misma operación como hecha en múltiples bultos (ej: toda una talla o corte).</div>
@@ -279,7 +279,7 @@
 
     <!-- Registros del día -->
     <div class="card">
-      <div class="card-title">📋 Registros de hoy</div>
+      <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> Registros de hoy</div>
       <div id="cap-registros"></div>
     </div>
   </div>
@@ -291,13 +291,13 @@
   <div id="prod-sub-operarias-view" style="display:none">
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">
-        <div class="card-title" style="margin:0">👷 Operarias y candidatas</div>
+        <div class="card-title" style="margin:0"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-persona"/></svg> Operarias y candidatas</div>
         <button class="btn btn-primary btn-sm" onclick="opAbrirFicha(null)">+ Agregar</button>
       </div>
       <div id="operarias-lista"></div>
     </div>
     <div class="card" id="planilla-card" style="display:none">
-      <div class="card-title" style="margin:0 0 6px">🧾 Planilla y recibos</div>
+      <div class="card-title" style="margin:0 0 6px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-hoja"/></svg> Planilla y recibos</div>
       <div id="planilla-cont"></div>
     </div>
   </div>
@@ -305,7 +305,7 @@
   <!-- SUB: Grupos (v31) -->
   <div id="prod-sub-grupos-view" style="display:none">
     <div class="card">
-      <div class="card-title">👥 Grupos de trabajo</div>
+      <div class="card-title"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-personas"/></svg> Grupos de trabajo</div>
       <div class="text-muted mb8" style="font-size:12px">Equipos para organizar el trabajo. El registro individual es opcional (útil para destajo).</div>
       <div id="grupos-tabs"></div>
     </div>
@@ -345,7 +345,7 @@
       <div class="modal-content" style="max-width:500px">
         <div class="modal-header">
           <div>
-            <div class="card-title" style="margin:0">👥 Miembros</div>
+            <div class="card-title" style="margin:0"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-personas"/></svg> Miembros</div>
             <div id="miembros-titulo" style="font-size:12px;color:#666;margin-top:2px"></div>
           </div>
           <button class="btn btn-ghost btn-sm" onclick="cerrarMiembros()">✕</button>

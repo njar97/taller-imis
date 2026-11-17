@@ -58,7 +58,7 @@ function opFila(op) {
   if (op.fecha_salida) lineas.push('Salió ' + opFecha(op.fecha_salida));
   if (op.como_llego) lineas.push('Llegó: ' + opEsc(op.como_llego));
   if (op.telefono) lineas.push('📞 ' + opEsc(opTel(op.telefono)));
-  else if (op.estado === 'trabajando') lineas.push('<span style="color:#B36B00">📞 falta teléfono</span>');
+  else if (op.estado === 'trabajando') lineas.push('<span style="color:#B36B00"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-celular"/></svg> falta teléfono</span>');
   const nDocs = (opDocsCache || []).filter(d => d.operaria_id === op.id).length;
   if (nDocs) lineas.push('📎 ' + nDocs + ' doc.');
   const duiColor = op.dui === 'falta' ? '#C0392B' : '#1E7B4F';
@@ -230,11 +230,11 @@ function opHtmlPrivado(id) {
     ? `<div style="color:#C0392B;font-size:12px;margin-bottom:6px">⚠ DUI ${p.dui_vence < hoy ? 'VENCIDO' : 'por vencer'} (${opFecha(p.dui_vence)}): pedir el renovado.</div>` : '';
   return `
     <div style="border-top:2px solid var(--borde);margin-top:10px;padding-top:8px">
-      <div style="font-weight:700;margin-bottom:6px">🔒 Datos privados (solo admin)</div>
+      <div style="font-weight:700;margin-bottom:6px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-candado"/></svg> Datos privados (solo admin)</div>
       ${venc}
       ${OP_PRIV_CAMPOS.map(campo).join('')}
       <label style="font-size:13px;display:block;margin-bottom:8px"><input type="checkbox" id="opp-trabaja_sabado" ${p.trabaja_sabado === false ? '' : 'checked'}> Viene los sábados</label>
-      <div style="font-weight:700;margin:10px 0 6px">📎 Documentos</div>
+      <div style="font-weight:700;margin:10px 0 6px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-hoja"/></svg> Documentos</div>
       <div id="opp-docs" class="text-muted" style="font-size:12px">Cargando…</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px">
         <select id="opp-doc-tipo">${Object.entries(OP_DOC_TIPOS).map(([k, t]) => `<option value="${k}">${t}</option>`).join('')}</select>
@@ -280,7 +280,7 @@ async function opPintarDocs(id) {
     const url = d.archivo ? await opUrlFirmada(d.archivo) : null;
     const esPdf = /\.pdf$/i.test(d.archivo || '');
     const vista = !url ? '<div style="height:90px;display:flex;align-items:center;justify-content:center;background:#eee">sin archivo</div>'
-      : esPdf ? `<a href="${url}" target="_blank" style="display:flex;height:90px;align-items:center;justify-content:center;background:#eee">📄 PDF</a>`
+      : esPdf ? `<a href="${url}" target="_blank" style="display:flex;height:90px;align-items:center;justify-content:center;background:#eee"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-hoja"/></svg> PDF</a>`
       : `<a href="${url}" target="_blank"><img src="${url}" style="width:100%;height:90px;object-fit:cover;border-radius:4px"></a>`;
     return `<div style="width:130px;font-size:11px;color:#333">${vista}<div><strong>${opEsc(OP_DOC_TIPOS[d.tipo] || d.tipo)}</strong></div>${d.fuente ? `<div class="text-muted">${opEsc(d.fuente)}</div>` : ''}${d.nota ? `<div>${opEsc(d.nota)}</div>` : ''}</div>`;
   }));
@@ -354,7 +354,7 @@ function renderPlanilla() {
         <td>${opEsc(l.nombre)}${Number(l.horas_faltadas) > 0 ? `<div class="text-muted">−${+l.horas_faltadas} h</div>` : ''}</td>
         <td>${+l.dias}</td><td>${l.sabados || 0}</td><td>${plMoney(l.base)}</td><td>${plMoney(l.monto_sabados)}</td>
         <td><strong>${plMoney(l.total)}</strong></td>
-        <td><button class="btn btn-ghost btn-sm" title="Recibo" onclick="plRecibos('${p.id}','${l.id}')">🧾</button></td>
+        <td><button class="btn btn-ghost btn-sm" title="Recibo" onclick="plRecibos('${p.id}','${l.id}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-hoja"/></svg></button></td>
       </tr>
       ${l.detalle ? `<tr><td colspan="7" style="font-size:11px;color:#666;padding:0 0 6px">${opEsc(l.detalle)}</td></tr>` : ''}`).join('');
     return `
@@ -368,10 +368,10 @@ function renderPlanilla() {
           </table>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
-          <button class="btn btn-primary btn-sm" onclick="plRecibos('${p.id}')">🧾 Imprimir todos los recibos</button>
-          ${p.estado !== 'pagada' ? `<button class="btn btn-ghost btn-sm" onclick="plMarcarPagada('${p.id}')">✅ Marcar pagada</button>` : ''}
+          <button class="btn btn-primary btn-sm" onclick="plRecibos('${p.id}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-hoja"/></svg> Imprimir todos los recibos</button>
+          ${p.estado !== 'pagada' ? `<button class="btn btn-ghost btn-sm" onclick="plMarcarPagada('${p.id}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-listo"/></svg> Marcar pagada</button>` : ''}
         </div>
-        ${p.criterio ? `<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;font-weight:600">📏 Criterios de pago</summary><div style="white-space:pre-wrap;font-size:12px;margin-top:4px">${opEsc(p.criterio)}</div></details>` : ''}
+        ${p.criterio ? `<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;font-weight:600"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-regla"/></svg> Criterios de pago</summary><div style="white-space:pre-wrap;font-size:12px;margin-top:4px">${opEsc(p.criterio)}</div></details>` : ''}
         ${p.enviada_a || p.nota ? `<div style="font-size:11px;color:#666;margin-top:6px">${p.enviada_a ? 'Enviada a: ' + opEsc(p.enviada_a) + '. ' : ''}${opEsc(p.nota || '')}</div>` : ''}
       </details>`;
   }).join('');

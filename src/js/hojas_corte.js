@@ -41,14 +41,14 @@ function initHojasCorte() {
   ).join('');
   cont.innerHTML = `
     <div class="card">
-      <div class="card-title">👖 Bolsa delantera · pantalón</div>
+      <div class="card-title"><span class="tj-ico tj-azul"><svg class="ico" aria-hidden="true"><use href="#i-regla"/></svg></span> Bolsa delantera · pantalón</div>
       <div class="card-sub">Separación (A) y abertura (B) según la tabla MINED 2026. Hoja carta, blanco y negro, números grandes.</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0">${chips}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" onclick="hcSetTallas(HC_TEMPORADA)">Tallas de la temporada</button>
         <button class="btn btn-ghost btn-sm" onclick="hcSetTallas(Object.keys(HC_BOLSA_DEL))">Todas</button>
       </div>
-      <button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="hcImprimirBolsaDelantera()">🖨 Imprimir hoja</button>
+      <button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="hcImprimirBolsaDelantera()"><svg class="ico" aria-hidden="true"><use href="#i-imprimir"/></svg> Imprimir hoja</button>
     </div>`;
 }
 

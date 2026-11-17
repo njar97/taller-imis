@@ -62,7 +62,7 @@ function renderAsignaciones() {
     const lista = porOperaria[nom];
     return `
       <div class="card" style="padding:10px;margin-bottom:10px">
-        <div style="font-weight:700;color:var(--azul);margin-bottom:8px">👷 ${nom}</div>
+        <div style="font-weight:700;color:var(--azul);margin-bottom:8px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-persona"/></svg> ${nom}</div>
         ${lista.map(a => renderAsignacionCard(a)).join('')}
       </div>
     `;
@@ -79,7 +79,7 @@ function renderAsignacionCard(a) {
     if (a.bultos_hechos > 0 && a.bultos_hechos >= a.bultos_total) {
       botones += `<button class="btn-mini btn-mini-success" onclick="marcarCompletada('${a.asignacion_id}')">✓ Marcar completada</button>`;
     }
-    botones += `<button class="btn-mini" onclick="capturarAsignacion('${a.asignacion_id}')">📝 Registrar avance</button>`;
+    botones += `<button class="btn-mini" onclick="capturarAsignacion('${a.asignacion_id}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lapiz"/></svg> Registrar avance</button>`;
     botones += `<button class="btn-mini btn-mini-danger" onclick="cancelarAsignacion('${a.asignacion_id}')">✖ Cancelar</button>`;
   } else if (a.estado === 'cancelada' || a.estado === 'completada') {
     botones += `<button class="btn-mini" onclick="reactivarAsignacion('${a.asignacion_id}')">↶ Reactivar</button>`;
@@ -95,7 +95,7 @@ function renderAsignacionCard(a) {
             <strong>${a.bultos_hechos}/${a.bultos_total}</strong> bultos
             <div class="prod-progress" style="max-width:200px;margin-top:2px"><div class="prod-progress-bar" style="width:${pct}%"></div></div>
           </div>
-          ${a.observaciones ? `<div style="font-size:11px;color:#856404;margin-top:4px">📝 ${a.observaciones}</div>` : ''}
+          ${a.observaciones ? `<div style="font-size:11px;color:#856404;margin-top:4px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lapiz"/></svg> ${a.observaciones}</div>` : ''}
         </div>
         <div style="font-size:18px;margin-left:8px">${expandida?'▼':'▶'}</div>
       </div>

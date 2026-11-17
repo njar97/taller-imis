@@ -340,7 +340,7 @@ function revisarWarnings() {
     if (capas > 0 && capas % 2 !== 0) rollosImpares.push(el.dataset.trollo);
   });
   if (rollosImpares.length) {
-    cont.innerHTML = `<div class="alert alert-warn">⚠️ Hay rollo(s) con capas impares (#${rollosImpares.join(', #')}) y el trazo tiene tallas en par. Se perdería 1 lienzo por rollo como desperdicio.</div>`;
+    cont.innerHTML = `<div class="alert alert-warn"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-alerta"/></svg> Hay rollo(s) con capas impares (#${rollosImpares.join(', #')}) y el trazo tiene tallas en par. Se perdería 1 lienzo por rollo como desperdicio.</div>`;
   }
 }
 
@@ -429,11 +429,11 @@ async function guardarTendido() {
       }
     }
 
-    mostrarAlerta('tendido','success',`✅ Tendido guardado. ${n} rollo(s) renumerados (último tendido = bulto #1).`);
-    setTimeout(() => { btn.textContent='💾 Guardar tendido (invierte numeración)'; btn.disabled=false; volverNuevo(); }, 2200);
+    mostrarAlerta('tendido','success',`Tendido guardado. ${n} rollo(s) renumerados (último tendido = bulto #1).`);
+    setTimeout(() => { btn.textContent='Guardar tendido (invierte numeración)'; btn.disabled=false; volverNuevo(); }, 2200);
   } catch(e) {
     mostrarAlerta('tendido','error','Error: ' + e.message);
-    btn.textContent = '💾 Guardar tendido (invierte numeración)';
+    btn.textContent = 'Guardar tendido (invierte numeración)';
     btn.disabled = false;
   }
 }

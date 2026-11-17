@@ -54,7 +54,7 @@ function renderTallajeInicial(escuelaId) {
     <datalist id="grados-datalist">${gradosHtml}</datalist>
     
     <div class="card" style="padding:14px;margin-bottom:10px">
-      <div style="font-weight:600;margin-bottom:10px">📏 Iniciar tallaje por grado</div>
+      <div style="font-weight:600;margin-bottom:10px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-regla"/></svg> Iniciar tallaje por grado</div>
       <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
         <div style="flex:1;min-width:120px">
           <label style="font-size:11px;color:#666;display:block">Grado</label>
@@ -63,11 +63,11 @@ function renderTallajeInicial(escuelaId) {
                  style="width:100%;padding:6px 10px;border:1px solid var(--borde);border-radius:4px"
                  value="${tallajeCache.grado || ''}">
         </div>
-        <button class="btn btn-primary" onclick="iniciarCapturaTallaje()">📝 Capturar alumnos</button>
+        <button class="btn btn-primary" onclick="iniciarCapturaTallaje()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lapiz"/></svg> Capturar alumnos</button>
       </div>
       <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--borde);text-align:center">
         <div style="font-size:11px;color:#888;margin-bottom:6px">¿Tenés muchos alumnos en un Excel?</div>
-        <button class="btn btn-ghost btn-sm" onclick="abrirImportacion('${escuelaId}')">📥 Importar desde Excel/CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirImportacion('${escuelaId}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-entrada"/></svg> Importar desde Excel/CSV</button>
       </div>
     </div>
     
@@ -105,7 +105,7 @@ function renderRecientes() {
             <div style="font-weight:600;font-size:12px">${a.nombre}</div>
             <div style="font-size:10px;color:#888">${a.grado || '-'} · ${a.talla_top_key || '?'} / ${a.talla_bottom_key || '?'}</div>
           </div>
-          <button class="btn-mini" onclick="editarAlumno('${a.id}')">✏ Editar</button>
+          <button class="btn-mini" onclick="editarAlumno('${a.id}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lapiz"/></svg> Editar</button>
         </div>
       `).join('')}
     </div>
@@ -177,7 +177,7 @@ function renderFormularioTallaje(datos = null) {
       
       <!-- TOP -->
       <div style="border:1px solid var(--borde);border-radius:8px;padding:10px;margin:10px 0">
-        <div style="font-weight:600;font-size:13px;margin-bottom:8px">👕 TOP</div>
+        <div style="font-weight:600;font-size:13px;margin-bottom:8px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camisa"/></svg> TOP</div>
         <div class="field">
           <label>Prenda</label>
           <select id="tall-prenda-t" onchange="actualizarKey('top')">
@@ -203,7 +203,7 @@ function renderFormularioTallaje(datos = null) {
       
       <!-- BOTTOM -->
       <div style="border:1px solid var(--borde);border-radius:8px;padding:10px;margin:10px 0">
-        <div style="font-weight:600;font-size:13px;margin-bottom:8px">👖 BOTTOM</div>
+        <div style="font-weight:600;font-size:13px;margin-bottom:8px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-pantalon"/></svg> BOTTOM</div>
         <div class="field">
           <label>Prenda</label>
           <select id="tall-prenda-b" onchange="actualizarKey('bottom')">

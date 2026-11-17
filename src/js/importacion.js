@@ -183,7 +183,7 @@ function renderPaso2Mapeo() {
     
     <div style="margin-top:10px;display:flex;gap:8px">
       <button class="btn btn-ghost" onclick="volverPaso1()">← Volver</button>
-      <button class="btn btn-primary" style="flex:1" onclick="previsualizarImportacion()">👁 Previsualizar y validar →</button>
+      <button class="btn btn-primary" style="flex:1" onclick="previsualizarImportacion()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-ojo"/></svg> Previsualizar y validar →</button>
     </div>
   `;
   

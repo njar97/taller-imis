@@ -189,14 +189,14 @@ function pronTablaHtml() {
     </tr>`).join('');
 
   const aviso = total < 30
-    ? `<div class="alert" style="margin-top:8px;font-size:12px">⚠️ Solo ${total} dato(s) histórico(s) — la distribución puede no ser representativa.</div>`
+    ? `<div class="alert" style="margin-top:8px;font-size:12px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-alerta"/></svg> Solo ${total} dato(s) histórico(s) — la distribución puede no ser representativa.</div>`
     : '';
 
   return `
     <div class="card" style="padding:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
         <div style="font-size:13px"><strong>${f.prenda}</strong> · base: ${total} pieza(s) de ${escTxt}</div>
-        <button class="btn btn-sm btn-ghost" onclick="pronPDF()" ${objetivo ? '' : 'disabled title="Ingresá la cantidad a producir"'}>🖨️ PDF</button>
+        <button class="btn btn-sm btn-ghost" onclick="pronPDF()" ${objetivo ? '' : 'disabled title="Ingresá la cantidad a producir"'}><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-imprimir"/></svg> PDF</button>
       </div>
       <div style="overflow-x:auto">
         <table class="table" style="width:100%;min-width:340px">

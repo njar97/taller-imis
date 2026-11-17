@@ -257,7 +257,7 @@ function emqAbrirAlt(alumnoId, pieza) {
   const enProd = emqState.prodMap ? (emqState.prodMap.get(prenda + '|' + pedida) || 0) : 0;
   document.getElementById('emq-alt-sub').innerHTML =
     (enProd > 0
-      ? `<div style="background:#F0F7F0;border:1px solid #CDE5CD;border-radius:6px;padding:6px 8px;margin-bottom:6px">🏭 <strong>Vienen ${enProd} pieza(s) de ${pedida} en producción</strong> — si podés esperar, quizás no haga falta talla alterna.</div>`
+      ? `<div style="background:#F0F7F0;border:1px solid #CDE5CD;border-radius:6px;padding:6px 8px;margin-bottom:6px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-hilo"/></svg> <strong>Vienen ${enProd} pieza(s) de ${pedida} en producción</strong> — si podés esperar, quizás no haga falta talla alterna.</div>`
       : '') +
     (lista.length
       ? `Para ${a.nombre}. Elegí una talla alterna disponible:`
@@ -506,7 +506,7 @@ function emqResvRender() {
       <div style="display:flex;gap:8px;align-items:center;margin-top:12px;border-top:2px solid var(--borde);padding-top:10px">
         <div style="flex:1;font-size:12px"><strong data-emq-total="remp">${tot}</strong> pieza(s)</div>
         <button class="btn btn-ghost btn-sm" onclick="emqCerrarReserva()">Cerrar</button>
-        <button class="btn btn-success btn-sm" data-emq-btn="remp" onclick="emqCantEmpacarUI('remp','modal')" ${tot === 0 ? 'disabled' : ''}>📦 Empacar todo lo que alcance</button>
+        <button class="btn btn-success btn-sm" data-emq-btn="remp" onclick="emqCantEmpacarUI('remp','modal')" ${tot === 0 ? 'disabled' : ''}><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> Empacar todo lo que alcance</button>
       </div>`;
     return;
   }
@@ -568,7 +568,7 @@ function emqResvRender() {
         <strong>${total}</strong> pieza(s)${resumen ? `<br><span style="color:#888;font-size:11px">${resumen}</span>` : ''}
       </div>
       <button class="btn btn-ghost btn-sm" onclick="emqCerrarReserva()">Cancelar</button>
-      <button class="btn btn-success btn-sm" onclick="emqConfirmarReserva()" ${total === 0 ? 'disabled' : ''}>🔒 Reservar ${total || ''}</button>
+      <button class="btn btn-success btn-sm" onclick="emqConfirmarReserva()" ${total === 0 ? 'disabled' : ''}><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-candado"/></svg> Reservar ${total || ''}</button>
     </div>`;
 }
 
@@ -739,12 +739,12 @@ function emqPaso1Html() {
   }).join('');
   return `
     <div class="card" style="padding:10px 12px;margin-bottom:10px">
-      <div style="font-weight:700">🧺 Sesión de empaque</div>
+      <div style="font-weight:700"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> Sesión de empaque</div>
       <div style="font-size:12px;color:#666;margin-top:2px">Elegí la escuela. "Empacables ya" = piezas que faltan y se pueden empacar con lo que hay ahora en bodega. 📋 = escuela por pedido (sin nombres).</div>
     </div>
-    ${cards || '<div class="alert alert-info">🎉 No hay piezas pendientes en ninguna escuela.</div>'}
+    ${cards || '<div class="alert alert-info"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-listo"/></svg> No hay piezas pendientes en ninguna escuela.</div>'}
     <div style="text-align:center;margin-top:8px">
-      <button class="btn btn-ghost btn-sm" onclick="initEmpaque()">🔄 Refrescar</button>
+      <button class="btn btn-ghost btn-sm" onclick="initEmpaque()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg> Refrescar</button>
     </div>`;
 }
 
@@ -816,13 +816,13 @@ function emqPaso2Html() {
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" onclick="emqVolverEscuelas()">‹ Escuelas</button>
         <div style="flex:1;min-width:120px">
-          <div style="font-weight:700">🧺 ${esc.alias || esc.nombre || ''}</div>
+          <div style="font-weight:700"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> ${esc.alias || esc.nombre || ''}</div>
           <div style="font-size:11px;color:#666">${pendientes} pendiente(s) · ${empacables} empacable(s) ya</div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="initEmpaque(emqState.escuelaId)" title="Refrescar stock y alumnos">🔄</button>
+        <button class="btn btn-ghost btn-sm" onclick="initEmpaque(emqState.escuelaId)" title="Refrescar stock y alumnos"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg></button>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px">
-        <button class="btn btn-primary btn-sm" onclick="emqMarcarTodos()">☑️ Marcar todos los empacables</button>
+        <button class="btn btn-primary btn-sm" onclick="emqMarcarTodos()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-listo"/></svg> Marcar todos los empacables</button>
         <button class="btn btn-warning btn-sm" onclick="emqAbrirReserva(emqState.escuelaId)"
           title="Apartar stock por TALLA y CANTIDAD para esta escuela, sin empacar. Los niños se eligen al empacar; la reserva se consume sola.">🔒 Reservar tallas</button>
         ${nPiezas > 0 ? '<button class="btn btn-ghost btn-sm" onclick="emqLimpiar()">✕ Limpiar</button>' : ''}
@@ -844,7 +844,7 @@ function emqPaso2Html() {
     <div style="position:fixed;bottom:calc(66px + env(safe-area-inset-bottom));left:0;right:0;z-index:900;display:flex;justify-content:center;pointer-events:none">
       <div style="pointer-events:auto;background:white;border:1px solid var(--borde);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.2);padding:8px 12px;display:flex;gap:8px;align-items:center;margin:0 12px">
         <div style="font-size:13px"><strong>${nPiezas}</strong> pieza(s) · <strong>${nAlumnos}</strong> alumno(s)</div>
-        <button id="emq-btn-empacar" class="btn btn-success" ${nPiezas === 0 ? 'disabled' : ''} onclick="emqEmpacar()">📦 Empacar</button>
+        <button id="emq-btn-empacar" class="btn btn-success" ${nPiezas === 0 ? 'disabled' : ''} onclick="emqEmpacar()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> Empacar</button>
       </div>
     </div>`;
 }
@@ -854,14 +854,14 @@ function emqPaso3Html() {
   const u = emqState.ultimoEmpaque;
   return `
     <div class="card" id="emq-exito-panel" style="padding:20px;text-align:center;max-width:440px;margin:20px auto">
-      <div style="font-size:40px">✅</div>
+      <div style="font-size:40px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-listo"/></svg></div>
       <div style="font-weight:700;font-size:16px;margin:6px 0">Empaque registrado</div>
       <div style="font-size:13px;color:#666">${esc.alias || esc.nombre || ''} · ${u ? u.resumen : ''}</div>
       <div id="emq-undo-status" style="font-size:12px;color:#888;margin-top:4px"></div>
 
       <!-- Entrega integrada: fecha + receptor acá mismo, sin saltar de vista -->
       <div style="margin-top:16px;padding:12px;background:#F5F9F5;border:1px solid #CDE5CD;border-radius:8px;text-align:left">
-        <div style="font-weight:700;font-size:13px;margin-bottom:8px">🚚 ¿Entregar a la escuela ahora?</div>
+        <div style="font-weight:700;font-size:13px;margin-bottom:8px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camion"/></svg> ¿Entregar a la escuela ahora?</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
           <div class="field" style="margin:0">
             <label>Fecha</label>
@@ -871,14 +871,14 @@ function emqPaso3Html() {
             <label>Recibió (opcional)</label>
             <input type="text" id="emq-ent-receptor" placeholder="Nombre de quien recibe">
           </div>
-          <button id="emq-btn-entregar" class="btn btn-primary btn-sm" onclick="emqEntregar()">🚚 Confirmar entrega</button>
+          <button id="emq-btn-entregar" class="btn btn-primary btn-sm" onclick="emqEntregar()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camion"/></svg> Confirmar entrega</button>
         </div>
         <div style="font-size:11px;color:#888;margin-top:6px">Marca como entregadas TODAS las piezas empacadas de la escuela y deja el registro con fecha y receptor.</div>
       </div>
 
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
-        <button class="btn btn-ghost" onclick="emqState.paso=2;renderEmpaque()">📋 Seguir en esta escuela</button>
-        <button class="btn btn-ghost" onclick="emqVolverEscuelas();renderEmpaque()">🧺 Otra escuela</button>
+        <button class="btn btn-ghost" onclick="emqState.paso=2;renderEmpaque()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> Seguir en esta escuela</button>
+        <button class="btn btn-ghost" onclick="emqVolverEscuelas();renderEmpaque()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> Otra escuela</button>
         ${u ? '<button class="btn btn-ghost" style="color:var(--rojo)" onclick="emqDeshacer()">↩️ Deshacer este empaque</button>' : ''}
       </div>
     </div>`;
@@ -1375,8 +1375,8 @@ function emqCardCantHtml(e) {
   return `
     <div class="card" style="padding:12px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="emqState.escuelaId='${e.id}';emqState.paso=2;renderEmpaque()">
       <div style="flex:1;min-width:0">
-        <div style="font-weight:700">📋 ${emqEsc(e.alias || e.nombre)}</div>
-        <div style="font-size:12px;color:#666">Faltan ${s.falta} de ${s.pedido}${s.empacado ? ` · <span style="color:#a82">📦 ${s.empacado} empacadas sin entregar</span>` : ''}</div>
+        <div style="font-weight:700"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> ${emqEsc(e.alias || e.nombre)}</div>
+        <div style="font-size:12px;color:#666">Faltan ${s.falta} de ${s.pedido}${s.empacado ? ` · <span style="color:#a82"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> ${s.empacado} empacadas sin entregar</span>` : ''}</div>
       </div>
       <div style="text-align:right">
         <div style="font-size:20px;font-weight:700;color:${color}">${s.puede}</div>
@@ -1423,7 +1423,7 @@ function emqTablaCantHtml(lineas, grupo, origen) {
       <td style="${td}" title="${emqEsc(fuentes || 'Nada en bodega que sirva para esta talla')}">
         <strong style="color:${L.enBodega ? 'var(--azul)' : '#c44'}">${L.enBodega}</strong>
         ${L.corto ? `<div style="font-size:10px;color:#a60" title="Pantalones de bodega más cortos que el largo 2026: no se cuentan">+${L.corto} cortos</div>` : ''}
-        ${L.enProceso ? `<div style="font-size:10px;color:#6a5" title="En producción (Prod → 📐 Plan), para todas las escuelas">🏭 ${L.enProceso}</div>` : ''}
+        ${L.enProceso ? `<div style="font-size:10px;color:#6a5" title="En producción (Prod → 📐 Plan), para todas las escuelas"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-hilo"/></svg> ${L.enProceso}</div>` : ''}
       </td>
       <td class="emq-acc1" style="${td};text-align:center;white-space:nowrap">${accion}</td>
     </tr>
@@ -1443,19 +1443,19 @@ function emqPaso2CantHtml() {
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" onclick="emqVolverEscuelas()">‹ Escuelas</button>
         <div style="flex:1;min-width:120px">
-          <div style="font-weight:700">🧺 ${emqEsc(emqNombreEscuela(escId))}</div>
-          <div style="font-size:11px;color:#666">📋 Por pedido (sin nombres) · pedido ${s.pedido} · empacado ${s.empacado} · entregado ${s.entregado} · faltan ${s.falta}</div>
+          <div style="font-weight:700"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> ${emqEsc(emqNombreEscuela(escId))}</div>
+          <div style="font-size:11px;color:#666"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> Por pedido (sin nombres) · pedido ${s.pedido} · empacado ${s.empacado} · entregado ${s.entregado} · faltan ${s.falta}</div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="initEmpaque(emqState.escuelaId)" title="Refrescar pedido y bodega">🔄</button>
+        <button class="btn btn-ghost btn-sm" onclick="initEmpaque(emqState.escuelaId)" title="Refrescar pedido y bodega"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg></button>
       </div>
-      ${s.empacado > 0 ? `<div style="margin-top:8px"><button class="btn btn-primary btn-sm" onclick="emqState.ultimoEmpaque=null;emqState.sel.ent=null;emqState.paso=3;renderEmpaque()">🚚 Entregar lo empacado (${s.empacado})</button></div>` : ''}
+      ${s.empacado > 0 ? `<div style="margin-top:8px"><button class="btn btn-primary btn-sm" onclick="emqState.ultimoEmpaque=null;emqState.sel.ent=null;emqState.paso=3;renderEmpaque()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camion"/></svg> Entregar lo empacado (${s.empacado})</button></div>` : ''}
       <div style="font-size:11px;color:#888;margin-top:6px">Empacar = sale de bodega y queda apartado para esta escuela. Ajustá la cantidad con − / + o escribila.</div>
     </div>
     <div class="card" style="padding:0;overflow:hidden;margin-bottom:74px">${emqTablaCantHtml(lineas, 'emp', 'sesion')}</div>
     <div style="position:fixed;bottom:calc(66px + env(safe-area-inset-bottom));left:0;right:0;z-index:900;display:flex;justify-content:center;pointer-events:none">
       <div style="pointer-events:auto;background:white;border:1px solid var(--borde);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.2);padding:8px 12px;display:flex;gap:8px;align-items:center;margin:0 12px">
         <div style="font-size:13px"><strong data-emq-total="emp">${tot}</strong> pieza(s)</div>
-        <button id="emq-btn-empacar" data-emq-btn="emp" class="btn btn-success" ${tot === 0 ? 'disabled' : ''} onclick="emqCantEmpacarUI('emp','sesion')">📦 Empacar todo lo que alcance</button>
+        <button id="emq-btn-empacar" data-emq-btn="emp" class="btn btn-success" ${tot === 0 ? 'disabled' : ''} onclick="emqCantEmpacarUI('emp','sesion')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> Empacar todo lo que alcance</button>
       </div>
     </div>`;
 }
@@ -1484,13 +1484,13 @@ function emqPaso3CantHtml() {
     <div class="card" id="emq-exito-panel" style="padding:20px;max-width:520px;margin:20px auto">
       ${u ? `
         <div style="text-align:center">
-          <div style="font-size:40px">✅</div>
+          <div style="font-size:40px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-listo"/></svg></div>
           <div style="font-weight:700;font-size:16px;margin:6px 0">Empaque registrado</div>
           <div style="font-size:13px;color:#666">${nombre} · ${emqEsc(u.resumen)}</div>
           <div id="emq-undo-status" style="font-size:12px;color:#888;margin-top:4px"></div>
-        </div>` : `<div style="font-weight:700;font-size:16px">🚚 Entrega · ${nombre}</div>`}
+        </div>` : `<div style="font-weight:700;font-size:16px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camion"/></svg> Entrega · ${nombre}</div>`}
       <div style="margin-top:16px;padding:12px;background:#F5F9F5;border:1px solid #CDE5CD;border-radius:8px">
-        <div style="font-weight:700;font-size:13px;margin-bottom:6px">🚚 ¿Entregar a la escuela ahora?</div>
+        <div style="font-weight:700;font-size:13px;margin-bottom:6px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camion"/></svg> ¿Entregar a la escuela ahora?</div>
         ${lineas.length ? `
           ${emqListaEntregaHtml(lineas, 'ent')}
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">
@@ -1502,13 +1502,13 @@ function emqPaso3CantHtml() {
               <label>Recibió (opcional)</label>
               <input type="text" id="emq-ent-receptor" placeholder="Nombre de quien recibe">
             </div>
-            <button id="emq-btn-entregar" data-emq-btn="ent" class="btn btn-primary btn-sm" ${tot === 0 ? 'disabled' : ''} onclick="emqCantEntregarSesion()">🚚 Entregar lo empacado</button>
+            <button id="emq-btn-entregar" data-emq-btn="ent" class="btn btn-primary btn-sm" ${tot === 0 ? 'disabled' : ''} onclick="emqCantEntregarSesion()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camion"/></svg> Entregar lo empacado</button>
           </div>` : '<div class="text-muted" style="font-size:12px">No hay piezas empacadas de esta escuela.</div>'}
         <div style="font-size:11px;color:#888;margin-top:6px">Se suma a lo entregado del pedido y queda el registro con fecha y quién recibió. Bodega no cambia: ya salió al empacar.</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
-        <button class="btn btn-ghost" onclick="emqState.paso=2;renderEmpaque()">📋 Seguir en esta escuela</button>
-        <button class="btn btn-ghost" onclick="emqVolverEscuelas();renderEmpaque()">🧺 Otra escuela</button>
+        <button class="btn btn-ghost" onclick="emqState.paso=2;renderEmpaque()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> Seguir en esta escuela</button>
+        <button class="btn btn-ghost" onclick="emqVolverEscuelas();renderEmpaque()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> Otra escuela</button>
         ${u ? '<button class="btn btn-ghost" style="color:var(--rojo)" onclick="emqDeshacer()">↩️ Deshacer este empaque</button>' : ''}
       </div>
     </div>`;

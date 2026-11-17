@@ -218,9 +218,9 @@ function renderRegistroCantidad() {
     const escuelas = regCantEscuelasLista();
     const tabs = `
       <div class="rc-tabs">
-        <button class="btn btn-sm ${regCant.vista === 'escuelas' ? 'btn-primary' : 'btn-ghost'}" onclick="regCantVista('escuelas')">🏫 Escuelas (${escuelas.length})</button>
-        <button class="btn btn-sm ${regCant.vista === 'especiales' ? 'btn-primary' : 'btn-ghost'}" onclick="regCantVista('especiales')">📏 Especiales (${regCant.esp.length})</button>
-        <button class="btn btn-sm btn-ghost" onclick="regCantRefrescar()" title="Volver a cargar" aria-label="Volver a cargar">🔄</button>
+        <button class="btn btn-sm ${regCant.vista === 'escuelas' ? 'btn-primary' : 'btn-ghost'}" onclick="regCantVista('escuelas')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-escuela"/></svg> Escuelas (${escuelas.length})</button>
+        <button class="btn btn-sm ${regCant.vista === 'especiales' ? 'btn-primary' : 'btn-ghost'}" onclick="regCantVista('especiales')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-regla"/></svg> Especiales (${regCant.esp.length})</button>
+        <button class="btn btn-sm btn-ghost" onclick="regCantRefrescar()" title="Volver a cargar" aria-label="Volver a cargar"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg></button>
       </div>`;
     cont.innerHTML = aviso + tabs + (regCant.vista === 'especiales'
       ? regCantEspecialesHtml()
@@ -271,7 +271,7 @@ function regCantResumenHtml(escuelas) {
         <div style="background:var(--azul2);width:${pct}%"></div><div style="background:var(--verde);width:${pctEmp}%"></div>
       </div>
       ${regCant.esp.length ? `
-      <button class="rc-link" onclick="regCantVista('especiales')">📏 ${ce.total} ${ce.total === 1 ? 'talla especial' : 'tallas especiales'}: ${TESP_ESTADOS.map(e => tespCuenta(e, ce[e.val])).join(' · ')} ›</button>` : ''}
+      <button class="rc-link" onclick="regCantVista('especiales')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-regla"/></svg> ${ce.total} ${ce.total === 1 ? 'talla especial' : 'tallas especiales'}: ${TESP_ESTADOS.map(e => tespCuenta(e, ce[e.val])).join(' · ')} ›</button>` : ''}
     </div>`;
 }
 
@@ -304,7 +304,7 @@ function regCantListaEscHtml() {
     return `
       <button type="button" class="rc-esc" onclick="regCantAbrirEscuela('${o.id}')">
         <span class="rc-esc-top">
-          <span class="rc-esc-nom">🏫 ${rcEsc(o.nombre)}</span>
+          <span class="rc-esc-nom"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-escuela"/></svg> ${rcEsc(o.nombre)}</span>
           ${o.sol ? `<span class="rc-pct" style="color:${colorPct}">${o.pct}%<small>entregado</small></span>` : ''}
         </span>
         <span class="rc-sub">${e.codigo_cde ? 'CDE ' + rcEsc(e.codigo_cde) + ' · ' : ''}${o.sol ? rcNum(o.sol) + ' piezas pedidas' : 'sin pedido'}</span>
@@ -313,7 +313,7 @@ function regCantListaEscHtml() {
           <span class="rc-chip rc-chip-falta"><b>${rcNum(o.pend)}</b> falta</span>
           <span class="rc-chip rc-chip-emp"><b>${rcNum(o.emp)}</b> empacado</span>
           <span class="rc-chip rc-chip-ent"><b>${rcNum(o.ent)}</b> entregado</span>` : ''}
-          ${o.esp.length ? `<span class="rc-chip rc-chip-esp">📏 <b>${o.esp.length}</b> ${o.esp.length === 1 ? 'especial' : 'especiales'}${cEsp.pendiente ? ` · ${cEsp.pendiente} pend.` : ''}</span>` : ''}
+          ${o.esp.length ? `<span class="rc-chip rc-chip-esp"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-regla"/></svg> <b>${o.esp.length}</b> ${o.esp.length === 1 ? 'especial' : 'especiales'}${cEsp.pendiente ? ` · ${cEsp.pendiente} pend.` : ''}</span>` : ''}
         </span>
         ${o.sol ? `<span class="rc-barra"><span style="background:var(--azul2);width:${o.pct}%"></span><span style="background:var(--verde);width:${o.pctEmp}%"></span></span>` : ''}
       </button>`;
@@ -352,15 +352,15 @@ function regCantFichaHtml(escId) {
   const e = o.escuela;
   const nombreLargo = e.nombre && e.alias ? ` <span class="rc-sub">${rcEsc(e.nombre)}</span>` : '';
   const acciones = [
-    typeof _avanceEscIrA === 'function' && o.sol ? `<button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('empacar','${escId}')">🧺 Empacar</button>` : '',
-    typeof _avanceEscIrA === 'function' && o.sol ? `<button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('entrega','${escId}')">🚚 Entrega</button>` : '',
-    typeof editarEscuela === 'function' ? `<button class="btn btn-ghost btn-sm" onclick="editarEscuela('${escId}')">✏️ Datos de la escuela</button>` : '',
+    typeof _avanceEscIrA === 'function' && o.sol ? `<button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('empacar','${escId}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> Empacar</button>` : '',
+    typeof _avanceEscIrA === 'function' && o.sol ? `<button class="btn btn-ghost btn-sm" onclick="_avanceEscIrA('entrega','${escId}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camion"/></svg> Entrega</button>` : '',
+    typeof editarEscuela === 'function' ? `<button class="btn btn-ghost btn-sm" onclick="editarEscuela('${escId}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lapiz"/></svg> Datos de la escuela</button>` : '',
   ].join('');
   return `
     <div class="rc-ficha">
       <button class="btn btn-ghost rc-volver" onclick="regCantCerrarEscuela()">← Escuelas</button>
       <div class="card rc-card">
-        <div class="rc-ficha-nom">🏫 ${rcEsc(o.nombre)}${nombreLargo}</div>
+        <div class="rc-ficha-nom"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-escuela"/></svg> ${rcEsc(o.nombre)}${nombreLargo}</div>
         <div class="rc-sub">${e.codigo_cde ? 'CDE ' + rcEsc(e.codigo_cde) : ''}</div>
         ${o.sol ? `
         <div class="rc-kpis" style="margin-top:8px">
@@ -380,7 +380,7 @@ function regCantFichaHtml(escId) {
 }
 
 function regCantPedidoHtml(o) {
-  const titulo = '<div class="rc-card-cab">📦 Pedido por prenda y talla</div>';
+  const titulo = '<div class="rc-card-cab"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> Pedido por prenda y talla</div>';
   if (!o.lineas.length) {
     return `<div class="card rc-card-tabla">${titulo}<div class="rc-sub" style="padding:10px 12px">Esta escuela no tiene pedido en la temporada.</div></div>`;
   }
@@ -415,11 +415,11 @@ function regCantEspFichaHtml(o) {
   return `
     <div class="card rc-card" id="rc-esp-sec">
       <div class="rc-card-cab rc-card-cab-plano">
-        <span>📏 Tallas especiales (${filas.length})</span>
+        <span><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-regla"/></svg> Tallas especiales (${filas.length})</span>
       </div>
       ${filas.length ? `<div class="rc-chips" style="margin-bottom:8px">${tespConteoHtml(c)}</div>` : ''}
       ${abierto ? tespNuevoHtml(o.id)
-        : `<button class="btn btn-success rc-agregar" onclick="tespNuevoAbrir('${o.id}')">➕ Agregar alumno especial</button>`}
+        : `<button class="btn btn-success rc-agregar" onclick="tespNuevoAbrir('${o.id}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-sumar"/></svg> Agregar alumno especial</button>`}
       ${filas.length ? filas.map(tespFilaHtml).join('')
         : (abierto ? '' : '<div class="rc-sub" style="padding:8px 2px">Esta escuela no tiene alumnos de talla especial.</div>')}
     </div>`;
@@ -441,7 +441,7 @@ function tespFilaHtml(r) {
           <span class="tesp-nombre">${rcEsc(r.nombre)}</span>
           ${meta ? `<span class="tesp-meta">${meta}</span>` : ''}
           <span class="tesp-talla">${tespTxt(r.talla) ? '👕 ' + rcEsc(r.talla) : '<em class="tesp-sin">sin talla</em>'}${medidas ? ` <span class="tesp-medidas-txt">· ${medidas}</span>` : ''}</span>
-          ${tespTxt(r.observaciones) ? `<span class="tesp-obs">📝 ${rcEsc(r.observaciones)}</span>` : ''}
+          ${tespTxt(r.observaciones) ? `<span class="tesp-obs"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lapiz"/></svg> ${rcEsc(r.observaciones)}</span>` : ''}
         </span>
         <span class="tesp-lado">
           <span class="tesp-estado" style="background:${est.bg};color:${est.fg}">${est.ico} ${est.txt}</span>
@@ -638,7 +638,7 @@ function tespNuevoHtml(escId) {
     .sort((a, b) => a.localeCompare(b, 'es'));
   return `
     <div class="tesp-form tesp-nuevo" id="tesp-nuevo">
-      <div class="tesp-nuevo-tit">➕ Alumno especial nuevo · ${rcEsc(regCantNombreEscuela(escId))}</div>
+      <div class="tesp-nuevo-tit"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-sumar"/></svg> Alumno especial nuevo · ${rcEsc(regCantNombreEscuela(escId))}</div>
       ${input('nombre', 'Nombre *', 'APELLIDOS NOMBRES', 'id="tesp-n-nombre" style="text-transform:uppercase"')}
       <div class="tesp-medidas">
         ${input('grado', 'Grado', 'Ej: Primer Año', 'list="tesp-grados"')}
@@ -656,7 +656,7 @@ function tespNuevoHtml(escId) {
       <label>Observaciones<textarea rows="2" oninput="tespNuevoCampo('observaciones', this.value)">${val('observaciones')}</textarea></label>
       <div class="tesp-acciones">
         <button type="button" class="btn btn-ghost" onclick="tespNuevoCerrar()">Cancelar</button>
-        <button type="button" class="btn btn-success" id="tesp-n-agregar" onclick="tespAgregar('${escId}')">➕ Agregar</button>
+        <button type="button" class="btn btn-success" id="tesp-n-agregar" onclick="tespAgregar('${escId}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-sumar"/></svg> Agregar</button>
       </div>
     </div>`;
 }
@@ -735,7 +735,7 @@ function regCantEspecialesHtml() {
       <button class="btn btn-sm ${actual === val ? 'btn-primary' : 'btn-ghost'}" onclick="tespFiltro('${campo}', '${val}')">${txt}${n == null ? '' : ` <span class="rc-n">${n}</span>`}</button>`;
   return `
     <div class="card rc-card">
-      <div class="rc-resumen-tit">📏 Tallas especiales</div>
+      <div class="rc-resumen-tit"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-regla"/></svg> Tallas especiales</div>
       <div class="rc-sub" style="margin-bottom:8px">Alumnos con medida propia: los únicos con nombre en esta temporada.</div>
       <div class="rc-filtro">
         <span class="rc-filtro-lbl">Estado</span>
@@ -750,7 +750,7 @@ function regCantEspecialesHtml() {
       <div class="rc-buscar-fila">
         <input type="search" class="rc-buscar" placeholder="🔍 Nombre, NIE o escuela…" value="${rcEsc(regCant.busqEsp)}"
           oninput="tespBuscar(this.value)" aria-label="Buscar alumno especial">
-        <button class="btn btn-primary" onclick="tespDescargarCSV()">⬇ Descargar CSV</button>
+        <button class="btn btn-primary" onclick="tespDescargarCSV()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-entrada"/></svg> Descargar CSV</button>
       </div>
     </div>
     <div id="rc-esp-lista">${regCantEspListaHtml()}</div>`;
@@ -774,7 +774,7 @@ function regCantEspListaHtml() {
     lista.map(g => `
       <div class="rc-grupo">
         <div class="rc-grupo-cab">
-          <span class="rc-grupo-nom">🏫 ${rcEsc(g.nombre)} <span class="rc-n">${g.arr.length}</span></span>
+          <span class="rc-grupo-nom"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-escuela"/></svg> ${rcEsc(g.nombre)} <span class="rc-n">${g.arr.length}</span></span>
           <button class="btn btn-ghost btn-sm" onclick="regCantAbrirEscuela('${g.id}')">Ver escuela ›</button>
         </div>
         <div class="rc-chips" style="margin:0 0 8px">${tespConteoHtml(tespConteo(regCant.esp.filter(r => r.escuela_id === g.id)))}</div>

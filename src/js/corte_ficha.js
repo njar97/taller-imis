@@ -23,7 +23,7 @@ async function renderFichaCorte(trazoId) {
   const talla = t => `${t.talla ? 'T' + t.talla : ''} <span class="text-muted">(${escH(t.talla_key_original)})</span>`;
   let html = '';
   if (trazo.foto_url) {
-    html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo">✂️ Trazo</div>
+    html += `<div class="detalle-seccion"><div class="detalle-seccion-titulo"><svg class="ico" aria-hidden="true"><use href="#i-tijera"/></svg> Trazo</div>
       <a href="${escH(trazo.foto_url)}" target="_blank" rel="noopener"><img src="${escH(trazo.foto_url)}" style="width:100%;border-radius:8px;border:1px solid #ddd" alt="Trazo del corte ${escH(trazo.letra_corte)}"></a>
       <div class="text-muted" style="font-size:11px;margin-top:4px">Tocá la imagen para verla grande.</div></div>`;
   }
@@ -32,7 +32,7 @@ async function renderFichaCorte(trazoId) {
     : ultAc ? `Último acomodo guardado: v${ultAc.version} · ${new Date(ultAc.creado_en).toLocaleString('es-SV', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}${ultAc.largo_cm ? ' · ' + (ultAc.largo_cm / 100).toFixed(2) + ' m' : ''}`
     : 'Todavía no tiene acomodo guardado: empezás con la tela vacía.';
   html += `<div class="detalle-seccion">
-      <button class="btn btn-primary btn-block" style="font-size:15px;padding:14px 16px" onclick="abrirEditorTrazo('${escH(trazoId)}')">✏️ Abrir en el editor de trazo</button>
+      <button class="btn btn-primary btn-block" style="font-size:15px;padding:14px 16px" onclick="abrirEditorTrazo('${escH(trazoId)}')"><svg class="ico" aria-hidden="true"><use href="#i-lapiz"/></svg> Abrir en el editor de trazo</button>
       <div class="text-muted" id="ficha-ed-ver" style="font-size:11px;margin-top:4px;text-align:center">${escH(txtAc)}</div></div>`;
   html += `<div class="detalle-seccion">
       <div class="detalle-seccion-titulo">Datos del trazo</div>
@@ -50,7 +50,7 @@ async function renderFichaCorte(trazoId) {
 
   if (!tendidos.length) {
     html += `<div class="detalle-seccion"><div class="alert alert-info">Este trazo todavía no se tiende.</div>
-      <button class="btn btn-success btn-block" style="font-size:15px;padding:14px 16px" onclick="tenderTrazo('${escH(trazoId)}')">▶ Tender este trazo</button></div>`;
+      <button class="btn btn-success btn-block" style="font-size:15px;padding:14px 16px" onclick="tenderTrazo('${escH(trazoId)}')"><svg class="ico" aria-hidden="true"><use href="#i-tijera"/></svg> Tender este trazo</button></div>`;
   }
   for (const tend of tendidos) {
     const [rollos, bultos] = await Promise.all([
@@ -62,7 +62,7 @@ async function renderFichaCorte(trazoId) {
     const lz = rollos.reduce((s, r) => s + (r.lienzos_salidos || 0), 0);
     const pares = rollos.reduce((s, r) => s + paresDe(r), 0);
     html += `<div class="detalle-seccion">
-      <div class="detalle-seccion-titulo">📋 Tendido · ${escH(tend.fecha)}${tend.equipo ? ' · ' + escH(tend.equipo) : ''}</div>
+      <div class="detalle-seccion-titulo"><svg class="ico" aria-hidden="true"><use href="#i-capas"/></svg> Tendido · ${escH(tend.fecha)}${tend.equipo ? ' · ' + escH(tend.equipo) : ''}</div>
       <div class="row3" style="font-size:12px;margin-bottom:6px">
         <div><div class="text-muted">Rollos</div><strong>${rollos.length}</strong></div>
         <div><div class="text-muted">Pares / lienzos</div><strong>${pares} / ${lz}</strong></div>
@@ -87,14 +87,14 @@ async function renderFichaCorte(trazoId) {
       const est = { pendiente: 0, en_proceso: 0, terminado: 0 };
       bultos.forEach(b => { const e = b.estado_manual || 'pendiente'; est[e] = (est[e] || 0) + 1; });
       html += `<div class="detalle-seccion">
-        <div class="detalle-seccion-titulo">📦 Bultos → producción (${bultos.length})</div>
+        <div class="detalle-seccion-titulo"><svg class="ico" aria-hidden="true"><use href="#i-caja"/></svg> Bultos → producción (${bultos.length})</div>
         <div class="text-muted" style="font-size:12px;margin-bottom:6px">⬜ pendiente ${est.pendiente} · 🟨 en proceso ${est.en_proceso} · 🟩 terminado ${est.terminado}</div>
         ${Object.values(porTalla).map(g => `
           <div style="margin-bottom:8px">
             <div style="font-size:12px"><strong style="color:var(--azul)">${escH(g.letra)}</strong> · ${escH(g.key)} · <strong>${g.piezas}</strong> piezas en ${g.bultos.length} bulto(s)</div>
             <div class="tallas-inline">${g.bultos.map(b => `<span class="talla-pill" style="background:${color(b.estado_manual)}" title="${b.etapas_hechas || 0}/${b.total_etapas || 0} operaciones">${escH(b.codigo_bulto)}${b.total_etapas ? ' · ' + (b.etapas_hechas || 0) + '/' + b.total_etapas : ''}</span>`).join('')}</div>
           </div>`).join('')}
-        <div class="text-muted" style="font-size:11px">El avance de cada bulto (operaciones hechas) se marca en 🏭 Producción.</div>
+        <div class="text-muted" style="font-size:11px">El avance de cada bulto (operaciones hechas) se marca en Producción.</div>
       </div>`;
     } else {
       html += `<div class="detalle-seccion"><div class="alert alert-info">Bultos de este tendido pendientes de capturar.</div></div>`;
@@ -108,7 +108,7 @@ async function renderFichaCorte(trazoId) {
 // Seguimiento del corte: lo que se va diciendo y haciendo, con fecha, quién y foto.
 async function renderSeguimientoCorte(box, ref) {
   if (!box) return;
-  box.innerHTML = '<div class="detalle-seccion"><div class="detalle-seccion-titulo">📝 Seguimiento</div><div class="loading">Cargando...</div></div>';
+  box.innerHTML = '<div class="detalle-seccion"><div class="detalle-seccion-titulo"><svg class="ico" aria-hidden="true"><use href="#i-lista"/></svg> Seguimiento</div><div class="loading">Cargando...</div></div>';
   const filtro = ref.trazo_id && ref.tendido_id ? `?or=(trazo_id.eq.${ref.trazo_id},tendido_id.eq.${ref.tendido_id})`
                : ref.trazo_id ? `?trazo_id=eq.${ref.trazo_id}` : `?tendido_id=eq.${ref.tendido_id}`;
   let notas = [];
@@ -116,7 +116,7 @@ async function renderSeguimientoCorte(box, ref) {
   const tz = ref.trazo_id ? `'${ref.trazo_id}'` : 'null';
   const td = ref.tendido_id ? `'${ref.tendido_id}'` : 'null';
   box.innerHTML = `<div class="detalle-seccion">
-    <div class="detalle-seccion-titulo">📝 Seguimiento (${notas.length})</div>
+    <div class="detalle-seccion-titulo"><svg class="ico" aria-hidden="true"><use href="#i-lista"/></svg> Seguimiento (${notas.length})</div>
     ${notas.length ? notas.map(n => `
       <div style="border-left:3px solid var(--azul);padding:4px 0 6px 8px;margin-bottom:8px">
         <div class="text-muted" style="font-size:11px">${escH(n.fecha)}${n.quien ? ' · <strong>' + escH(n.quien) + '</strong>' : ''}</div>
@@ -130,7 +130,7 @@ async function renderSeguimientoCorte(box, ref) {
         <input id="seg-fecha" type="date" value="${hoyLocal()}" style="width:140px">
       </div>
       <input id="seg-foto" type="file" accept="image/*" style="margin-top:6px">
-      <button class="btn btn-primary btn-sm btn-block" style="margin-top:6px" id="seg-btn" onclick="agregarSeguimientoCorte(${tz}, ${td})">➕ Agregar al seguimiento</button>
+      <button class="btn btn-primary btn-sm btn-block" style="margin-top:6px" id="seg-btn" onclick="agregarSeguimientoCorte(${tz}, ${td})">+ Agregar al seguimiento</button>
     </div>
   </div>`;
 }
@@ -160,7 +160,7 @@ async function agregarSeguimientoCorte(trazoId, tendidoId) {
     });
     renderSeguimientoCorte(document.getElementById('seg-corte-box'), { trazo_id: trazoId, tendido_id: tendidoId });
   } catch (e) {
-    btn.disabled = false; btn.textContent = '➕ Agregar al seguimiento';
+    btn.disabled = false; btn.textContent = '+ Agregar al seguimiento';
     if (typeof showToast === 'function') showToast('Error: ' + e.message, 'error'); else alert(e.message);
   }
 }

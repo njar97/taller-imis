@@ -123,7 +123,7 @@ async function cargarListaBackups() {
                 <td style="padding:6px 8px">${fechaLbl}</td>
                 <td style="padding:6px 8px;text-align:right">
                   <button class="btn-mini btn-mini-primary" onclick="descargarBackup('${f.name.replace(/'/g,"\\'")}')">↓ Descargar</button>
-                  <button class="btn-mini" onclick="borrarBackup('${f.name.replace(/'/g,"\\'")}')">🗑</button>
+                  <button class="btn-mini" onclick="borrarBackup('${f.name.replace(/'/g,"\\'")}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-basura"/></svg></button>
                 </td>
               </tr>
             `;
@@ -205,7 +205,7 @@ function renderGradosCatalogo() {
       <td style="padding:4px 8px"><span class="badge" style="background:${g.nivel==='PARV'?'#E8F4FD':g.nivel==='BASICA'?'#E8F8E8':g.nivel==='BACH'?'#FDF4E8':'#EEE'};padding:2px 6px;border-radius:4px;font-size:11px">${g.nivel}</span></td>
       <td style="padding:4px 8px;text-align:center;font-weight:600">${g.ciclo}</td>
       <td style="padding:4px 8px;text-align:right">
-        <button class="btn-mini" onclick="editarGrado('${g.grado.replace(/'/g,"\\'")}')">✏</button>
+        <button class="btn-mini" onclick="editarGrado('${g.grado.replace(/'/g,"\\'")}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lapiz"/></svg></button>
       </td>
     </tr>
   `).join('');
@@ -723,7 +723,7 @@ async function cargarGruposEscuelas() {
     const gruposHtml = gruposOrden.map(g => {
       const nombre = g === '__SIN_GRUPO__'
         ? '<span style="color:#888">⚪ Sin grupo</span>'
-        : `<span style="color:#1F4E79">📦 ${g}</span>`;
+        : `<span style="color:#1F4E79"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> ${g}</span>`;
       const items = groupMap.get(g);
       return `
         <div style="margin-top:8px;padding:6px 8px;background:#F5F7FA;border-radius:6px">
@@ -831,7 +831,7 @@ async function calcularAutoGrupos() {
       ${grupos.map(g => `
         <div style="margin:5px 0;padding:8px 10px;background:#F5F7FA;border-left:3px solid #1F4E79;border-radius:4px">
           <div style="display:flex;justify-content:space-between;align-items:center">
-            <strong style="color:#1F4E79">📦 ${g.nombre}</strong>
+            <strong style="color:#1F4E79"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> ${g.nombre}</strong>
             <span style="font-size:11px;color:#666">${g.escuelas.length} escuela(s) · <strong>${g.cargaTotal}</strong> alumnos</span>
           </div>
           <div style="font-size:11px;color:#444;margin-top:3px">
@@ -1042,7 +1042,7 @@ function renderUsuarios(users) {
           <div style="font-size:11px;color:#888;margin-top:2px;word-break:normal">Último ingreso: ${u.last_sign_in_at ? lastLogin : 'todavía no entra'}</div>
         </td>
         <td style="padding:8px 4px">${selectHtml}</td>
-        <td style="padding:8px 4px"><button class="btn-mini btn-mini-danger usr-borrar" aria-label="Quitarle el acceso" onclick="eliminarUsuario('${u.id}', '${u.email.replace(/'/g,"&#39;")}')" ${disableDel}>🗑</button></td>
+        <td style="padding:8px 4px"><button class="btn-mini btn-mini-danger usr-borrar" aria-label="Quitarle el acceso" onclick="eliminarUsuario('${u.id}', '${u.email.replace(/'/g,"&#39;")}')" ${disableDel}><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-basura"/></svg></button></td>
       </tr>
     `;
   }).join('');

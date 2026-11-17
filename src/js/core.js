@@ -651,7 +651,7 @@ function ayudaCerrada(id) {
 function ayudaHtml(id, texto) {
   return `
     <div class="ayuda-tip${ayudaCerrada(id) ? ' oculta' : ''}" data-ayuda="${id}" role="note">
-      <span class="ayuda-tip-ico" aria-hidden="true">💡</span>
+      <span class="ayuda-tip-ico" aria-hidden="true"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-idea"/></svg></span>
       <span class="ayuda-tip-txt"><b>¿Cómo se usa?</b> ${texto}</span>
       <button type="button" class="ayuda-tip-x" onclick="cerrarAyuda('${id}')" aria-label="Cerrar esta ayuda" title="Cerrar esta ayuda">✕</button>
     </div>`;

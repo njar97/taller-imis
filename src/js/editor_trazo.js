@@ -222,7 +222,7 @@
         </div>
       </div>
       <div class="ed-panel" id="ed-panel" hidden>
-        <div class="ed-panel-tit">➕ Agregar piezas <span class="ed-largo">(salen después del final; después las arrastrás)</span></div>
+        <div class="ed-panel-tit"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-sumar"/></svg> Agregar piezas <span class="ed-largo">(salen después del final; después las arrastrás)</span></div>
         <div class="ed-fila">
           <label>Prenda <select id="ed-ap-prenda"></select></label>
           <label>Talla <select id="ed-ap-talla"></select></label>

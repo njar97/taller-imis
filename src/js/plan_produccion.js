@@ -35,7 +35,7 @@ async function initPlanProduccion() {
   const cont = document.getElementById('prod-sub-plan-view');
   if (!cont) return;
   cont.innerHTML = '<div class="text-muted">Cargando plan...</div>';
-  const actualizar = '<button class="btn btn-ghost" onclick="initPlanProduccion()">🔄 Actualizar</button>';
+  const actualizar = '<button class="btn btn-ghost" onclick="initPlanProduccion()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg> Actualizar</button>';
   try {
     const [filas, config] = await Promise.all([
       supaFetch('vw_plan_produccion', 'GET', null, '?order=cod_prenda,talla_2026'),
