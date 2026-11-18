@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-17 22:48 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-17 22:51 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -11748,22 +11748,24 @@ function _prodFranjaSoloTalla(nBultos, pzBultos) {
   const nombre = (typeof dashPrendaNombre === 'function' ? dashPrendaNombre(prodSoloTalla.cod) : null) || CATALOGO[prodSoloTalla.cod]?.nombre || prodSoloTalla.cod;
   const filas = prodSoloTallaOrigen || [];
   const origen = !filas.length ? '' : `
-      <div style="margin-top:8px;font-size:12px"><strong>De dónde sale el número de «En costura»</strong> (lo anotado como cortado):</div>
-      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:4px">${filas.map(f => `
-        <tr style="border-top:1px solid #E6D9B8">
-          <td style="padding:4px 4px 4px 0">${_prodEsc(f.fuente || 'sin nota')}${f.estado === 'GUARDADO' ? ' <strong>· guardado, no se cose por ahora</strong>' : ''}</td>
-          <td style="padding:4px 0;text-align:right;font-weight:700;white-space:nowrap">${Number(f.cantidad) || 0}</td>
-        </tr>`).join('')}
-      </table>`;
+      <details style="margin-top:6px;font-size:12px">
+        <summary style="cursor:pointer">De dónde sale el número</summary>
+        <table style="width:100%;border-collapse:collapse;margin-top:4px">${filas.map(f => `
+          <tr style="border-top:1px solid #E6D9B8">
+            <td style="padding:4px 4px 4px 0">${_prodEsc(f.fuente || 'sin nota')}${f.estado === 'GUARDADO' ? ' <strong>· guardado</strong>' : ''}</td>
+            <td style="padding:4px 0;text-align:right;font-weight:700;white-space:nowrap">${Number(f.cantidad) || 0}</td>
+          </tr>`).join('')}
+        </table>
+      </details>`;
   const sinFase2 = FASE2_ACTIVA ? '' : `
-      <div style="margin-top:8px;font-size:12px">Para ver en qué operación va cada bulto, encender «Fase 2 · Captura por operación y operaria» en Ajustes.</div>`;
+      <div class="solo-asistencia" style="margin-top:6px;font-size:12px">Para ver en qué operación va cada bulto, encender «Fase 2» en Ajustes.</div>`;
   return `
     <div class="alert alert-warn" style="margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-        <strong>Solo ${_prodEsc(nombre)} · ${_prodEsc(prodSoloTalla.talla)}</strong>
+        <strong>${_prodEsc(nombre)} · ${_prodEsc(prodSoloTalla.talla)}</strong>
         <button class="btn btn-ghost btn-sm" onclick="prodQuitarSoloTalla()">Ver todos</button>
       </div>
-      <div style="font-size:12px;margin-top:2px">${nBultos ? `${nBultos} bulto(s) en la app · ${pzBultos} piezas` : 'Esta talla no tiene bultos en la app: solo está anotada como cantidad.'}</div>${origen}${sinFase2}
+      <div style="font-size:12px;margin-top:2px">${nBultos ? `${nBultos} bultos · ${pzBultos} piezas` : 'Sin bultos en la app.'}</div>${origen}${sinFase2}
     </div>`;
 }
 
