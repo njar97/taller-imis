@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-16 23:04 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-17 22:51 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -5222,10 +5222,20 @@ function _cvTallas(o) {
                 <td style="padding:5px 6px;font-weight:700">${dashEsc(t.talla)}</td>
                 <td style="${td}">${dashNum(t.pedido)}</td>
                 <td style="${td}">${dashNum(t.listo)}</td>
-                <td style="${td}">${dashNum(t.costura)}</td>
+                <td style="${td}">${t.costura > 0
+                  ? `<a href="#" onclick="event.stopPropagation();cvVerBultos('${o.cod}','${dashEsc(t.talla)}');return false" title="Ver los bultos de esta talla" style="color:#B7791F;font-weight:700;text-decoration:underline">${dashNum(t.costura)}</a>`
+                  : dashNum(t.costura)}</td>
                 <td style="${td};font-weight:${t.sin > 0 ? 700 : 400}">${dashNum(t.sin)}</td>
               </tr>`).join('')}</tbody>
           </table>`;
+}
+// Tocar el número «En costura» de una talla abre la lista de bultos de
+// «Terminar» (Producción) ya filtrada por esa prenda y esa talla.
+function cvVerBultos(cod, talla) {
+  window._prodHintTalla = { cod, talla };
+  window._prodHintSub = 'dashboard';
+  (typeof abrirPestana === 'function' ? abrirPestana : switchTab)('produccion');
+  document.body.classList.add('modo-paso');
 }
 function _renderComoVamos(plan, prod, totEmp) {
   if (!plan || plan.length === 0) return '';
@@ -11716,6 +11726,49 @@ let cortesExpandidos = new Set();
 // Se computa al cargarProduccion para mostrar badges "X esperando" por bulto.
 let demandaProdCache = {};
 
+// Filtro «solo esta prenda y talla» (viene de Inicio → Cómo vamos → En costura)
+let prodSoloTalla = null;          // { cod, talla }
+let prodSoloTallaOrigen = null;    // filas de produccion_en_proceso de esa talla
+function prodQuitarSoloTalla() {
+  prodSoloTalla = null; prodSoloTallaOrigen = null; cortesExpandidos = new Set();
+  renderProduccion();
+}
+async function prodCargarOrigenTalla() {
+  if (!prodSoloTalla) return;
+  try {
+    prodSoloTallaOrigen = await supaFetch('produccion_en_proceso', 'GET', null,
+      `?cod_prenda=eq.${encodeURIComponent(prodSoloTalla.cod)}&talla_2026=eq.${encodeURIComponent(prodSoloTalla.talla)}&select=fecha,cantidad,estado,fuente&order=fecha`);
+  } catch (_) { prodSoloTallaOrigen = []; }
+}
+function _prodEsc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+// Franja de arriba cuando la lista está filtrada por talla: qué se ve, de
+// dónde sale el número de «En costura» y cómo volver a ver todo.
+function _prodFranjaSoloTalla(nBultos, pzBultos) {
+  if (!prodSoloTalla) return '';
+  const nombre = (typeof dashPrendaNombre === 'function' ? dashPrendaNombre(prodSoloTalla.cod) : null) || CATALOGO[prodSoloTalla.cod]?.nombre || prodSoloTalla.cod;
+  const filas = prodSoloTallaOrigen || [];
+  const origen = !filas.length ? '' : `
+      <details style="margin-top:6px;font-size:12px">
+        <summary style="cursor:pointer">De dónde sale el número</summary>
+        <table style="width:100%;border-collapse:collapse;margin-top:4px">${filas.map(f => `
+          <tr style="border-top:1px solid #E6D9B8">
+            <td style="padding:4px 4px 4px 0">${_prodEsc(f.fuente || 'sin nota')}${f.estado === 'GUARDADO' ? ' <strong>· guardado</strong>' : ''}</td>
+            <td style="padding:4px 0;text-align:right;font-weight:700;white-space:nowrap">${Number(f.cantidad) || 0}</td>
+          </tr>`).join('')}
+        </table>
+      </details>`;
+  const sinFase2 = FASE2_ACTIVA ? '' : `
+      <div class="solo-asistencia" style="margin-top:6px;font-size:12px">Para ver en qué operación va cada bulto, encender «Fase 2» en Ajustes.</div>`;
+  return `
+    <div class="alert alert-warn" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <strong>${_prodEsc(nombre)} · ${_prodEsc(prodSoloTalla.talla)}</strong>
+        <button class="btn btn-ghost btn-sm" onclick="prodQuitarSoloTalla()">Ver todos</button>
+      </div>
+      <div style="font-size:12px;margin-top:2px">${nBultos ? `${nBultos} bultos · ${pzBultos} piezas` : 'Sin bultos en la app.'}</div>${origen}${sinFase2}
+    </div>`;
+}
+
 async function initProduccion() {
   // El subnav (📦 Bultos · 📐 Plan · 👷 Operarias · 📝 Captura) queda
   // siempre a la vista: antes se quería esconder sin Fase 2, pero el
@@ -11726,6 +11779,10 @@ async function initProduccion() {
   // Atajo desde Inicio («Bulto terminado», «¿Cómo van los bultos?»)
   const sub = window._prodHintSub || 'dashboard';
   window._prodHintSub = null;
+  // Atajo desde «Cómo vamos»: solo los bultos de una prenda y talla
+  prodSoloTalla = window._prodHintTalla || null;
+  window._prodHintTalla = null;
+  prodSoloTallaOrigen = null;
   switchSubProd(sub);
 }
 
@@ -11787,6 +11844,7 @@ async function cargarProduccion() {
       asignacionesPorBulto = {};
     }
 
+    if (prodSoloTalla && !prodSoloTallaOrigen) await prodCargarOrigenTalla();
     renderProduccion();
   } catch(e) {
     document.getElementById('prod-resumen-hoy').textContent = 'Error: ' + e.message;
@@ -11930,6 +11988,13 @@ function renderProduccion() {
   }
   if (fCorte) filtrados = filtrados.filter(b => (b.codigo_corte + '||' + (b.letra_corte||'')) === fCorte);
   if (fPrenda) filtrados = filtrados.filter(b => b.cod_prenda === fPrenda);
+  if (prodSoloTalla) {
+    const cod26 = c => (typeof codPedido2026 === 'function' ? codPedido2026(c) : c);
+    filtrados = filtrados.filter(b => cod26(b.cod_prenda) === prodSoloTalla.cod
+      && prodTalla2026(b.cod_prenda, b.talla_key_salida) === prodSoloTalla.talla);
+    filtrados.forEach(b => cortesExpandidos.add(b.talla_key_salida));   // se ven abiertos de una vez
+  }
+  const franjaTalla = _prodFranjaSoloTalla(filtrados.length, filtrados.reduce((s2, b) => s2 + (Number(b.cantidad_original) || 0), 0));
 
   // Estilizar botones de estado
   ['todos','pendientes','terminados'].forEach(f => {
@@ -11970,11 +12035,11 @@ function renderProduccion() {
 
   const cont = document.getElementById('prod-cortes-container');
   if (keys.length === 0) {
-    cont.innerHTML = '<div class="alert alert-info">No hay bultos con ese filtro.</div>' + linkCortesAnteriores('bultos');
+    cont.innerHTML = franjaTalla + (prodSoloTalla ? '' : '<div class="alert alert-info">No hay bultos con ese filtro.</div>') + linkCortesAnteriores('bultos');
     return;
   }
 
-  cont.innerHTML = keys.map(k => {
+  cont.innerHTML = franjaTalla + keys.map(k => {
     const grupo = porKey[k];
     const total = grupo.bultos.length;
     const terminados = grupo.bultos.filter(b => estadoEf(b) === 'terminado').length;

@@ -627,10 +627,20 @@ function _cvTallas(o) {
                 <td style="padding:5px 6px;font-weight:700">${dashEsc(t.talla)}</td>
                 <td style="${td}">${dashNum(t.pedido)}</td>
                 <td style="${td}">${dashNum(t.listo)}</td>
-                <td style="${td}">${dashNum(t.costura)}</td>
+                <td style="${td}">${t.costura > 0
+                  ? `<a href="#" onclick="event.stopPropagation();cvVerBultos('${o.cod}','${dashEsc(t.talla)}');return false" title="Ver los bultos de esta talla" style="color:#B7791F;font-weight:700;text-decoration:underline">${dashNum(t.costura)}</a>`
+                  : dashNum(t.costura)}</td>
                 <td style="${td};font-weight:${t.sin > 0 ? 700 : 400}">${dashNum(t.sin)}</td>
               </tr>`).join('')}</tbody>
           </table>`;
+}
+// Tocar el número «En costura» de una talla abre la lista de bultos de
+// «Terminar» (Producción) ya filtrada por esa prenda y esa talla.
+function cvVerBultos(cod, talla) {
+  window._prodHintTalla = { cod, talla };
+  window._prodHintSub = 'dashboard';
+  (typeof abrirPestana === 'function' ? abrirPestana : switchTab)('produccion');
+  document.body.classList.add('modo-paso');
 }
 function _renderComoVamos(plan, prod, totEmp) {
   if (!plan || plan.length === 0) return '';
