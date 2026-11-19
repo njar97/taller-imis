@@ -1242,6 +1242,18 @@ function _dashMarcoAvance(totalEsc, mostrados, cards) {
 // falta). Tocar la fila la abre: números, tabla por prenda y los dos botones
 // que llevan a empacar o entregar ESA escuela. Solo una abierta a la vez.
 let _avEscAbierta = null;
+// La tarjeta «Escuelas» llega plegada: hoy se trabaja por talla para cumplir
+// el contrato; el reparto por escuela se abre solo cuando hace falta.
+let _avEscPlegada = true;
+try { _avEscPlegada = lsLeer('escuelas_abierta') !== '1'; } catch (_) { /* sin memoria local */ }
+function avEscPlegar() {
+  _avEscPlegada = !_avEscPlegada;
+  if (_avEscPlegada) _avEscAbierta = null;
+  try { lsGuardar('escuelas_abierta', _avEscPlegada ? '0' : '1'); } catch (_) { /* sin memoria local */ }
+  const el = document.getElementById('dash-avance-esc');
+  if (el) el.outerHTML = _renderAvancePedido(dashboardCache.resumen || {}, dashboardCache.avLineas || []);
+  _avPintarListo();
+}
 function avEscToggle(escId) {
   _avEscAbierta = _avEscAbierta === escId ? null : escId;
   const el = document.getElementById('dash-avance-esc');
@@ -1339,14 +1351,17 @@ function _renderAvancePedido(r, lineas) {
         ${detalle}
       </div>`;
   }).join('');
+  const faltan = lista.reduce((t, o) => t + o.pend, 0);
+  const plegada = _avEscPlegada;
   return `
     <div class="card tj" id="dash-avance-esc">
-      <div class="tj-cab">
+      <div class="tj-cab" role="button" tabindex="0" aria-expanded="${!plegada}" style="cursor:pointer" onclick="avEscPlegar()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();avEscPlegar()}">
         <span class="tj-ico tj-azul">${ico('escuela')}</span>
-        <h2>Escuelas<span class="solo-asistencia"> · tocá una para ver su detalle</span></h2>
-        <span class="tj-leyenda"><span><i style="background:${AZ}"></i>entregado</span><span><i style="background:${CV_VERDE}"></i>empacado</span></span>
+        <h2>Escuelas<span style="font-weight:400;font-size:12.5px;color:var(--tinta2,#667)"> · ${dashNum(lista.length)} · faltan ${dashNum(faltan)}</span><span class="solo-asistencia">${plegada ? ' · tocá para ver el reparto por escuela' : ' · tocá una para ver su detalle'}</span></h2>
+        ${plegada ? '' : `<span class="tj-leyenda"><span><i style="background:${AZ}"></i>entregado</span><span><i style="background:${CV_VERDE}"></i>empacado</span></span>`}
+        <span class="fl-flecha${plegada ? '' : ' abierta'}" style="font-size:18px">${ico('ir')}</span>
       </div>
-      ${filas}
+      ${plegada ? '' : filas}
     </div>`;
 }
 

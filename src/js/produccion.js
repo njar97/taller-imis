@@ -226,19 +226,20 @@ function abrirEmpacarPrendaTalla(prenda, talla) {
   if (typeof switchTab === 'function') switchTab('empaque');
 }
 
+// Estado de un bulto. «Terminado» es SOLO el que ya entró a bodega (botón
+// «Terminar» o la última operación, que lo pide). Tener todas las operaciones
+// marcadas no lo termina por sí solo: así nunca se ve terminado sin estar en
+// bodega y «Revertir» siempre surte efecto. Con 0 operaciones se respeta lo
+// que se le puso a mano (los «en proceso» de antes).
+function prodEstadoEfectivo(b) {
+  if (b.estado_manual === 'terminado') return 'terminado';
+  if (FASE2_ACTIVA && b.total_etapas > 0 && b.etapas_hechas > 0) return 'en_proceso';
+  return b.estado_manual || b.estado || 'pendiente';
+}
 function renderProduccion() {
   const hoy = hoyLocal();
   // Función local: calcular estado efectivo
-  function estadoEf(b) {
-    // Terminado con el botón «✓ Terminar»: manda aunque no tenga operaciones marcadas.
-    if (b.estado_manual === 'terminado') return 'terminado';
-    if (FASE2_ACTIVA && b.total_etapas > 0) {
-      if (b.etapas_hechas === 0) return 'pendiente';
-      if (b.etapas_hechas >= b.total_etapas) return 'terminado';
-      return 'en_proceso';
-    }
-    return b.estado_manual || b.estado || 'pendiente';
-  }
+  const estadoEf = prodEstadoEfectivo;
 
   const terminadosHoy = produccionData.filter(b => b.fecha_terminado === hoy && estadoEf(b) === 'terminado');
   const piezasHoy = terminadosHoy.reduce((s,b) => s + (b.cantidad_final || b.cantidad_original || 0), 0);
@@ -399,13 +400,7 @@ function actualizarFiltrosProd() {
 
 function renderProdBulto(b) {
   // Estado efectivo: si Fase 2 ON y hay etapas, se deriva
-  let estadoEfectivo = b.estado_manual || b.estado || 'pendiente';
-  if (b.estado_manual === 'terminado') estadoEfectivo = 'terminado';   // lo terminaron con el botón
-  else if (FASE2_ACTIVA && b.total_etapas > 0) {
-    if (b.etapas_hechas === 0) estadoEfectivo = 'pendiente';
-    else if (b.etapas_hechas >= b.total_etapas) estadoEfectivo = 'terminado';
-    else estadoEfectivo = 'en_proceso';
-  }
+  const estadoEfectivo = prodEstadoEfectivo(b);
 
   const clase = estadoEfectivo === 'terminado' ? 'terminado' : (estadoEfectivo === 'en_proceso' ? 'proceso' : '');
   const cantActual = b.cantidad_original;
@@ -456,6 +451,10 @@ function renderProdBulto(b) {
   let terminarEnMas = '';
   if (estadoEfectivo === 'terminado') {
     acciones = `<button class="prod-btn-accion prod-btn-revertir" onclick="revertirBulto('${b.produccion_bulto_id}')">↶ Revertir</button>`;
+  } else if (conEtapas && b.etapas_hechas >= b.total_etapas) {
+    // Todas las operaciones hechas y todavía sin entrar a bodega
+    acciones = `<button class="prod-btn-accion prod-btn-terminar" onclick="terminarBulto('${b.produccion_bulto_id}', ${cantActual})">✓ Terminar · pasar a bodega</button>`;
+    terminarEnMas = `<button class="prod-btn-accion" onclick="toggleEtapasBulto('${b.produccion_bulto_id}')">▾ Operaciones ${b.etapas_hechas}/${b.total_etapas}</button>`;
   } else if (conEtapas) {
     acciones = `<button class="prod-btn-accion" style="background:#1565c0;color:#fff;border-color:#1565c0" onclick="toggleEtapasBulto('${b.produccion_bulto_id}')">▶ Avance ${b.etapas_hechas || 0}/${b.total_etapas}</button>`;
     terminarEnMas = `<button class="prod-btn-accion prod-btn-terminar" onclick="terminarBultoAtajo('${b.produccion_bulto_id}', ${cantActual})">✓ Terminar todo</button>`;
@@ -828,7 +827,13 @@ async function marcarEtapaRapida(bultoId, operacionId) {
 function escapeHtmlProd(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+const _etapaGuardando = new Set();   // operaciones que se están guardando (evita el doble toque)
 async function guardarEtapaRapida(bultoId, operacionId, operariaId) {
+  const llave = bultoId + '|' + operacionId;
+  if (_etapaGuardando.has(llave)) return;
+  _etapaGuardando.add(llave);
+  const caja = document.getElementById(`pick-${bultoId}-${operacionId}`);
+  if (caja) caja.querySelectorAll('button').forEach(x => { x.disabled = true; });
   const bulto = produccionData.find(b => b.produccion_bulto_id === bultoId);
   const inp = document.getElementById(`pickc-${bultoId}-${operacionId}`);
   const cantidad = parseInt(inp && inp.value) || bulto?.cantidad_original || 0;
@@ -846,8 +851,17 @@ async function guardarEtapaRapida(bultoId, operacionId, operariaId) {
     await toggleEtapasBulto(bultoId); // cerrar
     await cargarProduccion();
     await toggleEtapasBulto(bultoId); // reabrir con datos frescos
+    // Era la última operación: el bulto pasa a bodega igual que con «Terminar».
+    const b2 = produccionData.find(b => b.produccion_bulto_id === bultoId);
+    if (b2 && b2.estado_manual !== 'terminado' && b2.total_etapas > 0 && b2.etapas_hechas >= b2.total_etapas) {
+      showToast('Operaciones completas. Falta decir cuántas piezas salieron para pasarlo a bodega.', 'success', 5000);
+      await terminarBulto(bultoId, b2.cantidad_original);
+    }
   } catch(e) {
     alert('Error: ' + e.message);
+    if (caja) caja.querySelectorAll('button').forEach(x => { x.disabled = false; });
+  } finally {
+    _etapaGuardando.delete(llave);
   }
 }
 
