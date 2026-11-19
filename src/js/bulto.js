@@ -272,57 +272,32 @@ async function guardarBultos() {
   btn.disabled = true;
 
   try {
-    let total = 0;
-    // uid del bultosState → id UUID insertado en tendido_rollo_salida (solo para no-divididos)
-    const uidToSalidaId = {};
+    // Todo o nada: todos los bultos se guardan en UN solo paso en la base
+    // (función guardar_bultos); si falla no queda ninguno y se puede reintentar.
+    // Hermanos: principal y complemento del mismo rollo y la misma talla marcada.
+    const parejas = {}; // "rollo_id|talla_marcada_id" → { principal: uid, complemento: uid }
     for (const b of bultosState) {
-      if (b.estado === 'dividido' && b.partidas) {
-        let ord = 1;
-        for (const p of b.partidas) {
-          await supaFetch('tendido_rollo_salida','POST',{
-            tendido_rollo_id: b.rollo_id,
-            tendido_talla_marcada_id: b.talla_marcada_id,
-            talla_key_salida: p.talla.trim(),
-            cantidad: parseInt(p.cantidad),
-            orden: ord++,
-          });
-          total++;
-        }
-      } else {
-        const [inserted] = await supaFetch('tendido_rollo_salida','POST',{
-          tendido_rollo_id: b.rollo_id,
-          tendido_talla_marcada_id: b.talla_marcada_id,
-          talla_key_salida: b.talla_salida,
-          cantidad: b.cantidad,
-          orden: 1,
-        });
-        if (inserted?.id) uidToSalidaId[b.uid] = inserted.id;
-        total++;
-      }
-    }
-
-    // Segunda pasada: vincular bulto_hermano_id entre principal y complemento
-    // Dos bultos son hermanos si comparten (rollo_id, talla_marcada_id) y son
-    // uno principal + uno complemento (ambos no divididos).
-    const parejas = {}; // key "rollo_id|talla_marcada_id" → {principal: uid, complemento: uid}
-    for (const b of bultosState) {
-      if (!uidToSalidaId[b.uid]) continue;       // solo los no divididos
-      if (!b.rol_par || !b.hermano_key) continue; // solo los pares
+      if (b.estado === 'dividido' || !b.rol_par || !b.hermano_key) continue;
       const k = `${b.rollo_id}|${b.talla_marcada_id}`;
       if (!parejas[k]) parejas[k] = {};
       parejas[k][b.rol_par] = b.uid;
     }
-    for (const k of Object.keys(parejas)) {
-      const par = parejas[k];
-      if (par.principal && par.complemento) {
-        const idP = uidToSalidaId[par.principal];
-        const idC = uidToSalidaId[par.complemento];
-        if (idP && idC) {
-          await supaUpdate('tendido_rollo_salida', idP, { bulto_hermano_id: idC });
-          await supaUpdate('tendido_rollo_salida', idC, { bulto_hermano_id: idP });
+    const hermanoDe = {};
+    for (const par of Object.values(parejas)) {
+      if (par.principal && par.complemento) { hermanoDe[par.principal] = par.complemento; hermanoDe[par.complemento] = par.principal; }
+    }
+    const lista = [];
+    for (const b of bultosState) {
+      if (b.estado === 'dividido' && b.partidas) {
+        let ord = 1;
+        for (const p of b.partidas) {
+          lista.push({ rollo_id: b.rollo_id, talla_marcada_id: b.talla_marcada_id, talla: p.talla.trim(), cantidad: parseInt(p.cantidad), orden: ord++ });
         }
+      } else {
+        lista.push({ uid: b.uid, rollo_id: b.rollo_id, talla_marcada_id: b.talla_marcada_id, talla: b.talla_salida, cantidad: b.cantidad, orden: 1, hermano_uid: hermanoDe[b.uid] || null });
       }
     }
+    const total = await supaFetch('rpc/guardar_bultos','POST',{ p_tendido: tendidoSeleccionado.tendido.id, p_bultos: lista });
 
     mostrarAlerta('bulto','success',`${total} bulto(s) guardado(s).`);
     setTimeout(() => { btn.textContent='Guardar bultos confirmados'; btn.disabled=false; volverNuevo(); }, 2000);
