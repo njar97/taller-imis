@@ -420,7 +420,7 @@ async function cargarDashboardHoy() {
       // vw_plan_produccion es el plan de la temporada en curso
       if (sel === activa) {
         tareas.push(['plan', () => supaFetch('vw_plan_produccion', 'GET', null,
-          '?select=cod_prenda,nombre_prenda,talla_2026,pedido,falta_hacer,en_proceso,falta_iniciar,contado')]);
+          '?select=cod_prenda,nombre_prenda,talla_2026,pedido,falta_hacer,en_proceso,falta_iniciar,contado,fuera')]);
       }
       await _dashCorrer(tareas, data, fallidos);
     } else if (data.modo === 'alumnos') {
@@ -918,7 +918,9 @@ function _renderComoVamos(plan, prod, totEmp) {
   if (!plan || plan.length === 0) return '';
   const porPrenda = new Map();
   const tot = { pedido: 0, listo: 0, costura: 0, sin: 0 };
+  let fuera = 0;   // de lo listo, lo que ya salió de bodega: empacado o entregado
   for (const f of plan) {
+    fuera += Number(f.fuera) || 0;
     let o = porPrenda.get(f.cod_prenda);
     if (!o) { o = { cod: f.cod_prenda, pedido: 0, listo: 0, costura: 0, sin: 0, tallas: [] }; porPrenda.set(f.cod_prenda, o); }
     const pedido = Number(f.pedido) || 0, falta = Number(f.falta_hacer) || 0;
@@ -944,15 +946,16 @@ function _renderComoVamos(plan, prod, totEmp) {
         ${_cvFiltroEmpresa()}
         <div class="cv">
           <div class="cv-top">
-            <div class="cv-pct">${pctListo(tot)}<small>%</small><span>en bodega</span></div>
+            <div class="cv-pct">${pctListo(tot)}<small>%</small><span>${fuera > 0 ? 'listas' : 'en bodega'}</span></div>
             <div class="cv-total"><strong>${dashNum(tot.pedido)}</strong>piezas<span class="solo-asistencia"> pedidas en la temporada</span></div>
           </div>
           ${_cvBarra(tot, 14)}
           <div class="cv-nums">
-            <div style="--p:${CV_VERDE}"><b>${dashNum(tot.listo)}</b><small>En bodega</small></div>
+            <div style="--p:${CV_VERDE}"><b>${dashNum(tot.listo)}</b><small>${fuera > 0 ? 'Listas' : 'En bodega'}</small></div>
             <div style="--p:${CV_AMBAR}"><b>${dashNum(tot.costura)}</b><small>En costura</small></div>
             <div style="--p:#B9C2CD"><b>${dashNum(tot.sin)}</b><small>Sin empezar</small></div>
           </div>
+          ${fuera > 0 ? `<div style="font-size:12px;color:#556;margin-top:6px">De las listas, <strong>${dashNum(fuera)}</strong> ya están empacadas o entregadas y <strong>${dashNum(Math.max(0, tot.listo - fuera))}</strong> siguen en bodega.</div>` : ''}
         </div>
         <button type="button" class="cv-ver${_cvPorPrenda ? ' abierta' : ''}" aria-expanded="${_cvPorPrenda}" onclick="cvToggle()">
           <span>Detalle<span class="solo-asistencia" style="font-weight:400"> por prenda y talla (tocá una prenda para ver sus tallas)</span></span>${ico('ir')}
@@ -1517,11 +1520,12 @@ function _avanceEscIrA(accion, escId) {
     if (typeof switchTab === 'function') switchTab('bodega');
     setTimeout(() => {
       if (typeof abrirEntregaModal === 'function') {
-        abrirEntregaModal();
-        setTimeout(() => {
+        // La escuela se elige DESPUÉS de que la lista esté llena (antes se
+        // esperaba 0.4 s a ciegas y con señal lenta el modal abría vacío).
+        Promise.resolve(abrirEntregaModal()).then(() => {
           const sel = document.getElementById('ent-escuela');
           if (sel) { sel.value = escId; if (typeof onEntregaEscuelaCambio === 'function') onEntregaEscuelaCambio(); }
-        }, 400);
+        });
       }
     }, 100);
     return;

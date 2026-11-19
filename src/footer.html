@@ -56,8 +56,17 @@
     }
   } catch (_) {}
 
+  // Solo se recarga sola parada en Inicio y sin ventanas abiertas: a media
+  // sesión de empaque, tendido o producción no se interrumpe a nadie.
+  function pwaEnInicio() {
+    const ini = document.getElementById('view-inicio');
+    if (!ini || !ini.classList.contains('active')) return false;
+    if (document.body.classList.contains('fuera-inicio') || document.body.classList.contains('modo-paso')) return false;
+    return ![...document.querySelectorAll('.modal, .modal-overlay, [id$="-modal"], [id$="-overlay"]')]
+      .some(m => { const st = getComputedStyle(m); return st.display !== 'none' && st.visibility !== 'hidden' && m.offsetParent !== null && m.id !== 'auth-overlay'; });
+  }
   function showPwaUpdate(worker) {
-    if (!pwaEscribio) {
+    if (!pwaEscribio && pwaEnInicio()) {
       try { sessionStorage.setItem('pwa_actualizada', '1'); } catch (_) {}
       worker.postMessage({ type: 'SKIP_WAITING' });
       return;
@@ -68,6 +77,8 @@
     document.getElementById('pwa-update-btn').onclick = () => {
       worker.postMessage({ type: 'SKIP_WAITING' });
     };
+    // Cerrar el aviso no lo apaga para siempre: vuelve a salir más tarde
+    // (cada media hora o al volver a la app) mientras haya versión esperando.
     document.getElementById('pwa-dismiss-btn').onclick = () => {
       banner.style.display = 'none';
     };
@@ -120,7 +131,7 @@
     const buscarVersion = () => navigator.serviceWorker.getRegistration().then(reg => {
       if (!reg) return;
       // Una versión que quedó esperando se aplica al volver, si no hay nada a medias.
-      if (reg.waiting && navigator.serviceWorker.controller && !pwaEscribio) showPwaUpdate(reg.waiting);
+      if (reg.waiting && navigator.serviceWorker.controller) showPwaUpdate(reg.waiting);
       return reg.update();
     }).catch(() => {});
     setInterval(buscarVersion, 30 * 60 * 1000);
