@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-17 22:51 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-18 21:33 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -4789,15 +4789,44 @@ function temporadaActivaDe(lista) {
   return (lista || []).find(t => t.estado === 'activa') || (lista || [])[0] || null;
 }
 
+// Nombre corto de cada empresa (código de la tabla proveedor → botón).
+const EMPRESA_CORTA = { IMIS: 'IMIS', NELSON: 'JAV', AMERICA: 'AME' };
+// Empresa elegida en Inicio (null = todas). Se recuerda por aparato.
+let _dashEmpresa = null;
+try { _dashEmpresa = localStorage.getItem('dash-empresa') || null; } catch (e) { /* sin almacenamiento */ }
+function dashElegirEmpresa(emp) {
+  _dashEmpresa = emp || null;
+  try { emp ? localStorage.setItem('dash-empresa', emp) : localStorage.removeItem('dash-empresa'); } catch (e) { /* nada */ }
+  _avEscAbierta = null;
+  renderDashboard();
+}
+// escuela_id → empresa, sacado de los contratos del pedido.
+function dashEmpresaPorEscuela(pedidoTemp) {
+  const porContrato = new Map((pedidoTemp?.contratos || []).map(c => [c.id, c.empresa]));
+  const m = new Map();
+  for (const p of pedidoTemp?.pedido || []) {
+    const emp = porContrato.get(p.contrato_id);
+    if (emp && !m.has(p.escuela_id)) m.set(p.escuela_id, emp);
+  }
+  return m;
+}
+
 // Pedido de una temporada = el de todos sus contratos.
 async function pedidoDeTemporada(temporadaId) {
   return cachedFetch('pedido-temp-' + temporadaId, async () => {
     const contratos = await supaFetch('contrato', 'GET', null,
-      `?temporada_id=eq.${temporadaId}&select=id,codigo`);
+      `?temporada_id=eq.${temporadaId}&select=id,codigo,proveedor_id`);
     if (!contratos || contratos.length === 0) return { contratos: [], pedido: [] };
+    // Empresa de cada contrato (IMIS, JAV, AME). Si falla, el filtro no sale.
+    const provs = await supaFetch('proveedor', 'GET', null, '?select=id,codigo').catch(() => []);
+    const provCod = new Map((provs || []).map(p => [p.id, p.codigo]));
+    for (const c of contratos) {
+      const cod = provCod.get(c.proveedor_id);
+      c.empresa = cod ? (EMPRESA_CORTA[cod] || cod) : null;
+    }
     const pedido = await supaFetchAll('pedido',
       `?contrato_id=in.(${contratos.map(c => c.id).join(',')})` +
-      '&select=escuela_id,nivel,cod_prenda,nombre_prenda,talla_key,cantidad_solicitada,cantidad_entregada');
+      '&select=escuela_id,contrato_id,nivel,cod_prenda,nombre_prenda,talla_key,cantidad_solicitada,cantidad_entregada');
     return { contratos, pedido };
   }, { ttl: 60_000, group: 'pedido' });
 }
@@ -5070,7 +5099,14 @@ function renderDashboard() {
   let comoVamos = '';          // tarjeta de arriba (solo temporada por pedido)
   let verStock = true;         // «Stock top 10»: en 2026 se ve en Bodega
   if (r.modo === 'pedido') {
-    const lineas = avancePedidoTemporada(r.pedidoTemp?.pedido, r.acap, r.equiv);
+    const todas = avancePedidoTemporada(r.pedidoTemp?.pedido, r.acap, r.equiv);
+    // Filtro por empresa: solo lo pedido, empacado y entregado de sus escuelas.
+    const empEsc = dashEmpresaPorEscuela(r.pedidoTemp);
+    dashboardCache.empresas = [...new Set(empEsc.values())].sort();
+    if (_dashEmpresa && !dashboardCache.empresas.includes(_dashEmpresa)) _dashEmpresa = null;
+    dashboardCache.empEsc = empEsc;
+    const lineas = _dashEmpresa ? todas.filter(l => empEsc.get(l.escuela_id) === _dashEmpresa) : todas;
+    dashboardCache.cvLineas = lineas;
     const tot = lineas.reduce((t, l) => {
       t.sol += l.sol; t.ent += l.ent; t.emp += l.emp; t.pend += l.pend; return t;
     }, { sol: 0, ent: 0, emp: 0, pend: 0 });
@@ -5205,6 +5241,96 @@ function cvToggle(cod) {
   const cv = document.getElementById('dash-como-vamos');
   if (cv) cv.innerHTML = _renderComoVamos(r.plan, r.produccionHoy, dashboardCache.cvTot);
 }
+// Botones Todas · IMIS · JAV · AME (solo si hay más de una empresa).
+function _cvFiltroEmpresa() {
+  const emps = dashboardCache.empresas || [];
+  if (emps.length < 2) return '';
+  const b = (val, txt) => `<button type="button" class="btn btn-sm ${(_dashEmpresa || null) === val ? 'btn-primary' : 'btn-ghost'}" aria-pressed="${(_dashEmpresa || null) === val}" onclick="dashElegirEmpresa(${val ? `'${val}'` : 'null'})">${txt}</button>`;
+  return `<div class="cv-empresas" style="display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px 0">${b(null, 'Todas')}${emps.map(e => b(e, dashEsc(e))).join('')}</div>`;
+}
+// «Cómo vamos» de UNA empresa: lo pedido por sus escuelas, lo empacado y lo
+// entregado. Lo de producción (bodega, costura) es del taller entero y se
+// muestra aparte, gris, para saber si hay con qué empacar.
+function _renderComoVamosEmpresa(plan, lineas) {
+  const planIdx = new Map((plan || []).map(f => [f.cod_prenda + '|' + f.talla_2026, f]));
+  const porPrenda = new Map();
+  const tot = { pedido: 0, emp: 0, ent: 0, pend: 0 };
+  for (const l of lineas) {
+    let o = porPrenda.get(l.cod);
+    if (!o) { o = { cod: l.cod, pedido: 0, emp: 0, ent: 0, pend: 0, tallas: new Map() }; porPrenda.set(l.cod, o); }
+    let t = o.tallas.get(l.talla);
+    if (!t) { t = { talla: l.talla, pedido: 0, emp: 0, ent: 0, pend: 0 }; o.tallas.set(l.talla, t); }
+    for (const [c, v] of [['pedido', l.sol], ['emp', l.emp], ['ent', l.ent], ['pend', l.pend]]) { t[c] += v; o[c] += v; tot[c] += v; }
+  }
+  const filas = [...porPrenda.values()].sort((a, b) => dashOrdenPrenda(a.cod) - dashOrdenPrenda(b.cod));
+  const pct = o => o.pedido > 0 ? Math.floor(100 * (o.emp + o.ent) / o.pedido) : 0;
+  const barra = (o, alto) => {
+    const w = v => o.pedido > 0 ? (100 * v / o.pedido).toFixed(2) : 0;
+    return `<div style="display:flex;height:${alto}px;border-radius:${alto / 2}px;overflow:hidden;background:${CV_GRIS}">${o.ent > 0 ? `<div style="width:${w(o.ent)}%;background:${CV_MORADO}"></div>` : ''}${o.emp > 0 ? `<div style="width:${w(o.emp)}%;background:${CV_VERDE}"></div>` : ''}</div>`;
+  };
+  const td = 'padding:5px 6px;text-align:right';
+  const tabla = o => {
+    const ts = [...o.tallas.values()].sort((a, b) => dashOrdenTalla(a.talla, b.talla));
+    return `
+          <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;background:#FAFBFC;border-radius:8px;overflow:hidden">
+            <thead><tr style="font-size:11px;color:#555">
+              <th style="padding:6px;text-align:left">Talla</th>
+              <th style="${td}">Pedido</th>
+              <th style="${td};color:${CV_VERDE}">Empacado</th>
+              <th style="${td};color:${CV_MORADO}">Entregado</th>
+              <th style="${td}">Falta</th>
+              <th style="${td};color:#8A94A3;font-weight:400" title="En bodega, de todo el taller (compartido por las empresas)">Bodega taller</th>
+            </tr></thead>
+            <tbody>${ts.map(t => {
+              const f = planIdx.get(o.cod + '|' + t.talla);
+              const bod = f ? Math.max(0, (Number(f.pedido) || 0) - (Number(f.falta_hacer) || 0)) : 0;
+              return `
+              <tr style="border-top:1px solid #ECEFF3">
+                <td style="padding:5px 6px;font-weight:700">${dashEsc(t.talla)}</td>
+                <td style="${td}">${dashNum(t.pedido)}</td>
+                <td style="${td}">${dashNum(t.emp)}</td>
+                <td style="${td}">${dashNum(t.ent)}</td>
+                <td style="${td};font-weight:${t.pend > 0 ? 700 : 400}">${dashNum(t.pend)}</td>
+                <td style="${td};color:#8A94A3">${dashNum(bod)}</td>
+              </tr>`;
+            }).join('')}</tbody>
+          </table>`;
+  };
+  return `
+      <div class="card tj">
+        <div class="tj-cab">
+          <span class="tj-ico tj-verde">${ico('avance')}</span>
+          <h2>Cómo vamos · ${dashEsc(_dashEmpresa)}</h2>
+          <button type="button" class="tj-accion redondo" onclick="initDashboard()" title="Volver a cargar los números" aria-label="Volver a cargar los números">${ico('recargar')}</button>
+        </div>
+        ${_cvFiltroEmpresa()}
+        <div class="cv">
+          <div class="cv-top">
+            <div class="cv-pct">${pct(tot)}<small>%</small><span>empacado o entregado</span></div>
+            <div class="cv-total"><strong>${dashNum(tot.pedido)}</strong>piezas<span class="solo-asistencia"> pedidas a ${dashEsc(_dashEmpresa)}</span></div>
+          </div>
+          ${barra(tot, 14)}
+          <div class="cv-nums">
+            <div style="--p:${CV_VERDE}"><b>${dashNum(tot.emp)}</b><small>Empacado</small></div>
+            <div style="--p:${CV_MORADO}"><b>${dashNum(tot.ent)}</b><small>Entregado</small></div>
+            <div style="--p:#B9C2CD"><b>${dashNum(tot.pend)}</b><small>Falta</small></div>
+          </div>
+        </div>
+        <div class="solo-asistencia" style="padding:0 12px 6px;font-size:12px;color:#666">Lo que se corta y se cose es del taller entero: «Bodega taller» es lo que hay para todas las empresas.</div>
+        <button type="button" class="cv-ver${_cvPorPrenda ? ' abierta' : ''}" aria-expanded="${_cvPorPrenda}" onclick="cvToggle()">
+          <span>Detalle<span class="solo-asistencia" style="font-weight:400"> por prenda y talla</span></span>${ico('ir')}
+        </button>
+        ${!_cvPorPrenda ? '' : filas.map(o => `
+        <div class="cv-prenda" role="button" tabindex="0" aria-expanded="${_cvAbiertas.has(o.cod)}" onclick="cvToggle('${o.cod}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();cvToggle('${o.cod}')}" style="padding:9px 12px;border-bottom:1px solid #F0F0F0;cursor:pointer">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px">
+            <span style="font-weight:600;font-size:13px"><span class="fl-flecha${_cvAbiertas.has(o.cod) ? ' abierta' : ''}">${ico('ir')}</span>${dashEsc(dashPrendaNombre(o.cod))} <span style="font-weight:400;color:#888;font-size:11px">· ${dashNum(o.pedido)} pedidas · tallas ${[...o.tallas.keys()].sort(dashOrdenTalla).map(dashEsc).join(', ')}</span></span>
+            <span style="font-size:12px;font-weight:700;color:${o.emp + o.ent > 0 ? CV_VERDE : '#999'}">${pct(o)}%</span>
+          </div>
+          ${barra(o, 10)}
+          ${_cvAbiertas.has(o.cod) ? tabla(o) : ''}
+        </div>`).join('')}
+      </div>`;
+}
 function _cvTallas(o) {
   const td = 'padding:5px 6px;text-align:right';
   const filas = o.tallas.slice().sort((a, b) => dashOrdenTalla(a.talla, b.talla));
@@ -5238,6 +5364,7 @@ function cvVerBultos(cod, talla) {
   document.body.classList.add('modo-paso');
 }
 function _renderComoVamos(plan, prod, totEmp) {
+  if (_dashEmpresa) return _renderComoVamosEmpresa(plan, dashboardCache.cvLineas || []);
   if (!plan || plan.length === 0) return '';
   const porPrenda = new Map();
   const tot = { pedido: 0, listo: 0, costura: 0, sin: 0 };
@@ -5264,6 +5391,7 @@ function _renderComoVamos(plan, prod, totEmp) {
           <h2>Cómo vamos</h2>
           <button type="button" class="tj-accion redondo" onclick="initDashboard()" title="Volver a cargar los números" aria-label="Volver a cargar los números">${ico('recargar')}</button>
         </div>
+        ${_cvFiltroEmpresa()}
         <div class="cv">
           <div class="cv-top">
             <div class="cv-pct">${pctListo(tot)}<small>%</small><span>en bodega</span></div>
@@ -5393,6 +5521,7 @@ async function cargarListoEmpacar() {
     const filas = [];
     for (const e of escuelas) {
       if (!ctx.escuelasPedido.has(e.id)) continue;
+      if (_dashEmpresa && dashboardCache.empEsc && dashboardCache.empEsc.get(e.id) !== _dashEmpresa) continue;
       const s = emqSumar(emqLineasEscuela(ctx, e.id));
       if (s.puede > 0) filas.push({ id: e.id, nombre: e.alias || e.nombre, puede: s.puede, falta: s.falta });
     }
