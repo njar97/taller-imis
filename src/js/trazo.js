@@ -1,5 +1,15 @@
 // ══════════════════════════════════════════════════════════════════════
+// Deja el formulario en «trazo nuevo» (ver tdSalirDeEdicion en tendido.js).
+function trazoSalirDeEdicion() {
+  const btn = document.getElementById('btn-guardar-trazo');
+  if (btn) {
+    btn.textContent = 'Guardar trazo'; btn.disabled = false; btn.onclick = () => guardarTrazo();
+    delete btn.dataset.editandoId; delete btn.dataset.codigoViejo; delete btn.dataset.letraVieja;
+  }
+  window._tallasViejasTrazo = null;
+}
 async function initTrazo() {
+  trazoSalirDeEdicion();
   document.getElementById('t-fecha').value = hoyLocal();
   ['t-letra-corte','t-capas','t-yardas','t-video-url','t-observaciones'].forEach(id => {
     const el = document.getElementById(id);

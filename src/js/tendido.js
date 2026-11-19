@@ -3,6 +3,17 @@
 // Al tender se elige el rollo de una lista: las yardas se llenan solas y,
 // al guardar, al rollo se le deja lo que sobró (0 = agotado, ya no sale).
 const TD_TOPE_TELAS = 320;          // máximo de telas por tendido
+let tdEditando = false;             // true mientras se edita un tendido ya guardado
+// Deja el asistente en «tendido nuevo»: si alguien abrió «Editar» y salió sin
+// guardar, el botón seguía apuntando al registro viejo y el siguiente tendido
+// lo pisaba.
+function tdSalirDeEdicion() {
+  tdEditando = false;
+  const btn = document.getElementById('btn-guardar-tendido');
+  if (btn) { btn.textContent = 'Guardar tendido (invierte numeración)'; btn.disabled = false; btn.onclick = () => guardarTendido(); }
+  const sel = document.getElementById('td-trazo-select');
+  if (sel) sel.disabled = false;
+}
 let tdRollosBodega = [];            // rollos con yardas disponibles
 function tdEsc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -104,6 +115,7 @@ function tdTelasAuto(rolloId) {
 // Cuando el último rollo ya tiene yardas y telas y todavía falta para el
 // plan, aparece solo el renglón del rollo que sigue.
 function tdAutoAgregar() {
+  if (tdEditando) return;             // al editar un tendido no se agregan renglones solos
   const cards = [...document.querySelectorAll('.rollo-card')];
   const ult = cards[cards.length - 1];
   if (!ult) return;
@@ -160,6 +172,7 @@ function tdPintarContador() {
 }
 
 async function initTendido() {
+  tdSalirDeEdicion();
   tdCargarRollosBodega().then(() => tdRefrescarListas());
   document.getElementById('td-fecha').value = hoyLocal();
   ['td-equipo','td-observaciones'].forEach(id => document.getElementById(id).value = '');
@@ -358,6 +371,11 @@ async function guardarTendido() {
   const rollos = [...document.querySelectorAll('.rollo-card')].filter(c =>
     ['yardas_rollo','lienzos_salidos'].some(f => (c.querySelector(`[data-tfield="${f}"]`).value || '') !== ''));
   if (!rollos.length) { mostrarAlerta('tendido','error','Agregá al menos 1 rollo.'); return; }
+  // Tope de telas: no se pasa sin decirlo a propósito.
+  const totalTelas = rollos.reduce((s, c) => s + (parseInt(c.querySelector('[data-tfield="lienzos_salidos"]').value) || 0), 0);
+  if (totalTelas > TD_TOPE_TELAS) {
+    if (!await confirmar(`Este tendido lleva ${totalTelas} telas y el tope es ${TD_TOPE_TELAS}.\n\n¿Guardarlo así de todos modos?`)) return;
+  }
 
   const btn = document.getElementById('btn-guardar-tendido');
   btn.textContent = '⏳ Guardando...';
