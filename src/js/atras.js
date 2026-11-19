@@ -68,8 +68,14 @@ function _atrasCerrarModal(m) {
   else m.style.display = 'none';
 }
 
+// Un cambio del «#» de la dirección también dispara popstate y NO es el botón
+// atrás: pasa al entrar con un enlace que trae la sesión (invitación, cambio
+// de contraseña, acceso temporal), porque Supabase borra el «#…» al leerlo.
+// Sin esto, la app creía que era «atrás» en Inicio y se salía sola.
+let _atrasHash = window.location.hash;
 window.addEventListener('popstate', () => {
   _atras.armado = false;
+  if (window.location.hash !== _atrasHash) { _atrasHash = window.location.hash; _atrasArmar(); return; }
   const m = _atrasModalAbierto();
   if (m) { _atrasCerrarModal(m); _atrasArmar(); return; }
   const actual = _atrasVistaActiva();
