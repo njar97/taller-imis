@@ -396,6 +396,27 @@ async function cargarDashboardHoy() {
         ['topEscuelas', () => supaFetch('vw_pedido_escuela', 'GET', null,
           `?temporada_id=eq.${sel.id}&piezas_pendientes=gt.0&order=piezas_pendientes.desc&limit=5`)],
       ];
+      // Tela que entregó el MINED (rollos de bodega), para «Cómo vamos».
+      if (sel === activa) {
+        tareas.push(['tela', () => cachedFetch('dashboard-tela',
+          () => supaFetchAll('tela_rollo', '?select=escuela_id,color,yardas,yardas_disponibles,fecha_retiro'),
+          { ttl: 60_000, group: 'tela' })]);
+        // Tendidos hechos (lo que se gastó en cada uno).
+        tareas.push(['tendidos', () => cachedFetch('dashboard-tendidos', async () => {
+          const [ts, rs] = await Promise.all([
+            supaFetchAll('tendido', '?select=id,fecha,letra_corte,codigo_corte,prendas&order=fecha'),
+            supaFetchAll('tendido_rollo', '?select=tendido_id,yardas_rollo,yardas_sobrantes,lienzos_salidos'),
+          ]);
+          const m = new Map((ts || []).map(t => [t.id, { ...t, yd: 0, telas: 0 }]));
+          for (const x of rs || []) {
+            const t = m.get(x.tendido_id);
+            if (!t) continue;
+            t.yd += Math.max(0, (Number(x.yardas_rollo) || 0) - (Number(x.yardas_sobrantes) || 0));
+            t.telas += Number(x.lienzos_salidos) || 0;
+          }
+          return [...m.values()];
+        }, { ttl: 60_000, group: 'tela' })]);
+      }
       // vw_plan_produccion es el plan de la temporada en curso
       if (sel === activa) {
         tareas.push(['plan', () => supaFetch('vw_plan_produccion', 'GET', null,
@@ -764,7 +785,101 @@ function _renderComoVamosEmpresa(plan, lineas) {
           ${barra(o, 6)}
           ${_cvAbiertas.has(o.cod) ? _cvTablaEscuelas(o.cod, lineas) + bodega(o) : ''}
         </div>`).join('')}
+        ${_cvTela()}
       </div>`;
+}
+// ─── Tela entregada por el MINED (rollos de `tela_rollo`) ────────────
+// Un renglón al pie de «Cómo vamos»: yardas entregadas. Al tocarlo: por
+// color (entregada y lo que queda en rollo) y por escuela. Respeta la
+// empresa elegida (la escuela del rollo dice de qué empresa es).
+const TELA_COLORES = [['AZUL', 'Azul', '#1F4E79'], ['BLANCA', 'Blanca', '#FFFFFF'], ['BEIGE', 'Beige', '#D4C59E'], ['CELESTE', 'Celeste', '#8EC5E8']];
+let _cvTelaAbierta = false;
+function cvTelaToggle() {
+  _cvTelaAbierta = !_cvTelaAbierta;
+  const r = dashboardCache.resumen || {};
+  const cv = document.getElementById('dash-como-vamos');
+  if (cv) cv.innerHTML = _renderComoVamos(r.plan, r.produccionHoy, dashboardCache.cvTot);
+}
+function _cvTela() {
+  const r = dashboardCache.resumen || {};
+  const empEsc = dashboardCache.empEsc || new Map();
+  const rollos = (r.tela || []).filter(x => !_dashEmpresa || empEsc.get(x.escuela_id) === _dashEmpresa);
+  if (!rollos.length) return '';
+  const cero = () => ({ ent: 0, queda: 0 });
+  const tot = cero(), porColor = new Map(), porEsc = new Map();
+  for (const x of rollos) {
+    const col = String(x.color || '').toUpperCase(), ent = Number(x.yardas) || 0, queda = Number(x.yardas_disponibles) || 0;
+    tot.ent += ent; tot.queda += queda;
+    if (!porColor.has(col)) porColor.set(col, cero());
+    porColor.get(col).ent += ent; porColor.get(col).queda += queda;
+    let e = porEsc.get(x.escuela_id);
+    if (!e) { e = { id: x.escuela_id, ent: 0, c: new Map() }; porEsc.set(x.escuela_id, e); }
+    e.ent += ent; e.c.set(col, (e.c.get(col) || 0) + ent);
+  }
+  const yd = n => dashNum(Math.round(n));
+  const boton = `
+        <button type="button" class="cv-ver${_cvTelaAbierta ? ' abierta' : ''}" aria-expanded="${_cvTelaAbierta}" onclick="cvTelaToggle()">
+          <span>Tela <strong style="color:var(--tinta,#222)">${yd(tot.ent)} yd</strong> <span style="font-weight:400;color:#667">· gastada ${yd(tot.ent - tot.queda)}</span><span class="solo-asistencia" style="font-weight:400"> · lo que dio el MINED y lo que ya se tendió</span></span>${ico('ir')}
+        </button>`;
+  if (!_cvTelaAbierta) return boton;
+  const colores = TELA_COLORES.filter(([k]) => porColor.has(k));
+  const punto = hex => `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${hex};border:1px solid #B9C2CD;margin-right:5px"></span>`;
+  const escMap = new Map((r.escuelas || []).map(e => [e.id, e]));
+  const filas = [...porEsc.values()].sort((a, b) => b.ent - a.ent);
+  const td = 'padding:5px 4px;text-align:right;white-space:nowrap';
+  // Tendidos hechos desde que se retiró la tela (son del taller entero).
+  const desde = rollos.reduce((m, x) => x.fecha_retiro && (!m || x.fecha_retiro < m) ? x.fecha_retiro : m, null);
+  const tend = (r.tendidos || []).filter(t => desde && t.fecha >= desde && t.yd > 0);
+  const totTend = tend.reduce((s, t) => s + t.yd, 0);
+  const tendidosHtml = !tend.length ? '' : `
+          <div style="font-size:11px;color:#667;font-weight:600;margin-top:10px">Gastada por tendido${_dashEmpresa ? ' (todo el taller)' : ''}</div>
+          <table style="width:100%;border-collapse:collapse;font-size:12px;background:#FAFBFC;border-radius:8px;overflow:hidden;margin-top:4px">
+            <tbody>${tend.map(t => `
+              <tr style="border-top:1px solid #ECEFF3">
+                <td style="padding:5px 6px">${dashEsc(t.codigo_corte || t.letra_corte || t.fecha)}</td>
+                <td style="${td};color:#778">${dashNum(t.telas)} telas</td>
+                <td style="${td};font-weight:700">${yd(t.yd)} yd</td>
+              </tr>`).join('')}
+              <tr style="border-top:2px solid #DDE3EA;font-weight:700">
+                <td style="padding:5px 6px" colspan="2">Total</td>
+                <td style="${td}">${yd(totTend)} yd</td>
+              </tr>
+            </tbody>
+          </table>`;
+  return boton + `
+        <div style="padding:10px 12px 12px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px">${colores.map(([k, nom, hex]) => `
+            <div style="background:#F6F8FB;border-radius:12px;padding:9px 10px">
+              <small style="display:block;font-size:11.5px;color:#556">${punto(hex)}${nom}</small>
+              <b style="display:block;font-size:18px">${yd(porColor.get(k).ent)} <small style="font-size:11px;font-weight:400;color:#778">yd</small></b>
+              <small style="display:block;font-size:11px;color:#778">gastada <strong style="color:#B7791F">${yd(porColor.get(k).ent - porColor.get(k).queda)}</strong> · quedan ${yd(porColor.get(k).queda)}</small>
+            </div>`).join('')}
+          </div>
+          <div style="font-size:12px;color:#556;margin-top:8px">Entregada <strong>${yd(tot.ent)}</strong> · gastada <strong style="color:#B7791F">${yd(tot.ent - tot.queda)}</strong> · quedan <strong>${yd(tot.queda)}</strong> yd</div>
+          ${tendidosHtml}
+          <div style="font-size:11px;color:#667;font-weight:600;margin-top:10px">Entregada por escuela</div>
+          <div style="overflow-x:auto;margin-top:8px">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;background:#FAFBFC;border-radius:8px;overflow:hidden">
+            <thead><tr style="font-size:11px;color:#555">
+              <th style="padding:6px;text-align:left">Escuela</th>
+              ${colores.map(([, nom]) => `<th style="${td}">${nom}</th>`).join('')}
+              <th style="${td}">Total</th>
+            </tr></thead>
+            <tbody>${filas.map(e => `
+              <tr style="border-top:1px solid #ECEFF3">
+                <td style="padding:5px 6px;max-width:104px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${dashEsc((escMap.get(e.id) || {}).nombre || '')}">${dashEsc(dashEscuelaCorta(escMap.get(e.id)))}${!_dashEmpresa && empEsc.get(e.id) ? ` <small style="color:#8A94A3">${dashEsc(empEsc.get(e.id))}</small>` : ''}</td>
+                ${colores.map(([k]) => `<td style="${td}">${e.c.get(k) ? yd(e.c.get(k)) : '<span style="color:#C3CAD3">—</span>'}</td>`).join('')}
+                <td style="${td};font-weight:700">${yd(e.ent)}</td>
+              </tr>`).join('')}
+              <tr style="border-top:2px solid #DDE3EA;font-weight:700">
+                <td style="padding:5px 6px">Total</td>
+                ${colores.map(([k]) => `<td style="${td}">${yd(porColor.get(k).ent)}</td>`).join('')}
+                <td style="${td}">${yd(tot.ent)}</td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+        </div>`;
 }
 function _cvTallas(o) {
   const td = 'padding:5px 6px;text-align:right';
@@ -855,6 +970,7 @@ function _renderComoVamos(plan, prod, totEmp) {
           <div style="font-size:11px;color:#444;margin-top:4px;line-height:1.7">${_cvLeyenda(o)}</div>
           ${_cvAbiertas.has(o.cod) ? _cvTallas(o) + _cvTablaEscuelas(o.cod, dashboardCache.cvLineas) : ''}
         </div>`).join('')}
+        ${_cvTela()}
       </div>`;
 }
 
