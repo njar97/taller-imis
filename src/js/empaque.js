@@ -1186,35 +1186,22 @@ async function emqCantEmpacar(escId, items) {
       });
     }
   }
-  // Un solo INSERT: o salen todas o ninguna
-  const creados = await supaFetch('bodega_movimiento', 'POST', movs);
-  const idDe = new Map((creados || []).map(m => [m.pedido_id + '|' + m.talla_key, m.id]));
-  const acaps = movs.map(m => ({
-    escuela_id: escId,
-    cod_prenda: m.cod_prenda, nombre_prenda: m.nombre_prenda, talla_key: m.talla_key,
-    cantidad_acaparada: m.cantidad, cantidad_consumida: 0,
-    movimiento_bodega_id: idDe.get(m.pedido_id + '|' + m.talla_key) || null,
-    observaciones: 'Empacado por pedido (sin nombres)',
-  }));
-  let acapCreados;
-  try {
-    if (acaps.some(a => !a.movimiento_bodega_id)) throw new Error('No volvió el id del movimiento de bodega');
-    acapCreados = await supaFetch('escuela_acaparado', 'POST', acaps);
-  } catch (e) {
-    // Devolver a bodega lo que salió (mismo criterio que desempacar: ENTRADA_MANUAL)
-    try {
-      await supaFetch('bodega_movimiento', 'POST', movs.map(m => ({
-        ...m, tipo: 'ENTRADA_MANUAL', observaciones: 'Anulado: no se pudo registrar el empaque',
-      })));
-    } catch (e2) { console.warn('[empaque] no se pudo devolver a bodega', e2.message); }
-    throw new Error('No quedó empacado nada: ' + e.message);
-  }
+  // Todo o nada en la base (función empacar_por_pedido): sale de bodega y
+  // queda apartado para la escuela en UN solo paso. Si se cae la señal o el
+  // stock cambió, no queda nada a medias.
+  const acapIds = await supaFetch('rpc/empacar_por_pedido', 'POST', {
+    p_escuela: escId,
+    p_items: movs.map(m => ({
+      pedido_id: m.pedido_id, cod_prenda: m.cod_prenda, nombre_prenda: m.nombre_prenda,
+      talla_key: m.talla_key, cantidad: m.cantidad, fecha: m.fecha, observaciones: m.observaciones,
+    })),
+  });
   const total = plan.reduce((s, p) => s + p.n, 0);
   emqAvisarCambio();
   return {
     errores: [], total,
     detalle: plan.map(p => `${p.L.talla}×${p.n}`).join(', '),
-    acapIds: (acapCreados || []).map(a => a.id).filter(Boolean),
+    acapIds: (acapIds || []).filter(Boolean),
   };
 }
 
@@ -1244,34 +1231,17 @@ async function emqCantEntregar(escId, items, fecha, receptor, obs) {
   const total = plan.reduce((s, p) => s + p.n, 0);
   const detalle = plan.map(p => `${p.L.talla}×${p.n}`).join(', ');
 
-  // 1) Registro de la entrega (si falla acá, no se tocó nada)
-  const reg = await supaFetch('entrega_escuela', 'POST', {
-    escuela_id: escId, fecha, cantidad_piezas: total, receptor: receptor || null,
-    observaciones: [obs, 'Por pedido: ' + detalle].filter(Boolean).join(' · '),
-  });
-  const regId = Array.isArray(reg) ? (reg[0] && reg[0].id) : (reg && reg.id);
-  const borrarRegistro = async () => {
-    if (regId) { try { await supaFetch('entrega_escuela', 'DELETE', null, `?id=eq.${regId}`); } catch (_) { /* best effort */ } }
-  };
-  // 2) Lo empacado pasa a entregado: una sola llamada (todo o nada)
+  // Todo o nada en la base (función entregar_por_pedido): el registro de la
+  // entrega, lo empacado que pasa a entregado y la suma al pedido se guardan
+  // en UN solo paso. La entrega guarda su detalle para poder anularla.
   const consumos = {};
   for (const p of plan) Object.assign(consumos, p.consumos);
-  try {
-    await _consumePoolBatch(consumos);
-  } catch (e) {
-    await borrarRegistro();
-    throw e;
-  }
-  // 3) Sumar al pedido; si falla, se deshace lo anterior
-  try {
-    await emqAplicarEntregado(plan.flatMap(p => p.patches));
-  } catch (e) {
-    const rev = {};
-    for (const [id, d] of Object.entries(consumos)) rev[id] = -d;
-    try { await _consumePoolBatch(rev); } catch (_) { /* best effort */ }
-    await borrarRegistro();
-    throw new Error('No se pudo sumar al pedido (no se entregó nada): ' + e.message);
-  }
+  await supaFetch('rpc/entregar_por_pedido', 'POST', { p: {
+    escuela_id: escId, fecha, receptor: receptor || null,
+    observaciones: [obs, 'Por pedido: ' + detalle].filter(Boolean).join(' · '),
+    consumos,
+    patches: plan.flatMap(p => p.patches).map(x => ({ id: x.id, sumar: x.despues - x.antes })),
+  } });
   emqAvisarCambio();
   return { total, detalle };
 }
@@ -1280,29 +1250,72 @@ async function emqCantEntregar(escId, items, fecha, receptor, obs) {
 async function emqCantDeshacer(u) {
   const ids = (u && u.acapIds) || [];
   if (!ids.length) return 0;
-  const rows = await supaFetch('escuela_acaparado', 'GET', null,
-    `?id=in.(${ids.join(',')})&select=id,escuela_id,cod_prenda,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida,bodega_movimiento(pedido_id)`);
-  let n = 0;
-  for (const a of rows || []) {
-    const consumida = Number(a.cantidad_consumida) || 0;
-    const resto = (Number(a.cantidad_acaparada) || 0) - consumida;
-    if (resto <= 0) continue;   // ya entregado: no se toca
-    await supaUpdate('escuela_acaparado', a.id, { cantidad_acaparada: consumida, actualizado_en: new Date().toISOString() });
-    try {
-      await supaFetch('bodega_movimiento', 'POST', {
-        tipo: 'ENTRADA_MANUAL', cod_prenda: a.cod_prenda, nombre_prenda: a.nombre_prenda,
-        talla_key: a.talla_key, cantidad: resto, escuela_id: a.escuela_id,
-        pedido_id: a.bodega_movimiento ? a.bodega_movimiento.pedido_id : null,
-        fecha: emqHoy(), observaciones: 'Deshecho: empaque por pedido',
-      });
-    } catch (e) {
-      try { await supaUpdate('escuela_acaparado', a.id, { cantidad_acaparada: consumida + resto }); } catch (_) { /* best effort */ }
-      throw e;
-    }
-    n += resto;
-  }
+  const n = Number(await supaFetch('rpc/desempacar_por_pedido', 'POST', { p_acap_ids: ids })) || 0;
   if (n) emqAvisarCambio();
   return n;
+}
+
+// ── Deshacer después (auditoría 18-nov, 3.3) ─────────────────────────
+// Desempacar una talla: lo empacado sin entregar vuelve a bodega.
+async function emqDesempacarLinea(k) {
+  if (_emqOcupado) return;
+  const escId = emqState.escuelaId;
+  const L = emqLineasEscuela(emqState.cant, escId).find(x => x.k === k);
+  if (!L || !L.empacado) return;
+  if (!await confirmar(`¿Desempacar ${L.empacado} pieza(s) de ${L.prenda} ${tallaPedidoBonita(L.talla)}?\n\nVuelven a bodega y dejan de estar apartadas para ${emqNombreEscuela(escId)}.`)) return;
+  _emqOcupado = true;
+  try {
+    const n = Number(await supaFetch('rpc/desempacar_por_pedido', 'POST', { p_acap_ids: L.acap.map(a => a.id) })) || 0;
+    emqAvisarCambio();
+    alert(`✓ ${n} pieza(s) volvieron a bodega.`);
+  } catch (e) {
+    alert('No se desempacó nada: ' + e.message);
+  } finally {
+    _emqOcupado = false;
+  }
+  emqState.ultimoEmpaque = null;
+  emqState.sel.ent = null;
+  const paso = emqState.paso;
+  await initEmpaque(escId);
+  if (paso === 3) { emqState.paso = 3; renderEmpaque(); }
+}
+
+// Entregas ya registradas de la escuela, con «Anular».
+async function emqVerEntregas() {
+  const caja = document.getElementById('emq-entregas');
+  if (!caja) return;
+  if (caja.innerHTML) { caja.innerHTML = ''; return; }
+  caja.innerHTML = '<div class="text-muted" style="font-size:12px;padding:6px 0">Cargando entregas…</div>';
+  try {
+    const rows = await supaFetch('entrega_escuela', 'GET', null,
+      `?escuela_id=eq.${emqState.escuelaId}&select=id,fecha,cantidad_piezas,receptor,observaciones,detalle&order=fecha.desc,creado_en.desc&limit=50`);
+    if (!rows || !rows.length) { caja.innerHTML = '<div class="text-muted" style="font-size:12px;padding:6px 0">Todavía no hay entregas de esta escuela.</div>'; return; }
+    caja.innerHTML = rows.map(r => `
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #EEE;font-size:12.5px">
+        <div style="flex:1;min-width:0">
+          <strong>${emqEsc(r.fecha)}</strong> · ${Number(r.cantidad_piezas) || 0} pieza(s)${r.receptor ? ' · recibió ' + emqEsc(r.receptor) : ''}
+          <div style="font-size:11px;color:#777">${emqEsc(String(r.observaciones || '').replace(/^.*Por pedido: /, ''))}</div>
+        </div>
+        ${r.detalle ? `<button class="btn btn-ghost btn-sm" style="color:var(--rojo)" onclick="emqAnularEntrega('${r.id}', ${Number(r.cantidad_piezas) || 0}, '${emqEsc(r.fecha)}')">Anular</button>` : '<span style="font-size:11px;color:#999">sin detalle</span>'}
+      </div>`).join('');
+  } catch (e) {
+    caja.innerHTML = `<div style="font-size:12px;color:#B00;padding:6px 0">No se pudieron cargar las entregas: ${emqEsc(e.message)}</div>`;
+  }
+}
+async function emqAnularEntrega(id, piezas, fecha) {
+  if (_emqOcupado) return;
+  if (!await confirmar(`¿Anular la entrega del ${fecha} (${piezas} pieza(s))?\n\nLas piezas vuelven a quedar «empacadas sin entregar» y se restan de lo entregado del pedido. Bodega no cambia.`)) return;
+  _emqOcupado = true;
+  try {
+    const n = Number(await supaFetch('rpc/anular_entrega', 'POST', { p_id: id })) || 0;
+    emqAvisarCambio();
+    alert(`✓ Entrega anulada: ${n} pieza(s) vuelven a estar empacadas sin entregar.`);
+  } catch (e) {
+    alert('No se anuló la entrega: ' + e.message);
+  } finally {
+    _emqOcupado = false;
+  }
+  await initEmpaque(emqState.escuelaId);
 }
 
 // ── Cantidades con − / + ─────────────────────────────────────────────
@@ -1450,6 +1463,7 @@ function emqPaso2CantHtml() {
       </div>
       ${s.empacado > 0 ? `<div style="margin-top:8px"><button class="btn btn-primary btn-sm" onclick="emqState.ultimoEmpaque=null;emqState.sel.ent=null;emqState.paso=3;renderEmpaque()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camion"/></svg> Entregar lo empacado (${s.empacado})</button></div>` : ''}
       <div style="font-size:11px;color:#888;margin-top:6px">Empacar = sale de bodega y queda apartado para esta escuela. Ajustá la cantidad con − / + o escribila.</div>
+      ${s.entregado > 0 ? `<div style="margin-top:8px"><a href="#" style="font-size:12.5px;font-weight:600" onclick="event.preventDefault();emqVerEntregas()">Entregas hechas (${s.entregado} piezas) ›</a><div id="emq-entregas"></div></div>` : ''}
     </div>
     <div class="card" style="padding:0;overflow:hidden;margin-bottom:74px">${emqTablaCantHtml(lineas, 'emp', 'sesion')}</div>
     <div style="position:fixed;bottom:calc(66px + env(safe-area-inset-bottom));left:0;right:0;z-index:900;display:flex;justify-content:center;pointer-events:none">
@@ -1466,7 +1480,7 @@ function emqListaEntregaHtml(lineas, grupo) {
     <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #E6EFE6">
       <div style="flex:1;min-width:0;font-size:13px">
         ${emqEsc(prendaBonita(L.prenda))} <span style="font-weight:700">${emqEsc(tallaPedidoBonita(L.talla))}</span>
-        <div style="font-size:11px;color:#666">empacadas ${L.empacado} · pedido ${L.pedido} · entregado ${L.entregado}</div>
+        <div style="font-size:11px;color:#666">empacadas ${L.empacado} · pedido ${L.pedido} · entregado ${L.entregado}${grupo === 'ent' ? ` · <a href="#" style="color:var(--rojo)" onclick="event.preventDefault();emqDesempacarLinea('${L.k}')">Desempacar</a>` : ''}</div>
       </div>
       ${emqStepHtml(grupo, L.k)}
     </div>`).join('') +
