@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-18 21:33 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-18 22:03 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -5241,6 +5241,53 @@ function cvToggle(cod) {
   const cv = document.getElementById('dash-como-vamos');
   if (cv) cv.innerHTML = _renderComoVamos(r.plan, r.produccionHoy, dashboardCache.cvTot);
 }
+// Nombre corto de escuela para tablas angostas (sin «Centro Escolar», etc.).
+function dashEscuelaCorta(e) {
+  const n = String((e && (e.alias || e.nombre)) || '¿?');
+  return n.replace(/^(centro escolar|complejo educativo|instituto nacional|c\.\s*e\.|ce)\s+/i, '').trim() || n;
+}
+// Una prenda abierta: sus escuelas en filas y sus tallas en columnas.
+// Sale de las líneas del pedido (ya filtradas por empresa si hay una).
+function _cvTablaEscuelas(cod, lineas) {
+  const escMap = new Map(((dashboardCache.resumen || {}).escuelas || []).map(e => [e.id, e]));
+  const tallas = new Set(), porEsc = new Map(), totT = new Map();
+  for (const l of lineas || []) {
+    if (l.cod !== cod || !(l.sol > 0)) continue;
+    tallas.add(l.talla);
+    let o = porEsc.get(l.escuela_id);
+    if (!o) { o = { id: l.escuela_id, total: 0, t: new Map() }; porEsc.set(l.escuela_id, o); }
+    o.t.set(l.talla, (o.t.get(l.talla) || 0) + l.sol);
+    o.total += l.sol;
+    totT.set(l.talla, (totT.get(l.talla) || 0) + l.sol);
+  }
+  if (!porEsc.size) return '';
+  const ts = [...tallas].sort(dashOrdenTalla);
+  const filas = [...porEsc.values()].sort((a, b) => b.total - a.total);
+  const td = 'padding:5px 6px;text-align:right;white-space:nowrap';
+  const totGen = filas.reduce((s, o) => s + o.total, 0);
+  return `
+          <div style="overflow-x:auto;margin-top:8px">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;background:#FAFBFC;border-radius:8px;overflow:hidden">
+            <thead><tr style="font-size:11px;color:#555">
+              <th style="padding:6px;text-align:left">Escuela</th>
+              ${ts.map(t => `<th style="${td}">${dashEsc(t)}</th>`).join('')}
+              ${ts.length > 1 ? `<th style="${td}">Total</th>` : ''}
+            </tr></thead>
+            <tbody>${filas.map(o => `
+              <tr style="border-top:1px solid #ECEFF3">
+                <td style="padding:5px 6px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${dashEsc((escMap.get(o.id) || {}).nombre || '')}">${dashEsc(dashEscuelaCorta(escMap.get(o.id)))}</td>
+                ${ts.map(t => `<td style="${td}">${o.t.get(t) ? dashNum(o.t.get(t)) : '<span style="color:#C3CAD3">—</span>'}</td>`).join('')}
+                ${ts.length > 1 ? `<td style="${td};font-weight:700">${dashNum(o.total)}</td>` : ''}
+              </tr>`).join('')}
+              <tr style="border-top:2px solid #DDE3EA;font-weight:700">
+                <td style="padding:5px 6px">Total</td>
+                ${ts.map(t => `<td style="${td}">${dashNum(totT.get(t))}</td>`).join('')}
+                ${ts.length > 1 ? `<td style="${td}">${dashNum(totGen)}</td>` : ''}
+              </tr>
+            </tbody>
+          </table>
+          </div>`;
+}
 // Botones Todas · IMIS · JAV · AME (solo si hay más de una empresa).
 function _cvFiltroEmpresa() {
   const emps = dashboardCache.empresas || [];
@@ -5268,33 +5315,13 @@ function _renderComoVamosEmpresa(plan, lineas) {
     const w = v => o.pedido > 0 ? (100 * v / o.pedido).toFixed(2) : 0;
     return `<div style="display:flex;height:${alto}px;border-radius:${alto / 2}px;overflow:hidden;background:${CV_GRIS}">${o.ent > 0 ? `<div style="width:${w(o.ent)}%;background:${CV_MORADO}"></div>` : ''}${o.emp > 0 ? `<div style="width:${w(o.emp)}%;background:${CV_VERDE}"></div>` : ''}</div>`;
   };
-  const td = 'padding:5px 6px;text-align:right';
-  const tabla = o => {
-    const ts = [...o.tallas.values()].sort((a, b) => dashOrdenTalla(a.talla, b.talla));
-    return `
-          <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;background:#FAFBFC;border-radius:8px;overflow:hidden">
-            <thead><tr style="font-size:11px;color:#555">
-              <th style="padding:6px;text-align:left">Talla</th>
-              <th style="${td}">Pedido</th>
-              <th style="${td};color:${CV_VERDE}">Empacado</th>
-              <th style="${td};color:${CV_MORADO}">Entregado</th>
-              <th style="${td}">Falta</th>
-              <th style="${td};color:#8A94A3;font-weight:400" title="En bodega, de todo el taller (compartido por las empresas)">Bodega taller</th>
-            </tr></thead>
-            <tbody>${ts.map(t => {
-              const f = planIdx.get(o.cod + '|' + t.talla);
-              const bod = f ? Math.max(0, (Number(f.pedido) || 0) - (Number(f.falta_hacer) || 0)) : 0;
-              return `
-              <tr style="border-top:1px solid #ECEFF3">
-                <td style="padding:5px 6px;font-weight:700">${dashEsc(t.talla)}</td>
-                <td style="${td}">${dashNum(t.pedido)}</td>
-                <td style="${td}">${dashNum(t.emp)}</td>
-                <td style="${td}">${dashNum(t.ent)}</td>
-                <td style="${td};font-weight:${t.pend > 0 ? 700 : 400}">${dashNum(t.pend)}</td>
-                <td style="${td};color:#8A94A3">${dashNum(bod)}</td>
-              </tr>`;
-            }).join('')}</tbody>
-          </table>`;
+  // Lo que hay en bodega (todo el taller) de las tallas de esta prenda.
+  const bodega = o => {
+    const ts = [...o.tallas.keys()].sort(dashOrdenTalla).map(t => {
+      const f = planIdx.get(o.cod + '|' + t);
+      return [t, f ? Math.max(0, (Number(f.pedido) || 0) - (Number(f.falta_hacer) || 0)) : 0];
+    });
+    return `<div style="font-size:11px;color:#8A94A3;margin-top:6px">En bodega del taller (para las 3): ${ts.map(([t, n]) => `${dashEsc(t)} <strong>${dashNum(n)}</strong>`).join(' · ')}</div>`;
   };
   return `
       <div class="card tj">
@@ -5316,18 +5343,21 @@ function _renderComoVamosEmpresa(plan, lineas) {
             <div style="--p:#B9C2CD"><b>${dashNum(tot.pend)}</b><small>Falta</small></div>
           </div>
         </div>
-        <div class="solo-asistencia" style="padding:0 12px 6px;font-size:12px;color:#666">Lo que se corta y se cose es del taller entero: «Bodega taller» es lo que hay para todas las empresas.</div>
+        <div class="solo-asistencia" style="padding:0 12px 6px;font-size:12px;color:#666">Tocá una prenda para ver sus escuelas. Lo que se corta y se cose es del taller entero: la bodega sirve para todas las empresas.</div>
         <button type="button" class="cv-ver${_cvPorPrenda ? ' abierta' : ''}" aria-expanded="${_cvPorPrenda}" onclick="cvToggle()">
           <span>Detalle<span class="solo-asistencia" style="font-weight:400"> por prenda y talla</span></span>${ico('ir')}
         </button>
         ${!_cvPorPrenda ? '' : filas.map(o => `
         <div class="cv-prenda" role="button" tabindex="0" aria-expanded="${_cvAbiertas.has(o.cod)}" onclick="cvToggle('${o.cod}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();cvToggle('${o.cod}')}" style="padding:9px 12px;border-bottom:1px solid #F0F0F0;cursor:pointer">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px">
-            <span style="font-weight:600;font-size:13px"><span class="fl-flecha${_cvAbiertas.has(o.cod) ? ' abierta' : ''}">${ico('ir')}</span>${dashEsc(dashPrendaNombre(o.cod))} <span style="font-weight:400;color:#888;font-size:11px">· ${dashNum(o.pedido)} pedidas · tallas ${[...o.tallas.keys()].sort(dashOrdenTalla).map(dashEsc).join(', ')}</span></span>
-            <span style="font-size:12px;font-weight:700;color:${o.emp + o.ent > 0 ? CV_VERDE : '#999'}">${pct(o)}%</span>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px">
+            <span style="font-weight:600;font-size:14px"><span class="fl-flecha${_cvAbiertas.has(o.cod) ? ' abierta' : ''}">${ico('ir')}</span>${dashEsc(dashPrendaNombre(o.cod))}</span>
+            <span style="white-space:nowrap"><strong style="font-size:18px">${dashNum(o.pedido)}</strong> <small style="color:#888">piezas</small></span>
           </div>
-          ${barra(o, 10)}
-          ${_cvAbiertas.has(o.cod) ? tabla(o) : ''}
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">${[...o.tallas.values()].sort((a, b) => dashOrdenTalla(a.talla, b.talla)).map(t => `
+            <span style="display:inline-flex;align-items:baseline;gap:5px;padding:3px 9px;border:1px solid #DDE3EA;border-radius:8px;background:#F7F9FB;font-size:12px"><span style="color:#667">${dashEsc(t.talla)}</span><strong style="font-size:14px">${dashNum(t.pedido)}</strong>${t.emp + t.ent > 0 ? `<small style="color:${CV_VERDE}">· ${dashNum(t.emp + t.ent)} listas</small>` : ''}</span>`).join('')}
+          </div>
+          ${barra(o, 6)}
+          ${_cvAbiertas.has(o.cod) ? _cvTablaEscuelas(o.cod, lineas) + bodega(o) : ''}
         </div>`).join('')}
       </div>`;
 }
@@ -5418,7 +5448,7 @@ function _renderComoVamos(plan, prod, totEmp) {
           </div>
           ${_cvBarra(o, 10)}
           <div style="font-size:11px;color:#444;margin-top:4px;line-height:1.7">${_cvLeyenda(o)}</div>
-          ${_cvAbiertas.has(o.cod) ? _cvTallas(o) : ''}
+          ${_cvAbiertas.has(o.cod) ? _cvTallas(o) + _cvTablaEscuelas(o.cod, dashboardCache.cvLineas) : ''}
         </div>`).join('')}
       </div>`;
 }
