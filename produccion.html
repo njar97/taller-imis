@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-18 23:34 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-18 23:45 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -12412,8 +12412,15 @@ function renderProdBulto(b) {
 
   // Acciones
   let acciones = '';
+  // Con operaciones (Fase 2): el botón grande es «Avance N/25» y abre las operaciones;
+  // «Terminar» pasa a «⋯» (Javier 18-nov: «solo hay un gran botón que dice terminar»).
+  const conEtapas = FASE2_ACTIVA && b.total_etapas > 0;
+  let terminarEnMas = '';
   if (estadoEfectivo === 'terminado') {
     acciones = `<button class="prod-btn-accion prod-btn-revertir" onclick="revertirBulto('${b.produccion_bulto_id}')">↶ Revertir</button>`;
+  } else if (conEtapas) {
+    acciones = `<button class="prod-btn-accion" style="background:#1565c0;color:#fff;border-color:#1565c0" onclick="toggleEtapasBulto('${b.produccion_bulto_id}')">▶ Avance ${b.etapas_hechas || 0}/${b.total_etapas}</button>`;
+    terminarEnMas = `<button class="prod-btn-accion prod-btn-terminar" onclick="terminarBultoAtajo('${b.produccion_bulto_id}', ${cantActual})">✓ Terminar todo</button>`;
   } else {
     // Con Fase 2 activa, el "terminar" es atajo con confirmación
     const onclickTerm = FASE2_ACTIVA
@@ -12422,16 +12429,16 @@ function renderProdBulto(b) {
     acciones = `<button class="prod-btn-accion prod-btn-terminar" onclick="${onclickTerm}">✓ Terminar</button>`;
   }
   // Lo de todos los días es «Terminar»; lo demás va detrás de «⋯».
-  let mas = '';
+  let mas = terminarEnMas;
   if (estadoEfectivo !== 'terminado' && cantActual > 1) {
     mas += `<button class="prod-btn-accion prod-btn-dividir" onclick="abrirDividir('${b.produccion_bulto_id}', ${cantActual}, '${b.codigo_bulto}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-tijera"/></svg> Dividir</button>`;
   }
   if (estadoEfectivo !== 'terminado') {
     mas += `<button class="prod-btn-accion prod-btn-unir" onclick="abrirUnir('${b.produccion_bulto_id}', '${b.talla_key_salida}', '${b.codigo_bulto}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-enlace"/></svg> Unir</button>`;
   }
-  // Botón expandir etapas (solo si Fase 2 activa)
-  if (FASE2_ACTIVA && b.total_etapas > 0) {
-    mas += `<button class="prod-btn-accion" onclick="toggleEtapasBulto('${b.produccion_bulto_id}')">▾ Etapas</button>`;
+  // Terminado con operaciones: «Etapas» sigue en «⋯» para ver quién hizo qué
+  if (conEtapas && estadoEfectivo === 'terminado') {
+    mas += `<button class="prod-btn-accion" onclick="toggleEtapasBulto('${b.produccion_bulto_id}')">▾ Operaciones</button>`;
   }
   if (mas) {
     acciones += `<button class="prod-btn-accion prod-btn-mas" onclick="toggleMasBulto('${b.produccion_bulto_id}')" aria-label="Más opciones" title="Dividir, unir, etapas">⋯</button>`;
@@ -12441,7 +12448,7 @@ function renderProdBulto(b) {
   const obsInfo = b.observaciones ? `<div style="font-size:11px;color:#856404;margin-top:4px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-alerta"/></svg> ${b.observaciones}</div>` : '';
 
   return `
-    <div class="prod-bulto-row ${clase}" id="bulto-row-${b.produccion_bulto_id}">
+    <div class="prod-bulto-row ${clase}" id="bulto-row-${b.produccion_bulto_id}" style="flex-wrap:wrap">
       <div style="flex:1;min-width:0">
         <div>
           <span class="prod-bulto-nombre">Rollo ${b.numero_rollo ?? '?'}${b.sufijo_division ? ' (' + b.sufijo_division + ')' : ''} · ${cantFinal}</span>
@@ -12452,9 +12459,9 @@ function renderProdBulto(b) {
         ${badges?`<div class="prod-bulto-badges">${badges}</div>`:''}
         ${obsInfo}
         ${mas ? `<div class="prod-bulto-mas" id="mas-${b.produccion_bulto_id}" style="display:none">${mas}</div>` : ''}
-        <div id="etapas-${b.produccion_bulto_id}" style="display:none;margin-top:8px"></div>
       </div>
       <div class="prod-bulto-acciones">${acciones}</div>
+      <div id="etapas-${b.produccion_bulto_id}" style="display:none;margin-top:8px;flex-basis:100%;width:100%"></div>
     </div>
   `;
 }
@@ -12710,7 +12717,7 @@ async function toggleEtapasBulto(produccionBultoId) {
   cont.innerHTML = '<div class="text-muted" style="font-size:11px">Cargando etapas...</div>';
   try {
     const etapas = await supaFetch('vw_bulto_etapas','GET',null,
-      `?produccion_bulto_id=eq.${produccionBultoId}&order=orden&limit=20`);
+      `?produccion_bulto_id=eq.${produccionBultoId}&order=orden&limit=60`);
     renderEtapasBulto(produccionBultoId, etapas);
   } catch(e) {
     cont.innerHTML = `<div class="text-muted" style="color:#B00">Error: ${e.message}</div>`;
@@ -12724,51 +12731,70 @@ function renderEtapasBulto(bultoId, etapas) {
     cont.innerHTML = '<div class="text-muted" style="font-size:11px">Este bulto no tiene operaciones configuradas.</div>';
     return;
   }
+  const sigue = etapas.find(e => !e.registro_id);
   cont.innerHTML = etapas.map(e => {
     const hecha = !!e.registro_id;
+    const esSigue = sigue && e.operacion_id === sigue.operacion_id;
     const info = hecha
-      ? `<span style="color:#155724;font-size:11px">✓ ${e.operaria_nombre||'?'} · ${e.fecha_hecha||''} · ${e.cantidad_hecha||'?'}pz</span>`
-      : `<span style="color:#999;font-size:11px">pendiente</span>`;
+      ? `<span style="color:#155724;font-size:11px">✓ ${e.operaria_nombre||'?'} · ${e.fecha_hecha||''} · ${e.cantidad_hecha||'?'} pz</span>`
+      : esSigue ? `<span style="color:#1565c0;font-size:11px;font-weight:700">SIGUE ESTA</span>` : '';
     const btn = hecha
-      ? `<button class="btn-mini btn-mini-danger" onclick="desmarcarEtapa('${e.registro_id}','${bultoId}')">↶ Deshacer</button>`
-      : `<button class="btn-mini btn-mini-success" onclick="marcarEtapaRapida('${bultoId}','${e.operacion_id}')">✓ Marcar</button>`;
+      ? `<button class="btn-mini btn-mini-danger" onclick="desmarcarEtapa('${e.registro_id}','${bultoId}')">↶</button>`
+      : `<button class="btn-mini btn-mini-success" style="padding:6px 10px;font-size:13px" onclick="marcarEtapaRapida('${bultoId}','${e.operacion_id}')">✓ Hecha</button>`;
     const reprocesos = e.n_reprocesos > 0 ? ` <span style="color:#B58900;font-size:10px">(${e.n_reprocesos} reproc.)</span>` : '';
     return `
-      <div style="padding:6px;border:1px solid #E8E8E8;border-radius:4px;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;background:${hecha?'#F1F8F1':'#FAFAFA'}">
-        <div style="flex:1">
-          <div style="font-size:12px;font-weight:600">${e.orden}. ${e.operacion_nombre}${reprocesos}</div>
-          <div>${info}</div>
+      <div style="padding:6px 8px;border:1px solid ${esSigue?'#90caf9':'#E8E8E8'};border-radius:6px;margin-bottom:4px;background:${hecha?'#F1F8F1':esSigue?'#E3F2FD':'#FAFAFA'}">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600">${e.orden}. ${e.operacion_nombre}${reprocesos}</div>
+            ${info ? `<div>${info}</div>` : ''}
+          </div>
+          ${btn}
         </div>
-        ${btn}
+        ${hecha ? '' : `<div id="pick-${bultoId}-${e.operacion_id}"></div>`}
       </div>
     `;
   }).join('');
+  if (sigue) {
+    const el = document.getElementById(`pick-${bultoId}-${sigue.operacion_id}`);
+    if (el && el.parentElement) el.parentElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
 }
 
-// Marcar etapa hecha rápidamente desde el dashboard
+// Marcar etapa hecha: se abre debajo de la operación una cajita con las
+// operarias en botones y la cantidad ya puesta (antes eran dos ventanas para escribir).
 async function marcarEtapaRapida(bultoId, operacionId) {
-  // Necesitamos operaria y cantidad
+  const caja = document.getElementById(`pick-${bultoId}-${operacionId}`);
+  if (!caja) return;
+  if (caja.innerHTML) { caja.innerHTML = ''; return; }
+  document.querySelectorAll(`[id^="pick-${bultoId}-"]`).forEach(x => { x.innerHTML = ''; });
   if (operariasCache.length === 0) {
+    caja.innerHTML = '<div class="text-muted" style="font-size:12px">Cargando operarias…</div>';
     operariasCache = await supaFetch('operaria','GET',null,'?activo=eq.true&order=nombre&limit=100');
   }
   const activas = operariasCache.filter(operariaTrabajando);
-  if (activas.length === 0) { alert('No hay operarias activas. Andá a Operarias y agregá.'); return; }
-
-  // Preguntar operaria
-  const nombres = activas.map((o,i) => `${i+1}. ${o.nombre}`).join('\n');
-  const idxStr = await pedirTexto(`¿Quién hizo esta etapa?\n\n${nombres}\n\nEscribí el número:`, '1');
-  if (idxStr === null) return;
-  const idx = parseInt(idxStr) - 1;
-  if (idx < 0 || idx >= activas.length) { alert('Número inválido'); return; }
-  const operaria = activas[idx];
-
-  // Buscar bulto para obtener cantidad
+  if (activas.length === 0) { caja.innerHTML = '<div class="text-muted" style="font-size:12px">No hay operarias activas. Agregalas en Operarias.</div>'; return; }
   const bulto = produccionData.find(b => b.produccion_bulto_id === bultoId);
-  const cantDefault = bulto?.cantidad_original || 0;
-  const cantStr = await pedirTexto(`Cantidad de piezas (Enter = ${cantDefault}):`, cantDefault);
-  if (cantStr === null) return;
-  const cantidad = parseInt(cantStr) || cantDefault;
-
+  const cant = bulto?.cantidad_final || bulto?.cantidad_original || 0;
+  caja.innerHTML = `
+    <div style="margin-top:6px;padding:8px;background:#fff;border:1px solid #cfe3cf;border-radius:8px">
+      <div style="font-size:12px;margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        Piezas <input type="number" id="pickc-${bultoId}-${operacionId}" value="${cant}" min="1" style="width:70px;padding:4px 6px;font-size:14px">
+        <span class="text-muted">¿Quién la hizo?</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${activas.map(o => `<button class="btn btn-ghost btn-sm" style="padding:8px 10px" onclick="guardarEtapaRapida('${bultoId}','${operacionId}','${o.id}')">${escapeHtmlProd(o.nombre)}</button>`).join('')}
+      </div>
+    </div>`;
+}
+function escapeHtmlProd(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+async function guardarEtapaRapida(bultoId, operacionId, operariaId) {
+  const bulto = produccionData.find(b => b.produccion_bulto_id === bultoId);
+  const inp = document.getElementById(`pickc-${bultoId}-${operacionId}`);
+  const cantidad = parseInt(inp && inp.value) || bulto?.cantidad_original || 0;
+  const operaria = { id: operariaId };
   try {
     await supaFetch('produccion_registro_operacion','POST',{
       produccion_bulto_id: bultoId,
