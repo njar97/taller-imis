@@ -1169,7 +1169,7 @@ async function invitarUsuario() {
 function toggleFase(n, activar) {
   if (n === 2) {
     FASE2_ACTIVA = activar;
-    localStorage.setItem('fase2_activa', String(activar));
+    try { localStorage.setItem('fase2_apagada', activar ? '0' : '1'); } catch (_) {}
     // Si desactivo Fase 2, también desactivo Fase 3
     if (!activar) {
       FASE3_ACTIVA = false;

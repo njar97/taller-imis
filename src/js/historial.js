@@ -252,6 +252,20 @@ async function editarTrazo(id) {
     document.getElementById('t-observaciones').value = trazo.observaciones || '';
     document.getElementById('t-video-url').value = trazo.video_url || '';
 
+    // Foto: mostrar la que ya tiene (antes salía vacía al editar)
+    fotoBlob = null;
+    const fIn = document.getElementById('t-foto-input');
+    if (fIn) fIn.value = '';
+    const fPrev = document.getElementById('t-foto-preview');
+    const fLbl = document.getElementById('t-foto-label');
+    if (trazo.foto_url) {
+      fPrev.src = trazo.foto_url; fPrev.style.display = 'block';
+      fLbl.textContent = 'Imagen actual del trazo · tocá para cambiarla';
+    } else {
+      fPrev.removeAttribute('src'); fPrev.style.display = 'none';
+      fLbl.textContent = 'Toca para tomar o adjuntar foto';
+    }
+
     // Colores
     coloresSeleccionados = new Set(trazo.colores_tela || []);
     renderColorChips();
@@ -301,6 +315,9 @@ async function editarTrazo(id) {
     const btn = document.getElementById('btn-guardar-trazo');
     btn.textContent = '💾 Guardar cambios';
     btn.dataset.editandoId = id;
+    btn.dataset.codigoViejo = trazo.codigo_corte || '';
+    window._tallasViejasTrazo = tallas;   // para no perder «×8» (multiplicidad) al guardar
+    btn.dataset.letraVieja = trazo.letra_corte || '';
     // Listener temporal: usamos onclick distinto
     btn.onclick = () => guardarEdicionTrazo(id);
 
@@ -313,8 +330,14 @@ async function editarTrazo(id) {
 async function guardarEdicionTrazo(id) {
   const fecha = document.getElementById('t-fecha').value;
   const letraCorte = (document.getElementById('t-letra-corte').value||'').toUpperCase().trim();
+  const btn0 = document.getElementById('btn-guardar-trazo');
+  const codigoViejo = btn0.dataset.codigoViejo || '';
+  const letraVieja = btn0.dataset.letraVieja || '';
   if (!fecha) { mostrarAlerta('trazo','error','Fecha es obligatoria.'); return; }
-  if (!letraCorte) { mostrarAlerta('trazo','error','Letra del corte es obligatoria.'); return; }
+  // Los trazos del plan («Plan T1»…) no traen letra: se la pone el tendido.
+  if (!letraCorte && letraVieja) { mostrarAlerta('trazo','error','Letra del corte es obligatoria.'); return; }
+  // El nombre solo sigue a la letra cuando era la misma letra; «Plan T1» no se pisa.
+  const codigoNuevo = (!codigoViejo || codigoViejo === letraVieja) ? (letraCorte || codigoViejo) : codigoViejo;
   if (coloresSeleccionados.size === 0) { mostrarAlerta('trazo','error','Elegí al menos un color.'); return; }
 
   const tallas = recolectarTallasTrazo();
@@ -330,8 +353,8 @@ async function guardarEdicionTrazo(id) {
     // Actualizar el trazo
     await supaUpdate('trazo', id, {
       fecha,
-      codigo_corte: letraCorte,
-      letra_corte: letraCorte,
+      codigo_corte: codigoNuevo,
+      letra_corte: letraCorte || null,
       colores_tela: [...coloresSeleccionados],
       capas: parseInt(document.getElementById('t-capas').value) || null,
       yardas_estimadas: parseFloat(document.getElementById('t-yardas').value) || null,
@@ -340,16 +363,29 @@ async function guardarEdicionTrazo(id) {
       video_url: document.getElementById('t-video-url').value.trim() || null,
     });
 
+    // Si se eligió una imagen nueva, se sube con otro nombre (la vieja no se pisa)
+    if (fotoBlob) {
+      try {
+        const url = await supaUploadFoto(fotoBlob, `${id}_${Date.now()}`);
+        await supaUpdate('trazo', id, { foto_url: url });
+      } catch (e) { mostrarAlerta('trazo', 'error', 'Se guardó el trazo, pero no la imagen: ' + e.message); }
+      fotoBlob = null;
+    }
+
     // Estrategia simple para tallas: borrar todas las existentes y reinsertar
+    const viejas = Array.isArray(window._tallasViejasTrazo) ? window._tallasViejasTrazo : [];
     await supaFetch('trazo_talla_marcada','DELETE',null,`?trazo_id=eq.${id}`);
     for (const t of tallas) {
+      const v = viejas.find(x => x.talla_key_original === t.key && x.letra_local === t.letra)
+             || viejas.find(x => x.talla_key_original === t.key);
       await supaFetch('trazo_talla_marcada','POST',{
+        ...(v && v.talla != null ? { talla: v.talla } : {}),
         trazo_id: id,
         letra_local: t.letra,
         talla_key_original: t.key,
         talla_key_complemento: (t.tipo === 'par' && t.complementoKey) ? t.complementoKey : null,
         tipo: t.tipo,
-        multiplicidad: 1,
+        multiplicidad: (v && +v.multiplicidad > 0) ? +v.multiplicidad : 1,
         cod_prenda: t.prenda,
         orden: t.orden,
       });

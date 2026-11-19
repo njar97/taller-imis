@@ -981,7 +981,9 @@ let progresoCache = {}; // produccion_bulto_id -> { total, registradas }
 let asignacionesPorBulto = {}; // produccion_bulto_id -> [{ operaria_nombre, operacion_nombre }, ...]
 
 // Features opt-in: se activan desde Config
-let FASE2_ACTIVA = localStorage.getItem('fase2_activa') === 'true';
+// 18-nov-2026 (Javier): Fase 2 (avance por operación) ENCENDIDA para todos por defecto.
+// Solo se apaga si alguien la apaga a propósito en Ajustes (clave nueva «fase2_apagada»).
+let FASE2_ACTIVA = (() => { try { return localStorage.getItem('fase2_apagada') !== '1'; } catch (_) { return true; } })();
 let FASE3_ACTIVA = localStorage.getItem('fase3_activa') === 'true';
 
 function switchSubProd(sub) {
