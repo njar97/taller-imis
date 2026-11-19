@@ -210,13 +210,15 @@ async function eliminarRegistro() {
             + `• ${rollos.length} rollo(s)\n`
             + `• ${tms.length} talla(s) heredada(s)\n`
             + `• ${nSalidas} bulto(s) capturado(s)\n\n`
-            + `El trazo NO se borra.\n\nOjo: las yardas NO vuelven solas a los rollos de bodega; hay que corregirlas a mano.\n\nEsta acción NO se puede deshacer. ¿Continuar?`;
+            + `El trazo NO se borra.\n\nLas yardas vuelven a los rollos de bodega que se eligieron de la lista (en los tendidos viejos, A y B, hay que corregirlas a mano).\n\nEsta acción NO se puede deshacer. ¿Continuar?`;
     }
 
     if (!await confirmar(aviso)) return;
 
-    // Ejecutar DELETE (cascade se encarga del resto)
-    await supaFetch(tipo, 'DELETE', null, `?id=eq.${id}`);
+    // El tendido se elimina en un solo paso que también devuelve las yardas;
+    // el trazo, con DELETE (la cascada se encarga del resto).
+    if (tipo === 'tendido') await supaFetch('rpc/eliminar_tendido', 'POST', { p_id: id });
+    else await supaFetch(tipo, 'DELETE', null, `?id=eq.${id}`);
 
     alert('✅ Registro eliminado.');
     cerrarDetalle();

@@ -62,16 +62,35 @@ function tdBuscarRollo(rolloId) {
   let elegido = iguales.find(r => r.id === card.dataset.telaId) || null;
   if (!elegido && iguales.length === 1) elegido = iguales[0];
   if (elegido) { card.dataset.telaId = elegido.id; card.dataset.telaColor = String(elegido.color || '').toUpperCase(); }
-  else { delete card.dataset.telaId; delete card.dataset.telaColor; }
+  else {
+    delete card.dataset.telaId;
+    // Rollo que no está en la lista: vale el color que se le eligió a mano.
+    if (!iguales.length && card.dataset.colorManual) card.dataset.telaColor = card.dataset.colorManual; else delete card.dataset.telaColor;
+  }
   if (!caja) return;
   const bonito = c => { c = String(c || ''); return c.charAt(0).toUpperCase() + c.slice(1).toLowerCase(); };
   if (!(yd > 0)) { caja.innerHTML = ''; return; }
   if (!iguales.length) {
-    caja.innerHTML = '<span class="td-rollo-nota">No está en la lista: se anota como rollo nuevo.</span>';
+    // Trazo de dos colores (falda azul + beige): hay que saber el color del
+    // rollo para que sus bultos salgan con la prenda correcta.
+    const cols = tdColoresTrazo();
+    caja.innerHTML = '<span class="td-rollo-nota">No está en la lista: se anota como rollo nuevo.</span>'
+      + (cols.length > 1 ? `<span class="td-rollo-nota">¿De qué color es?</span>` + cols.map(c =>
+          `<button type="button" class="td-rollo-chip${card.dataset.colorManual === c ? ' on' : ''}" onclick="tdColorRollo(${rolloId},'${c}')">${card.dataset.colorManual === c ? '✓ ' : ''}${tdEsc(bonito(c))}</button>`).join('') : '');
     return;
   }
   caja.innerHTML = (iguales.length > 1 && !elegido ? `<span class="td-rollo-nota">Hay ${iguales.length} de ${yd} yd. Tocá cuál:</span>` : '')
     + iguales.slice(0, 8).map(r => `<button type="button" class="td-rollo-chip${elegido && elegido.id === r.id ? ' on' : ''}" onclick="tdElegirRollo(${rolloId},'${r.id}')">${elegido && elegido.id === r.id ? '✓ ' : ''}${tdEsc(bonito(r.color))} · ${tdEsc(tdNombreRollo(r))}</button>`).join('');
+}
+function tdColoresTrazo() {
+  return ((trazoSeleccionado && trazoSeleccionado.trazo.colores_tela) || []).map(c => String(c).toUpperCase());
+}
+function tdColorRollo(rolloId, color) {
+  const card = document.getElementById('trollo-' + rolloId);
+  if (!card) return;
+  card.dataset.colorManual = color;
+  tdRefrescarListas();
+  recalcTotalesTendido();
 }
 function tdElegirRollo(rolloId, telaId) {
   const card = document.getElementById('trollo-' + rolloId);
@@ -377,75 +396,51 @@ async function guardarTendido() {
     if (!await confirmar(`Este tendido lleva ${totalTelas} telas y el tope es ${TD_TOPE_TELAS}.\n\n¿Guardarlo así de todos modos?`)) return;
   }
 
+  // Trazo de dos colores: cada rollo tiene que decir su color.
+  if (tdColoresTrazo().length > 1) {
+    const sinColor = rollos.find(c => !c.dataset.telaId && !c.dataset.telaColor);
+    if (sinColor) {
+      mostrarAlerta('tendido','error','Este trazo lleva dos colores de tela. En el rollo de ' + (sinColor.querySelector('[data-tfield="yardas_rollo"]').value || '?') + ' yardas tocá cuál rollo es, o de qué color es.');
+      sinColor.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      return;
+    }
+  }
+
   const btn = document.getElementById('btn-guardar-tendido');
   btn.textContent = '⏳ Guardando...';
   btn.disabled = true;
 
   try {
     const completo = document.getElementById('td-completo').value === 'true';
-    // Heredar código, prendas y letra del trazo
-    const [tendido] = await supaFetch('tendido','POST',{
-      fecha,
-      codigo_corte: trazoSeleccionado.trazo.codigo_corte,
-      letra_corte: letra,
-      trazo_id: trazoSeleccionado.trazo.id,
-      prendas: null, // se puede inferir de las tallas
-      equipo: document.getElementById('td-equipo').value || null,
-      completo_en_un_dia: completo,
-      fecha_continuacion: (!completo && document.getElementById('td-continuacion').value) ? document.getElementById('td-continuacion').value : null,
-      observaciones_generales: document.getElementById('td-observaciones').value || null,
-    });
-
-    // El trazo queda con la misma letra (si no la tenía o se cambió)
-    if (trazoSeleccionado.trazo.letra_corte !== letra) {
-      await supaFetch('trazo','PATCH',{ letra_corte: letra },`?id=eq.${trazoSeleccionado.trazo.id}`);
-      trazoSeleccionado.trazo.letra_corte = letra;
-    }
-
-    // Copiar tallas marcadas del trazo al tendido (con vinculación)
-    const tmRemoteMap = {}; // letra_local -> id en tendido_talla_marcada
-    for (const t of trazoSeleccionado.tallas) {
-      const [inserted] = await supaFetch('tendido_talla_marcada','POST',{
-        tendido_id: tendido.id,
-        trazo_talla_marcada_id: t.id,
-        letra_local: t.letra_local,
-        talla_key_original: t.talla_key_original,
-        talla_key_complemento: t.talla_key_complemento || null,
-        tipo: t.tipo,
-        multiplicidad: t.multiplicidad,
-        orden: t.orden,
-      });
-      tmRemoteMap[t.letra_local] = inserted.id;
-    }
-
-    // Rollos con numeración invertida: último capturado = rollo #1
-    // Orden de captura: trollo-1, trollo-2, ..., trollo-N
-    // Numeración final: el último capturado es rollo 1, el primero es rollo N
+    // Todo o nada: el tendido, sus tallas, sus rollos y el descuento de
+    // bodega se guardan en UN solo paso en la base (función guardar_tendido).
+    // Si algo falla no queda nada a medias y se puede volver a intentar.
+    // Numeración invertida: el último rollo capturado es el #1.
     const rolloElems = Array.from(rollos);
     const n = rolloElems.length;
-    for (let i = 0; i < n; i++) {
-      const el = rolloElems[i];
-      const id = el.id.replace('trollo-','');
-      const numeroFinal = n - i; // i=0 (primer capturado) → rollo #N; i=n-1 (último) → rollo #1
-      const campos = { tendido_id: tendido.id, numero_rollo: numeroFinal };
+    const rollosDatos = rolloElems.map((el, i) => {
+      const campos = { numero_rollo: n - i };   // i=0 (primer capturado) → rollo #N; el último → #1
       el.querySelectorAll('[data-trollo]').forEach(inp => {
         const f = inp.dataset.tfield;
         const v = inp.value;
         campos[f] = ['yardas_rollo','lienzos_salidos','yardas_sobrantes'].includes(f) ? (v ? parseFloat(v) : null) : (v || null);
       });
       const tela = el.dataset.telaId ? tdRollosBodega.find(r => r.id === el.dataset.telaId) : null;
-      if (tela) campos.codigo_rollo = tdNombreRollo(tela);
-      await supaFetch('tendido_rollo','POST',campos);
-      // Descontar de bodega: al rollo le queda lo que sobró; con 0 queda agotado.
-      if (tela) {
-        const queda = Math.max(0, Number(campos.yardas_sobrantes) || 0);
-        await supaFetch('tela_rollo','PATCH',{
-          yardas_disponibles: queda,
-          estado: queda > 0 ? 'en_bodega' : 'agotado',
-          actualizado_en: new Date().toISOString(),
-        },`?id=eq.${tela.id}`);
-      }
-    }
+      if (tela) { campos.tela_rollo_id = tela.id; campos.codigo_rollo = tdNombreRollo(tela); }
+      else if (el.dataset.telaColor) campos.color = el.dataset.telaColor;
+      return campos;
+    });
+    await supaFetch('rpc/guardar_tendido','POST',{ p: {
+      fecha,
+      letra,
+      trazo_id: trazoSeleccionado.trazo.id,
+      equipo: document.getElementById('td-equipo').value || null,
+      completo,
+      fecha_continuacion: (!completo && document.getElementById('td-continuacion').value) ? document.getElementById('td-continuacion').value : null,
+      observaciones: document.getElementById('td-observaciones').value || null,
+      rollos: rollosDatos,
+    } });
+    trazoSeleccionado.trazo.letra_corte = letra;
 
     mostrarAlerta('tendido','success',`Tendido guardado. ${n} rollo(s) renumerados (último tendido = bulto #1).`);
     setTimeout(() => { btn.textContent='Guardar tendido (invierte numeración)'; btn.disabled=false; volverNuevo(); }, 2200);
