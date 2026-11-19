@@ -272,7 +272,9 @@
   function titulo() {
     const t = ED.trazo || {};
     const v = ED.version ? `v${ED.version}${ED.soloVista ? ' (vieja)' : ''}` : 'nuevo';
-    $('ed-titulo').textContent = `Editor · Corte ${t.letra_corte || '—'} · ${v}`;
+    // Los trazos del plan («Plan T1») no tienen letra hasta que se tienden.
+    const nombre = t.letra_corte ? `Corte ${t.letra_corte}` : (t.codigo_corte || 'Trazo');
+    $('ed-titulo').textContent = `Editor · ${nombre} · ${v}${ED.yaTendido ? ' · YA TENDIDO' : ''}`;
   }
 
   function armar() {
@@ -756,6 +758,9 @@
 
   async function guardar() {
     if (ED.guardando || ED.cargando || !ED.trazoId) return;
+    // Trazo ya tendido: la tela ya se cortó con el acomodo anterior.
+    if (ED.yaTendido && typeof confirmar === 'function'
+        && !await confirmar('Este trazo YA SE TENDIÓ: la tela se cortó con el acomodo anterior.\n\n¿Guardar de todos modos una versión nueva del acomodo? (La anterior no se borra.)')) return;
     ED.guardando = true;
     const b = $('ed-guardar');
     b.disabled = true; b.textContent = 'Guardando…';
@@ -827,7 +832,7 @@
     construir();
     if (!ED.abierto) cuerpoOverflow = document.body.style.overflow;
     ED.abierto = true; ED.cargando = true; ED.trazoId = trazoId; ED.trazo = null;
-    ED.versiones = []; ED.piezas = []; ED.sel = null; ED.deshacer = []; ED.sucio = false; ED.soloVista = false;
+    ED.versiones = []; ED.piezas = []; ED.sel = null; ED.deshacer = []; ED.sucio = false; ED.soloVista = false; ED.yaTendido = false;
     ED.filaId = null; ED.version = 0; ED.foto = null; ED.fotoW = null; ED.largoRef = null;
     desarmarCerrar(); cerrarPanel();
     clearTimeout(avisoT); avisoT = null;
@@ -842,11 +847,13 @@
     $('ed-titulo').textContent = 'Editor de trazo · cargando…';
     $('ed-versiones').innerHTML = ''; $('ed-versiones').disabled = true;
     try {
-      const [tr, vers] = await Promise.all([
+      const [tr, vers, tend] = await Promise.all([
         supaFetch('trazo', 'GET', null, `?id=eq.${encodeURIComponent(trazoId)}&select=id,letra_corte,codigo_corte,largo_cm,fecha,foto_url`),
-        supaFetch('trazo_layout', 'GET', null, `?trazo_id=eq.${encodeURIComponent(trazoId)}&select=id,version,creado_en,creado_por,nota,largo_cm&order=version.desc`)
+        supaFetch('trazo_layout', 'GET', null, `?trazo_id=eq.${encodeURIComponent(trazoId)}&select=id,version,creado_en,creado_por,nota,largo_cm&order=version.desc`),
+        supaFetch('tendido', 'GET', null, `?trazo_id=eq.${encodeURIComponent(trazoId)}&select=id&limit=1`).catch(() => [])
       ]);
       if (ED.trazoId !== trazoId) return;            // se abrió otro mientras cargaba
+      ED.yaTendido = !!(tend && tend.length);
       ED.trazo = (tr && tr[0]) || { id: trazoId };
       ED.largoRef = +ED.trazo.largo_cm > 0 ? +ED.trazo.largo_cm : null;
       ED.versiones = vers || [];

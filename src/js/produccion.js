@@ -827,6 +827,17 @@ async function marcarEtapaRapida(bultoId, operacionId) {
 function escapeHtmlProd(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+// Recarga la lista de Producción y deja abierto el mismo bulto, en el mismo
+// punto de la pantalla (antes cada toque mandaba la pantalla hasta arriba).
+async function prodRecargarEnSuLugar(bultoId) {
+  const fila = () => document.getElementById(`bulto-row-${bultoId}`);
+  const antes = fila();
+  const topAntes = antes ? antes.getBoundingClientRect().top : null;
+  await cargarProduccion();
+  await toggleEtapasBulto(bultoId);   // la lista se rehízo: reabrir las operaciones del bulto
+  const ahora = fila();
+  if (ahora && topAntes !== null) window.scrollBy(0, ahora.getBoundingClientRect().top - topAntes);
+}
 const _etapaGuardando = new Set();   // operaciones que se están guardando (evita el doble toque)
 async function guardarEtapaRapida(bultoId, operacionId, operariaId) {
   const llave = bultoId + '|' + operacionId;
@@ -847,10 +858,8 @@ async function guardarEtapaRapida(bultoId, operacionId, operariaId) {
       cantidad_realizada: cantidad,
       tipo: 'normal',
     });
-    // Refrescar etapas y dashboard
-    await toggleEtapasBulto(bultoId); // cerrar
-    await cargarProduccion();
-    await toggleEtapasBulto(bultoId); // reabrir con datos frescos
+    // Refrescar etapas y dashboard, sin perder el lugar en la pantalla
+    await prodRecargarEnSuLugar(bultoId);
     // Era la última operación: el bulto pasa a bodega igual que con «Terminar».
     const b2 = produccionData.find(b => b.produccion_bulto_id === bultoId);
     if (b2 && b2.estado_manual !== 'terminado' && b2.total_etapas > 0 && b2.etapas_hechas >= b2.total_etapas) {
@@ -869,9 +878,7 @@ async function desmarcarEtapa(registroId, bultoId) {
   if (!await confirmar('¿Deshacer esta etapa? Se elimina el registro de captura.')) return;
   try {
     await supaFetch('produccion_registro_operacion','DELETE',null,`?id=eq.${registroId}`);
-    await toggleEtapasBulto(bultoId); // cerrar
-    await cargarProduccion();
-    await toggleEtapasBulto(bultoId); // reabrir
+    await prodRecargarEnSuLugar(bultoId);
   } catch(e) {
     alert('Error: ' + e.message);
   }
@@ -893,37 +900,15 @@ async function abrirDividir(produccionBultoId, cantidadActual, codigoBulto) {
   const motivo = await pedirTexto('Motivo de la división (opcional, ej: "defectos", "agilizar entrega"):') || null;
 
   try {
-    // 1. Encontrar el bulto original para obtener su salida_id
+    // Todo o nada en la base (función dividir_bulto): cambia la cantidad del
+    // original, crea el derivado y reparte entre los dos las operaciones ya
+    // marcadas, en proporción a las piezas.
     const original = produccionData.find(x => x.produccion_bulto_id === produccionBultoId);
     if (!original) throw new Error('No se encontró el bulto original');
-
-    // 2. Contar hermanos de división para asignar sufijo correcto
-    const hermanos = await supaFetch('produccion_bulto','GET',null,
-      `?or=(id.eq.${produccionBultoId},bulto_origen_id.eq.${produccionBultoId})&select=id,sufijo_division`);
-    const yaUsados = new Set(['']); // '' = original sin sufijo
-    hermanos.forEach(h => { if (h.sufijo_division) yaUsados.add(h.sufijo_division); });
-    let n = 2;
-    while (yaUsados.has(`/${n}`)) n++;
-    const sufijoNuevo = `/${n}`;
-
-    // 3. Actualizar cantidad del original
     const cantidadOriginalNueva = original.cantidad_original - piezasAPartir;
-    await supaUpdate('produccion_bulto', produccionBultoId, {
-      cantidad_ajustada: cantidadOriginalNueva,
-      actualizado_en: new Date().toISOString(),
-    });
+    const sufijoNuevo = await supaFetch('rpc/dividir_bulto', 'POST', { p_id: produccionBultoId, p_piezas: piezasAPartir, p_motivo: motivo });
 
-    // 4. Crear bulto derivado (mismo tendido_rollo_salida, con sufijo)
-    await supaFetch('produccion_bulto','POST',{
-      tendido_rollo_salida_id: original.salida_id,
-      estado: 'pendiente',
-      cantidad_ajustada: piezasAPartir,
-      bulto_origen_id: produccionBultoId,
-      sufijo_division: sufijoNuevo,
-      observaciones: motivo,
-    });
-
-    alert(`✅ Dividido: ${cantidadOriginalNueva} + ${piezasAPartir} piezas (derivado${sufijoNuevo})`);
+    alert(`✅ Dividido: ${cantidadOriginalNueva} + ${piezasAPartir} piezas (derivado${sufijoNuevo})${(original.etapas_hechas || 0) > 0 ? '\n\nLas operaciones ya marcadas se repartieron entre los dos bultos.' : ''}`);
     await cargarProduccion(); // recargar desde BD porque cambió estructura
   } catch(e) {
     alert('Error al dividir: ' + e.message);
@@ -933,14 +918,26 @@ async function abrirDividir(produccionBultoId, cantidadActual, codigoBulto) {
 // ══ UNIR ═════════════════════════════════════════════════════════════
 async function abrirUnir(produccionBultoId, tallaKeySalida, codigoBulto) {
   // Buscar otros bultos con misma KEY, no terminados, no fusionados, no este mismo
-  const candidatos = produccionData.filter(b => 
+  // Solo se unen bultos sin terminar y SIN operaciones marcadas: al unir no
+  // se puede saber qué piezas llevan qué trabajo, y un bulto terminado ya
+  // está en bodega (unirlo lo contaría dos veces).
+  const principal = produccionData.find(b => b.produccion_bulto_id === produccionBultoId);
+  if (principal && (Number(principal.etapas_hechas) || 0) > 0) {
+    alert('Este bulto ya tiene operaciones marcadas: no se le pueden unir otros.\n\nSi hace falta juntarlos, primero deshacé esas operaciones (↶).');
+    return;
+  }
+  const mismos = produccionData.filter(b =>
     b.talla_key_salida === tallaKeySalida &&
+    b.produccion_bulto_id &&
     b.produccion_bulto_id !== produccionBultoId &&
-    b.estado !== 'terminado'
+    b.estado_manual !== 'terminado'
   );
+  const candidatos = mismos.filter(b => !((Number(b.etapas_hechas) || 0) > 0));
 
   if (candidatos.length === 0) {
-    alert(`No hay otros bultos pendientes con la KEY ${tallaKeySalida} para unir.`);
+    alert(mismos.length
+      ? `Los otros bultos de ${tallaKeySalida} ya tienen operaciones marcadas: no se pueden unir.`
+      : `No hay otros bultos pendientes con la KEY ${tallaKeySalida} para unir.`);
     return;
   }
 
@@ -1149,7 +1146,14 @@ function llenarOperacionesLote() {
 }
 
 function refrescarBultosLote() {
+  // llenarOperacionesLote rehace la lista: se conserva la operación elegida
+  // (antes se borraba y nunca aparecían los bultos).
+  const opAntes = document.getElementById('lote-operacion').value;
   llenarOperacionesLote();
+  if (opAntes) {
+    const selOpPrev = document.getElementById('lote-operacion');
+    if ([...selOpPrev.options].some(o => o.value === opAntes)) selOpPrev.value = opAntes;
+  }
   const selCorte = document.getElementById('lote-corte').value;
   const selPrenda = document.getElementById('lote-prenda').value;
   const selOpEl = document.getElementById('lote-operacion');

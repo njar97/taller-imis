@@ -95,13 +95,17 @@ async function cargarHoySigue() {
   if (_hoySigue.t && Date.now() - _hoySigue.t < 60000) { pintar(); return; }
   try {
     const [pend, bultos] = await Promise.all([
-      supaFetch('vw_trazos_sin_tendido', 'GET', null, '?select=id,codigo_corte&limit=50').catch(() => []),
-      supaFetch('vw_produccion_estado', 'GET', null, '?select=fecha_corte,estado_manual,cantidad_original&limit=2000').catch(() => []),
+      supaFetch('vw_trazos_sin_tendido', 'GET', null, '?select=id,codigo_corte&limit=50').catch(() => null),
+      supaFetch('vw_produccion_estado', 'GET', null, '?select=fecha_corte,estado_manual,cantidad_original&limit=2000').catch(() => null),
     ]);
-    let txtCorte = 'No hay tendidos pendientes', txtBulto = 'No hay bultos en costura';
-    if (pend.length) {
-      pend.sort((a, b) => String(a.codigo_corte || '').localeCompare(String(b.codigo_corte || ''), 'es', { numeric: true }));
-      txtCorte = `Sigue ${pend[0].codigo_corte} · ${pend.length === 1 ? 'es el último' : 'faltan ' + pend.length}`;
+    // null = la consulta falló: se dice, no se muestra como «no hay nada».
+    const falloCorte = pend === null, falloBulto = bultos === null;
+    const pendOk = pend || [];
+    let txtCorte = falloCorte ? 'No se pudo cargar · tocá para ver' : 'No hay tendidos pendientes';
+    let txtBulto = falloBulto ? 'No se pudo cargar · tocá para ver' : 'No hay bultos en costura';
+    if (pendOk.length) {
+      pendOk.sort((a, b) => String(a.codigo_corte || '').localeCompare(String(b.codigo_corte || ''), 'es', { numeric: true }));
+      txtCorte = `Sigue ${pendOk[0].codigo_corte} · ${pendOk.length === 1 ? 'es el último' : 'faltan ' + pendOk.length}`;
     }
     const desde = typeof CORTES_DESDE === 'string' ? CORTES_DESDE : '';
     const enCostura = (bultos || []).filter(b => b.estado_manual !== 'terminado' && (!b.fecha_corte || String(b.fecha_corte) >= desde));
@@ -109,12 +113,13 @@ async function cargarHoySigue() {
       const pz = enCostura.reduce((s, b) => s + (Number(b.cantidad_original) || 0), 0);
       txtBulto = `${dashNum(enCostura.length)} bultos en costura · ${dashNum(pz)} piezas`;
     }
-    _hoySigue = { t: Date.now(), corte: txtCorte, bulto: txtBulto };
+    // Si algo falló no se guarda en memoria: la próxima vez se vuelve a intentar.
+    _hoySigue = { t: (falloCorte || falloBulto) ? 0 : Date.now(), corte: txtCorte, bulto: txtBulto };
     pintar();
     // Para «Urge»: en qué corte pendiente sale cada talla
-    if (pend.length) {
+    if (pendOk.length) {
       const tz = await supaFetch('trazo', 'GET', null,
-        `?id=in.(${pend.map(x => x.id).join(',')})&select=id,codigo_corte,capas,tallas_tendido`).catch(() => []);
+        `?id=in.(${pendOk.map(x => x.id).join(',')})&select=id,codigo_corte,capas,tallas_tendido`).catch(() => []);
       tz.sort((a, b) => String(a.codigo_corte || '').localeCompare(String(b.codigo_corte || ''), 'es', { numeric: true }));
       dashboardCache.trazosPend = tz;
     } else dashboardCache.trazosPend = [];
@@ -549,8 +554,10 @@ function renderDashboard() {
     comoVamos = _renderComoVamos(r.plan, r.produccionHoy, tot)
       || `<div class="card" style="padding:12px;margin-bottom:10px">${dashEsc(sel?.nombre || '')}: ${dashNum(tot.sol)} piezas pedidas · ${dashNum(tot.emp)} empacadas · ${dashNum(tot.ent)} entregadas</div>`;
     banner = ''; kpis = ''; verStock = false;
-    tareaSubtitulo('empacar', tot.pend > 0 ? `Faltan ${dashNum(tot.pend)} piezas por empacar` : 'Todo está empacado');
-    tareaSubtitulo('entregar', tot.emp > 0 ? `${dashNum(tot.emp)} piezas empacadas por entregar` : 'Todavía no hay nada empacado');
+    // Si el pedido o lo empacado no cargó, no se dice «todo está empacado».
+    const falloPedido = (dashboardCache.fallidos || []).some(k => k === 'pedidoTemp' || k === 'acap' || k === 'equiv');
+    tareaSubtitulo('empacar', falloPedido ? 'No se pudo cargar · tocá recargar' : tot.pend > 0 ? `Faltan ${dashNum(tot.pend)} piezas por empacar` : 'Todo está empacado');
+    tareaSubtitulo('entregar', falloPedido ? 'No se pudo cargar · tocá recargar' : tot.emp > 0 ? `${dashNum(tot.emp)} piezas empacadas por entregar` : 'Todavía no hay nada empacado');
     cuerpo = _renderQueUrge(r.plan)
       + '<div id="dash-listo-empacar"></div>'
       + _renderEmpaquePorPrenda(lineas)

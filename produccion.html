@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-19 15:25 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-19 15:40 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -4690,13 +4690,17 @@ async function cargarHoySigue() {
   if (_hoySigue.t && Date.now() - _hoySigue.t < 60000) { pintar(); return; }
   try {
     const [pend, bultos] = await Promise.all([
-      supaFetch('vw_trazos_sin_tendido', 'GET', null, '?select=id,codigo_corte&limit=50').catch(() => []),
-      supaFetch('vw_produccion_estado', 'GET', null, '?select=fecha_corte,estado_manual,cantidad_original&limit=2000').catch(() => []),
+      supaFetch('vw_trazos_sin_tendido', 'GET', null, '?select=id,codigo_corte&limit=50').catch(() => null),
+      supaFetch('vw_produccion_estado', 'GET', null, '?select=fecha_corte,estado_manual,cantidad_original&limit=2000').catch(() => null),
     ]);
-    let txtCorte = 'No hay tendidos pendientes', txtBulto = 'No hay bultos en costura';
-    if (pend.length) {
-      pend.sort((a, b) => String(a.codigo_corte || '').localeCompare(String(b.codigo_corte || ''), 'es', { numeric: true }));
-      txtCorte = `Sigue ${pend[0].codigo_corte} · ${pend.length === 1 ? 'es el último' : 'faltan ' + pend.length}`;
+    // null = la consulta falló: se dice, no se muestra como «no hay nada».
+    const falloCorte = pend === null, falloBulto = bultos === null;
+    const pendOk = pend || [];
+    let txtCorte = falloCorte ? 'No se pudo cargar · tocá para ver' : 'No hay tendidos pendientes';
+    let txtBulto = falloBulto ? 'No se pudo cargar · tocá para ver' : 'No hay bultos en costura';
+    if (pendOk.length) {
+      pendOk.sort((a, b) => String(a.codigo_corte || '').localeCompare(String(b.codigo_corte || ''), 'es', { numeric: true }));
+      txtCorte = `Sigue ${pendOk[0].codigo_corte} · ${pendOk.length === 1 ? 'es el último' : 'faltan ' + pendOk.length}`;
     }
     const desde = typeof CORTES_DESDE === 'string' ? CORTES_DESDE : '';
     const enCostura = (bultos || []).filter(b => b.estado_manual !== 'terminado' && (!b.fecha_corte || String(b.fecha_corte) >= desde));
@@ -4704,12 +4708,13 @@ async function cargarHoySigue() {
       const pz = enCostura.reduce((s, b) => s + (Number(b.cantidad_original) || 0), 0);
       txtBulto = `${dashNum(enCostura.length)} bultos en costura · ${dashNum(pz)} piezas`;
     }
-    _hoySigue = { t: Date.now(), corte: txtCorte, bulto: txtBulto };
+    // Si algo falló no se guarda en memoria: la próxima vez se vuelve a intentar.
+    _hoySigue = { t: (falloCorte || falloBulto) ? 0 : Date.now(), corte: txtCorte, bulto: txtBulto };
     pintar();
     // Para «Urge»: en qué corte pendiente sale cada talla
-    if (pend.length) {
+    if (pendOk.length) {
       const tz = await supaFetch('trazo', 'GET', null,
-        `?id=in.(${pend.map(x => x.id).join(',')})&select=id,codigo_corte,capas,tallas_tendido`).catch(() => []);
+        `?id=in.(${pendOk.map(x => x.id).join(',')})&select=id,codigo_corte,capas,tallas_tendido`).catch(() => []);
       tz.sort((a, b) => String(a.codigo_corte || '').localeCompare(String(b.codigo_corte || ''), 'es', { numeric: true }));
       dashboardCache.trazosPend = tz;
     } else dashboardCache.trazosPend = [];
@@ -5144,8 +5149,10 @@ function renderDashboard() {
     comoVamos = _renderComoVamos(r.plan, r.produccionHoy, tot)
       || `<div class="card" style="padding:12px;margin-bottom:10px">${dashEsc(sel?.nombre || '')}: ${dashNum(tot.sol)} piezas pedidas · ${dashNum(tot.emp)} empacadas · ${dashNum(tot.ent)} entregadas</div>`;
     banner = ''; kpis = ''; verStock = false;
-    tareaSubtitulo('empacar', tot.pend > 0 ? `Faltan ${dashNum(tot.pend)} piezas por empacar` : 'Todo está empacado');
-    tareaSubtitulo('entregar', tot.emp > 0 ? `${dashNum(tot.emp)} piezas empacadas por entregar` : 'Todavía no hay nada empacado');
+    // Si el pedido o lo empacado no cargó, no se dice «todo está empacado».
+    const falloPedido = (dashboardCache.fallidos || []).some(k => k === 'pedidoTemp' || k === 'acap' || k === 'equiv');
+    tareaSubtitulo('empacar', falloPedido ? 'No se pudo cargar · tocá recargar' : tot.pend > 0 ? `Faltan ${dashNum(tot.pend)} piezas por empacar` : 'Todo está empacado');
+    tareaSubtitulo('entregar', falloPedido ? 'No se pudo cargar · tocá recargar' : tot.emp > 0 ? `${dashNum(tot.emp)} piezas empacadas por entregar` : 'Todavía no hay nada empacado');
     cuerpo = _renderQueUrge(r.plan)
       + '<div id="dash-listo-empacar"></div>'
       + _renderEmpaquePorPrenda(lineas)
@@ -11494,7 +11501,9 @@ async function agregarSeguimientoCorte(trazoId, tendidoId) {
   function titulo() {
     const t = ED.trazo || {};
     const v = ED.version ? `v${ED.version}${ED.soloVista ? ' (vieja)' : ''}` : 'nuevo';
-    $('ed-titulo').textContent = `Editor · Corte ${t.letra_corte || '—'} · ${v}`;
+    // Los trazos del plan («Plan T1») no tienen letra hasta que se tienden.
+    const nombre = t.letra_corte ? `Corte ${t.letra_corte}` : (t.codigo_corte || 'Trazo');
+    $('ed-titulo').textContent = `Editor · ${nombre} · ${v}${ED.yaTendido ? ' · YA TENDIDO' : ''}`;
   }
 
   function armar() {
@@ -11978,6 +11987,9 @@ async function agregarSeguimientoCorte(trazoId, tendidoId) {
 
   async function guardar() {
     if (ED.guardando || ED.cargando || !ED.trazoId) return;
+    // Trazo ya tendido: la tela ya se cortó con el acomodo anterior.
+    if (ED.yaTendido && typeof confirmar === 'function'
+        && !await confirmar('Este trazo YA SE TENDIÓ: la tela se cortó con el acomodo anterior.\n\n¿Guardar de todos modos una versión nueva del acomodo? (La anterior no se borra.)')) return;
     ED.guardando = true;
     const b = $('ed-guardar');
     b.disabled = true; b.textContent = 'Guardando…';
@@ -12049,7 +12061,7 @@ async function agregarSeguimientoCorte(trazoId, tendidoId) {
     construir();
     if (!ED.abierto) cuerpoOverflow = document.body.style.overflow;
     ED.abierto = true; ED.cargando = true; ED.trazoId = trazoId; ED.trazo = null;
-    ED.versiones = []; ED.piezas = []; ED.sel = null; ED.deshacer = []; ED.sucio = false; ED.soloVista = false;
+    ED.versiones = []; ED.piezas = []; ED.sel = null; ED.deshacer = []; ED.sucio = false; ED.soloVista = false; ED.yaTendido = false;
     ED.filaId = null; ED.version = 0; ED.foto = null; ED.fotoW = null; ED.largoRef = null;
     desarmarCerrar(); cerrarPanel();
     clearTimeout(avisoT); avisoT = null;
@@ -12064,11 +12076,13 @@ async function agregarSeguimientoCorte(trazoId, tendidoId) {
     $('ed-titulo').textContent = 'Editor de trazo · cargando…';
     $('ed-versiones').innerHTML = ''; $('ed-versiones').disabled = true;
     try {
-      const [tr, vers] = await Promise.all([
+      const [tr, vers, tend] = await Promise.all([
         supaFetch('trazo', 'GET', null, `?id=eq.${encodeURIComponent(trazoId)}&select=id,letra_corte,codigo_corte,largo_cm,fecha,foto_url`),
-        supaFetch('trazo_layout', 'GET', null, `?trazo_id=eq.${encodeURIComponent(trazoId)}&select=id,version,creado_en,creado_por,nota,largo_cm&order=version.desc`)
+        supaFetch('trazo_layout', 'GET', null, `?trazo_id=eq.${encodeURIComponent(trazoId)}&select=id,version,creado_en,creado_por,nota,largo_cm&order=version.desc`),
+        supaFetch('tendido', 'GET', null, `?trazo_id=eq.${encodeURIComponent(trazoId)}&select=id&limit=1`).catch(() => [])
       ]);
       if (ED.trazoId !== trazoId) return;            // se abrió otro mientras cargaba
+      ED.yaTendido = !!(tend && tend.length);
       ED.trazo = (tr && tr[0]) || { id: trazoId };
       ED.largoRef = +ED.trazo.largo_cm > 0 ? +ED.trazo.largo_cm : null;
       ED.versiones = vers || [];
@@ -12933,6 +12947,17 @@ async function marcarEtapaRapida(bultoId, operacionId) {
 function escapeHtmlProd(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+// Recarga la lista de Producción y deja abierto el mismo bulto, en el mismo
+// punto de la pantalla (antes cada toque mandaba la pantalla hasta arriba).
+async function prodRecargarEnSuLugar(bultoId) {
+  const fila = () => document.getElementById(`bulto-row-${bultoId}`);
+  const antes = fila();
+  const topAntes = antes ? antes.getBoundingClientRect().top : null;
+  await cargarProduccion();
+  await toggleEtapasBulto(bultoId);   // la lista se rehízo: reabrir las operaciones del bulto
+  const ahora = fila();
+  if (ahora && topAntes !== null) window.scrollBy(0, ahora.getBoundingClientRect().top - topAntes);
+}
 const _etapaGuardando = new Set();   // operaciones que se están guardando (evita el doble toque)
 async function guardarEtapaRapida(bultoId, operacionId, operariaId) {
   const llave = bultoId + '|' + operacionId;
@@ -12953,10 +12978,8 @@ async function guardarEtapaRapida(bultoId, operacionId, operariaId) {
       cantidad_realizada: cantidad,
       tipo: 'normal',
     });
-    // Refrescar etapas y dashboard
-    await toggleEtapasBulto(bultoId); // cerrar
-    await cargarProduccion();
-    await toggleEtapasBulto(bultoId); // reabrir con datos frescos
+    // Refrescar etapas y dashboard, sin perder el lugar en la pantalla
+    await prodRecargarEnSuLugar(bultoId);
     // Era la última operación: el bulto pasa a bodega igual que con «Terminar».
     const b2 = produccionData.find(b => b.produccion_bulto_id === bultoId);
     if (b2 && b2.estado_manual !== 'terminado' && b2.total_etapas > 0 && b2.etapas_hechas >= b2.total_etapas) {
@@ -12975,9 +12998,7 @@ async function desmarcarEtapa(registroId, bultoId) {
   if (!await confirmar('¿Deshacer esta etapa? Se elimina el registro de captura.')) return;
   try {
     await supaFetch('produccion_registro_operacion','DELETE',null,`?id=eq.${registroId}`);
-    await toggleEtapasBulto(bultoId); // cerrar
-    await cargarProduccion();
-    await toggleEtapasBulto(bultoId); // reabrir
+    await prodRecargarEnSuLugar(bultoId);
   } catch(e) {
     alert('Error: ' + e.message);
   }
@@ -12999,37 +13020,15 @@ async function abrirDividir(produccionBultoId, cantidadActual, codigoBulto) {
   const motivo = await pedirTexto('Motivo de la división (opcional, ej: "defectos", "agilizar entrega"):') || null;
 
   try {
-    // 1. Encontrar el bulto original para obtener su salida_id
+    // Todo o nada en la base (función dividir_bulto): cambia la cantidad del
+    // original, crea el derivado y reparte entre los dos las operaciones ya
+    // marcadas, en proporción a las piezas.
     const original = produccionData.find(x => x.produccion_bulto_id === produccionBultoId);
     if (!original) throw new Error('No se encontró el bulto original');
-
-    // 2. Contar hermanos de división para asignar sufijo correcto
-    const hermanos = await supaFetch('produccion_bulto','GET',null,
-      `?or=(id.eq.${produccionBultoId},bulto_origen_id.eq.${produccionBultoId})&select=id,sufijo_division`);
-    const yaUsados = new Set(['']); // '' = original sin sufijo
-    hermanos.forEach(h => { if (h.sufijo_division) yaUsados.add(h.sufijo_division); });
-    let n = 2;
-    while (yaUsados.has(`/${n}`)) n++;
-    const sufijoNuevo = `/${n}`;
-
-    // 3. Actualizar cantidad del original
     const cantidadOriginalNueva = original.cantidad_original - piezasAPartir;
-    await supaUpdate('produccion_bulto', produccionBultoId, {
-      cantidad_ajustada: cantidadOriginalNueva,
-      actualizado_en: new Date().toISOString(),
-    });
+    const sufijoNuevo = await supaFetch('rpc/dividir_bulto', 'POST', { p_id: produccionBultoId, p_piezas: piezasAPartir, p_motivo: motivo });
 
-    // 4. Crear bulto derivado (mismo tendido_rollo_salida, con sufijo)
-    await supaFetch('produccion_bulto','POST',{
-      tendido_rollo_salida_id: original.salida_id,
-      estado: 'pendiente',
-      cantidad_ajustada: piezasAPartir,
-      bulto_origen_id: produccionBultoId,
-      sufijo_division: sufijoNuevo,
-      observaciones: motivo,
-    });
-
-    alert(`✅ Dividido: ${cantidadOriginalNueva} + ${piezasAPartir} piezas (derivado${sufijoNuevo})`);
+    alert(`✅ Dividido: ${cantidadOriginalNueva} + ${piezasAPartir} piezas (derivado${sufijoNuevo})${(original.etapas_hechas || 0) > 0 ? '\n\nLas operaciones ya marcadas se repartieron entre los dos bultos.' : ''}`);
     await cargarProduccion(); // recargar desde BD porque cambió estructura
   } catch(e) {
     alert('Error al dividir: ' + e.message);
@@ -13039,14 +13038,26 @@ async function abrirDividir(produccionBultoId, cantidadActual, codigoBulto) {
 // ══ UNIR ═════════════════════════════════════════════════════════════
 async function abrirUnir(produccionBultoId, tallaKeySalida, codigoBulto) {
   // Buscar otros bultos con misma KEY, no terminados, no fusionados, no este mismo
-  const candidatos = produccionData.filter(b => 
+  // Solo se unen bultos sin terminar y SIN operaciones marcadas: al unir no
+  // se puede saber qué piezas llevan qué trabajo, y un bulto terminado ya
+  // está en bodega (unirlo lo contaría dos veces).
+  const principal = produccionData.find(b => b.produccion_bulto_id === produccionBultoId);
+  if (principal && (Number(principal.etapas_hechas) || 0) > 0) {
+    alert('Este bulto ya tiene operaciones marcadas: no se le pueden unir otros.\n\nSi hace falta juntarlos, primero deshacé esas operaciones (↶).');
+    return;
+  }
+  const mismos = produccionData.filter(b =>
     b.talla_key_salida === tallaKeySalida &&
+    b.produccion_bulto_id &&
     b.produccion_bulto_id !== produccionBultoId &&
-    b.estado !== 'terminado'
+    b.estado_manual !== 'terminado'
   );
+  const candidatos = mismos.filter(b => !((Number(b.etapas_hechas) || 0) > 0));
 
   if (candidatos.length === 0) {
-    alert(`No hay otros bultos pendientes con la KEY ${tallaKeySalida} para unir.`);
+    alert(mismos.length
+      ? `Los otros bultos de ${tallaKeySalida} ya tienen operaciones marcadas: no se pueden unir.`
+      : `No hay otros bultos pendientes con la KEY ${tallaKeySalida} para unir.`);
     return;
   }
 
@@ -13255,7 +13266,14 @@ function llenarOperacionesLote() {
 }
 
 function refrescarBultosLote() {
+  // llenarOperacionesLote rehace la lista: se conserva la operación elegida
+  // (antes se borraba y nunca aparecían los bultos).
+  const opAntes = document.getElementById('lote-operacion').value;
   llenarOperacionesLote();
+  if (opAntes) {
+    const selOpPrev = document.getElementById('lote-operacion');
+    if ([...selOpPrev.options].some(o => o.value === opAntes)) selOpPrev.value = opAntes;
+  }
   const selCorte = document.getElementById('lote-corte').value;
   const selPrenda = document.getElementById('lote-prenda').value;
   const selOpEl = document.getElementById('lote-operacion');
