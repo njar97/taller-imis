@@ -191,6 +191,13 @@ async function eliminarRegistro() {
             + `• ${nSalidas} bulto(s) capturado(s)\n\n`
             + `Esta acción NO se puede deshacer. ¿Continuar?`;
     } else if (tipo === 'tendido') {
+      // Con producción empezada no se borra: se llevaría los bultos, su avance y lo que ya entró a bodega.
+      const enProd = await supaFetch('vw_produccion_estado','GET',null,`?tendido_id=eq.${id}&select=estado_manual,etapas_hechas&limit=2000`);
+      const empezados = (enProd || []).filter(b => (b.estado_manual && b.estado_manual !== 'pendiente') || Number(b.etapas_hechas) > 0).length;
+      if (empezados > 0) {
+        alert(`Este tendido no se puede eliminar: ${empezados} de sus bultos ya están en costura o terminados.\n\nPrimero hay que revertir esos bultos en Producción.`);
+        return;
+      }
       const rollos = await supaFetch('tendido_rollo','GET',null,`?tendido_id=eq.${id}&select=id`);
       const tms = await supaFetch('tendido_talla_marcada','GET',null,`?tendido_id=eq.${id}&select=id`);
       let nSalidas = 0;
@@ -203,7 +210,7 @@ async function eliminarRegistro() {
             + `• ${rollos.length} rollo(s)\n`
             + `• ${tms.length} talla(s) heredada(s)\n`
             + `• ${nSalidas} bulto(s) capturado(s)\n\n`
-            + `El trazo NO se borra.\n\nEsta acción NO se puede deshacer. ¿Continuar?`;
+            + `El trazo NO se borra.\n\nOjo: las yardas NO vuelven solas a los rollos de bodega; hay que corregirlas a mano.\n\nEsta acción NO se puede deshacer. ¿Continuar?`;
     }
 
     if (!await confirmar(aviso)) return;
@@ -278,6 +285,7 @@ async function editarTrazo(id) {
       const fid = tallasCount;
       const row = document.getElementById(`ttrazo-${fid}`);
       if (!row) continue;
+      row.dataset.remotoId = t.id;   // al guardar se actualiza ESTA fila, no se borra y reinserta
       // Letra
       row.querySelector('[data-ttrazo-letra]').value = t.letra_local;
       // Prenda (disparar onchange para habilitar KEY)
@@ -372,35 +380,38 @@ async function guardarEdicionTrazo(id) {
       fotoBlob = null;
     }
 
-    // Estrategia simple para tallas: borrar todas las existentes y reinsertar
+    // Cada talla se actualiza en SU fila: así no se pierde lo que el formulario
+    // no muestra (×8, prenda, largo, nota, «F16×8» de los trazos del plan).
+    // Solo se inserta la talla nueva y se borra la que se quitó.
     const viejas = Array.isArray(window._tallasViejasTrazo) ? window._tallasViejasTrazo : [];
-    await supaFetch('trazo_talla_marcada','DELETE',null,`?trazo_id=eq.${id}`);
+    const quedan = new Set();
     for (const t of tallas) {
-      const v = viejas.find(x => x.talla_key_original === t.key && x.letra_local === t.letra)
-             || viejas.find(x => x.talla_key_original === t.key);
-      await supaFetch('trazo_talla_marcada','POST',{
-        ...(v && v.talla != null ? { talla: v.talla } : {}),
-        trazo_id: id,
+      const fila = document.querySelector(`.talla-row[data-tt-id="${t.idLocal}"]`);
+      const remotoId = fila && fila.dataset.remotoId;
+      const v = remotoId ? viejas.find(x => x.id === remotoId) : null;
+      const cambios = {
         letra_local: t.letra,
         talla_key_original: t.key,
         talla_key_complemento: (t.tipo === 'par' && t.complementoKey) ? t.complementoKey : null,
         tipo: t.tipo,
-        multiplicidad: (v && +v.multiplicidad > 0) ? +v.multiplicidad : 1,
-        cod_prenda: t.prenda,
         orden: t.orden,
-      });
+      };
+      // La prenda solo se toca si el formulario trae una (si no la sabe mostrar, se conserva la guardada).
+      if (t.prenda || !v) cambios.cod_prenda = t.prenda;
+      if (v) {
+        await supaUpdate('trazo_talla_marcada', v.id, cambios);
+        quedan.add(v.id);
+      } else {
+        await supaFetch('trazo_talla_marcada','POST',{ ...cambios, trazo_id: id, multiplicidad: 1 });
+      }
+    }
+    for (const x of viejas) {
+      if (!quedan.has(x.id)) await supaFetch('trazo_talla_marcada','DELETE',null,`?id=eq.${x.id}`);
     }
 
     mostrarAlerta('trazo','success','✅ Cambios guardados.');
     // Restaurar botón y volver a estado normal
-    setTimeout(() => {
-      btn.disabled = false;
-      btn.textContent = '💾 Guardar trazo';
-      btn.onclick = () => guardarTrazo();
-      delete btn.dataset.editandoId;
-      initTrazo();
-      volverNuevo();
-    }, 1500);
+    setTimeout(() => { initTrazo(); volverNuevo(); }, 1500);
   } catch(e) {
     mostrarAlerta('trazo','error','Error: ' + e.message);
     btn.textContent = '💾 Guardar cambios';
@@ -463,6 +474,7 @@ async function editarTendido(id) {
     if (tend.fecha_continuacion) document.getElementById('td-continuacion').value = tend.fecha_continuacion;
 
     // Limpiar y recargar rollos (manteniendo numero_rollo)
+    tdEditando = true;   // sin renglones automáticos ni recálculo de lo ya anotado
     document.getElementById('td-rollos-container').innerHTML = '';
     rollosCountTd = 0;
     for (const r of rollos) {
@@ -480,6 +492,8 @@ async function editarTendido(id) {
       rowEl.querySelectorAll('[data-trollo]').forEach(inp => {
         const f = inp.dataset.tfield;
         if (r[f] !== null && r[f] !== undefined) inp.value = r[f];
+        // Lo anotado se respeta tal cual (también un sobrante vacío): no se recalcula al abrir.
+        if (f === 'lienzos_salidos' || f === 'yardas_sobrantes') inp.dataset.manual = '1';
       });
       onCapasChange(rid);
     }
@@ -500,7 +514,9 @@ async function editarTendido(id) {
 async function guardarEdicionTendido(id) {
   const fecha = document.getElementById('td-fecha').value;
   if (!fecha) { mostrarAlerta('tendido','error','Fecha obligatoria.'); return; }
-  const rollos = document.querySelectorAll('.rollo-card');
+  // Los renglones nuevos que quedaron vacíos no se guardan.
+  const rollos = [...document.querySelectorAll('.rollo-card')].filter(c => c.dataset.rolloIdRemoto ||
+    ['yardas_rollo','lienzos_salidos'].some(f => (c.querySelector(`[data-tfield="${f}"]`).value || '') !== ''));
   if (!rollos.length) { mostrarAlerta('tendido','error','Agregá al menos 1 rollo.'); return; }
 
   const btn = document.getElementById('btn-guardar-tendido');
@@ -539,14 +555,7 @@ async function guardarEdicionTendido(id) {
     }
 
     mostrarAlerta('tendido','success','✅ Cambios guardados.');
-    setTimeout(() => {
-      btn.disabled = false;
-      btn.textContent = '💾 Guardar tendido (invierte numeración)';
-      btn.onclick = () => guardarTendido();
-      const sel = document.getElementById('td-trazo-select');
-      if (sel) sel.disabled = false;
-      volverNuevo();
-    }, 1500);
+    setTimeout(() => { tdSalirDeEdicion(); volverNuevo(); }, 1500);
   } catch(e) {
     mostrarAlerta('tendido','error','Error: ' + e.message);
     btn.textContent = '💾 Guardar cambios';
