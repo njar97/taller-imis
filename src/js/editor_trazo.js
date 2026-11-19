@@ -843,7 +843,7 @@
     $('ed-versiones').innerHTML = ''; $('ed-versiones').disabled = true;
     try {
       const [tr, vers] = await Promise.all([
-        supaFetch('trazo', 'GET', null, `?id=eq.${encodeURIComponent(trazoId)}&select=id,letra_corte,codigo_corte,largo_cm,fecha`),
+        supaFetch('trazo', 'GET', null, `?id=eq.${encodeURIComponent(trazoId)}&select=id,letra_corte,codigo_corte,largo_cm,fecha,foto_url`),
         supaFetch('trazo_layout', 'GET', null, `?trazo_id=eq.${encodeURIComponent(trazoId)}&select=id,version,creado_en,creado_por,nota,largo_cm&order=version.desc`)
       ]);
       if (ED.trazoId !== trazoId) return;            // se abrió otro mientras cargaba
@@ -857,6 +857,12 @@
       }
       if (ED.trazoId !== trazoId) return;
       ponerFila(fila);
+      // Sin acomodo guardado: de fondo, la imagen del trazo (la de la ficha) para no ver la tela vacía.
+      if (!fila && ED.trazo.foto_url) {
+        ED.foto = ED.trazo.foto_url; ED.conFoto = true;
+        ED.msgGuard = 'Sin acomodo guardado: de fondo, la imagen del trazo';
+        medirFoto(ED.foto);
+      }
     } catch (err) {
       // se queda «cargando» para que las herramientas sigan apagadas; solo sirve ✕
       $('ed-info').innerHTML = `<span class="ed-malo">No se pudo abrir el editor: ${esc(err.message)}</span>`;
