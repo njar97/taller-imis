@@ -58,6 +58,7 @@ $jsOrder = @(
     'grupos.js',
     'auditoria.js',
     'config.js',
+    'escanear_qr.js',
     'atras.js'
 )
 

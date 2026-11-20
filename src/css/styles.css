@@ -810,6 +810,14 @@ body:not(.con-asistencia) .ayuda-tip { display: none !important; }
 body:not(.con-asistencia) .solo-asistencia { display: none !important; }
 body.con-asistencia .btn-ayuda { background: #1f2d3d; color: #fff; }
 .btn-ayuda { position: fixed; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 950; width: 46px; height: 46px; border-radius: 50%; border: 0; background: #FFB300; color: #1f2d3d; font-size: 22px; font-weight: 800; font-family: inherit; box-shadow: 0 3px 10px rgba(0,0,0,0.3); cursor: pointer; }
+/* Botón flotante «escanear etiqueta» (QR de bulto), abajo a la izquierda */
+.btn-qr { position: fixed; left: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 950; width: 58px; height: 58px; border-radius: 50%; border: 0; background: var(--azul); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(0,0,0,0.35); cursor: pointer; }
+.btn-qr:active { transform: scale(0.95); }
+.btn-qr:focus-visible { outline: 3px solid #FFB300; outline-offset: 2px; }
+@media (max-width: 640px) {
+  body.fuera-inicio .btn-qr { bottom: calc(72px + env(safe-area-inset-bottom)); }
+}
+@media print { .btn-qr { display: none !important; } }
 .btn-ayuda:active { transform: scale(0.95); }
 .btn-ayuda:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
 @media (max-width: 640px) {

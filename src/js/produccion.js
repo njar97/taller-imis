@@ -9,6 +9,8 @@ let demandaProdCache = {};
 // Filtro «solo esta prenda y talla» (viene de Inicio → Cómo vamos → En costura)
 let prodSoloTalla = null;          // { cod, talla }
 let prodSoloTallaOrigen = null;    // filas de produccion_en_proceso de esa talla
+// Filtro «solo este bulto» (se llegó escaneando su etiqueta): id del bulto
+let prodSoloBulto = null;
 
 // Etiqueta de bulto con QR: la dirección trae ?b=<primeras letras del id del
 // bulto> y la app abre ESE bulto con sus operaciones a la vista.
@@ -42,22 +44,29 @@ async function prodAbrirBultoDeEnlace() {
     showToast('No se encontró el bulto de esa etiqueta.', 'error', 7000);
     return;
   }
-  produccionFiltro = 'todos';
+  // Se ve SOLO ese bulto (no la lista entera) hasta tocar «Ver todos».
   prodSoloTalla = null;
-  ['prod-filtro-corte', 'prod-filtro-prenda'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (sel) sel.value = '';
-  });
-  cortesExpandidos.add(b.talla_key_salida);
+  prodSoloBulto = b.produccion_bulto_id;
   renderProduccion();
-  const fila = document.getElementById(`bulto-row-${b.produccion_bulto_id}`);
-  if (!fila) return;
-  fila.scrollIntoView({ block: 'start' });
-  window.scrollBy(0, -70);   // que no quede debajo de la barra de arriba
-  fila.style.outline = '3px solid #1565c0';
-  setTimeout(() => { fila.style.outline = ''; }, 4000);
-  const cont = document.getElementById(`etapas-${b.produccion_bulto_id}`);
-  if (cont && cont.style.display !== 'block') await toggleEtapasBulto(b.produccion_bulto_id);
+  window.scrollTo(0, 0);
+}
+function prodQuitarSoloBulto() {
+  prodSoloBulto = null; cortesExpandidos = new Set();
+  renderProduccion();
+}
+// Franja de arriba cuando se ve un solo bulto (el de la etiqueta escaneada).
+function _prodFranjaSoloBulto(b) {
+  const nombre = (b.cod_prenda && CATALOGO[b.cod_prenda]?.nombre) || b.cod_prenda || '';
+  const t26 = prodTalla2026(b.cod_prenda, b.talla_key_salida);
+  const codigo = String(b.codigo_bulto || '').split('-')[0];
+  return `
+    <div class="alert alert-info" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <strong>Bulto ${_prodEsc(codigo)} · ${_prodEsc(nombre)}${t26 ? ' ' + _prodEsc(t26) : ''}</strong>
+        <button class="btn btn-ghost btn-sm" onclick="prodQuitarSoloBulto()">Ver todos</button>
+      </div>
+      <div style="font-size:12px;margin-top:2px">Es el bulto de la etiqueta que escaneó.</div>
+    </div>`;
 }
 function prodQuitarSoloTalla() {
   prodSoloTalla = null; prodSoloTallaOrigen = null; cortesExpandidos = new Set();
@@ -113,6 +122,7 @@ async function initProduccion() {
   prodSoloTalla = window._prodHintTalla || null;
   window._prodHintTalla = null;
   prodSoloTallaOrigen = null;
+  prodSoloBulto = null;
   switchSubProd(sub);
 }
 
@@ -326,7 +336,15 @@ function renderProduccion() {
       && prodTalla2026(b.cod_prenda, b.talla_key_salida) === prodSoloTalla.talla);
     filtrados.forEach(b => cortesExpandidos.add(b.talla_key_salida));   // se ven abiertos de una vez
   }
-  const franjaTalla = _prodFranjaSoloTalla(filtrados.length, filtrados.reduce((s2, b) => s2 + (Number(b.cantidad_original) || 0), 0));
+  let franjaTalla = _prodFranjaSoloTalla(filtrados.length, filtrados.reduce((s2, b) => s2 + (Number(b.cantidad_original) || 0), 0));
+  // Etiqueta escaneada: solo ese bulto, pase lo que pase con los demás filtros.
+  const elSolo = prodSoloBulto ? produccionData.find(b => b.produccion_bulto_id === prodSoloBulto) : null;
+  if (prodSoloBulto && !elSolo) prodSoloBulto = null;
+  if (elSolo) {
+    filtrados = [elSolo];
+    cortesExpandidos.add(elSolo.talla_key_salida);
+    franjaTalla = _prodFranjaSoloBulto(elSolo);
+  }
 
   // Estilizar botones de estado
   ['todos','pendientes','terminados'].forEach(f => {
@@ -411,7 +429,12 @@ function renderProduccion() {
         </div>
       </div>
     `;
-  }).join('') + linkCortesAnteriores('bultos');
+  }).join('') + (elSolo ? '' : linkCortesAnteriores('bultos'));
+  // Un solo bulto a la vista: sus operaciones abiertas de una vez (también si la lista se vuelve a pintar).
+  if (elSolo) {
+    const et = document.getElementById(`etapas-${elSolo.produccion_bulto_id}`);
+    if (et && et.style.display !== 'block') toggleEtapasBulto(elSolo.produccion_bulto_id);
+  }
 }
 
 function actualizarFiltrosProd() {
@@ -846,6 +869,9 @@ function renderEtapasBulto(bultoId, etapas) {
   if (sigue) {
     const el = document.getElementById(`pick-${bultoId}-${sigue.operacion_id}`);
     if (el && el.parentElement) el.parentElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    // Se llegó escaneando la etiqueta: la operación que sigue ya sale con los
+    // nombres para tocar quién la hizo (sin tener que abrirla).
+    if (prodSoloBulto === bultoId && el && !el.innerHTML) marcarEtapaRapida(bultoId, sigue.operacion_id);
   }
 }
 
@@ -885,7 +911,9 @@ async function prodRecargarEnSuLugar(bultoId) {
   const antes = fila();
   const topAntes = antes ? antes.getBoundingClientRect().top : null;
   await cargarProduccion();
-  await toggleEtapasBulto(bultoId);   // la lista se rehízo: reabrir las operaciones del bulto
+  // la lista se rehízo: reabrir las operaciones del bulto (si no se abrieron ya solas)
+  const et = document.getElementById(`etapas-${bultoId}`);
+  if (!et || et.style.display !== 'block') await toggleEtapasBulto(bultoId);
   const ahora = fila();
   if (ahora && topAntes !== null) window.scrollBy(0, ahora.getBoundingClientRect().top - topAntes);
 }

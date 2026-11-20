@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-20 09:30 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-20 12:50 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -834,6 +834,14 @@ body:not(.con-asistencia) .ayuda-tip { display: none !important; }
 body:not(.con-asistencia) .solo-asistencia { display: none !important; }
 body.con-asistencia .btn-ayuda { background: #1f2d3d; color: #fff; }
 .btn-ayuda { position: fixed; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 950; width: 46px; height: 46px; border-radius: 50%; border: 0; background: #FFB300; color: #1f2d3d; font-size: 22px; font-weight: 800; font-family: inherit; box-shadow: 0 3px 10px rgba(0,0,0,0.3); cursor: pointer; }
+/* Botón flotante «escanear etiqueta» (QR de bulto), abajo a la izquierda */
+.btn-qr { position: fixed; left: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 950; width: 58px; height: 58px; border-radius: 50%; border: 0; background: var(--azul); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(0,0,0,0.35); cursor: pointer; }
+.btn-qr:active { transform: scale(0.95); }
+.btn-qr:focus-visible { outline: 3px solid #FFB300; outline-offset: 2px; }
+@media (max-width: 640px) {
+  body.fuera-inicio .btn-qr { bottom: calc(72px + env(safe-area-inset-bottom)); }
+}
+@media print { .btn-qr { display: none !important; } }
 .btn-ayuda:active { transform: scale(0.95); }
 .btn-ayuda:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
 @media (max-width: 640px) {
@@ -1103,6 +1111,8 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
 <!-- Asistencia: la app arranca en versión corta (una palabra por botón). Este
      botón prende o apaga la versión extendida: explicaciones, textos largos y
      los «¿Cómo se usa?» de cada pantalla (css .solo-asistencia / .ayuda-tip). -->
+<!-- Escanear la etiqueta de un bulto (QR): abre ese bulto con sus operaciones. -->
+<button type="button" id="btn-qr" class="btn-qr" onclick="abrirEscanerQR()" aria-label="Escanear la etiqueta de un bulto" title="Escanear etiqueta"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM21 14v.01M14 21v.01M17 21h4v-4"/></svg></button>
 <button type="button" id="btn-ayuda" class="btn-ayuda" onclick="toggleAsistencia()" aria-pressed="false" aria-label="Mostrar u ocultar las explicaciones" title="Asistencia">?</button>
 
 <div class="container">
@@ -3370,6 +3380,15 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
       <div id="emq-reserva-contenido"></div>
     </div>
   </div>
+</div>
+<!-- Escanear etiqueta de bulto (QR) -->
+<div id="qr-modal" class="modal" style="display:none;background:rgba(0,0,0,0.92);z-index:1600;flex-direction:column;padding:0">
+  <div class="modal-header" style="width:100%;border:0;color:#fff">
+    <div style="font-weight:700;font-size:17px">Escanear etiqueta</div>
+    <button class="btn btn-ghost btn-sm" style="color:#fff;font-size:20px;min-width:44px;min-height:44px" onclick="cerrarEscanerQR()" aria-label="Cerrar">✕</button>
+  </div>
+  <video id="qr-video" playsinline muted style="flex:1;min-height:0;width:100%;object-fit:cover;background:#000"></video>
+  <div id="qr-msg" style="width:100%;padding:16px 14px calc(18px + env(safe-area-inset-bottom));text-align:center;color:#fff;font-size:16px;font-weight:600"></div>
 </div>
 
 <script>
@@ -12118,6 +12137,8 @@ let demandaProdCache = {};
 // Filtro «solo esta prenda y talla» (viene de Inicio → Cómo vamos → En costura)
 let prodSoloTalla = null;          // { cod, talla }
 let prodSoloTallaOrigen = null;    // filas de produccion_en_proceso de esa talla
+// Filtro «solo este bulto» (se llegó escaneando su etiqueta): id del bulto
+let prodSoloBulto = null;
 
 // Etiqueta de bulto con QR: la dirección trae ?b=<primeras letras del id del
 // bulto> y la app abre ESE bulto con sus operaciones a la vista.
@@ -12151,22 +12172,29 @@ async function prodAbrirBultoDeEnlace() {
     showToast('No se encontró el bulto de esa etiqueta.', 'error', 7000);
     return;
   }
-  produccionFiltro = 'todos';
+  // Se ve SOLO ese bulto (no la lista entera) hasta tocar «Ver todos».
   prodSoloTalla = null;
-  ['prod-filtro-corte', 'prod-filtro-prenda'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (sel) sel.value = '';
-  });
-  cortesExpandidos.add(b.talla_key_salida);
+  prodSoloBulto = b.produccion_bulto_id;
   renderProduccion();
-  const fila = document.getElementById(`bulto-row-${b.produccion_bulto_id}`);
-  if (!fila) return;
-  fila.scrollIntoView({ block: 'start' });
-  window.scrollBy(0, -70);   // que no quede debajo de la barra de arriba
-  fila.style.outline = '3px solid #1565c0';
-  setTimeout(() => { fila.style.outline = ''; }, 4000);
-  const cont = document.getElementById(`etapas-${b.produccion_bulto_id}`);
-  if (cont && cont.style.display !== 'block') await toggleEtapasBulto(b.produccion_bulto_id);
+  window.scrollTo(0, 0);
+}
+function prodQuitarSoloBulto() {
+  prodSoloBulto = null; cortesExpandidos = new Set();
+  renderProduccion();
+}
+// Franja de arriba cuando se ve un solo bulto (el de la etiqueta escaneada).
+function _prodFranjaSoloBulto(b) {
+  const nombre = (b.cod_prenda && CATALOGO[b.cod_prenda]?.nombre) || b.cod_prenda || '';
+  const t26 = prodTalla2026(b.cod_prenda, b.talla_key_salida);
+  const codigo = String(b.codigo_bulto || '').split('-')[0];
+  return `
+    <div class="alert alert-info" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <strong>Bulto ${_prodEsc(codigo)} · ${_prodEsc(nombre)}${t26 ? ' ' + _prodEsc(t26) : ''}</strong>
+        <button class="btn btn-ghost btn-sm" onclick="prodQuitarSoloBulto()">Ver todos</button>
+      </div>
+      <div style="font-size:12px;margin-top:2px">Es el bulto de la etiqueta que escaneó.</div>
+    </div>`;
 }
 function prodQuitarSoloTalla() {
   prodSoloTalla = null; prodSoloTallaOrigen = null; cortesExpandidos = new Set();
@@ -12222,6 +12250,7 @@ async function initProduccion() {
   prodSoloTalla = window._prodHintTalla || null;
   window._prodHintTalla = null;
   prodSoloTallaOrigen = null;
+  prodSoloBulto = null;
   switchSubProd(sub);
 }
 
@@ -12435,7 +12464,15 @@ function renderProduccion() {
       && prodTalla2026(b.cod_prenda, b.talla_key_salida) === prodSoloTalla.talla);
     filtrados.forEach(b => cortesExpandidos.add(b.talla_key_salida));   // se ven abiertos de una vez
   }
-  const franjaTalla = _prodFranjaSoloTalla(filtrados.length, filtrados.reduce((s2, b) => s2 + (Number(b.cantidad_original) || 0), 0));
+  let franjaTalla = _prodFranjaSoloTalla(filtrados.length, filtrados.reduce((s2, b) => s2 + (Number(b.cantidad_original) || 0), 0));
+  // Etiqueta escaneada: solo ese bulto, pase lo que pase con los demás filtros.
+  const elSolo = prodSoloBulto ? produccionData.find(b => b.produccion_bulto_id === prodSoloBulto) : null;
+  if (prodSoloBulto && !elSolo) prodSoloBulto = null;
+  if (elSolo) {
+    filtrados = [elSolo];
+    cortesExpandidos.add(elSolo.talla_key_salida);
+    franjaTalla = _prodFranjaSoloBulto(elSolo);
+  }
 
   // Estilizar botones de estado
   ['todos','pendientes','terminados'].forEach(f => {
@@ -12520,7 +12557,12 @@ function renderProduccion() {
         </div>
       </div>
     `;
-  }).join('') + linkCortesAnteriores('bultos');
+  }).join('') + (elSolo ? '' : linkCortesAnteriores('bultos'));
+  // Un solo bulto a la vista: sus operaciones abiertas de una vez (también si la lista se vuelve a pintar).
+  if (elSolo) {
+    const et = document.getElementById(`etapas-${elSolo.produccion_bulto_id}`);
+    if (et && et.style.display !== 'block') toggleEtapasBulto(elSolo.produccion_bulto_id);
+  }
 }
 
 function actualizarFiltrosProd() {
@@ -12955,6 +12997,9 @@ function renderEtapasBulto(bultoId, etapas) {
   if (sigue) {
     const el = document.getElementById(`pick-${bultoId}-${sigue.operacion_id}`);
     if (el && el.parentElement) el.parentElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    // Se llegó escaneando la etiqueta: la operación que sigue ya sale con los
+    // nombres para tocar quién la hizo (sin tener que abrirla).
+    if (prodSoloBulto === bultoId && el && !el.innerHTML) marcarEtapaRapida(bultoId, sigue.operacion_id);
   }
 }
 
@@ -12994,7 +13039,9 @@ async function prodRecargarEnSuLugar(bultoId) {
   const antes = fila();
   const topAntes = antes ? antes.getBoundingClientRect().top : null;
   await cargarProduccion();
-  await toggleEtapasBulto(bultoId);   // la lista se rehízo: reabrir las operaciones del bulto
+  // la lista se rehízo: reabrir las operaciones del bulto (si no se abrieron ya solas)
+  const et = document.getElementById(`etapas-${bultoId}`);
+  if (!et || et.style.display !== 'block') await toggleEtapasBulto(bultoId);
   const ahora = fila();
   if (ahora && topAntes !== null) window.scrollBy(0, ahora.getBoundingClientRect().top - topAntes);
 }
@@ -26013,6 +26060,126 @@ function cfgAbrirReportesPDF() {
   const id = sel && sel.value;
   if (!id) { alert('Elegí una escuela primero (tocá 🔄 para cargar la lista).'); return; }
   if (typeof abrirMenuReportes === 'function') abrirMenuReportes(id);
+}
+
+// +++++++++++++++++++ escanear_qr.js +++++++++++++++++++
+// ══════════════════════════════════════════════════════════════════════
+// ESCANEAR ETIQUETA (botón flotante)
+// Abre la cámara, lee el QR de la etiqueta de un bulto y abre ESE bulto en
+// Producción con sus operaciones a la vista. El QR trae la dirección
+// …/B/<primeras letras del id del bulto> (también sirve …?b=<id>).
+// ══════════════════════════════════════════════════════════════════════
+const _qr = { stream: null, activo: false, ultimoAviso: 0 };
+
+function qrIdDeTexto(txt) {
+  const s = String(txt || '').trim();
+  const m = s.match(/\/B\/([0-9A-Fa-f]{6,12})\/?$/i) || s.match(/[?&]b=([0-9A-Fa-f]{6,12})(?![0-9A-Fa-f])/i);
+  return m ? m[1].toLowerCase() : null;
+}
+
+function _qrMsg(texto, error) {
+  const el = document.getElementById('qr-msg');
+  if (!el) return;
+  el.textContent = texto;
+  el.style.color = error ? '#ffb4a9' : '#fff';
+}
+
+function _qrCargarLector() {
+  // Respaldo para los teléfonos que no leen QR por sí solos (iPhone).
+  if (window.jsQR) return Promise.resolve();
+  return new Promise((ok, mal) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+    s.onload = () => ok();
+    s.onerror = () => mal(new Error('sin lector'));
+    document.head.appendChild(s);
+  });
+}
+
+async function abrirEscanerQR() {
+  const modal = document.getElementById('qr-modal');
+  const video = document.getElementById('qr-video');
+  if (!modal || !video || _qr.activo) return;
+  modal.style.display = 'flex';
+  _qrMsg('Abriendo la cámara…');
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    _qrMsg('Este aparato no deja usar la cámara desde la app.', true);
+    return;
+  }
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+  } catch (e) {
+    _qrMsg(e && e.name === 'NotAllowedError'
+      ? 'La cámara no tiene permiso. Actívelo en el candado de la dirección y toque otra vez el botón.'
+      : 'No se pudo abrir la cámara.', true);
+    return;
+  }
+  if (modal.style.display === 'none') { stream.getTracks().forEach(t => t.stop()); return; }   // la cerraron mientras abría
+  _qr.stream = stream;
+  _qr.activo = true;
+  video.srcObject = stream;
+  try { await video.play(); } catch (_) {}
+
+  let leer = null;
+  if ('BarcodeDetector' in window) {
+    try {
+      const det = new BarcodeDetector({ formats: ['qr_code'] });
+      leer = async () => { const r = await det.detect(video); return r && r.length ? r[0].rawValue : null; };
+    } catch (_) { leer = null; }
+  }
+  if (!leer) {
+    try { await _qrCargarLector(); } catch (_) {
+      _qrMsg('No se pudo preparar el lector. Revise el internet y vuelva a intentar.', true);
+      return;
+    }
+    const lienzo = document.createElement('canvas');
+    const ctx = lienzo.getContext('2d', { willReadFrequently: true });
+    leer = async () => {
+      const w = video.videoWidth, h = video.videoHeight;
+      if (!w || !h) return null;
+      const k = Math.min(1, 640 / Math.max(w, h));
+      lienzo.width = Math.round(w * k); lienzo.height = Math.round(h * k);
+      ctx.drawImage(video, 0, 0, lienzo.width, lienzo.height);
+      const img = ctx.getImageData(0, 0, lienzo.width, lienzo.height);
+      const r = window.jsQR(img.data, img.width, img.height);
+      return r ? r.data : null;
+    };
+  }
+  _qrMsg('Apunte la cámara al código de la etiqueta');
+
+  const vuelta = async () => {
+    if (!_qr.activo) return;
+    let texto = null;
+    try { if (video.readyState >= 2) texto = await leer(); } catch (_) { texto = null; }
+    if (!_qr.activo) return;
+    if (texto) {
+      const id = qrIdDeTexto(texto);
+      if (id) {
+        try { if (navigator.vibrate) navigator.vibrate(80); } catch (_) {}
+        cerrarEscanerQR();
+        window._prodHintBulto = id;
+        prodEntrarPorEnlace();
+        return;
+      }
+      if (Date.now() - _qr.ultimoAviso > 2500) {
+        _qr.ultimoAviso = Date.now();
+        _qrMsg('Ese código no es de una etiqueta de bulto.', true);
+      }
+    }
+    setTimeout(vuelta, 180);
+  };
+  vuelta();
+}
+
+function cerrarEscanerQR() {
+  _qr.activo = false;
+  if (_qr.stream) { try { _qr.stream.getTracks().forEach(t => t.stop()); } catch (_) {} }
+  _qr.stream = null;
+  const video = document.getElementById('qr-video');
+  if (video) { try { video.pause(); } catch (_) {} video.srcObject = null; }
+  const modal = document.getElementById('qr-modal');
+  if (modal) modal.style.display = 'none';
 }
 
 // +++++++++++++++++++ atras.js +++++++++++++++++++
