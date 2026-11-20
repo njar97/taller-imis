@@ -77,6 +77,8 @@ const ESPERADAS = [
   // Registro 2026 (pedido por cantidades + tallas especiales)
   'async function initRegistroCantidad', 'async function tespGuardar',
   'async function tespAgregar', 'function tespDescargarCSV', 'function buscadorIrEspecial',
+  // Etiqueta de bulto con QR
+  'function prodEntrarPorEnlace', 'async function prodAbrirBultoDeEnlace',
 ];
 const faltantes = ESPERADAS.filter(needle => !html.includes(needle));
 if (faltantes.length > 0) {

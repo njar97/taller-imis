@@ -9,6 +9,56 @@ let demandaProdCache = {};
 // Filtro «solo esta prenda y talla» (viene de Inicio → Cómo vamos → En costura)
 let prodSoloTalla = null;          // { cod, talla }
 let prodSoloTallaOrigen = null;    // filas de produccion_en_proceso de esa talla
+
+// Etiqueta de bulto con QR: la dirección trae ?b=<primeras letras del id del
+// bulto> y la app abre ESE bulto con sus operaciones a la vista.
+window._prodHintBulto = (() => {
+  try {
+    const v = new URLSearchParams(window.location.search).get('b') || '';
+    return /^[0-9a-f]{6,12}$/i.test(v) ? v.toLowerCase() : null;
+  } catch (_) { return null; }
+})();
+
+// Al arrancar (o al terminar de entrar con la contraseña): si se llegó con el
+// QR de un bulto, pasa a Producción → Bultos, que es donde se abre.
+function prodEntrarPorEnlace() {
+  if (!window._prodHintBulto) return;
+  window._prodHintSub = 'dashboard';
+  window._prodHintTalla = null;
+  abrirPestana('produccion');
+}
+
+// Con la lista ya cargada: busca el bulto del QR, quita los filtros que lo
+// esconderían, abre su talla, lo deja a la vista y despliega sus operaciones.
+async function prodAbrirBultoDeEnlace() {
+  const pista = window._prodHintBulto;
+  if (!pista) return;
+  window._prodHintBulto = null;
+  try { history.replaceState(null, '', window.location.pathname + window.location.hash); } catch (_) {}
+  const b = produccionData.find(x =>
+    String(x.produccion_bulto_id || '').toLowerCase().startsWith(pista) ||
+    String(x.salida_id || '').toLowerCase().startsWith(pista));
+  if (!b || !b.produccion_bulto_id) {
+    showToast('No se encontró el bulto de esa etiqueta.', 'error', 7000);
+    return;
+  }
+  produccionFiltro = 'todos';
+  prodSoloTalla = null;
+  ['prod-filtro-corte', 'prod-filtro-prenda'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (sel) sel.value = '';
+  });
+  cortesExpandidos.add(b.talla_key_salida);
+  renderProduccion();
+  const fila = document.getElementById(`bulto-row-${b.produccion_bulto_id}`);
+  if (!fila) return;
+  fila.scrollIntoView({ block: 'start' });
+  window.scrollBy(0, -70);   // que no quede debajo de la barra de arriba
+  fila.style.outline = '3px solid #1565c0';
+  setTimeout(() => { fila.style.outline = ''; }, 4000);
+  const cont = document.getElementById(`etapas-${b.produccion_bulto_id}`);
+  if (cont && cont.style.display !== 'block') await toggleEtapasBulto(b.produccion_bulto_id);
+}
 function prodQuitarSoloTalla() {
   prodSoloTalla = null; prodSoloTallaOrigen = null; cortesExpandidos = new Set();
   renderProduccion();
@@ -126,6 +176,7 @@ async function cargarProduccion() {
 
     if (prodSoloTalla && !prodSoloTallaOrigen) await prodCargarOrigenTalla();
     renderProduccion();
+    await prodAbrirBultoDeEnlace();
   } catch(e) {
     document.getElementById('prod-resumen-hoy').textContent = 'Error: ' + e.message;
   }

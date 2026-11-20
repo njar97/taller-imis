@@ -992,6 +992,7 @@ async function doLogin(ev) {
     document.getElementById('auth-pass').value = '';
     if (typeof initDashboard === 'function') initDashboard();
     if (typeof initAuditRoleTab === 'function') initAuditRoleTab();
+    if (typeof prodEntrarPorEnlace === 'function') prodEntrarPorEnlace();
   } catch (e) {
     alertEl.innerHTML = `<div class="alert alert-error">${e.message || 'Error de login'}</div>`;
   } finally {
@@ -1145,6 +1146,7 @@ async function bootApp() {
   await gateApp();
   if (supaSession && typeof initDashboard === 'function') initDashboard();
   if (supaSession && typeof initAuditRoleTab === 'function') initAuditRoleTab();
+  if (supaSession && typeof prodEntrarPorEnlace === 'function') prodEntrarPorEnlace();
   if (supaSession && typeof actualizarBadgeEscuelasEsperando === 'function') {
     actualizarBadgeEscuelasEsperando();
   }
