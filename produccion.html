@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-20 12:50 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-20 13:16 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -12951,16 +12951,44 @@ async function toggleEtapasBulto(produccionBultoId) {
     cont.style.display = 'none';
     return;
   }
-  // Cargar etapas
   cont.style.display = 'block';
   cont.innerHTML = '<div class="text-muted" style="font-size:11px">Cargando etapas...</div>';
+  await prodRefrescarEtapas(produccionBultoId);
+}
+
+// Por bulto y operación: quién la está haciendo ahora y quién la terminó (puede ser más de una persona).
+//   _etapasHaciendo[bulto][operacion] = [{asignacion_id, operaria_id, operaria_nombre}]
+//   _etapasHechas[bulto][operacion]   = [{operaria_id, nombre, cantidad, fecha}]
+const _etapasHaciendo = {};
+const _etapasHechas = {};
+// Trae las operaciones del bulto con sus personas y las pinta (sin cerrar la lista).
+async function prodRefrescarEtapas(bultoId) {
+  const cont = document.getElementById(`etapas-${bultoId}`);
+  if (!cont) return;
   try {
-    const etapas = await supaFetch('vw_bulto_etapas','GET',null,
-      `?produccion_bulto_id=eq.${produccionBultoId}&order=orden&limit=60`);
-    renderEtapasBulto(produccionBultoId, etapas);
+    const [etapas, asig, regs] = await Promise.all([
+      supaFetch('vw_bulto_etapas','GET',null, `?produccion_bulto_id=eq.${bultoId}&order=orden&limit=60`),
+      supaFetch('vw_bulto_asignaciones','GET',null, `?produccion_bulto_id=eq.${bultoId}&limit=200`).catch(() => []),
+      supaFetch('produccion_registro_operacion','GET',null, `?produccion_bulto_id=eq.${bultoId}&tipo=eq.normal&select=operacion_id,operaria_id,operaria,cantidad_realizada,fecha&order=creado_en&limit=300`).catch(() => []),
+      operariasCache.length ? null : supaFetch('operaria','GET',null,'?order=nombre&limit=300').then(o => { operariasCache = o || []; }).catch(() => {}),
+    ]);
+    const m = {};
+    (asig || []).forEach(a => { (m[a.operacion_id] = m[a.operacion_id] || []).push(a); });
+    _etapasHaciendo[bultoId] = m;
+    const h = {};
+    (regs || []).forEach(r => {
+      const o = operariasCache.find(x => x.id === r.operaria_id);
+      (h[r.operacion_id] = h[r.operacion_id] || []).push({ operaria_id: r.operaria_id, nombre: (o && o.nombre) || r.operaria || '?', cantidad: r.cantidad_realizada, fecha: r.fecha });
+    });
+    _etapasHechas[bultoId] = h;
+    renderEtapasBulto(bultoId, etapas);
   } catch(e) {
     cont.innerHTML = `<div class="text-muted" style="color:#B00">Error: ${e.message}</div>`;
   }
+}
+function _prodNombres(lista) {
+  const n = lista.map(x => escapeHtmlProd(x));
+  return n.length <= 1 ? (n[0] || '') : n.slice(0, -1).join(', ') + ' y ' + n[n.length - 1];
 }
 
 function renderEtapasBulto(bultoId, etapas) {
@@ -12970,20 +12998,34 @@ function renderEtapasBulto(bultoId, etapas) {
     cont.innerHTML = '<div class="text-muted" style="font-size:11px">Este bulto no tiene operaciones configuradas.</div>';
     return;
   }
+  const haciendo = _etapasHaciendo[bultoId] || {};
+  const hechasDe = _etapasHechas[bultoId] || {};
   const sigue = etapas.find(e => !e.registro_id);
-  cont.innerHTML = etapas.map(e => {
+  const fila = e => {
     const hecha = !!e.registro_id;
     const esSigue = sigue && e.operacion_id === sigue.operacion_id;
-    const info = hecha
-      ? `<span style="color:#155724;font-size:11px">✓ ${e.operaria_nombre||'?'} · ${e.fecha_hecha||''} · ${e.cantidad_hecha||'?'} pz</span>`
-      : esSigue ? `<span style="color:#1565c0;font-size:11px;font-weight:700">SIGUE ESTA</span>` : '';
+    const quienes = hecha ? [] : (haciendo[e.operacion_id] || []);
+    let info = '';
+    if (hecha) {
+      const rs = hechasDe[e.operacion_id] || [];
+      const det = rs.length > 1
+        ? rs.map(r => `${escapeHtmlProd(r.nombre)} ${r.cantidad || '?'}`).join(' · ') + ` · ${e.fecha_hecha || ''}`
+        : `${escapeHtmlProd(e.operaria_nombre || '?')} · ${e.fecha_hecha || ''} · ${e.cantidad_hecha || '?'} pz`;
+      info = `<span style="color:#155724;font-size:11px">✓ ${det}</span>`;
+    } else if (quienes.length) {
+      info = `<span style="color:#1565c0;font-size:12px;font-weight:700">En proceso: ${_prodNombres(quienes.map(q => q.operaria_nombre))}</span>`;
+    } else if (esSigue) {
+      info = `<span style="color:#1565c0;font-size:11px;font-weight:700">SIGUE ESTA</span>`;
+    }
+    const b = 'padding:8px 10px;font-size:13px;border-radius:6px;cursor:pointer;font-weight:600';
     const btn = hecha
-      ? `<button class="btn-mini btn-mini-danger" onclick="desmarcarEtapa('${e.registro_id}','${bultoId}')">↶</button>`
-      : `<button class="btn-mini btn-mini-success" style="padding:6px 10px;font-size:13px" onclick="marcarEtapaRapida('${bultoId}','${e.operacion_id}')">✓ Hecha</button>`;
+      ? `<button class="btn-mini btn-mini-danger" onclick="prodDeshacerEtapa('${bultoId}','${e.operacion_id}')">↶</button>`
+      : `<button type="button" style="${b};border:1px solid #1565c0;background:${quienes.length ? '#1565c0' : '#fff'};color:${quienes.length ? '#fff' : '#1565c0'}" onclick="prodAbrirPick('${bultoId}','${e.operacion_id}','haciendo')">En proceso</button>
+         <button type="button" style="${b};border:1px solid #2e7d32;background:#2e7d32;color:#fff" onclick="prodTerminarEtapa('${bultoId}','${e.operacion_id}')">Terminado</button>`;
     const reprocesos = e.n_reprocesos > 0 ? ` <span style="color:#B58900;font-size:10px">(${e.n_reprocesos} reproc.)</span>` : '';
     return `
-      <div style="padding:6px 8px;border:1px solid ${esSigue?'#90caf9':'#E8E8E8'};border-radius:6px;margin-bottom:4px;background:${hecha?'#F1F8F1':esSigue?'#E3F2FD':'#FAFAFA'}">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <div style="padding:6px 8px;border:1px solid ${esSigue?'#90caf9':'#E8E8E8'};border-radius:6px;margin-bottom:4px;background:${hecha?'#F1F8F1':(esSigue||quienes.length)?'#E3F2FD':'#FAFAFA'}">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
           <div style="flex:1;min-width:0">
             <div style="font-size:13px;font-weight:600">${e.orden}. ${e.operacion_nombre}${reprocesos}</div>
             ${info ? `<div>${info}</div>` : ''}
@@ -12993,42 +13035,218 @@ function renderEtapasBulto(bultoId, etapas) {
         ${hecha ? '' : `<div id="pick-${bultoId}-${e.operacion_id}"></div>`}
       </div>
     `;
-  }).join('');
+  };
+  // Las ya terminadas quedan plegadas para que la lista no sea tan larga.
+  const hechas = etapas.filter(e => e.registro_id);
+  const faltan = etapas.filter(e => !e.registro_id);
+  cont.innerHTML =
+    (hechas.length ? `<details style="margin-bottom:6px"><summary style="cursor:pointer;font-size:13px;font-weight:600;padding:6px 2px">Terminadas (${hechas.length} de ${etapas.length})</summary>${hechas.map(fila).join('')}</details>` : '')
+    + faltan.map(fila).join('');
   if (sigue) {
     const el = document.getElementById(`pick-${bultoId}-${sigue.operacion_id}`);
     if (el && el.parentElement) el.parentElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    // Se llegó escaneando la etiqueta: la operación que sigue ya sale con los
-    // nombres para tocar quién la hizo (sin tener que abrirla).
-    if (prodSoloBulto === bultoId && el && !el.innerHTML) marcarEtapaRapida(bultoId, sigue.operacion_id);
   }
 }
 
-// Marcar etapa hecha: se abre debajo de la operación una cajita con las
-// operarias en botones y la cantidad ya puesta (antes eran dos ventanas para escribir).
-async function marcarEtapaRapida(bultoId, operacionId) {
+// ── Anotar una operación ──────────────────────────────────────────────
+// A la vista solo hay «En proceso» y «Terminado». Al tocar se despliega la
+// lista de nombres con buscador; se puede marcar más de una persona. El
+// reparto de piezas entre ellas queda escondido en «Opciones».
+let _pick = null;   // { bultoId, operacionId, modo: 'haciendo'|'hecha', sel: [operaria_id], cant: {operaria_id: n} }
+function _prodSinTilde(t) { return String(t || '').normalize('NFD').replace(/[^a-zA-Z0-9ñÑ ]/g, '').toLowerCase(); }
+function _prodPiezasBulto(bultoId) {
+  const b = produccionData.find(x => x.produccion_bulto_id === bultoId);
+  return Number(b && (b.cantidad_final || b.cantidad_original)) || 0;
+}
+// Reparte las piezas del bulto en partes iguales (lo que sobra, a las primeras).
+function _prodRepartir(total, ids) {
+  const r = {};
+  if (!ids.length) return r;
+  const base = Math.floor(total / ids.length);
+  let sobra = total - base * ids.length;
+  ids.forEach(id => { r[id] = base + (sobra > 0 ? 1 : 0); if (sobra > 0) sobra--; });
+  return r;
+}
+function prodCerrarPick() {
+  if (_pick) {
+    const c = document.getElementById(`pick-${_pick.bultoId}-${_pick.operacionId}`);
+    if (c) c.innerHTML = '';
+  }
+  _pick = null;
+}
+function prodAbrirPick(bultoId, operacionId, modo) {
+  const mismo = _pick && _pick.bultoId === bultoId && _pick.operacionId === operacionId && _pick.modo === modo;
+  prodCerrarPick();
+  if (mismo) return;                                   // segundo toque: se pliega
+  const ya = ((_etapasHaciendo[bultoId] || {})[operacionId] || []).map(a => a.operaria_id);
+  _pick = { bultoId, operacionId, modo, sel: [...new Set(ya)], cant: {} };
+  _pick.cant = _prodRepartir(_prodPiezasBulto(bultoId), _pick.sel);
+  _prodPintarPick('');
+}
+function _prodPintarPick(busca) {
+  if (!_pick) return;
+  const { bultoId, operacionId, modo, sel } = _pick;
   const caja = document.getElementById(`pick-${bultoId}-${operacionId}`);
   if (!caja) return;
-  if (caja.innerHTML) { caja.innerHTML = ''; return; }
-  document.querySelectorAll(`[id^="pick-${bultoId}-"]`).forEach(x => { x.innerHTML = ''; });
-  if (operariasCache.length === 0) {
-    caja.innerHTML = '<div class="text-muted" style="font-size:12px">Cargando operarias…</div>';
-    operariasCache = await supaFetch('operaria','GET',null,'?activo=eq.true&order=nombre&limit=100');
-  }
   const activas = operariasCache.filter(operariaTrabajando);
-  if (activas.length === 0) { caja.innerHTML = '<div class="text-muted" style="font-size:12px">No hay operarias activas. Agregalas en Operarias.</div>'; return; }
-  const bulto = produccionData.find(b => b.produccion_bulto_id === bultoId);
-  const cant = bulto?.cantidad_final || bulto?.cantidad_original || 0;
+  if (activas.length === 0) { caja.innerHTML = '<div class="text-muted" style="font-size:12px;margin-top:6px">No hay personas activas. Agréguelas en Operarias.</div>'; return; }
+  const total = _prodPiezasBulto(bultoId);
+  const nombreDe = id => (operariasCache.find(o => o.id === id) || {}).nombre || '?';
+  const q = _prodSinTilde(busca).trim();
+  const titulo = modo === 'hecha' ? '¿Quién la terminó?' : '¿Quién la está haciendo?';
+  const suma = sel.reduce((a, id) => a + (Number(_pick.cant[id]) || 0), 0);
+  const opciones = modo !== 'hecha' ? '' : `
+      <details id="pick-op" style="margin-top:8px"${_pick.opAbierta ? ' open' : ''} ontoggle="if(_pick)_pick.opAbierta=this.open">
+        <summary style="cursor:pointer;font-size:13px;color:#555">Opciones: piezas de cada persona</summary>
+        <div style="margin-top:6px">
+          ${sel.length ? sel.map(id => `
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:14px">
+              <span style="flex:1">${escapeHtmlProd(nombreDe(id))}</span>
+              <input type="number" min="0" value="${_pick.cant[id] ?? 0}" oninput="prodPickCant('${id}', this.value)" style="width:76px;padding:6px;font-size:15px"> pz
+            </div>`).join('') : '<div class="text-muted" style="font-size:12px">Marque primero a la persona.</div>'}
+          <div id="pick-suma" style="font-size:12px;color:${suma === total ? '#555' : '#B00'}">Suman ${suma} de ${total} piezas del bulto.</div>
+        </div>
+      </details>`;
   caja.innerHTML = `
     <div style="margin-top:6px;padding:8px;background:#fff;border:1px solid #cfe3cf;border-radius:8px">
-      <div style="font-size:12px;margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-        Piezas <input type="number" id="pickc-${bultoId}-${operacionId}" value="${cant}" min="1" style="width:70px;padding:4px 6px;font-size:14px">
-        <span class="text-muted">¿Quién la hizo?</span>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">
-        ${activas.map(o => `<button class="btn btn-ghost btn-sm" style="padding:8px 10px" onclick="guardarEtapaRapida('${bultoId}','${operacionId}','${o.id}')">${escapeHtmlProd(o.nombre)}</button>`).join('')}
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px">${titulo} <span class="text-muted" style="font-weight:400">(puede marcar más de una)</span></div>
+      <input type="search" id="pick-busca" placeholder="Buscar nombre…" autocomplete="off" value="${escapeHtmlProd(busca || '')}" oninput="prodPickFiltrar(this.value)" style="width:100%;padding:8px;font-size:15px;margin-bottom:6px;box-sizing:border-box">
+      <div id="pick-lista" style="max-height:230px;overflow-y:auto;border:1px solid #e3e3e3;border-radius:6px">
+        ${activas.map(o => {
+          const on = sel.includes(o.id);
+          const ve = !q || _prodSinTilde(o.nombre).includes(q);
+          return `<button type="button" class="pick-nombre" data-n="${escapeHtmlProd(_prodSinTilde(o.nombre))}" onclick="prodPickTocar('${o.id}')" style="display:${ve ? 'block' : 'none'};width:100%;text-align:left;padding:11px 10px;font-size:15px;background:${on ? '#E3F2FD' : '#fff'};font-weight:${on ? 700 : 400};border:0;border-bottom:1px solid #eee;cursor:pointer">${on ? '✓ ' : ''}${escapeHtmlProd(o.nombre)}</button>`;
+        }).join('')}
+        <div id="pick-nadie" class="text-muted" style="display:none;padding:10px;font-size:13px">Nadie con ese nombre.</div>
+      </div>${opciones}
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button type="button" class="btn btn-ghost btn-sm" style="flex:1;padding:10px" onclick="prodCerrarPick()">Cerrar</button>
+        <button type="button" id="pick-guardar" class="btn btn-primary btn-sm" style="flex:2;padding:10px" onclick="prodPickGuardar()">${modo === 'hecha' ? 'Guardar terminado' : 'Guardar en proceso'}</button>
       </div>
     </div>`;
+  prodPickFiltrar(busca || '');
 }
+function prodPickFiltrar(texto) {
+  const q = _prodSinTilde(texto).trim();
+  let n = 0;
+  document.querySelectorAll('#pick-lista .pick-nombre').forEach(b => {
+    const ve = !q || b.dataset.n.includes(q);
+    b.style.display = ve ? 'block' : 'none';
+    if (ve) n++;
+  });
+  const v = document.getElementById('pick-nadie');
+  if (v) v.style.display = n ? 'none' : 'block';
+}
+function prodPickTocar(operariaId) {
+  if (!_pick) return;
+  const i = _pick.sel.indexOf(operariaId);
+  if (i >= 0) _pick.sel.splice(i, 1); else _pick.sel.push(operariaId);
+  _pick.cant = _prodRepartir(_prodPiezasBulto(_pick.bultoId), _pick.sel);   // al cambiar la gente, se reparte parejo otra vez
+  const busca = (document.getElementById('pick-busca') || {}).value || '';
+  _prodPintarPick(busca);
+}
+function prodPickCant(operariaId, valor) {
+  if (!_pick) return;
+  _pick.cant[operariaId] = Math.max(0, parseInt(valor) || 0);
+  const total = _prodPiezasBulto(_pick.bultoId);
+  const suma = _pick.sel.reduce((a, id) => a + (Number(_pick.cant[id]) || 0), 0);
+  const el = document.getElementById('pick-suma');
+  if (el) { el.textContent = `Suman ${suma} de ${total} piezas del bulto.`; el.style.color = suma === total ? '#555' : '#B00'; }
+}
+async function prodPickGuardar() {
+  if (!_pick) return;
+  const { bultoId, operacionId, modo, sel } = _pick;
+  if (modo === 'hecha') {
+    if (!sel.length) { showToast('Marque quién la terminó.', 'error', 3000); return; }
+    const partes = sel.map(id => ({ operaria_id: id, cantidad: Number(_pick.cant[id]) || 0 })).filter(x => x.cantidad > 0);
+    if (!partes.length) { showToast('Ponga las piezas de cada persona.', 'error', 3000); return; }
+    const total = _prodPiezasBulto(bultoId);
+    const suma = partes.reduce((a, x) => a + x.cantidad, 0);
+    if (suma !== total && !await confirmar(`Las piezas suman ${suma} y el bulto tiene ${total}. ¿Guardar así?`)) return;
+    return prodGuardarTerminado(bultoId, operacionId, partes);
+  }
+  // En proceso: deja anotadas exactamente a las personas marcadas.
+  const llave = bultoId + '|' + operacionId;
+  if (_etapaGuardando.has(llave)) return;
+  _etapaGuardando.add(llave);
+  const btn = document.getElementById('pick-guardar');
+  if (btn) btn.disabled = true;
+  try {
+    const ya = (_etapasHaciendo[bultoId] || {})[operacionId] || [];
+    for (const a of ya) if (!sel.includes(a.operaria_id)) await _prodSoltarAsignacion(bultoId, a, 'cancelada');
+    for (const id of sel) {
+      if (ya.some(a => a.operaria_id === id)) continue;
+      const [nueva] = await supaFetch('asignacion','POST',{
+        operaria_id: id, operacion_id: operacionId,
+        fecha_asignacion: hoyLocal(), estado: 'activa', observaciones: 'Desde la etiqueta del bulto',
+      });
+      await supaFetch('asignacion_bulto','POST',[{ asignacion_id: nueva.id, produccion_bulto_id: bultoId }]);
+    }
+    _pick = null;
+    await prodRefrescarEtapas(bultoId);
+    showToast(sel.length ? 'Anotado: en proceso.' : 'Quedó sin nadie anotado.', 'success', 2500);
+  } catch(e) {
+    alert('Error: ' + e.message);
+    if (btn) btn.disabled = false;
+  } finally {
+    _etapaGuardando.delete(llave);
+  }
+}
+// Quita de un bulto la marca de «en proceso» de una persona. Si esa asignación
+// era solo de este bulto queda cerrada (no se borra).
+async function _prodSoltarAsignacion(bultoId, a, estadoFinal) {
+  await supaFetch('asignacion_bulto','DELETE',null,`?asignacion_id=eq.${a.asignacion_id}&produccion_bulto_id=eq.${bultoId}`);
+  const resto = await supaFetch('asignacion_bulto','GET',null,`?asignacion_id=eq.${a.asignacion_id}&select=produccion_bulto_id&limit=1`);
+  if (!resto || resto.length === 0) await supaUpdate('asignacion', a.asignacion_id, { estado: estadoFinal });
+}
+// «Terminado» de un toque: si ya hay gente anotada en proceso se guarda con
+// ellas (piezas repartidas parejo); si no hay nadie, pregunta quién la terminó.
+async function prodTerminarEtapa(bultoId, operacionId) {
+  const ya = ((_etapasHaciendo[bultoId] || {})[operacionId] || []).map(a => a.operaria_id);
+  const ids = [...new Set(ya)];
+  if (!ids.length) return prodAbrirPick(bultoId, operacionId, 'hecha');
+  prodCerrarPick();
+  const rep = _prodRepartir(_prodPiezasBulto(bultoId), ids);
+  return prodGuardarTerminado(bultoId, operacionId, ids.map(id => ({ operaria_id: id, cantidad: rep[id] })));
+}
+async function prodGuardarTerminado(bultoId, operacionId, partes) {
+  const llave = bultoId + '|' + operacionId;
+  if (_etapaGuardando.has(llave)) return;
+  _etapaGuardando.add(llave);
+  try {
+    await supaFetch('produccion_registro_operacion','POST', partes.map(x => ({
+      produccion_bulto_id: bultoId, operacion_id: operacionId, operaria_id: x.operaria_id,
+      fecha: hoyLocal(), cantidad_realizada: x.cantidad, tipo: 'normal',
+    })));
+    for (const a of ((_etapasHaciendo[bultoId] || {})[operacionId] || [])) {
+      try { await _prodSoltarAsignacion(bultoId, a, 'completada'); } catch (_) {}
+    }
+    _pick = null;
+    await prodRecargarEnSuLugar(bultoId);
+    // Era la última operación: el bulto pasa a bodega igual que con «Terminar».
+    const b2 = produccionData.find(b => b.produccion_bulto_id === bultoId);
+    if (b2 && b2.estado_manual !== 'terminado' && b2.total_etapas > 0 && b2.etapas_hechas >= b2.total_etapas) {
+      showToast('Operaciones completas. Falta decir cuántas piezas salieron para pasarlo a bodega.', 'success', 5000);
+      await terminarBulto(bultoId, b2.cantidad_original);
+    }
+  } catch(e) {
+    alert('Error: ' + e.message);
+  } finally {
+    _etapaGuardando.delete(llave);
+  }
+}
+// Deshacer una operación terminada: borra lo anotado de todas las personas.
+async function prodDeshacerEtapa(bultoId, operacionId) {
+  if (!await confirmar('¿Deshacer esta operación? Se borra lo anotado como terminado.')) return;
+  try {
+    await supaFetch('produccion_registro_operacion','DELETE',null,`?produccion_bulto_id=eq.${bultoId}&operacion_id=eq.${operacionId}&tipo=eq.normal`);
+    await prodRecargarEnSuLugar(bultoId);
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+// Compatibilidad: el botón viejo «Hecha» abre la lista para decir quién la terminó.
+function marcarEtapaRapida(bultoId, operacionId) { return prodAbrirPick(bultoId, operacionId, 'hecha'); }
 function escapeHtmlProd(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
