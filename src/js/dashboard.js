@@ -1089,24 +1089,11 @@ async function cargarListoEmpacar() {
     filas.sort((a, b) => b.puede - a.puede);
     dashboardCache.listoPorEsc = new Map(filas.map(f => [f.id, f.puede]));
     _avPintarListo();
+    // La tarjeta «Listo» se quitó de Inicio (Javier, 19-nov: repetía la lista
+    // de escuelas). El número «se pueden empacar ya» queda en cada fila de
+    // «Escuelas» (lo pinta _avPintarListo).
     const el2 = document.getElementById('dash-listo-empacar');
-    if (!el2) return;
-    if (!filas.length) { el2.innerHTML = ''; return; }
-    el2.innerHTML = `
-      <div class="card tj">
-        <div class="tj-cab">
-          <span class="tj-ico tj-verde">${ico('caja')}</span>
-          <h2>Listo<span class="solo-asistencia"> para empacar</span></h2>
-        </div>
-        <div class="solo-asistencia" style="padding:4px 12px 0;font-size:12px;color:#666">Lo que ya se puede empacar con lo que hay en bodega. Tocá una escuela para empacarla.</div>
-        ${filas.slice(0, 5).map(f => `
-        <button type="button" class="listo-fila" onclick="dashEmpacarEscuela('${f.id}')">
-          <span style="flex:1;min-width:0"><strong>${dashEsc(f.nombre)}</strong><small class="solo-asistencia">le faltan ${dashNum(f.falta)} piezas</small></span>
-          <span style="text-align:right;white-space:nowrap"><strong style="color:${CV_VERDE};font-size:17px">${dashNum(f.puede)}</strong><small class="solo-asistencia">se pueden empacar</small></span>
-          ${ico('ir')}
-        </button>`).join('')}
-        ${filas.length > 5 ? `<div style="padding:8px 12px;font-size:12px;color:#666;border-top:1px solid #F0F0F0">+${filas.length - 5} más</div>` : ''}
-      </div>`;
+    if (el2) el2.innerHTML = '';
   } catch (e) {
     console.warn('[inicio] listo para empacar:', e && e.message || e);
   }
