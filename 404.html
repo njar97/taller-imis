@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taller IMIS — Uniformes</title>
+<script>
+// Etiqueta de bulto: el QR trae /B/<8 letras del bulto> y de aquí pasa a la app
+// con ese bulto abierto. Cualquier otra dirección que no exista entra a la app.
+(function () {
+  var m = location.pathname.match(/\/B\/([0-9A-Fa-f]{6,12})\/?$/);
+  location.replace('/produccion.html' + (m ? '?b=' + m[1].toLowerCase() : ''));
+})();
+</script>
+</head>
+<body style="font-family:sans-serif;padding:24px">
+<p><a href="/produccion.html">Entrar a la app</a></p>
+</body>
+</html>
