@@ -79,7 +79,7 @@ const ESPERADAS = [
   'async function tespAgregar', 'function tespDescargarCSV', 'function buscadorIrEspecial',
   // Etiqueta de bulto con QR
   'function prodEntrarPorEnlace', 'async function prodAbrirBultoDeEnlace',
-  'async function abrirEscanerQR', 'function cerrarEscanerQR', 'function qrIdDeTexto', 'function prodQuitarSoloBulto', 'function _prodFranjaSoloBulto',
+  'async function abrirEscanerQR', 'function cerrarEscanerQR', 'function qrIdDeTexto', 'function prodQuitarSoloBulto', 'async function prodGuardarTerminado', 'async function prodRefrescarEtapas', 'function prodAbrirPick', 'function _prodFranjaSoloBulto',
 ];
 const faltantes = ESPERADAS.filter(needle => !html.includes(needle));
 if (faltantes.length > 0) {
