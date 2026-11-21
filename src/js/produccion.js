@@ -1037,24 +1037,57 @@ async function prodCargarPasos() {
   } catch (_) { prodPasosDe = {}; prodDetalleDe = {}; }
 }
 const _prodUltEtapas = {};   // bulto -> últimas etapas pintadas
-let _prodDetPick = null;     // 'bulto|operación' con la lista de nombres abierta
-// Al tocar una operación sin hacer: se abre la lista de nombres para decir quién la hizo.
-function prodDetalleElegir(bultoId, opId) {
-  const llave = bultoId + '|' + opId;
-  _prodDetPick = _prodDetPick === llave ? null : llave;
+let prodAnota;                // quién anota (se elige una vez y se recuerda en este teléfono)
+let _prodAnotaAbierto = false;
+function prodAnotaAbrir(bultoId) {
+  _prodAnotaAbierto = !_prodAnotaAbierto;
   if (_prodUltEtapas[bultoId]) renderEtapasBulto(bultoId, _prodUltEtapas[bultoId]);
 }
-function _prodDetalleNombres(bultoId, opId, pasoId) {
-  let ult = null;
-  try { ult = localStorage.getItem('prodDetOp:' + opId); } catch (_) {}
-  const b = 'padding:10px 12px;border-radius:10px;font-size:15px;cursor:pointer;';
-  const lista = (operariasCache || []).filter(o => o.activo !== false)
-    .sort((x, y) => (y.id === ult) - (x.id === ult) || String(x.nombre).localeCompare(String(y.nombre)));
+function prodAnotaElegir(bultoId, operariaId) {
+  prodAnota = operariaId || '';
+  try { localStorage.setItem('prodAnota', prodAnota); } catch (_) {}
+  _prodAnotaAbierto = false;
+  if (_prodUltEtapas[bultoId]) renderEtapasBulto(bultoId, _prodUltEtapas[bultoId]);
+}
+// Quién anota: null = nunca se ha dicho · '' = sin nombre · id de la operaria
+function _prodAnotaActual() {
+  if (prodAnota === undefined) {
+    try { prodAnota = localStorage.getItem('prodAnota'); } catch (_) { prodAnota = null; }
+  }
+  if (prodAnota && !(operariasCache || []).some(o => o.id === prodAnota)) return null;
+  return prodAnota;
+}
+// Tocar una operación sin hacer: queda a nombre de quien anota. Si todavía no
+// se ha dicho quién anota, primero se abre la lista de nombres.
+function prodDetalleTocar(bultoId, opId, pasoId) {
+  const quien = _prodAnotaActual();
+  if (quien === null) {
+    _prodAnotaAbierto = true;
+    if (_prodUltEtapas[bultoId]) renderEtapasBulto(bultoId, _prodUltEtapas[bultoId]);
+    showToast('Primero diga quién hizo el trabajo.', 'info', 3500);
+    return;
+  }
+  return prodOperacionDetalle(bultoId, opId, pasoId, quien || null);
+}
+// Arriba de las operaciones: de quién es lo que se va a tocar (se dice una vez).
+function _prodAnotaCaja(bultoId) {
+  const quien = _prodAnotaActual();
+  const o = quien ? (operariasCache || []).find(x => x.id === quien) : null;
+  const texto = quien === null ? '<span style="color:#B45309;font-weight:700">Falta decir quién lo hizo</span>'
+    : `Lo hizo: <strong style="font-size:17px">${o ? _prodEsc(o.nombre) : 'Sin nombre'}</strong>`;
+  const fila = 'display:block;width:100%;text-align:left;padding:13px 12px;border:0;border-top:1px solid #E5E7EB;background:#fff;font-size:17px;cursor:pointer';
+  const lista = !_prodAnotaAbierto ? '' : `
+          <div style="margin-top:8px;border:1px solid #D1D5DB;border-radius:10px;overflow:hidden;max-height:320px;overflow-y:auto">
+            ${(operariasCache || []).filter(x => x.activo !== false).sort((x, y) => String(x.nombre).localeCompare(String(y.nombre)))
+              .map((x, i) => `<button type="button" style="${fila}${i ? '' : ';border-top:0'}${x.id === quien ? ';background:#DBEAFE;font-weight:700' : ''}" onclick="prodAnotaElegir('${bultoId}','${x.id}')">${_prodEsc(x.nombre)}</button>`).join('')}
+            <button type="button" style="${fila};color:#6B7280" onclick="prodAnotaElegir('${bultoId}','')">Sin nombre</button>
+          </div>`;
   return `
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px;padding:8px;border:1px dashed #9CA3AF;border-radius:10px;background:#F9FAFB">
-          <div style="flex-basis:100%;font-size:13px;color:#374151">¿Quién la hizo?</div>
-          ${lista.map(o => `<button type="button" style="${b}border:1px solid ${o.id === ult ? '#2563EB' : '#D1D5DB'};background:${o.id === ult ? '#DBEAFE' : '#fff'};font-weight:${o.id === ult ? 700 : 400}" onclick="prodOperacionDetalle('${bultoId}','${opId}','${pasoId}','${o.id}')">${_prodEsc(o.nombre)}</button>`).join('')}
-          <button type="button" style="${b}border:1px solid #D1D5DB;background:#fff;color:#6B7280" onclick="prodOperacionDetalle('${bultoId}','${opId}','${pasoId}',null)">Sin nombre</button>
+        <div style="padding:8px 10px;border-radius:10px;background:#F3F4F6">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span style="font-size:15px">${texto}</span>
+            <button type="button" onclick="prodAnotaAbrir('${bultoId}')" style="flex:none;padding:8px 12px;border:1px solid #9CA3AF;border-radius:8px;background:#fff;font-size:14px;cursor:pointer">${_prodAnotaAbierto ? 'Cerrar' : quien === null ? 'Elegir' : 'Cambiar'}</button>
+          </div>${lista}
         </div>`;
 }
 function _prodMinPaso(e) {
@@ -1080,26 +1113,24 @@ function _prodDetallePaso(bultoId, sigue, etapas) {
   const tot = etapas.reduce((t, e) => t + _prodMinPaso(e), 0) || 1;
   return `
       <div style="margin-top:12px;border:1px solid #D1D5DB;border-radius:12px;padding:8px;background:#fff">
-        <div style="font-size:13px;color:#6B7280;text-align:center">O anotar por operación: toque la que ya está hecha</div>` +
+        <div style="font-size:13px;color:#6B7280;text-align:center;margin-bottom:6px">O anotar por operación: toque la que ya está hecha</div>${_prodAnotaCaja(bultoId)}` +
     det.map(x => {
       const rs = hechasDe[x.id] || [];
       const ok = rs.length > 0;
       const quien = ok ? [...new Set(rs.map(r => r.nombre === '?' ? 'sin nombre' : r.nombre))].join(', ') : '';
-      const abierto = !ok && _prodDetPick === bultoId + '|' + x.id;
       return `
-        <button type="button" onclick="${ok ? `prodOperacionDetalle('${bultoId}','${x.id}','${sigue.operacion_id}')` : `prodDetalleElegir('${bultoId}','${x.id}')`}" style="display:flex;width:100%;align-items:center;gap:10px;margin-top:6px;padding:12px 10px;border:1px solid ${ok ? '#16A34A' : '#D1D5DB'};border-radius:10px;background:${ok ? '#F0FDF4' : '#fff'};font-size:16px;text-align:left;cursor:pointer">
+        <button type="button" onclick="${ok ? `prodOperacionDetalle('${bultoId}','${x.id}','${sigue.operacion_id}')` : `prodDetalleTocar('${bultoId}','${x.id}','${sigue.operacion_id}')`}" style="display:flex;width:100%;align-items:center;gap:10px;margin-top:6px;padding:12px 10px;border:1px solid ${ok ? '#16A34A' : '#D1D5DB'};border-radius:10px;background:${ok ? '#F0FDF4' : '#fff'};font-size:16px;text-align:left;cursor:pointer">
           <span style="flex:none;width:26px;height:26px;border-radius:50%;border:2px solid ${ok ? '#16A34A' : '#9CA3AF'};background:${ok ? '#16A34A' : '#fff'};color:#fff;text-align:center;line-height:22px;font-weight:700">${ok ? '✓' : ''}</span>
           <span style="flex:1;min-width:0;font-weight:${ok ? 700 : 400};color:${ok ? '#166534' : '#111'}">${_prodEsc(x.nombre)}${quien ? `<br><span style="font-weight:400;font-size:13px">${_prodEsc(quien)}</span>` : ''}</span>
           <span style="flex:none;font-size:13px;color:#6B7280">${Math.round(100 * x.min / tot)} %</span>
-        </button>${abierto ? _prodDetalleNombres(bultoId, x.id, sigue.operacion_id) : ''}`;
+        </button>`;
     }).join('') + `
       </div>`;
 }
 // Tocar una operación de detalle: la anota (o la quita si ya estaba). Cuando
 // quedan todas las del paso, el bulto pasa solo al paso siguiente.
 async function prodOperacionDetalle(bultoId, opId, pasoId, operariaId = null) {
-  _prodDetPick = null;
-  if (operariaId) { try { localStorage.setItem('prodDetOp:' + opId, operariaId); } catch (_) {} }
+
   const llave = bultoId + '|' + opId;
   if (_etapaGuardando.has(llave)) return;
   _etapaGuardando.add(llave);
