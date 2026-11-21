@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-20 18:52 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-20 19:22 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -12139,6 +12139,30 @@ let prodSoloTalla = null;          // { cod, talla }
 let prodSoloTallaOrigen = null;    // filas de produccion_en_proceso de esa talla
 // Filtro «solo este bulto» (se llegó escaneando su etiqueta): id del bulto
 let prodSoloBulto = null;
+// Bultos guardados (cortados que por ahora no se confeccionan): no salen en la
+// lista; se ven en su apartado «Guardados». Conservan el paso en que iban.
+let prodGuardados = new Set();     // ids de produccion_bulto
+let prodVerGuardados = false;      // true = se está viendo el apartado
+async function prodCargarGuardados() {
+  try {
+    const g = await supaFetch('produccion_bulto','GET',null,'?guardado=eq.true&select=id&limit=2000');
+    prodGuardados = new Set((g || []).map(x => x.id));
+  } catch (_) { prodGuardados = new Set(); }
+}
+async function prodGuardarBulto(bultoId, guardar) {
+  try {
+    await supaUpdate('produccion_bulto', bultoId, { guardado: !!guardar, guardado_en: guardar ? new Date().toISOString() : null });
+    if (guardar) prodGuardados.add(bultoId); else prodGuardados.delete(bultoId);
+    if (!prodGuardados.size) prodVerGuardados = false;
+    renderProduccion();
+    showToast(guardar ? 'Bulto guardado. Está en el apartado «Guardados».' : 'Bulto de vuelta en la lista.', 'success', 3500);
+  } catch (e) { alert('Error: ' + e.message); }
+}
+function prodVerApartadoGuardados(ver) {
+  prodVerGuardados = !!ver; cortesExpandidos = new Set();
+  renderProduccion();
+  window.scrollTo(0, 0);
+}
 
 // Etiqueta de bulto con QR: la dirección trae ?b=<primeras letras del id del
 // bulto> y la app abre ESE bulto con sus operaciones a la vista.
@@ -12307,6 +12331,8 @@ async function cargarProduccion() {
     if (FASE2_ACTIVA) {
       await cargarProgreso();
       await cargarAsignacionesPorBulto();
+      await prodCargarPasos();
+      await prodCargarGuardados();
     } else {
       progresoCache = {};
       asignacionesPorBulto = {};
@@ -12464,6 +12490,11 @@ function renderProduccion() {
       && prodTalla2026(b.cod_prenda, b.talla_key_salida) === prodSoloTalla.talla);
     filtrados.forEach(b => cortesExpandidos.add(b.talla_key_salida));   // se ven abiertos de una vez
   }
+  // Guardados: fuera de la lista normal; solos en su apartado.
+  const nGuardados = filtrados.filter(b => prodGuardados.has(b.produccion_bulto_id)).length;
+  if (prodVerGuardados && !nGuardados) prodVerGuardados = false;
+  filtrados = filtrados.filter(b => prodGuardados.has(b.produccion_bulto_id) === prodVerGuardados);
+  if (prodVerGuardados) filtrados.forEach(b => cortesExpandidos.add(b.talla_key_salida));
   let franjaTalla = _prodFranjaSoloTalla(filtrados.length, filtrados.reduce((s2, b) => s2 + (Number(b.cantidad_original) || 0), 0));
   // Etiqueta escaneada: solo ese bulto, pase lo que pase con los demás filtros.
   const elSolo = prodSoloBulto ? produccionData.find(b => b.produccion_bulto_id === prodSoloBulto) : null;
@@ -12472,6 +12503,17 @@ function renderProduccion() {
     filtrados = [elSolo];
     cortesExpandidos.add(elSolo.talla_key_salida);
     franjaTalla = _prodFranjaSoloBulto(elSolo);
+  } else if (prodVerGuardados) {
+    franjaTalla += `
+    <div class="alert alert-warn" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <strong>Guardados · ${filtrados.length} ${filtrados.length === 1 ? 'bulto' : 'bultos'} · ${filtrados.reduce((t, b) => t + (Number(b.cantidad_original) || 0), 0)} piezas</strong>
+        <button class="btn btn-ghost btn-sm" onclick="prodVerApartadoGuardados(false)">Volver a la lista</button>
+      </div>
+      <div style="font-size:12px;margin-top:2px">Cortados que por ahora no se confeccionan.</div>
+    </div>`;
+  } else if (nGuardados) {
+    franjaTalla += `<div style="text-align:right;margin-bottom:8px"><button class="btn btn-ghost btn-sm" onclick="prodVerApartadoGuardados(true)">Guardados (${nGuardados})</button></div>`;
   }
 
   // Estilizar botones de estado
@@ -12600,6 +12642,16 @@ function actualizarFiltrosProd() {
   }
 }
 
+// Bultos con sus pasos desplegados en la lista (plegados al entrar; se abren al tocar).
+const prodPasosAbiertos = new Set();
+function prodTogglePasos(bultoId) {
+  if (prodPasosAbiertos.has(bultoId)) prodPasosAbiertos.delete(bultoId); else prodPasosAbiertos.add(bultoId);
+  const abierto = prodPasosAbiertos.has(bultoId);
+  const caja = document.getElementById(`pasos-${bultoId}`);
+  if (caja) caja.style.display = abierto ? 'block' : 'none';
+  const fl = document.getElementById(`pasos-fl-${bultoId}`);
+  if (fl) fl.textContent = abierto ? '▼' : '▶';
+}
 function renderProdBulto(b) {
   // Estado efectivo: si Fase 2 ON y hay etapas, se deriva
   const estadoEfectivo = prodEstadoEfectivo(b);
@@ -12612,7 +12664,24 @@ function renderProdBulto(b) {
 
   // Progreso
   let progresoHtml = '';
-  if (FASE2_ACTIVA && b.total_etapas > 0) {
+  let pasosFila = '', botonPaso = '';   // van a lo ancho, debajo del nombre del bulto
+  // Prenda con pocos pasos: línea de pasos y un solo botón con el que sigue.
+  const pasosB = (FASE2_ACTIVA && b.total_etapas > 0 && b.total_etapas <= PROD_PASOS_MAX) ? (prodPasosDe[b.cod_prenda] || []) : [];
+  const porPasos = pasosB.length === b.total_etapas && pasosB.length > 0;
+  const guardado = prodGuardados.has(b.produccion_bulto_id);
+  if (guardado) {
+    const iba = (b.total_etapas > 0 && pasosB.length === b.total_etapas)
+      ? (pasosB[Math.min(b.etapas_hechas || 0, pasosB.length - 1)] || {}).nombre
+      : (b.total_etapas > 0 ? `operación ${Math.min((b.etapas_hechas || 0) + 1, b.total_etapas)} de ${b.total_etapas}` : null);
+    progresoHtml = `<div style="margin-top:4px;font-size:14px;font-weight:700;color:#6B7280">Guardado${iba ? ` <span style="font-weight:400;font-size:12px">· iba en: ${_prodEsc(iba)}</span>` : ''}</div>`;
+  } else if (porPasos) {
+    const nombres = pasosB.map(x => x.nombre).concat(['Bodega']);
+    const enBodega = estadoEfectivo === 'terminado';
+    const actual = enBodega ? nombres.length - 1 : Math.min(b.etapas_hechas || 0, nombres.length - 1);
+    pasosFila = _prodLineaPasos(nombres, actual, !enBodega);
+    const abiertoP = prodPasosAbiertos.has(b.produccion_bulto_id);
+    progresoHtml = `<div style="margin-top:4px;font-size:14px;font-weight:700;color:${enBodega ? '#16A34A' : '#2563EB'}"><span id="pasos-fl-${b.produccion_bulto_id}" style="font-size:11px">${abiertoP ? '▼' : '▶'}</span> ${enBodega ? 'En bodega' : actual >= nombres.length - 1 ? 'Listo para bodega' : 'Está en: ' + _prodEsc(nombres[actual])} <span style="font-weight:400;color:#6B7280;font-size:12px">· paso ${Math.min(actual + 1, nombres.length)} de ${nombres.length}</span></div>`;
+  } else if (FASE2_ACTIVA && b.total_etapas > 0) {
     const pct = Math.round(100 * b.etapas_hechas / b.total_etapas);
     progresoHtml = `
       <div style="margin-top:4px;font-size:11px;color:#555">
@@ -12656,7 +12725,16 @@ function renderProdBulto(b) {
   } else if (conEtapas && b.etapas_hechas >= b.total_etapas) {
     // Todas las operaciones hechas y todavía sin entrar a bodega
     acciones = `<button class="prod-btn-accion prod-btn-terminar" onclick="terminarBulto('${b.produccion_bulto_id}', ${cantActual})">✓ Terminar · pasar a bodega</button>`;
+    if (porPasos) {
+      botonPaso = `<button class="prod-btn-accion prod-btn-terminar" style="display:block;width:100%;margin-top:10px;font-size:16px;padding:12px;border-radius:12px" onclick="terminarBulto('${b.produccion_bulto_id}', ${cantActual})">Pasar a bodega →</button>`;
+      acciones = '';
+    }
     terminarEnMas = `<button class="prod-btn-accion" onclick="toggleEtapasBulto('${b.produccion_bulto_id}')">▾ Operaciones ${b.etapas_hechas}/${b.total_etapas}</button>`;
+  } else if (conEtapas && porPasos) {
+    const n = b.etapas_hechas || 0;
+    botonPaso = `<button class="prod-btn-accion" id="paso-lista-${b.produccion_bulto_id}" style="display:block;width:100%;margin-top:10px;background:#16A34A;color:#fff;border-color:#16A34A;font-size:16px;padding:12px;border-radius:12px;text-align:center;line-height:1.3" onclick="prodPasoListo('${b.produccion_bulto_id}')">Terminó ${_prodEsc(pasosB[n].nombre)}<br><span style="font-weight:400">pasar a ${_prodEsc(n + 1 < pasosB.length ? pasosB[n + 1].nombre : 'Bodega')} →</span></button>`;
+    terminarEnMas = `<button class="prod-btn-accion" onclick="toggleEtapasBulto('${b.produccion_bulto_id}')">▾ Quién lo hizo · deshacer</button>`
+      + `<button class="prod-btn-accion prod-btn-terminar" onclick="terminarBultoAtajo('${b.produccion_bulto_id}', ${cantActual})">✓ Terminar todo</button>`;
   } else if (conEtapas) {
     acciones = `<button class="prod-btn-accion" style="background:#1565c0;color:#fff;border-color:#1565c0" onclick="toggleEtapasBulto('${b.produccion_bulto_id}')">▶ Avance ${b.etapas_hechas || 0}/${b.total_etapas}</button>`;
     terminarEnMas = `<button class="prod-btn-accion prod-btn-terminar" onclick="terminarBultoAtajo('${b.produccion_bulto_id}', ${cantActual})">✓ Terminar todo</button>`;
@@ -12667,12 +12745,20 @@ function renderProdBulto(b) {
       : `terminarBulto('${b.produccion_bulto_id}', ${cantActual})`;
     acciones = `<button class="prod-btn-accion prod-btn-terminar" onclick="${onclickTerm}">✓ Terminar</button>`;
   }
+  // Guardado: no se avanza ni se termina desde la lista; solo se puede sacar de guardado.
+  if (guardado) {
+    acciones = `<button class="prod-btn-accion" onclick="prodGuardarBulto('${b.produccion_bulto_id}', false)">Sacar de guardado</button>`;
+    terminarEnMas = ''; pasosFila = ''; botonPaso = '';
+  }
   // Lo de todos los días es «Terminar»; lo demás va detrás de «⋯».
   let mas = terminarEnMas;
-  if (estadoEfectivo !== 'terminado' && cantActual > 1) {
+  if (!guardado && estadoEfectivo !== 'terminado') {
+    mas += `<button class="prod-btn-accion" onclick="prodGuardarBulto('${b.produccion_bulto_id}', true)">Guardar este bulto</button>`;
+  }
+  if (!guardado && estadoEfectivo !== 'terminado' && cantActual > 1) {
     mas += `<button class="prod-btn-accion prod-btn-dividir" onclick="abrirDividir('${b.produccion_bulto_id}', ${cantActual}, '${b.codigo_bulto}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-tijera"/></svg> Dividir</button>`;
   }
-  if (estadoEfectivo !== 'terminado') {
+  if (!guardado && estadoEfectivo !== 'terminado') {
     mas += `<button class="prod-btn-accion prod-btn-unir" onclick="abrirUnir('${b.produccion_bulto_id}', '${b.talla_key_salida}', '${b.codigo_bulto}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-enlace"/></svg> Unir</button>`;
   }
   // Terminado con operaciones: «Etapas» sigue en «⋯» para ver quién hizo qué
@@ -12688,7 +12774,7 @@ function renderProdBulto(b) {
 
   return `
     <div class="prod-bulto-row ${clase}" id="bulto-row-${b.produccion_bulto_id}" style="flex-wrap:wrap">
-      <div style="flex:1;min-width:0">
+      <div style="flex:1;min-width:0${porPasos && !guardado ? ';cursor:pointer' : ''}"${porPasos && !guardado ? ` onclick="prodTogglePasos('${b.produccion_bulto_id}')"` : ''}>
         <div>
           <span class="prod-bulto-nombre">Rollo ${b.numero_rollo ?? '?'}${b.sufijo_division ? ' (' + b.sufijo_division + ')' : ''} · ${cantFinal}</span>
         </div>
@@ -12700,6 +12786,7 @@ function renderProdBulto(b) {
         ${mas ? `<div class="prod-bulto-mas" id="mas-${b.produccion_bulto_id}" style="display:none">${mas}</div>` : ''}
       </div>
       <div class="prod-bulto-acciones">${acciones}</div>
+      ${porPasos && !guardado ? `<div id="pasos-${b.produccion_bulto_id}" style="display:${prodPasosAbiertos.has(b.produccion_bulto_id) ? 'block' : 'none'};flex-basis:100%;width:100%;margin-top:8px">${pasosFila}${botonPaso}</div>` : ''}
       <div id="etapas-${b.produccion_bulto_id}" style="display:none;margin-top:8px;flex-basis:100%;width:100%"></div>
     </div>
   `;
@@ -13059,23 +13146,41 @@ function renderEtapasBulto(bultoId, etapas) {
 // Vale para las prendas con pocos pasos (falda: Corte, Preparación, Armado,
 // Limpia). Las de muchas operaciones siguen con la lista de siempre.
 const PROD_PASOS_MAX = 6;
-function _prodPanelPasos(bultoId, etapas, sigue, lista) {
-  const nombres = etapas.map(e => e.operacion_nombre).concat(['Bodega']);
-  const actual = sigue ? etapas.findIndex(e => e.operacion_id === sigue.operacion_id) : nombres.length - 1;
+// Nombres de los pasos activos de cada prenda (para la lista de bultos).
+let prodPasosDe = {};   // cod_prenda -> [{ id, nombre }]
+async function prodCargarPasos() {
+  try {
+    const ops = await supaFetch('produccion_operacion','GET',null,'?activo=eq.true&select=id,cod_prenda,nombre,orden&order=cod_prenda,orden&limit=400');
+    const m = {};
+    (ops || []).forEach(o => { (m[o.cod_prenda] = m[o.cod_prenda] || []).push({ id: o.id, nombre: o.nombre }); });
+    prodPasosDe = m;
+  } catch (_) { prodPasosDe = {}; }
+}
+// Línea de pasos: los hechos en verde, el actual en azul, lo que falta en gris.
+// `actual` = posición del paso en curso; si ya no falta ninguno, la última.
+function _prodLineaPasos(nombres, actual, enCurso) {
   const verde = '#16A34A', azul = '#2563EB', gris = '#D1D5DB';
-  const pasos = nombres.map((n, i) => {
+  return `<div style="display:flex;align-items:flex-start">` + nombres.map((n, i) => {
     const hecho = i < actual, aqui = i === actual;
-    const color = hecho ? verde : aqui ? (sigue ? azul : verde) : gris;
+    const color = hecho ? verde : aqui ? (enCurso ? azul : verde) : gris;
     const tam = aqui ? 26 : 20;
     return `
       <div style="flex:1;min-width:0;text-align:center;position:relative">
         ${i ? `<div style="position:absolute;top:11px;right:50%;width:100%;height:4px;background:${i <= actual ? verde : gris}"></div>` : ''}
-        <div style="position:relative;margin:${(26 - tam) / 2}px auto 0;width:${tam}px;height:${tam}px;border-radius:50%;background:${color};color:#fff;font-size:13px;line-height:${tam}px;font-weight:700">${hecho || (aqui && !sigue) ? '✓' : ''}</div>
-        <div style="margin-top:${4 + (26 - tam) / 2}px;font-size:11px;font-weight:${aqui ? 700 : 400};color:${hecho ? verde : aqui ? (sigue ? azul : verde) : '#9CA3AF'};overflow-wrap:anywhere">${_prodEsc(n)}</div>
+        <div style="position:relative;margin:${(26 - tam) / 2}px auto 0;width:${tam}px;height:${tam}px;border-radius:50%;background:${color};color:#fff;font-size:13px;line-height:${tam}px;font-weight:700">${hecho || (aqui && !enCurso) ? '✓' : ''}</div>
+        <div style="margin-top:${4 + (26 - tam) / 2}px;font-size:11px;font-weight:${aqui ? 700 : 400};color:${hecho ? verde : aqui ? (enCurso ? azul : verde) : '#9CA3AF'};overflow-wrap:anywhere">${_prodEsc(n)}</div>
       </div>`;
-  }).join('');
+  }).join('') + `</div>`;
+}
+function _prodPanelPasos(bultoId, etapas, sigue, lista) {
+  const nombres = etapas.map(e => e.operacion_nombre).concat(['Bodega']);
+  const actual = sigue ? etapas.findIndex(e => e.operacion_id === sigue.operacion_id) : nombres.length - 1;
+  const verde = '#16A34A', azul = '#2563EB';
+  const pasos = _prodLineaPasos(nombres, actual, !!sigue);
   const quienes = sigue ? ((_etapasHaciendo[bultoId] || {})[sigue.operacion_id] || []) : [];
-  const medio = sigue ? `
+  const medio = prodGuardados.has(bultoId) ? `
+      <div style="text-align:center;font-size:19px;font-weight:700;margin:14px 0 2px;color:#6B7280">Este bulto está guardado</div>
+      <button type="button" onclick="prodGuardarBulto('${bultoId}', false)" style="display:block;width:100%;margin-top:12px;padding:16px 10px;border:1px solid #9CA3AF;border-radius:16px;background:#fff;font-size:18px;font-weight:700;cursor:pointer">Sacar de guardado</button>` : sigue ? `
       <div style="text-align:center;font-size:19px;font-weight:700;margin:14px 0 2px">Está en: ${_prodEsc(sigue.operacion_nombre)}</div>
       ${quienes.length ? `<div style="text-align:center;font-size:13px;color:#555">${_prodNombres(quienes.map(q => q.operaria_nombre))}</div>` : ''}
       <button type="button" id="paso-btn-${bultoId}" onclick="prodPasoSiguiente('${bultoId}','${sigue.operacion_id}')" style="display:block;width:100%;margin-top:12px;padding:18px 10px;border:0;border-radius:16px;background:${verde};color:#fff;cursor:pointer">
@@ -13085,7 +13190,7 @@ function _prodPanelPasos(bultoId, etapas, sigue, lista) {
       <div style="text-align:center;font-size:19px;font-weight:700;margin:14px 0 2px;color:${verde}">Ya pasó por todos los pasos</div>`;
   return `
     <div style="padding:10px 4px 4px">
-      <div style="display:flex;align-items:flex-start">${pasos}</div>${medio}
+      ${pasos}${medio}
       <details style="margin-top:12px;border:1px solid #9CA3AF;border-radius:12px;padding:10px;background:#fff">
         <summary style="cursor:pointer;font-size:14px;text-align:center;color:#374151">Opciones (quién lo hizo · menos piezas · deshacer)</summary>
         <div style="margin-top:8px">${lista}</div>
@@ -13102,6 +13207,32 @@ async function prodPasoSiguiente(bultoId, operacionId) {
   const ya = (_etapasHaciendo[bultoId] || {})[operacionId] || [];
   if (ya.length) return prodTerminarEtapa(bultoId, operacionId);
   return prodGuardarTerminado(bultoId, operacionId, [{ operaria_id: null, cantidad: _prodPiezasBulto(bultoId) }]);
+}
+
+// El mismo botón en la lista de bultos: busca cuál paso sigue de verdad en ese
+// bulto y lo da por terminado, sin desplegar la lista de operaciones.
+async function prodPasoListo(bultoId) {
+  const btn = document.getElementById(`paso-lista-${bultoId}`);
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+  try {
+    const [etapas, asig] = await Promise.all([
+      supaFetch('vw_bulto_etapas','GET',null, `?produccion_bulto_id=eq.${bultoId}&order=orden&limit=60`),
+      supaFetch('vw_bulto_asignaciones','GET',null, `?produccion_bulto_id=eq.${bultoId}&limit=200`).catch(() => []),
+    ]);
+    const m = {};
+    (asig || []).forEach(a => { (m[a.operacion_id] = m[a.operacion_id] || []).push(a); });
+    _etapasHaciendo[bultoId] = m;
+    const sigue = (etapas || []).find(e => !e.registro_id);
+    if (!sigue) { await prodRecargarEnSuLugar(bultoId, false); return; }
+    const ids = [...new Set((m[sigue.operacion_id] || []).map(a => a.operaria_id))];
+    const total = _prodPiezasBulto(bultoId);
+    const rep = _prodRepartir(total, ids);
+    const partes = ids.length ? ids.map(id => ({ operaria_id: id, cantidad: rep[id] })) : [{ operaria_id: null, cantidad: total }];
+    await prodGuardarTerminado(bultoId, sigue.operacion_id, partes, false);
+  } catch (e) {
+    alert('Error: ' + e.message);
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  }
 }
 
 // ── Anotar una operación ──────────────────────────────────────────────
@@ -13265,7 +13396,7 @@ async function prodTerminarEtapa(bultoId, operacionId) {
   const rep = _prodRepartir(_prodPiezasBulto(bultoId), ids);
   return prodGuardarTerminado(bultoId, operacionId, ids.map(id => ({ operaria_id: id, cantidad: rep[id] })));
 }
-async function prodGuardarTerminado(bultoId, operacionId, partes) {
+async function prodGuardarTerminado(bultoId, operacionId, partes, abrir = true) {
   const llave = bultoId + '|' + operacionId;
   if (_etapaGuardando.has(llave)) return;
   _etapaGuardando.add(llave);
@@ -13278,7 +13409,7 @@ async function prodGuardarTerminado(bultoId, operacionId, partes) {
       try { await _prodSoltarAsignacion(bultoId, a, 'completada'); } catch (_) {}
     }
     _pick = null;
-    await prodRecargarEnSuLugar(bultoId);
+    await prodRecargarEnSuLugar(bultoId, abrir);
     // Era la última operación: el bulto pasa a bodega igual que con «Terminar».
     const b2 = produccionData.find(b => b.produccion_bulto_id === bultoId);
     if (b2 && b2.estado_manual !== 'terminado' && b2.total_etapas > 0 && b2.etapas_hechas >= b2.total_etapas) {
@@ -13308,14 +13439,14 @@ function escapeHtmlProd(s) {
 }
 // Recarga la lista de Producción y deja abierto el mismo bulto, en el mismo
 // punto de la pantalla (antes cada toque mandaba la pantalla hasta arriba).
-async function prodRecargarEnSuLugar(bultoId) {
+async function prodRecargarEnSuLugar(bultoId, abrir = true) {
   const fila = () => document.getElementById(`bulto-row-${bultoId}`);
   const antes = fila();
   const topAntes = antes ? antes.getBoundingClientRect().top : null;
   await cargarProduccion();
   // la lista se rehízo: reabrir las operaciones del bulto (si no se abrieron ya solas)
   const et = document.getElementById(`etapas-${bultoId}`);
-  if (!et || et.style.display !== 'block') await toggleEtapasBulto(bultoId);
+  if (abrir && (!et || et.style.display !== 'block')) await toggleEtapasBulto(bultoId);
   const ahora = fila();
   if (ahora && topAntes !== null) window.scrollBy(0, ahora.getBoundingClientRect().top - topAntes);
 }
