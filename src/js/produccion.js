@@ -1019,14 +1019,85 @@ function renderEtapasBulto(bultoId, etapas) {
 // Limpia). Las de muchas operaciones siguen con la lista de siempre.
 const PROD_PASOS_MAX = 6;
 // Nombres de los pasos activos de cada prenda (para la lista de bultos).
-let prodPasosDe = {};   // cod_prenda -> [{ id, nombre }]
+let prodPasosDe = {};   // cod_prenda -> [{ id, nombre, min }]
+// Operaciones de detalle dentro de cada paso (opcionales). Cada una pesa sus
+// minutos: el avance del bulto es minutos hechos / minutos de la prenda.
+let prodDetalleDe = {}; // paso_id -> [{ id, nombre, min }]
 async function prodCargarPasos() {
   try {
-    const ops = await supaFetch('produccion_operacion','GET',null,'?activo=eq.true&select=id,cod_prenda,nombre,orden&order=cod_prenda,orden&limit=400');
-    const m = {};
-    (ops || []).forEach(o => { (m[o.cod_prenda] = m[o.cod_prenda] || []).push({ id: o.id, nombre: o.nombre }); });
-    prodPasosDe = m;
-  } catch (_) { prodPasosDe = {}; }
+    const ops = await supaFetch('produccion_operacion','GET',null,'?or=(activo.eq.true,detalle.eq.true)&select=id,cod_prenda,nombre,orden,activo,detalle,paso_id,tiempo_estandar_min&order=cod_prenda,orden&limit=600');
+    const m = {}, d = {};
+    (ops || []).forEach(o => {
+      const min = Number(o.tiempo_estandar_min) || 0;
+      if (o.activo) (m[o.cod_prenda] = m[o.cod_prenda] || []).push({ id: o.id, nombre: o.nombre, min });
+      else if (o.detalle && o.paso_id) (d[o.paso_id] = d[o.paso_id] || []).push({ id: o.id, nombre: o.nombre, min });
+    });
+    prodPasosDe = m; prodDetalleDe = d;
+  } catch (_) { prodPasosDe = {}; prodDetalleDe = {}; }
+}
+function _prodMinPaso(e) {
+  const d = prodDetalleDe[e.operacion_id];
+  return d ? d.reduce((t, x) => t + x.min, 0) : (Number(e.tiempo_estandar_min) || 0);
+}
+// Avance del bulto en % (por tiempo). null si la prenda no tiene tiempos.
+function _prodAvanceBulto(bultoId, etapas) {
+  const hechasDe = _etapasHechas[bultoId] || {};
+  let tot = 0, hecho = 0;
+  etapas.forEach(e => {
+    const m = _prodMinPaso(e); tot += m;
+    if (e.registro_id) hecho += m;
+    else (prodDetalleDe[e.operacion_id] || []).forEach(x => { if ((hechasDe[x.id] || []).length) hecho += x.min; });
+  });
+  return tot > 0 ? Math.round(100 * hecho / tot) : null;
+}
+// Lista de operaciones del paso en curso: se toca la que ya está hecha.
+function _prodDetallePaso(bultoId, sigue, etapas) {
+  const det = prodDetalleDe[sigue.operacion_id] || [];
+  if (!det.length) return '';
+  const hechasDe = _etapasHechas[bultoId] || {};
+  const tot = etapas.reduce((t, e) => t + _prodMinPaso(e), 0) || 1;
+  return `
+      <div style="margin-top:12px;border:1px solid #D1D5DB;border-radius:12px;padding:8px;background:#fff">
+        <div style="font-size:13px;color:#6B7280;text-align:center">O anotar por operación: toque la que ya está hecha</div>` +
+    det.map(x => {
+      const ok = (hechasDe[x.id] || []).length > 0;
+      return `
+        <button type="button" onclick="prodOperacionDetalle('${bultoId}','${x.id}','${sigue.operacion_id}')" style="display:flex;width:100%;align-items:center;gap:10px;margin-top:6px;padding:12px 10px;border:1px solid ${ok ? '#16A34A' : '#D1D5DB'};border-radius:10px;background:${ok ? '#F0FDF4' : '#fff'};font-size:16px;text-align:left;cursor:pointer">
+          <span style="flex:none;width:26px;height:26px;border-radius:50%;border:2px solid ${ok ? '#16A34A' : '#9CA3AF'};background:${ok ? '#16A34A' : '#fff'};color:#fff;text-align:center;line-height:22px;font-weight:700">${ok ? '✓' : ''}</span>
+          <span style="flex:1;min-width:0;font-weight:${ok ? 700 : 400};color:${ok ? '#166534' : '#111'}">${_prodEsc(x.nombre)}</span>
+          <span style="flex:none;font-size:13px;color:#6B7280">${Math.round(100 * x.min / tot)} %</span>
+        </button>`;
+    }).join('') + `
+      </div>`;
+}
+// Tocar una operación de detalle: la anota (o la quita si ya estaba). Cuando
+// quedan todas las del paso, el bulto pasa solo al paso siguiente.
+async function prodOperacionDetalle(bultoId, opId, pasoId) {
+  const llave = bultoId + '|' + opId;
+  if (_etapaGuardando.has(llave)) return;
+  _etapaGuardando.add(llave);
+  try {
+    const h = _etapasHechas[bultoId] || {};
+    if ((h[opId] || []).length) {
+      await supaFetch('produccion_registro_operacion','DELETE',null,`?produccion_bulto_id=eq.${bultoId}&operacion_id=eq.${opId}&tipo=eq.normal`);
+    } else {
+      await supaFetch('produccion_registro_operacion','POST',[{
+        produccion_bulto_id: bultoId, operacion_id: opId, operaria_id: null,
+        fecha: hoyLocal(), cantidad_realizada: _prodPiezasBulto(bultoId), tipo: 'normal',
+      }]);
+      const todas = (prodDetalleDe[pasoId] || []).every(x => x.id === opId || (h[x.id] || []).length);
+      if (todas) {
+        const r = await prodGuardarTerminado(bultoId, pasoId, [{ operaria_id: null, cantidad: _prodPiezasBulto(bultoId) }]);
+        if (r === 'ok') _prodAvisoDeshacer(bultoId, pasoId);
+        return;
+      }
+    }
+    await prodRefrescarEtapas(bultoId);
+  } catch (e) {
+    alert('Error: ' + e.message);
+  } finally {
+    _etapaGuardando.delete(llave);
+  }
 }
 // Línea de pasos: los hechos en verde, el actual en azul, lo que falta en gris.
 // `actual` = posición del paso en curso; si ya no falta ninguno, la última.
@@ -1048,7 +1119,9 @@ function _prodPanelPasos(bultoId, etapas, sigue, lista) {
   const nombres = etapas.map(e => e.operacion_nombre).concat(['Bodega']);
   const actual = sigue ? etapas.findIndex(e => e.operacion_id === sigue.operacion_id) : nombres.length - 1;
   const verde = '#16A34A', azul = '#2563EB';
-  const pasos = _prodLineaPasos(nombres, actual, !!sigue);
+  const pct = _prodAvanceBulto(bultoId, etapas);
+  const pasos = _prodLineaPasos(nombres, actual, !!sigue)
+    + (pct === null ? '' : `<div style="text-align:center;font-size:13px;color:#6B7280;margin-top:8px">Avance del bulto: <strong style="color:#111">${pct} %</strong></div>`);
   const quienes = sigue ? ((_etapasHaciendo[bultoId] || {})[sigue.operacion_id] || []) : [];
   const medio = prodGuardados.has(bultoId) ? `
       <div style="text-align:center;font-size:19px;font-weight:700;margin:14px 0 2px;color:#6B7280">Este bulto está guardado</div>
@@ -1058,7 +1131,7 @@ function _prodPanelPasos(bultoId, etapas, sigue, lista) {
       <button type="button" id="paso-btn-${bultoId}" onclick="prodPasoSiguiente('${bultoId}','${sigue.operacion_id}')" style="display:block;width:100%;margin-top:12px;padding:18px 10px;border:0;border-radius:16px;background:${verde};color:#fff;cursor:pointer">
         <div style="font-size:22px;font-weight:700">Terminó ${_prodEsc(sigue.operacion_nombre)}</div>
         <div style="font-size:18px;margin-top:4px">pasar a ${_prodEsc(nombres[actual + 1])} →</div>
-      </button>` : `
+      </button>${_prodDetallePaso(bultoId, sigue, etapas)}` : `
       <div style="text-align:center;font-size:19px;font-weight:700;margin:14px 0 2px;color:${verde}">Ya pasó por todos los pasos</div>`;
   return `
     <div style="padding:10px 4px 4px">

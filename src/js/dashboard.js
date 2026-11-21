@@ -426,6 +426,13 @@ async function cargarDashboardHoy() {
       if (sel === activa) {
         tareas.push(['plan', () => supaFetch('vw_plan_produccion', 'GET', null,
           '?select=cod_prenda,nombre_prenda,talla_2026,pedido,falta_hacer,en_proceso,falta_iniciar,contado,fuera')]);
+        // Cuadro del plazo: avance de cada bulto (por tiempo), trabajo anotado por día y fechas
+        tareas.push(['avance', () => supaFetch('vw_bulto_avance', 'GET', null,
+          '?select=cod_prenda,cantidad,fraccion,estado_manual,fecha_terminado&limit=5000')]);
+        tareas.push(['avanceDia', () => supaFetch('vw_avance_diario', 'GET', null,
+          '?select=fecha,cod_prenda,prendas_equiv&order=fecha.desc&limit=600')]);
+        tareas.push(['plazoCfg', () => supaFetch('plan_produccion_config', 'GET', null,
+          '?clave=in.(fecha_inicio,fecha_entrega)&select=clave,valor')]);
       }
       await _dashCorrer(tareas, data, fallidos);
     } else if (data.modo === 'alumnos') {
@@ -551,7 +558,8 @@ function renderDashboard() {
     ], pctEnt, codigos.length ? `Contrato ${codigos.map(dashEsc).join(', ')}` : '');
     // Pantalla única: sin cartel ni cuadritos; todo eso va dentro de «Cómo vamos».
     dashboardCache.cvTot = tot;
-    comoVamos = _renderComoVamos(r.plan, r.produccionHoy, tot)
+    comoVamos = (_dashEmpresa ? '' : _renderPlazo(r.plan, r.avance, r.avanceDia, r.plazoCfg, new Date()))
+      + (_renderComoVamos(r.plan, r.produccionHoy, tot))
       || `<div class="card" style="padding:12px;margin-bottom:10px">${dashEsc(sel?.nombre || '')}: ${dashNum(tot.sol)} piezas pedidas · ${dashNum(tot.emp)} empacadas · ${dashNum(tot.ent)} entregadas</div>`;
     banner = ''; kpis = ''; verStock = false;
     // Si el pedido o lo empacado no cargó, no se dice «todo está empacado».
@@ -920,6 +928,111 @@ function cvVerBultos(cod, talla) {
   (typeof abrirPestana === 'function' ? abrirPestana : switchTab)('produccion');
   document.body.classList.add('modo-paso');
 }
+// ─── Plazo: días que faltan y cómo deberíamos ir ─────────────────────
+// «Llevamos» = prendas equivalentes: cada operación anotada en un bulto suma
+// según su tiempo, aunque la prenda no esté terminada. Días de trabajo: lunes a sábado.
+function _plazoFecha(v) {
+  const s = String(Math.round(Number(v) || 0));
+  return s.length === 8 ? new Date(+s.slice(0, 4), +s.slice(4, 6) - 1, +s.slice(6, 8)) : null;
+}
+function _plazoDias(a, b) {
+  let n = 0;
+  const d = new Date(a.getFullYear(), a.getMonth(), a.getDate());
+  while (d <= b) { if (d.getDay() !== 0) n++; d.setDate(d.getDate() + 1); }
+  return n;
+}
+function _plazoIso(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function _plazoCalculo(plan, avance, diario, cfg, ahora) {
+  const c = {};
+  (cfg || []).forEach(x => { c[x.clave] = _plazoFecha(x.valor); });
+  if (!c.fecha_inicio || !c.fecha_entrega || !plan || !plan.length) return null;
+  const inicioIso = _plazoIso(c.fecha_inicio);
+  const porPrenda = new Map();
+  const de = cod => { let o = porPrenda.get(cod); if (!o) { o = { cod, falta: 0, listas: 0, enProceso: 0 }; porPrenda.set(cod, o); } return o; };
+  for (const f of plan) de(f.cod_prenda).falta += Number(f.falta_hacer) || 0;
+  for (const b of (avance || [])) {
+    const cant = Number(b.cantidad) || 0;
+    if (b.estado_manual === 'terminado') { if ((b.fecha_terminado || '') >= inicioIso) de(b.cod_prenda).listas += cant; }
+    else de(b.cod_prenda).enProceso += cant * (Number(b.fraccion) || 0);
+  }
+  const filas = [...porPrenda.values()].filter(o => o.falta > 0 || o.listas > 0 || o.enProceso > 0);
+  const falta = filas.reduce((t, o) => t + o.falta, 0);
+  const listas = filas.reduce((t, o) => t + o.listas, 0);
+  const enProceso = filas.reduce((t, o) => t + o.enProceso, 0);
+  const objetivo = falta + listas;           // todo lo que había que hacer en el plazo
+  const llevamos = listas + enProceso;
+  // Hoy cuenta como día de trabajo hasta las 5 p. m.
+  const desde = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + (ahora.getHours() >= 17 ? 1 : 0));
+  const quedan = _plazoDias(desde, c.fecha_entrega);
+  const total = _plazoDias(c.fecha_inicio, c.fecha_entrega);
+  const deberiamos = total > 0 ? objetivo * (total - quedan) / total : 0;
+  const hoyIso = _plazoIso(ahora);
+  const hoyVan = (diario || []).filter(x => x.fecha === hoyIso).reduce((t, x) => t + (Number(x.prendas_equiv) || 0), 0);
+  // Ritmo: lo anotado en los últimos 7 días, entre sus 6 días de trabajo
+  const h7 = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - 6);
+  const sem = (diario || []).filter(x => x.fecha >= _plazoIso(h7) && x.fecha <= hoyIso).reduce((t, x) => t + (Number(x.prendas_equiv) || 0), 0);
+  const ritmo = sem / 6;
+  const resta = Math.max(0, objetivo - llevamos);
+  let termina = null;
+  if (ritmo > 0) {
+    let n = Math.ceil(resta / ritmo);
+    if (n <= 3000) {
+      termina = new Date(desde.getFullYear(), desde.getMonth(), desde.getDate() - 1);
+      while (n > 0) { termina.setDate(termina.getDate() + 1); if (termina.getDay() !== 0) n--; }
+    }
+  }
+  return { entrega: c.fecha_entrega, quedan, total, objetivo, llevamos, listas, enProceso, deberiamos,
+    atraso: deberiamos - llevamos, meta: quedan > 0 ? resta / quedan : resta, hoyVan, ritmo, termina, filas };
+}
+function _renderPlazo(plan, avance, diario, cfg, ahora) {
+  const p = _plazoCalculo(plan, avance, diario, cfg, ahora);
+  if (!p) return '';
+  const n = v => dashNum(Math.round(v));
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const fecha = d => `${d.getDate()} de ${meses[d.getMonth()]}`;
+  const pct = v => p.objetivo > 0 ? Math.max(0, Math.min(100, 100 * v / p.objetivo)) : 0;
+  const atrasado = p.atraso > 0.5;
+  const tarde = p.termina && p.termina > p.entrega;
+  const caja = (t, v, color) => `<div style="flex:1;min-width:0;text-align:center"><div style="font-size:12px;color:#6B7280">${t}</div><div style="font-size:24px;font-weight:700;color:${color}">${v}</div></div>`;
+  const ritmoTxt = p.ritmo > 0
+    ? `Ritmo de la semana: <strong>${n(p.ritmo)} por día</strong>. ` + (p.termina
+        ? `A ese ritmo se termina el <strong style="color:${tarde ? '#B91C1C' : '#166534'}">${fecha(p.termina)}${p.termina.getFullYear() !== p.entrega.getFullYear() ? ' de ' + p.termina.getFullYear() : ''}</strong>.`
+        : 'A ese ritmo no se termina.')
+    : 'Ritmo de la semana: todavía no hay trabajo anotado.';
+  return `
+    <div class="card" style="padding:12px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
+        <strong style="font-size:16px">Entrega: ${fecha(p.entrega)}</strong>
+        <span style="font-size:15px;font-weight:700;color:${p.quedan <= 6 ? '#B91C1C' : '#111'}">Faltan ${p.quedan} días de trabajo</span>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px">
+        ${caja('Deberíamos llevar', n(p.deberiamos), '#111')}
+        ${caja('Llevamos', n(p.llevamos), '#2563EB')}
+        ${caja(atrasado ? 'Atraso' : 'Adelanto', n(Math.abs(p.atraso)), atrasado ? '#B91C1C' : '#166534')}
+      </div>
+      <div style="position:relative;height:14px;background:#E5E7EB;border-radius:7px;margin-top:10px">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:${pct(p.llevamos)}%;background:#2563EB;border-radius:7px"></div>
+        <div style="position:absolute;left:0;top:0;bottom:0;width:${pct(p.listas)}%;background:#16A34A;border-radius:7px"></div>
+        <div title="Deberíamos ir aquí" style="position:absolute;top:-4px;bottom:-4px;left:${pct(p.deberiamos)}%;width:3px;background:#111"></div>
+      </div>
+      <div style="font-size:11px;color:#6B7280;margin-top:4px">De ${n(p.objetivo)} prendas por hacer · <span style="color:#16A34A">■</span> listas ${n(p.listas)} · <span style="color:#2563EB">■</span> avance en bultos ${n(p.enProceso)} · <span style="color:#111">▌</span> donde deberíamos ir</div>
+      <div style="margin-top:10px;padding-top:8px;border-top:1px solid #E5E7EB;font-size:14px">
+        Meta de cada día: <strong>${n(p.meta)} prendas</strong> · Hoy van: <strong>${n(p.hoyVan)}</strong>
+        <div style="margin-top:4px">${ritmoTxt}</div>
+      </div>
+      <details style="margin-top:8px">
+        <summary style="cursor:pointer;font-size:13px;color:#374151">Por prenda</summary>
+        <table style="width:100%;font-size:13px;margin-top:6px;border-collapse:collapse">
+          <tr style="color:#6B7280;text-align:right"><th style="text-align:left;font-weight:400">Prenda</th><th style="font-weight:400">Falta hacer</th><th style="font-weight:400">Avance en bultos</th></tr>
+          ${p.filas.sort((a, b) => dashOrdenPrenda(a.cod) - dashOrdenPrenda(b.cod)).map(o => `<tr style="text-align:right;border-top:1px solid #F3F4F6"><td style="text-align:left;padding:4px 0">${dashEsc(dashPrendaNombre(o.cod))}</td><td>${n(o.falta)}</td><td>${n(o.enProceso)}</td></tr>`).join('')}
+        </table>
+        <div style="font-size:11px;color:#6B7280;margin-top:6px">«Llevamos» y «Avance en bultos» son prendas equivalentes: cada operación anotada suma según su tiempo, aunque la prenda no esté terminada.</div>
+      </details>
+    </div>`;
+}
+
 function _renderComoVamos(plan, prod, totEmp) {
   if (_dashEmpresa) return _renderComoVamosEmpresa(plan, dashboardCache.cvLineas || []);
   if (!plan || plan.length === 0) return '';
