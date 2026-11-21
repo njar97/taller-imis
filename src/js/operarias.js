@@ -329,6 +329,12 @@ async function cargarPlanilla() {
     const ids = (periodos || []).map(p => p.id);
     const lineas = ids.length ? await supaFetch('planilla_linea', 'GET', null, `?periodo_id=in.(${ids.join(',')})&order=orden&limit=2000`) : [];
     planillaCache = { periodos: periodos || [], lineas: lineas || [] };
+    // Pago por operación: lo anotado en esta quincena y la anterior
+    try {
+      const q = dstQuincenas(new Date());
+      planillaCache.destajo = await supaFetch('vw_pago_operacion', 'GET', null,
+        `?fecha=gte.${q[1].inicio}&select=fecha,operaria_id,operaria_nombre,cod_prenda,operacion,cantidad,pago_unit&limit=20000`);
+    } catch (_) { planillaCache.destajo = []; }
     renderPlanilla();
   } catch (e) {
     cont.innerHTML = '<div class="text-muted">No se pudo cargar la planilla: ' + opEsc(e.message) + '</div>';
@@ -341,12 +347,55 @@ function plMoney(n) {
   return '$' + v.toLocaleString('en-US', { minimumFractionDigits: v % 1 ? 2 : 0, maximumFractionDigits: 2 });
 }
 
+// ─── Pago por operación (destajo): por quincena y por operaria ───────
+// Sale de lo anotado en los bultos con nombre × el pago por prenda de cada operación.
+function dstQuincenas(hoy) {
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const de = (a, m, primera) => ({
+    inicio: iso(new Date(a, m, primera ? 1 : 16)),
+    fin: iso(primera ? new Date(a, m, 15) : new Date(a, m + 1, 0)),
+  });
+  const a = hoy.getFullYear(), m = hoy.getMonth(), primera = hoy.getDate() <= 15;
+  return [de(a, m, primera), primera ? de(a, m - 1, false) : de(a, m, true)];
+}
+function renderDestajo(filas, hoy) {
+  return dstQuincenas(hoy).map((q, i) => {
+    const porOp = new Map();
+    for (const f of (filas || [])) {
+      if (f.fecha < q.inicio || f.fecha > q.fin) continue;
+      const monto = (Number(f.cantidad) || 0) * (Number(f.pago_unit) || 0);
+      const k = f.operaria_id || 'sin';
+      let o = porOp.get(k);
+      if (!o) { o = { nombre: f.operaria_id ? f.operaria_nombre : 'Sin nombre', sin: !f.operaria_id, total: 0, ops: new Map() }; porOp.set(k, o); }
+      o.total += monto;
+      const ko = f.cod_prenda + ' · ' + f.operacion;
+      const d = o.ops.get(ko) || { cant: 0, monto: 0 };
+      d.cant += Number(f.cantidad) || 0; d.monto += monto;
+      o.ops.set(ko, d);
+    }
+    const lista = [...porOp.values()].sort((x, y) => x.sin - y.sin || y.total - x.total);
+    const total = lista.filter(o => !o.sin).reduce((s, o) => s + o.total, 0);
+    const cuerpo = lista.length ? lista.map(o => `
+        <details style="border-bottom:1px solid #eee;padding:6px 0">
+          <summary style="cursor:pointer;display:flex;justify-content:space-between;gap:8px"><span style="${o.sin ? 'color:#B45309' : 'font-weight:600'}">${opEsc(o.nombre)}</span><strong>${plMoney(Math.round(o.total * 100) / 100)}</strong></summary>
+          <table style="width:100%;font-size:12px;margin-top:4px">${[...o.ops.entries()].sort((x, y) => y[1].monto - x[1].monto).map(([k, d]) => `<tr><td>${opEsc(k)}</td><td style="text-align:right">${d.cant} pz</td><td style="text-align:right">${plMoney(Math.round(d.monto * 100) / 100)}</td></tr>`).join('')}</table>
+        </details>`).join('') : '<div class="text-muted" style="font-size:12px;padding:6px 0">Nada anotado con operaciones en esta quincena.</div>';
+    return `
+      <details ${i === 0 ? 'open' : ''} style="border:1px solid var(--borde);border-radius:8px;padding:8px;margin-bottom:8px">
+        <summary style="cursor:pointer;font-weight:700">Por operación · ${opFecha(q.inicio)} al ${opFecha(q.fin)} · ${plMoney(Math.round(total * 100) / 100)}</summary>
+        ${cuerpo}
+        <div style="font-size:11px;color:#666;margin-top:6px">Sale de lo anotado en los bultos. «Sin nombre» es trabajo anotado sin decir quién lo hizo: no se le paga a nadie hasta ponerle nombre.</div>
+      </details>`;
+  }).join('');
+}
+
 function renderPlanilla() {
   const cont = document.getElementById('planilla-cont');
   if (!cont) return;
   const { periodos, lineas } = planillaCache;
-  if (!periodos.length) { cont.innerHTML = '<div class="text-muted">Todavía no hay planillas.</div>'; return; }
-  cont.innerHTML = periodos.map((p, i) => {
+  const destajo = renderDestajo(planillaCache.destajo, new Date());
+  if (!periodos.length) { cont.innerHTML = destajo + '<div class="text-muted">Todavía no hay planillas.</div>'; return; }
+  cont.innerHTML = destajo + periodos.map((p, i) => {
     const ls = lineas.filter(l => l.periodo_id === p.id);
     const total = ls.reduce((s, l) => s + Number(l.total || 0), 0);
     const filas = ls.map(l => `

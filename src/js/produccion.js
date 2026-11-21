@@ -957,6 +957,7 @@ function renderEtapasBulto(bultoId, etapas) {
     cont.innerHTML = '<div class="text-muted" style="font-size:11px">Este bulto no tiene operaciones configuradas.</div>';
     return;
   }
+  _prodUltEtapas[bultoId] = etapas;
   const haciendo = _etapasHaciendo[bultoId] || {};
   const hechasDe = _etapasHechas[bultoId] || {};
   const sigue = etapas.find(e => !e.registro_id);
@@ -1035,6 +1036,76 @@ async function prodCargarPasos() {
     prodPasosDe = m; prodDetalleDe = d;
   } catch (_) { prodPasosDe = {}; prodDetalleDe = {}; }
 }
+const _prodUltEtapas = {};   // bulto -> últimas etapas pintadas
+let prodAnota;                // quién anota (se elige una vez y se recuerda en este teléfono)
+let _prodAnotaAbierto = false;
+function prodAnotaAbrir(bultoId) {
+  _prodAnotaAbierto = !_prodAnotaAbierto;
+  if (_prodUltEtapas[bultoId]) renderEtapasBulto(bultoId, _prodUltEtapas[bultoId]);
+}
+function prodAnotaElegir(bultoId, operariaId) {
+  prodAnota = operariaId || '';
+  try { localStorage.setItem('prodAnota', prodAnota); } catch (_) {}
+  _prodAnotaAbierto = false;
+  if (_prodUltEtapas[bultoId]) renderEtapasBulto(bultoId, _prodUltEtapas[bultoId]);
+}
+// Quién anota: null = nunca se ha dicho · '' = sin nombre · id de la operaria
+function _prodAnotaActual() {
+  if (prodAnota === undefined) {
+    try { prodAnota = localStorage.getItem('prodAnota'); } catch (_) { prodAnota = null; }
+  }
+  if (prodAnota && !(operariasCache || []).some(o => o.id === prodAnota)) return null;
+  return prodAnota;
+}
+// Tocar una operación sin hacer: queda a nombre de quien anota. Si todavía no
+// se ha dicho quién anota, primero se abre la lista de nombres.
+function prodDetalleTocar(bultoId, opId, pasoId) {
+  const quien = _prodAnotaActual();
+  if (quien === null) {
+    _prodAnotaAbierto = true;
+    if (_prodUltEtapas[bultoId]) renderEtapasBulto(bultoId, _prodUltEtapas[bultoId]);
+    showToast('Primero diga quién hizo el trabajo.', 'info', 3500);
+    return;
+  }
+  return prodOperacionDetalle(bultoId, opId, pasoId, quien || null);
+}
+// La lista de nombres va por grupos según el puesto: primero las de máquina,
+// después los comodines (dueños y mesa de corte) y al final manualidades.
+function _prodAnotaGrupos() {
+  const grupos = [
+    { titulo: 'MÁQUINA', gente: [] }, { titulo: 'COMODÍN EN MÁQUINA', gente: [] },
+    { titulo: 'MANUALIDADES', gente: [] }, { titulo: 'OTROS', gente: [] },
+  ];
+  (operariasCache || []).filter(x => x.activo !== false && (!x.estado || x.estado === 'trabajando' || x.estado === 'en_prueba'))
+    .sort((x, y) => String(x.nombre).localeCompare(String(y.nombre)))
+    .forEach(x => {
+      const p = String(x.puesto || '').toLowerCase();
+      const i = /manual|plancha|limpia|empaque/.test(p) ? 2 : /due|corte/.test(p) ? 1 : /m[aá]quina|operaria|plana|rana/.test(p) ? 0 : 3;
+      grupos[i].gente.push(x);
+    });
+  return grupos.filter(g => g.gente.length);
+}
+// Arriba de las operaciones: de quién es lo que se va a tocar (se dice una vez).
+function _prodAnotaCaja(bultoId) {
+  const quien = _prodAnotaActual();
+  const o = quien ? (operariasCache || []).find(x => x.id === quien) : null;
+  const texto = quien === null ? '<span style="color:#B45309;font-weight:700">Falta decir quién lo hizo</span>'
+    : `Lo hizo: <strong style="font-size:17px">${o ? _prodEsc(o.nombre) : 'Sin nombre'}</strong>`;
+  const fila = 'display:block;width:100%;text-align:left;padding:13px 12px;border:0;border-top:1px solid #E5E7EB;background:#fff;font-size:17px;cursor:pointer';
+  const lista = !_prodAnotaAbierto ? '' : `
+          <div style="margin-top:8px;border:1px solid #D1D5DB;border-radius:10px;overflow:hidden;max-height:320px;overflow-y:auto">
+            ${_prodAnotaGrupos().map(g => `<div style="padding:5px 12px;background:#F3F4F6;font-size:12px;font-weight:700;color:#6B7280;border-top:1px solid #E5E7EB">${g.titulo}</div>`
+              + g.gente.map(x => `<button type="button" style="${fila}${x.id === quien ? ';background:#DBEAFE;font-weight:700' : ''}" onclick="prodAnotaElegir('${bultoId}','${x.id}')">${_prodEsc(x.nombre)}</button>`).join('')).join('')}
+            <button type="button" style="${fila};color:#6B7280" onclick="prodAnotaElegir('${bultoId}','')">Sin nombre</button>
+          </div>`;
+  return `
+        <div style="padding:8px 10px;border-radius:10px;background:#F3F4F6">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span style="font-size:15px">${texto}</span>
+            <button type="button" onclick="prodAnotaAbrir('${bultoId}')" style="flex:none;padding:8px 12px;border:1px solid #9CA3AF;border-radius:8px;background:#fff;font-size:14px;cursor:pointer">${_prodAnotaAbierto ? 'Cerrar' : quien === null ? 'Elegir' : 'Cambiar'}</button>
+          </div>${lista}
+        </div>`;
+}
 function _prodMinPaso(e) {
   const d = prodDetalleDe[e.operacion_id];
   return d ? d.reduce((t, x) => t + x.min, 0) : (Number(e.tiempo_estandar_min) || 0);
@@ -1058,13 +1129,15 @@ function _prodDetallePaso(bultoId, sigue, etapas) {
   const tot = etapas.reduce((t, e) => t + _prodMinPaso(e), 0) || 1;
   return `
       <div style="margin-top:12px;border:1px solid #D1D5DB;border-radius:12px;padding:8px;background:#fff">
-        <div style="font-size:13px;color:#6B7280;text-align:center">O anotar por operación: toque la que ya está hecha</div>` +
+        <div style="font-size:13px;color:#6B7280;text-align:center;margin-bottom:6px">O anotar por operación: toque la que ya está hecha</div>${_prodAnotaCaja(bultoId)}` +
     det.map(x => {
-      const ok = (hechasDe[x.id] || []).length > 0;
+      const rs = hechasDe[x.id] || [];
+      const ok = rs.length > 0;
+      const quien = ok ? [...new Set(rs.map(r => r.nombre === '?' ? 'sin nombre' : r.nombre))].join(', ') : '';
       return `
-        <button type="button" onclick="prodOperacionDetalle('${bultoId}','${x.id}','${sigue.operacion_id}')" style="display:flex;width:100%;align-items:center;gap:10px;margin-top:6px;padding:12px 10px;border:1px solid ${ok ? '#16A34A' : '#D1D5DB'};border-radius:10px;background:${ok ? '#F0FDF4' : '#fff'};font-size:16px;text-align:left;cursor:pointer">
+        <button type="button" onclick="${ok ? `prodOperacionDetalle('${bultoId}','${x.id}','${sigue.operacion_id}')` : `prodDetalleTocar('${bultoId}','${x.id}','${sigue.operacion_id}')`}" style="display:flex;width:100%;align-items:center;gap:10px;margin-top:6px;padding:12px 10px;border:1px solid ${ok ? '#16A34A' : '#D1D5DB'};border-radius:10px;background:${ok ? '#F0FDF4' : '#fff'};font-size:16px;text-align:left;cursor:pointer">
           <span style="flex:none;width:26px;height:26px;border-radius:50%;border:2px solid ${ok ? '#16A34A' : '#9CA3AF'};background:${ok ? '#16A34A' : '#fff'};color:#fff;text-align:center;line-height:22px;font-weight:700">${ok ? '✓' : ''}</span>
-          <span style="flex:1;min-width:0;font-weight:${ok ? 700 : 400};color:${ok ? '#166534' : '#111'}">${_prodEsc(x.nombre)}</span>
+          <span style="flex:1;min-width:0;font-weight:${ok ? 700 : 400};color:${ok ? '#166534' : '#111'}">${_prodEsc(x.nombre)}${quien ? `<br><span style="font-weight:400;font-size:13px">${_prodEsc(quien)}</span>` : ''}</span>
           <span style="flex:none;font-size:13px;color:#6B7280">${Math.round(100 * x.min / tot)} %</span>
         </button>`;
     }).join('') + `
@@ -1072,7 +1145,8 @@ function _prodDetallePaso(bultoId, sigue, etapas) {
 }
 // Tocar una operación de detalle: la anota (o la quita si ya estaba). Cuando
 // quedan todas las del paso, el bulto pasa solo al paso siguiente.
-async function prodOperacionDetalle(bultoId, opId, pasoId) {
+async function prodOperacionDetalle(bultoId, opId, pasoId, operariaId = null) {
+
   const llave = bultoId + '|' + opId;
   if (_etapaGuardando.has(llave)) return;
   _etapaGuardando.add(llave);
@@ -1082,7 +1156,7 @@ async function prodOperacionDetalle(bultoId, opId, pasoId) {
       await supaFetch('produccion_registro_operacion','DELETE',null,`?produccion_bulto_id=eq.${bultoId}&operacion_id=eq.${opId}&tipo=eq.normal`);
     } else {
       await supaFetch('produccion_registro_operacion','POST',[{
-        produccion_bulto_id: bultoId, operacion_id: opId, operaria_id: null,
+        produccion_bulto_id: bultoId, operacion_id: opId, operaria_id: operariaId || null,
         fecha: hoyLocal(), cantidad_realizada: _prodPiezasBulto(bultoId), tipo: 'normal',
       }]);
       const todas = (prodDetalleDe[pasoId] || []).every(x => x.id === opId || (h[x.id] || []).length);
