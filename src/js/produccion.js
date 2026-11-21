@@ -1077,8 +1077,39 @@ async function prodPasoSiguiente(bultoId, operacionId) {
   const btn = document.getElementById(`paso-btn-${bultoId}`);
   if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
   const ya = (_etapasHaciendo[bultoId] || {})[operacionId] || [];
-  if (ya.length) return prodTerminarEtapa(bultoId, operacionId);
-  return prodGuardarTerminado(bultoId, operacionId, [{ operaria_id: null, cantidad: _prodPiezasBulto(bultoId) }]);
+  const r = ya.length
+    ? await prodTerminarEtapa(bultoId, operacionId)
+    : await prodGuardarTerminado(bultoId, operacionId, [{ operaria_id: null, cantidad: _prodPiezasBulto(bultoId) }]);
+  if (r === 'ok') _prodAvisoDeshacer(bultoId, operacionId);
+}
+// Aviso de unos segundos con «Deshacer» después de avanzar un paso de un toque
+// (un dedo rápido se equivoca). Deshacer borra lo anotado de ese paso.
+let _prodAvisoT = null;
+function _prodAvisoDeshacer(bultoId, operacionId) {
+  const viejo = document.getElementById('prod-aviso-deshacer');
+  if (viejo) viejo.remove();
+  clearTimeout(_prodAvisoT);
+  let paso = '';
+  Object.values(prodPasosDe).forEach(l => l.forEach(x => { if (x.id === operacionId) paso = x.nombre; }));
+  const b = produccionData.find(x => x.produccion_bulto_id === bultoId);
+  const codigo = b ? String(b.codigo_bulto || '').split('-')[0] : '';
+  const d = document.createElement('div');
+  d.id = 'prod-aviso-deshacer';
+  d.style.cssText = 'position:fixed;left:12px;right:12px;bottom:84px;z-index:99998;background:#1F2937;color:#fff;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 6px 20px rgba(0,0,0,.3)';
+  d.innerHTML = `<div style="flex:1;font-size:15px">Anotado${codigo ? ' · ' + _prodEsc(codigo) : ''}: terminó <strong>${_prodEsc(paso || 'el paso')}</strong></div>
+    <button type="button" style="padding:10px 14px;border:0;border-radius:10px;background:#FBBF24;color:#111;font-size:15px;font-weight:700;cursor:pointer" onclick="prodDeshacerPaso('${bultoId}','${operacionId}')">Deshacer</button>`;
+  document.body.appendChild(d);
+  _prodAvisoT = setTimeout(() => { d.remove(); }, 8000);
+}
+async function prodDeshacerPaso(bultoId, operacionId) {
+  const d = document.getElementById('prod-aviso-deshacer');
+  if (d) d.remove();
+  clearTimeout(_prodAvisoT);
+  try {
+    await supaFetch('produccion_registro_operacion','DELETE',null,`?produccion_bulto_id=eq.${bultoId}&operacion_id=eq.${operacionId}&tipo=eq.normal`);
+    await prodRecargarEnSuLugar(bultoId, prodSoloBulto === bultoId);
+    showToast('Deshecho: el bulto volvió al paso anterior.', 'success', 3000);
+  } catch (e) { alert('Error: ' + e.message); }
 }
 
 // El mismo botón en la lista de bultos: busca cuál paso sigue de verdad en ese
@@ -1100,7 +1131,8 @@ async function prodPasoListo(bultoId) {
     const total = _prodPiezasBulto(bultoId);
     const rep = _prodRepartir(total, ids);
     const partes = ids.length ? ids.map(id => ({ operaria_id: id, cantidad: rep[id] })) : [{ operaria_id: null, cantidad: total }];
-    await prodGuardarTerminado(bultoId, sigue.operacion_id, partes, false);
+    const r = await prodGuardarTerminado(bultoId, sigue.operacion_id, partes, false);
+    if (r === 'ok') _prodAvisoDeshacer(bultoId, sigue.operacion_id);
   } catch (e) {
     alert('Error: ' + e.message);
     if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
@@ -1287,7 +1319,9 @@ async function prodGuardarTerminado(bultoId, operacionId, partes, abrir = true) 
     if (b2 && b2.estado_manual !== 'terminado' && b2.total_etapas > 0 && b2.etapas_hechas >= b2.total_etapas) {
       showToast('Operaciones completas. Falta decir cuántas piezas salieron para pasarlo a bodega.', 'success', 5000);
       await terminarBulto(bultoId, b2.cantidad_original);
+      return 'ultimo';
     }
+    return 'ok';
   } catch(e) {
     alert('Error: ' + e.message);
   } finally {
