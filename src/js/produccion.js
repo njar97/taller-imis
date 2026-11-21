@@ -1069,6 +1069,22 @@ function prodDetalleTocar(bultoId, opId, pasoId) {
   }
   return prodOperacionDetalle(bultoId, opId, pasoId, quien || null);
 }
+// La lista de nombres va por grupos según el puesto: primero las de máquina,
+// después los comodines (dueños y mesa de corte) y al final manualidades.
+function _prodAnotaGrupos() {
+  const grupos = [
+    { titulo: 'MÁQUINA', gente: [] }, { titulo: 'COMODÍN EN MÁQUINA', gente: [] },
+    { titulo: 'MANUALIDADES', gente: [] }, { titulo: 'OTROS', gente: [] },
+  ];
+  (operariasCache || []).filter(x => x.activo !== false && (!x.estado || x.estado === 'trabajando' || x.estado === 'en_prueba'))
+    .sort((x, y) => String(x.nombre).localeCompare(String(y.nombre)))
+    .forEach(x => {
+      const p = String(x.puesto || '').toLowerCase();
+      const i = /manual|plancha|limpia|empaque/.test(p) ? 2 : /due|corte/.test(p) ? 1 : /m[aá]quina|operaria|plana|rana/.test(p) ? 0 : 3;
+      grupos[i].gente.push(x);
+    });
+  return grupos.filter(g => g.gente.length);
+}
 // Arriba de las operaciones: de quién es lo que se va a tocar (se dice una vez).
 function _prodAnotaCaja(bultoId) {
   const quien = _prodAnotaActual();
@@ -1078,8 +1094,8 @@ function _prodAnotaCaja(bultoId) {
   const fila = 'display:block;width:100%;text-align:left;padding:13px 12px;border:0;border-top:1px solid #E5E7EB;background:#fff;font-size:17px;cursor:pointer';
   const lista = !_prodAnotaAbierto ? '' : `
           <div style="margin-top:8px;border:1px solid #D1D5DB;border-radius:10px;overflow:hidden;max-height:320px;overflow-y:auto">
-            ${(operariasCache || []).filter(x => x.activo !== false).sort((x, y) => String(x.nombre).localeCompare(String(y.nombre)))
-              .map((x, i) => `<button type="button" style="${fila}${i ? '' : ';border-top:0'}${x.id === quien ? ';background:#DBEAFE;font-weight:700' : ''}" onclick="prodAnotaElegir('${bultoId}','${x.id}')">${_prodEsc(x.nombre)}</button>`).join('')}
+            ${_prodAnotaGrupos().map(g => `<div style="padding:5px 12px;background:#F3F4F6;font-size:12px;font-weight:700;color:#6B7280;border-top:1px solid #E5E7EB">${g.titulo}</div>`
+              + g.gente.map(x => `<button type="button" style="${fila}${x.id === quien ? ';background:#DBEAFE;font-weight:700' : ''}" onclick="prodAnotaElegir('${bultoId}','${x.id}')">${_prodEsc(x.nombre)}</button>`).join('')).join('')}
             <button type="button" style="${fila};color:#6B7280" onclick="prodAnotaElegir('${bultoId}','')">Sin nombre</button>
           </div>`;
   return `
