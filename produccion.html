@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-21 18:43 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-22 18:58 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -5180,6 +5180,7 @@ function renderDashboard() {
     ], pctEnt, codigos.length ? `Contrato ${codigos.map(dashEsc).join(', ')}` : '');
     // Pantalla única: sin cartel ni cuadritos; todo eso va dentro de «Cómo vamos».
     dashboardCache.cvTot = tot;
+    dashboardCache.cvAvance = r.avance;
     comoVamos = (_dashEmpresa ? '' : _renderPlazo(r.plan, r.avance, r.avanceDia, r.plazoCfg, new Date(), r.planchado, r.plazoOps))
       + (_renderComoVamos(r.plan, r.produccionHoy, tot))
       || `<div class="card" style="padding:12px;margin-bottom:10px">${dashEsc(sel?.nombre || '')}: ${dashNum(tot.sol)} piezas pedidas · ${dashNum(tot.emp)} empacadas · ${dashNum(tot.ent)} entregadas</div>`;
@@ -5718,6 +5719,16 @@ function _renderComoVamos(plan, prod, totEmp) {
   }
   const filas = [...porPrenda.values()].sort((a, b) => dashOrdenPrenda(a.cod) - dashOrdenPrenda(b.cod));
   const pctListo = o => o.pedido > 0 ? Math.floor(100 * o.listo / o.pedido) : 0;
+  // Lo que va en proceso, contado como prendas terminadas (cada bulto vale según su avance),
+  // sin pasarse de lo que le falta a cada prenda.
+  const eqPrenda = new Map();
+  for (const b of (dashboardCache.cvAvance || [])) {
+    if (b.estado_manual === 'terminado') continue;
+    eqPrenda.set(b.cod_prenda, (eqPrenda.get(b.cod_prenda) || 0) + (Number(b.cantidad) || 0) * (Number(b.fraccion) || 0));
+  }
+  let enProcEq = 0;
+  for (const o of filas) enProcEq += Math.min(eqPrenda.get(o.cod) || 0, Math.max(0, o.pedido - o.listo));
+  const pctConProceso = tot.pedido > 0 ? Math.floor(100 * (tot.listo + enProcEq) / tot.pedido) : 0;
   const p = prod || {};
   return `
       <div class="card tj">
@@ -5732,6 +5743,7 @@ function _renderComoVamos(plan, prod, totEmp) {
             <div class="cv-pct">${pctListo(tot)}<small>%</small><span>${fuera > 0 ? 'listas' : 'en bodega'}</span></div>
             <div class="cv-total"><strong>${dashNum(tot.pedido)}</strong>piezas<span class="solo-asistencia"> pedidas en la temporada</span></div>
           </div>
+          ${enProcEq >= 1 ? `<div style="font-size:14px;margin:2px 0 8px">Con lo que va en proceso: <strong style="color:#2563EB">${pctConProceso} %</strong> <span style="font-size:12px;color:#6B7280">(los bultos a medias valen como ${dashNum(Math.round(enProcEq))} prendas terminadas)</span></div>` : ''}
           ${_cvBarra(tot, 14)}
           <div class="cv-nums">
             <div style="--p:${CV_VERDE}"><b>${dashNum(tot.listo)}</b><small>${fuera > 0 ? 'Listas' : 'En bodega'}</small></div>
