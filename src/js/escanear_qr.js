@@ -107,7 +107,23 @@ async function abrirEscanerQR() {
   vuelta();
 }
 
+// Etiqueta caída o sin QR: se escribe el código del bulto (3BA, KCH) y se abre
+// igual que si se hubiera escaneado.
+function qrAbrirPorCodigo() {
+  const campo = document.getElementById('qr-codigo');
+  const codigo = String((campo && campo.value) || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+  if (!codigo) { _qrMsg('Escriba el código que trae el bulto.', true); return; }
+  cerrarEscanerQR();
+  window._prodHintBulto = null;
+  window._prodHintCodigo = codigo;
+  prodEntrarPorEnlace();
+}
+
 function cerrarEscanerQR() {
+  const campo = document.getElementById('qr-codigo');
+  if (campo) campo.value = '';
+  const ops = document.getElementById('qr-opciones');
+  if (ops) ops.innerHTML = '';
   _qr.activo = false;
   if (_qr.stream) { try { _qr.stream.getTracks().forEach(t => t.stop()); } catch (_) {} }
   _qr.stream = null;

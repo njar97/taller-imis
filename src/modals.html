@@ -92,5 +92,10 @@
     <button class="btn btn-ghost btn-sm" style="color:#fff;font-size:20px;min-width:44px;min-height:44px" onclick="cerrarEscanerQR()" aria-label="Cerrar">✕</button>
   </div>
   <video id="qr-video" playsinline muted style="flex:1;min-height:0;width:100%;object-fit:cover;background:#000"></video>
-  <div id="qr-msg" style="width:100%;padding:16px 14px calc(18px + env(safe-area-inset-bottom));text-align:center;color:#fff;font-size:16px;font-weight:600"></div>
+  <div id="qr-msg" style="width:100%;padding:14px 14px 8px;text-align:center;color:#fff;font-size:16px;font-weight:600"></div>
+  <form onsubmit="qrAbrirPorCodigo(); return false;" style="width:100%;padding:4px 14px calc(16px + env(safe-area-inset-bottom));display:flex;gap:8px;box-sizing:border-box">
+    <input id="qr-codigo" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="O escriba el código" aria-label="Código del bulto" style="flex:1;min-width:0;padding:14px 12px;border:0;border-radius:12px;font-size:17px;text-transform:uppercase">
+    <button type="submit" style="flex:none;padding:14px 18px;border:0;border-radius:12px;background:#16A34A;color:#fff;font-size:17px;font-weight:700;cursor:pointer">Abrir</button>
+  </form>
+  <div id="qr-opciones" style="width:100%;padding:0 14px 12px;box-sizing:border-box"></div>
 </div>
