@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-23 23:44 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-24 06:09 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -12423,18 +12423,22 @@ function prodQuitarSoloBulto() {
   prodSoloBulto = null; cortesExpandidos = new Set();
   renderProduccion();
 }
-// Franja de arriba cuando se ve un solo bulto (el de la etiqueta escaneada).
+// Arriba cuando se ve un solo bulto (etiqueta o código): un renglón con
+// «Todos» para volver, qué bulto es y «⋯» para sus opciones.
 function _prodFranjaSoloBulto(b) {
   const nombre = (b.cod_prenda && CATALOGO[b.cod_prenda]?.nombre) || b.cod_prenda || '';
   const t26 = prodTalla2026(b.cod_prenda, b.talla_key_salida);
   const codigo = String(b.codigo_bulto || '').split('-')[0];
+  const cant = Number(b.cantidad_final || b.cantidad_original) || 0;
+  const bt = 'flex:none;min-height:44px;padding:8px 12px;border:1px solid #9CA3AF;border-radius:10px;background:#fff;font-size:15px;font-weight:700;cursor:pointer';
   return `
-    <div class="alert alert-info" style="margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-        <strong>Bulto ${_prodEsc(codigo)} · ${_prodEsc(nombre)}${t26 ? ' ' + _prodEsc(t26) : ''}</strong>
-        <button class="btn btn-ghost btn-sm" onclick="prodQuitarSoloBulto()">Ver todos</button>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:8px;border-radius:12px;background:#DBEAFE">
+      <button type="button" style="${bt}" onclick="prodQuitarSoloBulto()">← Todos</button>
+      <div style="flex:1;min-width:0;line-height:1.2">
+        <div style="font-size:20px;font-weight:700;overflow-wrap:anywhere">${_prodEsc(codigo)}</div>
+        <div style="font-size:14px;color:#1F2937">${_prodEsc(nombre)}${t26 ? ' ' + _prodEsc(t26) : ''} · ${cant}</div>
       </div>
-      <div style="font-size:12px;margin-top:2px">Es el bulto que escaneó o buscó por código.</div>
+      <button type="button" style="${bt};font-size:20px" onclick="toggleMasBulto('${b.produccion_bulto_id}')" aria-label="Opciones del bulto">⋯</button>
     </div>`;
 }
 function prodQuitarSoloTalla() {
@@ -12544,8 +12548,17 @@ function toggleMasBulto(id) {
   if (el) el.style.display = el.style.display === 'none' ? 'flex' : 'none';
 }
 
+// ¿El bulto de la etiqueta o del código escrito ya está en la lista cargada?
+function _prodEnlaceEnLista() {
+  if (!produccionData.length || !Object.keys(prodPasosDe).length) return false;
+  if (window._prodHintCodigo) return prodBuscarPorCodigo(window._prodHintCodigo).length > 0;
+  const pista = window._prodHintBulto;
+  return !!pista && produccionData.some(x => String(x.produccion_bulto_id || '').toLowerCase().startsWith(pista));
+}
 async function cargarProduccion() {
   try {
+    // Con la lista ya en el teléfono el bulto se abre de una vez, sin volver a traer todo.
+    if (_prodEnlaceEnLista()) { await prodAbrirBultoDeEnlace(); return; }
     if (!prodEquivIdx) {
       try {
         const eq = await supaFetch('talla_equivalencia', 'GET', null, '?select=cod_prenda,talla_vieja,talla_2026,largo_2026_cm');
@@ -12581,10 +12594,7 @@ async function cargarProduccion() {
 
     // Cargar progreso Fase 2 (solo si está activa)
     if (FASE2_ACTIVA) {
-      await cargarProgreso();
-      await cargarAsignacionesPorBulto();
-      await prodCargarPasos();
-      await prodCargarGuardados();
+      await Promise.all([cargarProgreso(), cargarAsignacionesPorBulto(), prodCargarPasos(), prodCargarGuardados()]);
     } else {
       progresoCache = {};
       asignacionesPorBulto = {};
@@ -12751,10 +12761,18 @@ function renderProduccion() {
   // Etiqueta escaneada: solo ese bulto, pase lo que pase con los demás filtros.
   const elSolo = prodSoloBulto ? produccionData.find(b => b.produccion_bulto_id === prodSoloBulto) : null;
   if (prodSoloBulto && !elSolo) prodSoloBulto = null;
+  // Con un solo bulto no se ven las pestañas, el resumen ni los filtros.
+  const _subnav = document.getElementById('prod-subnav');
+  const _resumen = document.getElementById('prod-resumen-hoy');
+  const _tarjeta = _resumen && _resumen.closest ? _resumen.closest('.card') : null;
+  if (_subnav) _subnav.style.display = elSolo ? 'none' : '';
+  if (_tarjeta) _tarjeta.style.display = elSolo ? 'none' : '';
   if (elSolo) {
-    filtrados = [elSolo];
-    cortesExpandidos.add(elSolo.talla_key_salida);
-    franjaTalla = _prodFranjaSoloBulto(elSolo);
+    const c = document.getElementById('prod-cortes-container');
+    c.innerHTML = _prodFranjaSoloBulto(elSolo) + renderProdBulto(elSolo);
+    const et = document.getElementById(`etapas-${elSolo.produccion_bulto_id}`);
+    if (et && et.style.display !== 'block') toggleEtapasBulto(elSolo.produccion_bulto_id);
+    return;
   } else if (prodVerGuardados) {
     franjaTalla += `
     <div class="alert alert-warn" style="margin-bottom:10px">
@@ -13033,6 +13051,15 @@ function renderProdBulto(b) {
   const fechaInfo = estadoEfectivo === 'terminado' && b.fecha_terminado ? ` · ${b.fecha_terminado}` : '';
   const obsInfo = b.observaciones ? `<div style="font-size:11px;color:#856404;margin-top:4px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-alerta"/></svg> ${b.observaciones}</div>` : '';
 
+  if (prodSoloBulto === b.produccion_bulto_id) {
+    return `
+    <div id="bulto-row-${b.produccion_bulto_id}">
+      ${mas ? `<div class="prod-bulto-mas" id="mas-${b.produccion_bulto_id}" style="display:none;margin:0 0 8px;padding:8px;border:1px solid #D1D5DB;border-radius:12px;background:#fff">${mas}</div>` : ''}
+      ${obsInfo}
+      ${guardado || estadoEfectivo === 'terminado' ? `<div class="prod-bulto-acciones" style="margin-bottom:8px">${acciones}</div>` : ''}
+      <div id="etapas-${b.produccion_bulto_id}" style="display:none"></div>
+    </div>`;
+  }
   return `
     <div class="prod-bulto-row ${clase}" id="bulto-row-${b.produccion_bulto_id}" style="flex-wrap:wrap">
       <div style="flex:1;min-width:0${porPasos && !guardado ? ';cursor:pointer' : ''}"${porPasos && !guardado ? ` onclick="prodTogglePasos('${b.produccion_bulto_id}')"` : ''}>
