@@ -199,6 +199,41 @@ function prodTalla2026(cod, key) {
   if (!t) return null;
   return /^(T|\dX$)/i.test(String(t)) ? String(t).toUpperCase() : 'T' + t;   // 1X, 2X, 3X van sin la T
 }
+// «⋯» → Corregir cantidad: el bulto trae más o menos prendas de las anotadas.
+// Lo ya anotado con la cantidad vieja (bulto entero) pasa a la nueva.
+async function prodCorregirCantidad(bultoId, actual) {
+  const txt = await pedirTexto(`¿Cuántas prendas trae de verdad este bulto?\n\nAhora dice: ${actual}`, actual);
+  if (txt === null) return;
+  const n = parseInt(txt);
+  if (!(n > 0) || n === Number(actual)) return;
+  try {
+    await supaUpdate('produccion_bulto', bultoId, { cantidad_ajustada: n, actualizado_en: new Date().toISOString() });
+    // PATCH no devuelve cuerpo: el aviso de «JSON vacío» no es un error.
+    try {
+      await supaFetch('produccion_registro_operacion', 'PATCH', { cantidad_realizada: n }, `?produccion_bulto_id=eq.${bultoId}&tipo=eq.normal&cantidad_realizada=eq.${Number(actual)}`);
+    } catch (e) { if (!/json/i.test(String(e && e.message))) throw e; }
+    await prodRecargarEnSuLugar(bultoId, prodSoloBulto === bultoId);
+    showToast(`Cantidad corregida: ${actual} → ${n}.`, 'success', 3500);
+  } catch (e) { alert('Error: ' + e.message); }
+}
+// «⋯» → Cambiar código: el bulto quedó con otra etiqueta (letras y números).
+async function prodCambiarCodigo(bultoId) {
+  const b = produccionData.find(x => x.produccion_bulto_id === bultoId);
+  const actual = b ? String(b.codigo_bulto || '').split('-')[0] : '';
+  const txt = await pedirTexto(`Código nuevo del bulto (el que dice la etiqueta)\n\nAhora es: ${actual}`, '');
+  if (txt === null) return;
+  const cod = String(txt).toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 8);
+  if (!cod || cod === actual) return;
+  if (produccionData.some(x => x.produccion_bulto_id !== bultoId && String(x.codigo_bulto || '').split('-')[0].toUpperCase() === cod)) {
+    alert(`Ya hay otro bulto con el código ${cod}.`);
+    return;
+  }
+  try {
+    await supaUpdate('produccion_bulto', bultoId, { etiqueta: cod, actualizado_en: new Date().toISOString() });
+    await prodRecargarEnSuLugar(bultoId, prodSoloBulto === bultoId);
+    showToast(`Código cambiado: ${actual} → ${cod}.`, 'success', 3500);
+  } catch (e) { alert('Error: ' + e.message); }
+}
 function toggleMasBulto(id) {
   const el = document.getElementById('mas-' + id);
   if (el) el.style.display = el.style.display === 'none' ? 'flex' : 'none';
@@ -632,6 +667,7 @@ function renderProdBulto(b) {
   // «Terminar» pasa a «⋯» (Javier 18-nov: «solo hay un gran botón que dice terminar»).
   const conEtapas = FASE2_ACTIVA && b.total_etapas > 0;
   let terminarEnMas = '';
+  let terminarTodo = false;   // va al final de «⋯», aparte y en rojo
   if (estadoEfectivo === 'terminado') {
     acciones = `<button class="prod-btn-accion prod-btn-revertir" onclick="revertirBulto('${b.produccion_bulto_id}')">↶ Revertir</button>`;
   } else if (conEtapas && b.etapas_hechas >= b.total_etapas) {
@@ -645,11 +681,11 @@ function renderProdBulto(b) {
   } else if (conEtapas && porPasos) {
     const n = b.etapas_hechas || 0;
     botonPaso = `<button class="prod-btn-accion" id="paso-lista-${b.produccion_bulto_id}" style="display:block;width:100%;margin-top:10px;background:#16A34A;color:#fff;border-color:#16A34A;font-size:16px;padding:12px;border-radius:12px;text-align:center;line-height:1.3" onclick="prodPasoListo('${b.produccion_bulto_id}')">Terminó ${_prodEsc(pasosB[n].nombre)}<br><span style="font-weight:400">pasar a ${_prodEsc(n + 1 < pasosB.length ? pasosB[n + 1].nombre : 'Bodega')} →</span></button>`;
-    terminarEnMas = `<button class="prod-btn-accion" onclick="toggleEtapasBulto('${b.produccion_bulto_id}')">▾ Quién lo hizo · deshacer</button>`
-      + `<button class="prod-btn-accion prod-btn-terminar" onclick="terminarBultoAtajo('${b.produccion_bulto_id}', ${cantActual})">✓ Terminar todo</button>`;
+    terminarEnMas = `<button class="prod-btn-accion" onclick="toggleEtapasBulto('${b.produccion_bulto_id}')">▾ Quién lo hizo · deshacer</button>`;
+    terminarTodo = true;
   } else if (conEtapas) {
     acciones = `<button class="prod-btn-accion" style="background:#1565c0;color:#fff;border-color:#1565c0" onclick="toggleEtapasBulto('${b.produccion_bulto_id}')">▶ Avance ${b.etapas_hechas || 0}/${b.total_etapas}</button>`;
-    terminarEnMas = `<button class="prod-btn-accion prod-btn-terminar" onclick="terminarBultoAtajo('${b.produccion_bulto_id}', ${cantActual})">✓ Terminar todo</button>`;
+    terminarTodo = true;
   } else {
     // Con Fase 2 activa, el "terminar" es atajo con confirmación
     const onclickTerm = FASE2_ACTIVA
@@ -663,15 +699,23 @@ function renderProdBulto(b) {
     terminarEnMas = ''; pasosFila = ''; botonPaso = '';
   }
   // Lo de todos los días es «Terminar»; lo demás va detrás de «⋯».
+  // Orden: lo de consulta, lo que corrige el bulto, lo que lo parte o lo junta,
+  // guardarlo y, aparte y en rojo, mandarlo entero a bodega.
   let mas = terminarEnMas;
-  if (!guardado && estadoEfectivo !== 'terminado') {
-    mas += `<button class="prod-btn-accion" onclick="prodGuardarBulto('${b.produccion_bulto_id}', true)">Guardar este bulto</button>`;
+  const vivo = !guardado && estadoEfectivo !== 'terminado';
+  if (vivo) {
+    mas += `<button class="prod-btn-accion" onclick="prodCorregirCantidad('${b.produccion_bulto_id}', ${cantActual})">Corregir cantidad</button>`;
+    mas += `<button class="prod-btn-accion" onclick="prodCambiarCodigo('${b.produccion_bulto_id}')">Cambiar código</button>`;
   }
-  if (!guardado && estadoEfectivo !== 'terminado' && cantActual > 1) {
+  if (vivo && cantActual > 1) {
     mas += `<button class="prod-btn-accion prod-btn-dividir" onclick="abrirDividir('${b.produccion_bulto_id}', ${cantActual}, '${b.codigo_bulto}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-tijera"/></svg> Dividir</button>`;
   }
-  if (!guardado && estadoEfectivo !== 'terminado') {
+  if (vivo) {
     mas += `<button class="prod-btn-accion prod-btn-unir" onclick="abrirUnir('${b.produccion_bulto_id}', '${b.talla_key_salida}', '${b.codigo_bulto}')"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-enlace"/></svg> Unir</button>`;
+    mas += `<button class="prod-btn-accion" onclick="prodGuardarBulto('${b.produccion_bulto_id}', true)">Guardar este bulto</button>`;
+  }
+  if (vivo && terminarTodo) {
+    mas += `<button class="prod-btn-accion" style="flex-basis:100%;margin-top:8px;border-color:#DC2626;color:#B91C1C;background:#fff" onclick="terminarBultoAtajo('${b.produccion_bulto_id}', ${cantActual})">Terminar todo · pasar a bodega</button>`;
   }
   // Terminado con operaciones: «Etapas» sigue en «⋯» para ver quién hizo qué
   if (conEtapas && estadoEfectivo === 'terminado') {
@@ -968,7 +1012,7 @@ async function prodRefrescarEtapas(bultoId) {
     const [etapas, asig, regs] = await Promise.all([
       supaFetch('vw_bulto_etapas','GET',null, `?produccion_bulto_id=eq.${bultoId}&order=orden&limit=60`),
       supaFetch('vw_bulto_asignaciones','GET',null, `?produccion_bulto_id=eq.${bultoId}&limit=200`).catch(() => []),
-      supaFetch('produccion_registro_operacion','GET',null, `?produccion_bulto_id=eq.${bultoId}&tipo=eq.normal&select=operacion_id,operaria_id,operaria,cantidad_realizada,fecha&order=creado_en&limit=300`).catch(() => []),
+      supaFetch('produccion_registro_operacion','GET',null, `?produccion_bulto_id=eq.${bultoId}&tipo=eq.normal&select=operacion_id,operaria_id,operaria,cantidad_realizada,fecha,segundos&order=creado_en&limit=300`).catch(() => []),
       operariasCache.length ? null : supaFetch('operaria','GET',null,'?order=nombre&limit=300').then(o => { operariasCache = o || []; }).catch(() => {}),
     ]);
     const m = {};
@@ -977,7 +1021,7 @@ async function prodRefrescarEtapas(bultoId) {
     const h = {};
     (regs || []).forEach(r => {
       const o = operariasCache.find(x => x.id === r.operaria_id);
-      (h[r.operacion_id] = h[r.operacion_id] || []).push({ operaria_id: r.operaria_id, nombre: (o && o.nombre) || r.operaria || '?', cantidad: r.cantidad_realizada, fecha: r.fecha });
+      (h[r.operacion_id] = h[r.operacion_id] || []).push({ operaria_id: r.operaria_id, nombre: (o && o.nombre) || r.operaria || '?', cantidad: r.cantidad_realizada, fecha: r.fecha, segundos: Number(r.segundos) || 0 });
     });
     _etapasHechas[bultoId] = h;
     renderEtapasBulto(bultoId, etapas);
@@ -1066,12 +1110,12 @@ let prodPasosDe = {};   // cod_prenda -> [{ id, nombre, min }]
 let prodDetalleDe = {}; // paso_id -> [{ id, nombre, min }]
 async function prodCargarPasos() {
   try {
-    const ops = await supaFetch('produccion_operacion','GET',null,'?or=(activo.eq.true,detalle.eq.true)&select=id,cod_prenda,nombre,orden,activo,detalle,paso_id,tiempo_estandar_min,pago_prenda,maquina&order=cod_prenda,orden&limit=600');
+    const ops = await supaFetch('produccion_operacion','GET',null,'?or=(activo.eq.true,detalle.eq.true)&select=id,cod_prenda,nombre,orden,activo,detalle,paso_id,tiempo_estandar_min,pago_prenda,maquina,codigo,requiere&order=cod_prenda,orden&limit=600');
     const m = {}, d = {};
     (ops || []).forEach(o => {
       const min = Number(o.tiempo_estandar_min) || 0;
       if (o.activo) (m[o.cod_prenda] = m[o.cod_prenda] || []).push({ id: o.id, nombre: o.nombre, min });
-      else if (o.detalle && o.paso_id) (d[o.paso_id] = d[o.paso_id] || []).push({ id: o.id, nombre: o.nombre, min, pago: Number(o.pago_prenda) || 0, maquina: o.maquina || '' });
+      else if (o.detalle && o.paso_id) (d[o.paso_id] = d[o.paso_id] || []).push({ id: o.id, nombre: o.nombre, min, pago: Number(o.pago_prenda) || 0, maquina: o.maquina || '', codigo: o.codigo || '', requiere: o.requiere || [] });
     });
     prodPasosDe = m; prodDetalleDe = d;
   } catch (_) { prodPasosDe = {}; prodDetalleDe = {}; }
@@ -1113,21 +1157,27 @@ function _prodMinTexto(min) {
   const s = Math.round(min * 60);
   return s < 60 ? `${s} s` : s % 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s / 60} min`;
 }
-function _prodInfoCaja(bultoId, x, n, deCuantas, rs) {
+function _prodInfoCaja(bultoId, o) {
   const piezas = _prodPiezasBulto(bultoId) || 0;
   const linea = (a, b) => `<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0"><span style="color:#6B7280">${a}</span><strong style="text-align:right">${b}</strong></div>`;
+  const rs = o.rs || [];
   const hecho = rs.length
     ? rs.map(r => `${_prodEsc(r.nombre === '?' ? 'sin nombre' : r.nombre)} · ${r.cantidad || '?'} · ${_prodEsc(r.fecha || '')}`).join('<br>')
-    : 'todavía no';
+    : o.hecha ? 'sí (anotado con el paso completo)' : 'todavía no';
+  const medido = rs.filter(r => r.segundos > 0).map(r => `${_prodCronoTexto(r.segundos)}${r.cantidad ? ' (' + _prodMinTexto(r.segundos / 60 / r.cantidad) + ' por prenda)' : ''}`).join('<br>');
+  const medir = !o.hecha && !o.esPaso && !(o.falta || []).length && !_prodCronoLeer()
+    ? `<button type="button" onclick="prodCronoEmpezar('${bultoId}','${o.id}','${o.pasoId}')" style="display:block;width:100%;margin-top:6px;padding:10px;border:1px solid #2563EB;border-radius:10px;background:#fff;color:#2563EB;font-size:15px;font-weight:700;cursor:pointer">⏱ Medir esta</button>` : '';
   return `
-        <div style="margin-top:4px;padding:8px 12px;border:1px solid #BFDBFE;border-radius:10px;background:#EFF6FF;font-size:14px">
-          ${linea('Orden', `${n} de ${deCuantas} en este paso`)}
-          ${x.maquina ? linea('Máquina', _prodEsc(x.maquina)) : ''}
-          ${linea('Tiempo por prenda', _prodMinTexto(x.min))}
-          ${x.min && piezas ? linea(`Tiempo del bulto (${piezas})`, _prodMinTexto(x.min * piezas)) : ''}
-          ${x.pago ? linea('Pago por prenda', '$' + x.pago.toFixed(2)) : ''}
-          ${x.pago && piezas ? linea('Pago del bulto', '$' + (x.pago * piezas).toFixed(2)) : ''}
+        <div style="margin-top:6px;padding:8px 12px;border:1px solid #BFDBFE;border-radius:10px;background:#EFF6FF;font-size:14px">
+          ${linea('Orden', `${o.n} de ${o.de} en ${_prodEsc(o.paso)}`)}
+          ${linea('Necesita antes', (o.requiere || []).includes('*') ? 'todas las demás' : (o.necesita || []).length ? _prodEsc(o.necesita.join(', ')) : 'nada (libre)')}
+          ${o.maquina ? linea('Máquina', _prodEsc(o.maquina)) : ''}
+          ${linea('Tiempo por prenda', _prodMinTexto(o.min))}
+          ${o.min && piezas ? linea(`Tiempo del bulto (${piezas})`, _prodMinTexto(o.min * piezas)) : ''}
+          ${o.pago ? linea('Pago por prenda', '$' + o.pago.toFixed(2)) : ''}
+          ${o.pago && piezas ? linea('Pago del bulto', '$' + (o.pago * piezas).toFixed(2)) : ''}
           ${linea('Hecho', hecho)}
+          ${medido ? linea('Medido', medido) : ''}${medir}
         </div>`;
 }
 // La lista de nombres va por grupos según el puesto: primero las de máquina,
@@ -1182,35 +1232,171 @@ function _prodAvanceBulto(bultoId, etapas) {
   });
   return tot > 0 ? Math.round(100 * hecho / tot) : null;
 }
-// Lista de operaciones del paso en curso: se toca la que ya está hecha.
-function _prodDetallePaso(bultoId, sigue, etapas) {
-  const det = prodDetalleDe[sigue.operacion_id] || [];
-  if (!det.length) return '';
+// ── Operaciones del bulto: la que sigue arriba, llaves y cronómetro ────
+// Todas las operaciones de la prenda en orden, con su estado en este bulto:
+// hecha, con llave (le falta otra antes) o libre para anotarse.
+function _prodOpsBulto(bultoId, etapas) {
   const hechasDe = _etapasHechas[bultoId] || {};
-  const tot = etapas.reduce((t, e) => t + _prodMinPaso(e), 0) || 1;
-  return `
-      <div style="margin-top:12px;border:1px solid #D1D5DB;border-radius:12px;padding:8px;background:#fff">
-        <div style="font-size:13px;color:#6B7280;text-align:center;margin-bottom:6px">O anotar por operación: toque la que ya está hecha</div>${_prodAnotaCaja(bultoId)}` +
-    det.map((x, i) => {
-      const rs = hechasDe[x.id] || [];
-      const ok = rs.length > 0;
-      const quien = ok ? [...new Set(rs.map(r => r.nombre === '?' ? 'sin nombre' : r.nombre))].join(', ') : '';
-      const abierta = _prodInfoAbierta.has(x.id);
-      return `
+  const ops = [];
+  etapas.forEach(e => {
+    const det = prodDetalleDe[e.operacion_id] || [];
+    const pasoHecho = !!e.registro_id;
+    if (!det.length) {
+      ops.push({ id: e.operacion_id, pasoId: e.operacion_id, paso: e.operacion_nombre, nombre: e.operacion_nombre, codigo: e.operacion_codigo || '',
+        min: Number(e.tiempo_estandar_min) || 0, pago: 0, maquina: e.maquina || '', requiere: [], esPaso: true, hecha: pasoHecho, porPaso: false, rs: [], n: 1, de: 1 });
+    } else {
+      det.forEach((x, i) => {
+        const rs = hechasDe[x.id] || [];
+        ops.push({ ...x, pasoId: e.operacion_id, paso: e.operacion_nombre, esPaso: false, hecha: pasoHecho || rs.length > 0, porPaso: pasoHecho && !rs.length, rs, n: i + 1, de: det.length });
+      });
+    }
+  });
+  const porCodigo = {};
+  ops.forEach(o => { if (o.codigo) porCodigo[o.codigo] = o; });
+  ops.forEach((o, i) => {
+    const req = (o.requiere || []).includes('*')
+      ? ops.filter(x => x !== o)
+      : (o.requiere || []).map(c => porCodigo[c]).filter(Boolean);
+    // Los pasos sin operaciones propias (Corte) van antes que todo lo que sigue.
+    ops.slice(0, i).forEach(x => { if (x.esPaso && !req.includes(x)) req.push(x); });
+    o.necesita = req.filter(x => !x.esPaso).map(x => x.nombre);
+    o.falta = o.hecha ? [] : req.filter(x => !x.hecha).map(x => x.nombre);
+  });
+  return ops;
+}
+// Cronómetro (opcional): uno a la vez, se recuerda en el teléfono aunque se cierre la app.
+let _prodCrono;
+function _prodCronoLeer() {
+  if (_prodCrono === undefined) {
+    try { _prodCrono = JSON.parse(localStorage.getItem('prodCrono') || 'null'); } catch (_) { _prodCrono = null; }
+  }
+  return _prodCrono;
+}
+function _prodCronoPoner(c) {
+  _prodCrono = c;
+  try { if (c) localStorage.setItem('prodCrono', JSON.stringify(c)); else localStorage.removeItem('prodCrono'); } catch (_) {}
+}
+function _prodCronoTexto(seg) {
+  const s = Math.max(0, Math.round(seg)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+  return (h ? h + ':' + String(m).padStart(2, '0') : String(m)) + ':' + String(r).padStart(2, '0');
+}
+let _prodCronoT = null;
+function _prodCronoLatido() {
+  if (_prodCronoT) return;
+  _prodCronoT = setInterval(() => {
+    const c = _prodCronoLeer(), el = document.getElementById('prod-crono-t');
+    if (!c) { clearInterval(_prodCronoT); _prodCronoT = null; return; }
+    if (el) el.textContent = _prodCronoTexto((Date.now() - c.inicio) / 1000);
+  }, 1000);
+}
+function prodCronoEmpezar(bultoId, opId, pasoId) {
+  _prodCronoPoner({ bultoId, opId, pasoId, inicio: Date.now() });
+  if (_prodUltEtapas[bultoId]) renderEtapasBulto(bultoId, _prodUltEtapas[bultoId]);
+}
+function prodCronoCancelar(bultoId) {
+  _prodCronoPoner(null);
+  if (_prodUltEtapas[bultoId]) renderEtapasBulto(bultoId, _prodUltEtapas[bultoId]);
+}
+async function prodCronoTerminar(bultoId) {
+  const c = _prodCronoLeer();
+  if (!c || c.bultoId !== bultoId) return;
+  const seg = Math.max(1, Math.round((Date.now() - c.inicio) / 1000));
+  _prodCronoPoner(null);
+  await prodOperacionDetalle(bultoId, c.opId, c.pasoId, _prodAnotaActual() || null, seg);
+}
+function prodOpConLlave(falta) {
+  showToast('Todavía no se puede: falta ' + falta + '.', 'info', 4000);
+}
+// Pantalla del bulto: arriba la operación que sigue (un botón), las hechas
+// plegadas y abajo lo que falta, por paso. Las que tienen llave salen con candado.
+function _prodDetallePaso(bultoId, sigue, etapas) {
+  const ops = _prodOpsBulto(bultoId, etapas);
+  if (!ops.some(o => !o.esPaso)) return null;
+  const faltan = ops.filter(o => !o.hecha);
+  const s = faltan.find(o => !o.falta.length) || faltan[0];
+  if (!s) return '';
+  const piezas = _prodPiezasBulto(bultoId) || 0;
+  const crono = _prodCronoLeer();
+  const midiendo = crono && crono.bultoId === bultoId ? ops.find(o => o.id === crono.opId && !o.hecha) : null;
+  const arriba = midiendo || s;
+  const tocar = o => o.esPaso ? `prodPasoSiguiente('${bultoId}','${o.id}')` : `prodDetalleTocar('${bultoId}','${o.id}','${o.pasoId}')`;
+  const botonI = o => {
+    const ab = _prodInfoAbierta.has(o.id);
+    return `<button type="button" onclick="prodInfoOperacion('${bultoId}','${o.id}')" aria-label="Información de ${_prodEsc(o.nombre)}" style="flex:none;width:44px;border:1px solid ${ab ? '#2563EB' : '#D1D5DB'};border-radius:10px;background:${ab ? '#2563EB' : '#fff'};color:${ab ? '#fff' : '#2563EB'};font-size:18px;font-weight:700;font-style:italic;font-family:Georgia,serif;cursor:pointer">i</button>`;
+  };
+  const info = o => _prodInfoAbierta.has(o.id) ? _prodInfoCaja(bultoId, o) : '';
+  const tiempo = arriba.min ? `${_prodMinTexto(arriba.min)} por prenda${piezas ? ' · ' + _prodMinTexto(arriba.min * piezas) + ' el bulto' : ''}` : '';
+  let botones;
+  if (midiendo) {
+    _prodCronoLatido();
+    botones = `
+        <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+          <div id="prod-crono-t" style="flex:none;font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;color:#1D4ED8">${_prodCronoTexto((Date.now() - crono.inicio) / 1000)}</div>
+          <button type="button" onclick="prodCronoTerminar('${bultoId}')" style="flex:1;padding:16px 8px;border:0;border-radius:14px;background:#16A34A;color:#fff;font-size:19px;font-weight:700;cursor:pointer">Terminé · anotar</button>
+        </div>
+        <button type="button" onclick="prodCronoCancelar('${bultoId}')" style="display:block;margin:8px auto 0;padding:8px 12px;border:0;background:none;color:#6B7280;font-size:14px;text-decoration:underline;cursor:pointer">Dejar de medir (no anota nada)</button>`;
+  } else if (arriba.falta.length) {
+    botones = `<div style="margin-top:8px;font-size:15px;color:#B45309">🔒 Falta antes: ${_prodEsc(arriba.falta.join(', '))}</div>`;
+  } else {
+    const otro = crono ? `<div style="margin-top:8px;font-size:13px;color:#6B7280;text-align:center">Hay un cronómetro andando en otro bulto.</div>` : '';
+    botones = `
+        <button type="button" id="paso-btn-${bultoId}" onclick="${tocar(arriba)}" style="display:block;width:100%;margin-top:10px;padding:16px;border:0;border-radius:14px;background:#16A34A;color:#fff;font-size:20px;font-weight:700;cursor:pointer">✓ Ya está hecha</button>
+        ${arriba.esPaso || crono ? otro : `<button type="button" onclick="prodCronoEmpezar('${bultoId}','${arriba.id}','${arriba.pasoId}')" style="display:block;width:100%;margin-top:8px;padding:12px;border:1px solid #2563EB;border-radius:12px;background:#fff;color:#2563EB;font-size:16px;font-weight:700;cursor:pointer">⏱ Empezar a medir (opcional)</button>`}`;
+  }
+  const tarjeta = `
+      <div style="margin-top:12px;border:2px solid ${midiendo ? '#2563EB' : '#16A34A'};border-radius:16px;padding:12px;background:${midiendo ? '#EFF6FF' : '#F0FDF4'}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div style="min-width:0">
+            <div style="font-size:13px;font-weight:700;color:${midiendo ? '#1D4ED8' : '#166534'}">${midiendo ? 'MIDIENDO' : 'SIGUE'} · ${_prodEsc(arriba.paso)}</div>
+            <div style="font-size:22px;font-weight:700;margin-top:2px;overflow-wrap:anywhere">${_prodEsc(arriba.nombre)}</div>
+            ${tiempo ? `<div style="font-size:13px;color:#6B7280;margin-top:2px">${tiempo}</div>` : ''}
+          </div>
+          ${arriba.esPaso ? '' : `<div style="display:flex;height:44px">${botonI(arriba)}</div>`}
+        </div>${botones}${info(arriba)}
+      </div>
+      <div style="margin-top:8px">${_prodAnotaCaja(bultoId)}</div>`;
+  const filaHecha = o => {
+    const quien = o.rs.length ? [...new Set(o.rs.map(r => r.nombre === '?' ? 'sin nombre' : r.nombre))].join(', ') : '';
+    const propio = !o.esPaso && o.rs.length > 0;
+    return `
         <div style="display:flex;align-items:stretch;gap:6px;margin-top:6px">
-        <button type="button" onclick="${ok ? `prodOperacionDetalle('${bultoId}','${x.id}','${sigue.operacion_id}')` : `prodDetalleTocar('${bultoId}','${x.id}','${sigue.operacion_id}')`}" style="display:flex;flex:1;min-width:0;align-items:center;gap:10px;padding:12px 10px;border:1px solid ${ok ? '#16A34A' : '#D1D5DB'};border-radius:10px;background:${ok ? '#F0FDF4' : '#fff'};font-size:16px;text-align:left;cursor:pointer">
-          <span style="flex:none;width:26px;height:26px;border-radius:50%;border:2px solid ${ok ? '#16A34A' : '#9CA3AF'};background:${ok ? '#16A34A' : '#fff'};color:#fff;text-align:center;line-height:22px;font-weight:700">${ok ? '✓' : ''}</span>
-          <span style="flex:1;min-width:0;font-weight:${ok ? 700 : 400};color:${ok ? '#166534' : '#111'}">${_prodEsc(x.nombre)}${quien ? `<br><span style="font-weight:400;font-size:13px">${_prodEsc(quien)}</span>` : ''}</span>
-          <span style="flex:none;font-size:13px;color:#6B7280">${Math.round(100 * x.min / tot)} %</span>
-        </button>
-        <button type="button" onclick="prodInfoOperacion('${bultoId}','${x.id}')" aria-label="Información de ${_prodEsc(x.nombre)}" style="flex:none;width:44px;border:1px solid ${abierta ? '#2563EB' : '#D1D5DB'};border-radius:10px;background:${abierta ? '#2563EB' : '#fff'};color:${abierta ? '#fff' : '#2563EB'};font-size:18px;font-weight:700;font-style:italic;font-family:Georgia,serif;cursor:pointer">i</button>
-        </div>${abierta ? _prodInfoCaja(bultoId, x, i + 1, det.length, rs) : ''}`;
-    }).join('') + `
-      </div>`;
+          <button type="button" ${propio ? `onclick="prodOperacionDetalle('${bultoId}','${o.id}','${o.pasoId}')"` : 'disabled'} style="display:flex;flex:1;min-width:0;align-items:center;gap:10px;padding:10px;border:1px solid #16A34A;border-radius:10px;background:#F0FDF4;font-size:15px;text-align:left;color:#166534${propio ? ';cursor:pointer' : ''}">
+            <span style="flex:none;font-weight:700">✓</span>
+            <span style="flex:1;min-width:0">${_prodEsc(o.nombre)}${quien ? `<br><span style="font-size:13px">${_prodEsc(quien)}</span>` : ''}</span>
+            ${propio ? '<span style="flex:none;font-size:12px;color:#6B7280">tocar = quitar</span>' : ''}
+          </button>${o.esPaso ? '' : botonI(o)}
+        </div>${info(o)}`;
+  };
+  const filaFalta = o => {
+    const llave = o.falta.length > 0;
+    const accion = llave ? `prodOpConLlave('${_prodEsc(o.falta.join(', ')).replace(/'/g, '')}')` : tocar(o);
+    return `
+        <div style="display:flex;align-items:stretch;gap:6px;margin-top:6px">
+          <button type="button" onclick="${accion}" style="display:flex;flex:1;min-width:0;align-items:center;gap:10px;padding:12px 10px;border:1px solid #D1D5DB;border-radius:10px;background:${llave ? '#F3F4F6' : '#fff'};font-size:16px;text-align:left;color:${llave ? '#6B7280' : '#111'};cursor:pointer">
+            <span style="flex:none;width:26px;height:26px;border-radius:50%;border:2px solid ${llave ? '#D1D5DB' : '#9CA3AF'};background:#fff;text-align:center;line-height:22px;font-size:13px">${llave ? '🔒' : ''}</span>
+            <span style="flex:1;min-width:0">${_prodEsc(o.nombre)}${llave ? `<br><span style="font-size:13px">falta: ${o.falta.length > 3 ? o.falta.length + ' operaciones' : _prodEsc(o.falta.join(', '))}</span>` : ''}</span>
+          </button>${o.esPaso ? '' : botonI(o)}
+        </div>${info(o)}`;
+  };
+  const hechas = ops.filter(o => o.hecha);
+  const resto = faltan.filter(o => o !== arriba);
+  let grupo = '';
+  const lista = resto.map(o => {
+    const titulo = o.paso !== grupo ? `<div style="margin-top:10px;font-size:12px;font-weight:700;color:#6B7280">${_prodEsc(String(o.paso).toUpperCase())}</div>` : '';
+    grupo = o.paso;
+    return titulo + filaFalta(o);
+  }).join('');
+  return tarjeta
+    + (hechas.length ? `
+      <details style="margin-top:12px;border:1px solid #D1D5DB;border-radius:10px;padding:10px;background:#fff">
+        <summary style="cursor:pointer;font-size:15px;font-weight:700;color:#166534">Hechas (${hechas.length} de ${ops.length})</summary>${hechas.map(filaHecha).join('')}
+      </details>` : '')
+    + (resto.length ? `
+      <div style="margin-top:12px;font-size:13px;color:#6B7280">Después faltan ${resto.length}. Las libres se pueden tocar aunque no sean la que sigue.</div>${lista}` : '');
 }
 // Tocar una operación de detalle: la anota (o la quita si ya estaba). Cuando
 // quedan todas las del paso, el bulto pasa solo al paso siguiente.
-async function prodOperacionDetalle(bultoId, opId, pasoId, operariaId = null) {
+async function prodOperacionDetalle(bultoId, opId, pasoId, operariaId = null, segundos = null) {
 
   const llave = bultoId + '|' + opId;
   if (_etapaGuardando.has(llave)) return;
@@ -1220,10 +1406,12 @@ async function prodOperacionDetalle(bultoId, opId, pasoId, operariaId = null) {
     if ((h[opId] || []).length) {
       await supaFetch('produccion_registro_operacion','DELETE',null,`?produccion_bulto_id=eq.${bultoId}&operacion_id=eq.${opId}&tipo=eq.normal`);
     } else {
-      await supaFetch('produccion_registro_operacion','POST',[{
+      const fila = {
         produccion_bulto_id: bultoId, operacion_id: opId, operaria_id: operariaId || null,
         fecha: hoyLocal(), cantidad_realizada: _prodPiezasBulto(bultoId), tipo: 'normal',
-      }]);
+      };
+      if (segundos > 0) fila.segundos = Math.round(segundos);
+      await supaFetch('produccion_registro_operacion','POST',[fila]);
       const todas = (prodDetalleDe[pasoId] || []).every(x => x.id === opId || (h[x.id] || []).length);
       if (todas) {
         const r = await prodGuardarTerminado(bultoId, pasoId, [{ operaria_id: null, cantidad: _prodPiezasBulto(bultoId) }]);
@@ -1262,22 +1450,25 @@ function _prodPanelPasos(bultoId, etapas, sigue, lista) {
   const pasos = _prodLineaPasos(nombres, actual, !!sigue)
     + (pct === null ? '' : `<div style="text-align:center;font-size:13px;color:#6B7280;margin-top:8px">Avance del bulto: <strong style="color:#111">${pct} %</strong></div>`);
   const quienes = sigue ? ((_etapasHaciendo[bultoId] || {})[sigue.operacion_id] || []) : [];
+  // Prendas con operaciones de detalle: arriba va la operación que sigue.
+  const porOps = sigue ? _prodDetallePaso(bultoId, sigue, etapas) : null;
+  const pasoEntero = sigue && porOps !== null ? `<button type="button" onclick="prodPasoSiguiente('${bultoId}','${sigue.operacion_id}')" style="display:block;width:100%;margin-bottom:10px;padding:12px;border:1px solid #16A34A;border-radius:10px;background:#fff;color:#166534;font-size:15px;font-weight:700;cursor:pointer">Dar por terminado todo «${_prodEsc(sigue.operacion_nombre)}» · pasar a ${_prodEsc(nombres[actual + 1])}</button>` : '';
   const medio = prodGuardados.has(bultoId) ? `
       <div style="text-align:center;font-size:19px;font-weight:700;margin:14px 0 2px;color:#6B7280">Este bulto está guardado</div>
-      <button type="button" onclick="prodGuardarBulto('${bultoId}', false)" style="display:block;width:100%;margin-top:12px;padding:16px 10px;border:1px solid #9CA3AF;border-radius:16px;background:#fff;font-size:18px;font-weight:700;cursor:pointer">Sacar de guardado</button>` : sigue ? `
+      <button type="button" onclick="prodGuardarBulto('${bultoId}', false)" style="display:block;width:100%;margin-top:12px;padding:16px 10px;border:1px solid #9CA3AF;border-radius:16px;background:#fff;font-size:18px;font-weight:700;cursor:pointer">Sacar de guardado</button>` : sigue ? (porOps !== null ? porOps : `
       <div style="text-align:center;font-size:19px;font-weight:700;margin:14px 0 2px">Está en: ${_prodEsc(sigue.operacion_nombre)}</div>
       ${quienes.length ? `<div style="text-align:center;font-size:13px;color:#555">${_prodNombres(quienes.map(q => q.operaria_nombre))}</div>` : ''}
       <button type="button" id="paso-btn-${bultoId}" onclick="prodPasoSiguiente('${bultoId}','${sigue.operacion_id}')" style="display:block;width:100%;margin-top:12px;padding:18px 10px;border:0;border-radius:16px;background:${verde};color:#fff;cursor:pointer">
         <div style="font-size:22px;font-weight:700">Terminó ${_prodEsc(sigue.operacion_nombre)}</div>
         <div style="font-size:18px;margin-top:4px">pasar a ${_prodEsc(nombres[actual + 1])} →</div>
-      </button>${_prodDetallePaso(bultoId, sigue, etapas)}` : `
+      </button>`) : `
       <div style="text-align:center;font-size:19px;font-weight:700;margin:14px 0 2px;color:${verde}">Ya pasó por todos los pasos</div>`;
   return `
     <div style="padding:10px 4px 4px">
       ${pasos}${medio}
       <details style="margin-top:12px;border:1px solid #9CA3AF;border-radius:12px;padding:10px;background:#fff">
-        <summary style="cursor:pointer;font-size:14px;text-align:center;color:#374151">Opciones (quién lo hizo · menos piezas · deshacer)</summary>
-        <div style="margin-top:8px">${lista}</div>
+        <summary style="cursor:pointer;font-size:14px;text-align:center;color:#374151">Opciones (paso entero · quién lo hizo · menos piezas · deshacer)</summary>
+        <div style="margin-top:8px">${pasoEntero}${lista}</div>
       </details>
       <button type="button" onclick="abrirEscanerQR()" style="display:block;width:100%;margin-top:10px;padding:14px;border:1px solid #9CA3AF;border-radius:12px;background:#fff;color:${azul};font-size:17px;font-weight:700;cursor:pointer">Escanear otro bulto</button>
     </div>`;
