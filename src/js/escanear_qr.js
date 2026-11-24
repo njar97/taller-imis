@@ -107,6 +107,46 @@ async function abrirEscanerQR() {
   vuelta();
 }
 
+// Lista de bultos mientras se escribe el código: sale desde la primera letra o
+// número y se achica con cada tecla. Tocar uno lo abre.
+let _qrBultos = null, _qrBultosT = 0, _qrBultosP = null;
+function _qrBultosCargar() {
+  if (_qrBultos && Date.now() - _qrBultosT < 120000) return Promise.resolve(_qrBultos);
+  if (!_qrBultosP) {
+    _qrBultosP = supaFetch('vw_produccion_estado', 'GET', null,
+      '?produccion_bulto_id=not.is.null&select=produccion_bulto_id,codigo_bulto,cod_prenda,talla_key_salida,cantidad_original,estado_manual&limit=3000')
+      .then(r => { _qrBultos = r || []; _qrBultosT = Date.now(); return _qrBultos; })
+      .catch(() => _qrBultos || [])
+      .finally(() => { _qrBultosP = null; });
+  }
+  return _qrBultosP;
+}
+async function qrSugerir() {
+  const campo = document.getElementById('qr-codigo'), ops = document.getElementById('qr-opciones');
+  if (!campo || !ops) return;
+  const t = String(campo.value || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+  if (!t) { ops.innerHTML = ''; return; }
+  const todos = await _qrBultosCargar();
+  if (String(campo.value || '').toUpperCase().replace(/[^0-9A-Z]/g, '') !== t) return;   // ya se escribió otra cosa
+  const cod = x => String(x.codigo_bulto || '').split('-')[0].toUpperCase();
+  const lista = todos.filter(x => cod(x).startsWith(t))
+    .sort((a, b) => (a.estado_manual === 'terminado') - (b.estado_manual === 'terminado') || cod(a).length - cod(b).length || cod(a).localeCompare(cod(b)));
+  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  if (!lista.length) { ops.innerHTML = `<div style="padding:10px;color:#ffb4a9;font-size:15px;text-align:center">Ningún bulto empieza con ${esc(t)}.</div>`; return; }
+  ops.innerHTML = lista.slice(0, 12).map(x => {
+    const nombre = (typeof CATALOGO !== 'undefined' && CATALOGO[x.cod_prenda] && CATALOGO[x.cod_prenda].nombre) || x.cod_prenda || '';
+    const talla = (typeof prodTalla2026 === 'function' && prodTalla2026(x.cod_prenda, x.talla_key_salida)) || '';
+    const fin = x.estado_manual === 'terminado';
+    return `<button type="button" onclick="qrAbrirBulto('${x.produccion_bulto_id}')" style="display:flex;width:100%;align-items:center;gap:10px;margin-top:6px;padding:12px;border:0;border-radius:12px;background:${fin ? '#D1D5DB' : '#fff'};font-size:16px;text-align:left;cursor:pointer"><strong style="flex:none;font-size:18px">${esc(cod(x))}</strong><span style="flex:1;min-width:0;color:#374151">${esc(nombre)} ${esc(talla)} · ${Number(x.cantidad_original) || 0}${fin ? ' · ya terminado' : ''}</span></button>`;
+  }).join('') + (lista.length > 12 ? `<div style="padding:8px;color:#fff;font-size:13px;text-align:center">y ${lista.length - 12} más: siga escribiendo</div>` : '');
+}
+function qrAbrirBulto(id) {
+  cerrarEscanerQR();
+  window._prodHintCodigo = null;
+  window._prodHintBulto = String(id).toLowerCase().slice(0, 12);
+  prodEntrarPorEnlace();
+}
+
 // Etiqueta caída o sin QR: se escribe el código del bulto (3BA, KCH) y se abre
 // igual que si se hubiera escaneado.
 function qrAbrirPorCodigo() {
