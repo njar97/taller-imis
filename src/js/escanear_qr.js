@@ -36,6 +36,7 @@ async function abrirEscanerQR() {
   const video = document.getElementById('qr-video');
   if (!modal || !video || _qr.activo) return;
   modal.style.display = 'flex';
+  _qrBultosCargar();   // la lista de códigos queda lista antes de escribir
   _qrMsg('Abriendo la cámara…');
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     _qrMsg('Este aparato no deja usar la cámara desde la app.', true);
@@ -126,6 +127,7 @@ async function qrSugerir() {
   if (!campo || !ops) return;
   const t = String(campo.value || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
   if (!t) { ops.innerHTML = ''; return; }
+  if (!_qrBultos) ops.innerHTML = '<div style="padding:10px;color:#fff;font-size:15px;text-align:center">Buscando…</div>';
   const todos = await _qrBultosCargar();
   if (String(campo.value || '').toUpperCase().replace(/[^0-9A-Z]/g, '') !== t) return;   // ya se escribió otra cosa
   const cod = x => String(x.codigo_bulto || '').split('-')[0].toUpperCase();
