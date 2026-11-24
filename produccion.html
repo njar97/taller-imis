@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-23 23:44 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-24 06:13 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -3449,6 +3449,16 @@ function authToken() {
 // Token del usuario garantizado VIGENTE: consulta al SDK, que refresca si
 // expiró. Usar en llamadas que exigen JWT válido (Edge Functions, Storage) —
 // la variable supaSession puede quedar vencida si la PWA estuvo en background.
+// Pide una sesión nueva con el refresh token. Devuelve el token nuevo o null.
+async function authRenovar() {
+  try {
+    if (!supaClient) return null;
+    const { data, error } = await supaClient.auth.refreshSession();
+    if (error || !data || !data.session) return null;
+    supaSession = data.session;
+    return data.session.access_token;
+  } catch (_e) { return null; }
+}
 async function authTokenFresh() {
   try {
     if (supaClient) {
@@ -4112,13 +4122,22 @@ function mostrarAyudasOtraVez() {
 // ══════════════════════════════════════════════════════════════════════
 async function supaFetch(table, method = 'GET', body = null, params = '') {
   const url = `${SUPA_URL}/rest/v1/${table}${params}`;
-  const tok = authToken() || SUPA_KEY;
-  const opts = {
-    method,
-    headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}`, 'Prefer': method === 'POST' ? 'return=representation' : '' }
+  // El token guardado puede estar vencido si la app estuvo en segundo plano:
+  // se pide siempre el vigente (el SDK lo renueva si hace falta).
+  const armar = tok => {
+    const o = {
+      method,
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok || SUPA_KEY}`, 'Prefer': method === 'POST' ? 'return=representation' : '' }
+    };
+    if (body) o.body = JSON.stringify(body);
+    return o;
   };
-  if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(url, opts);
+  let res = await fetch(url, armar(await authTokenFresh()));
+  // 401 con sesión: antes de sacar a la persona, renovar la sesión y reintentar una vez.
+  if (res.status === 401 && authToken()) {
+    const nuevo = await authRenovar();
+    if (nuevo) res = await fetch(url, armar(nuevo));
+  }
   if (!res.ok) {
     const errText = await res.text();
     // 401 = token expirado o inválido. En vez de mostrar "JWT expired"
@@ -4260,7 +4279,7 @@ async function tiSWR(cacheKey, fetchFn, onData, opts = {}) {
 async function supaUploadFoto(file, trazoId) {
   const ext = file.name.split('.').pop();
   const path = `${trazoId}.${ext}`;
-  const tok = authToken() || SUPA_KEY;
+  const tok = (await authTokenFresh()) || SUPA_KEY;
   const res = await fetch(`${SUPA_URL}/storage/v1/object/trazo-fotos/${path}`, {
     method: 'POST',
     headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}`, 'Content-Type': file.type },
@@ -4271,7 +4290,7 @@ async function supaUploadFoto(file, trazoId) {
 }
 
 async function supaUpdate(table, id, data) {
-  const tok = authToken() || SUPA_KEY;
+  const tok = (await authTokenFresh()) || SUPA_KEY;
   const res = await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}` },
@@ -4473,7 +4492,7 @@ async function doSetNewPassword(ev) {
 async function doLogout() {
   try {
     const cli = initSupaClient();
-    if (cli) await cli.auth.signOut();
+    if (cli) await cli.auth.signOut({ scope: 'local' });
   } catch (e) { /* ignore */ }
   // Limpiar cache local de datos para que el próximo login no vea
   // info del usuario anterior (en caso de uso compartido del browser).
