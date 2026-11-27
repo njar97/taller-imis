@@ -1389,23 +1389,6 @@ async function guardarSalida() {
   }
 }
 
-// ─── Hook: registrar entrada al terminar bulto ──────────────────────
-// Se llama desde producción cuando un bulto pasa a "terminado"
-async function registrarEntradaBodegaPorBulto(bulto) {
-  if (!bulto || !bulto.cod_prenda || !bulto.talla_salida || !bulto.cantidad_final) return;
-  try {
-    await supaFetch('bodega_movimiento', 'POST', {
-      tipo: 'ENTRADA_PRODUCCION',
-      cod_prenda: bulto.cod_prenda,
-      // Siempre con el nombre de la prenda: la bodega agrupa por código + nombre +
-      // talla, y una entrada sin nombre salía en renglón aparte de su talla.
-      nombre_prenda: bulto.nombre_prenda || prendaCanon(bulto.cod_prenda) || null,
-      talla_key: bulto.talla_salida,
-      cantidad: bulto.cantidad_final,
-      produccion_bulto_id: bulto.id,
-      observaciones: `Bulto ${bulto.codigo_bulto || bulto.id.slice(0,6)} terminado`
-    });
-  } catch(e) {
-    console.warn('No se pudo registrar entrada bodega:', e.message);
-  }
-}
+// La entrada a bodega al terminar un bulto ya no se hace desde aquí: la hace la
+// base junto con el «terminado» (función terminar_bulto, v3.53), todo o nada.
+// Siempre lleva el nombre de la prenda: la bodega agrupa por código + nombre + talla.
