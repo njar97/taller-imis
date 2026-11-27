@@ -1058,3 +1058,11 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
 .etq-aviso { display: flex; gap: 8px; align-items: flex-start; background: #EEF3F8; border-left: 4px solid var(--azul2); border-radius: 6px; padding: 10px; font-size: 14px; color: #2B3A4A; }
 .etq-aviso .ico { flex: none; margin-top: 2px; }
 .etq-cambio { display: block; border: 0; background: none; font: inherit; font-size: 12px; color: #778; text-decoration: underline; padding: 0; margin-top: 10px; min-height: 32px; cursor: pointer; }
+.etq-foco-caja { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 6px; }
+.etq-foco-caja:empty { display: none; }
+.etq-foco { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #445; }
+.etq-foco i { width: 10px; height: 10px; border-radius: 50%; background: #AEB8C2; flex: none; }
+.etq-foco.verde { color: #0B6B35; } .etq-foco.verde i { background: #12A150; }
+.etq-foco.ambar { color: #8A5A00; } .etq-foco.ambar i { background: #E0A526; }
+.etq-foco.rojo { color: #B42318; font-size: 14px; } .etq-foco.rojo i { background: #D92D20; }
+.etq-enlaces button:disabled, .etq-pie button:disabled { color: #AEB8C2; cursor: default; }

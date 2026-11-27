@@ -204,7 +204,8 @@ function etqRender() {
     cv.className = 'etq-canvas';
     prev.appendChild(cv);
   }
-  etqPintarN();
+  etqPintarFoco();
+  etqVigilarImpresora();
 }
 
 // ── ¿Este aparato tiene la impresora? ──
@@ -223,6 +224,91 @@ function etqPonerImpresora(si) {
   etq.reponer = null;
   etqRender();
 }
+// ── ¿La impresora está lista? ──
+// Una página web no puede ver las impresoras. En la compu del taller corre un
+// ayudante (herramientas/ayudante_etiquetas) que lee el estado que da Windows
+// y contesta en http://127.0.0.1:17651/estado. Si dice que la impresora está
+// apagada, desconectada o con error, NO se manda nada ni se anota ningún
+// número. Si el ayudante no contesta, se avisa y se deja imprimir como antes.
+const ETQ_AYUDANTE = 'http://127.0.0.1:17651/estado';
+const ETQ_IMP_MALA = ['desconectada', 'error', 'no_instalada'];
+let etqImp = { estado: null, mensaje: '', t: 0, reloj: null, enCurso: null, modo: null };
+function etqImpresoraMala() { return ETQ_IMP_MALA.includes(etqImp.estado); }
+// Formas de pedirle al ayudante: Chrome nuevo exige decir que la dirección es
+// de esta misma computadora. Se recuerda la que funcionó.
+const ETQ_MODOS = [{}, { targetAddressSpace: 'loopback' }, { targetAddressSpace: 'local' }];
+async function etqPreguntarAyudante() {
+  const pedir = async extra => {
+    const ctl = new AbortController(), tope = setTimeout(() => ctl.abort(), 1500);
+    try {
+      const r = await fetch(ETQ_AYUDANTE, { cache: 'no-store', signal: ctl.signal, ...extra });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return await r.json();
+    } finally { clearTimeout(tope); }
+  };
+  if (etqImp.modo != null) {
+    try { return await pedir(ETQ_MODOS[etqImp.modo]); } catch (_) { etqImp.modo = null; }
+  }
+  let ultimo;
+  for (let i = 0; i < ETQ_MODOS.length; i++) {
+    try { const j = await pedir(ETQ_MODOS[i]); etqImp.modo = i; return j; } catch (e) { ultimo = e; }
+  }
+  throw ultimo;
+}
+// Revisa la impresora y repinta el aviso. Devuelve true si se puede imprimir.
+// Si ya hay una revisión en camino se espera esa (no se cruzan respuestas).
+function etqRevisarImpresora() {
+  if (!etqTieneImpresora()) return Promise.resolve(false);
+  if (etqImp.enCurso) return etqImp.enCurso;
+  etqImp.enCurso = (async () => {
+    let nuevo;
+    try {
+      const j = await etqPreguntarAyudante();
+      nuevo = { estado: j.estado || 'error', mensaje: j.mensaje || '' };
+    } catch (_) {
+      nuevo = { estado: 'sin_ayudante', mensaje: 'No se pudo revisar la impresora' };
+    }
+    etqImp.estado = nuevo.estado; etqImp.mensaje = nuevo.mensaje; etqImp.t = Date.now();
+    etqImp.enCurso = null;
+    etqPintarFoco();
+    return !etqImpresoraMala();
+  })();
+  return etqImp.enCurso;
+}
+// Revisión fresca justo antes de mandar algo.
+async function etqRevisarAhora() {
+  if (etqImp.enCurso) await etqImp.enCurso;
+  return etqRevisarImpresora();
+}
+function etqFocoHtml() {
+  if (!etqTieneImpresora()) return '';
+  const e = etqImp.estado;
+  const clase = !e ? 'gris' : e === 'lista' ? 'verde' : e === 'sin_ayudante' ? 'ambar' : 'rojo';
+  const txt = !e ? 'Revisando la impresora…' : e === 'lista' ? 'Impresora lista' : etqImp.mensaje || 'La impresora no está lista';
+  return `<span class="etq-foco ${clase}"><i aria-hidden="true"></i>${etqEsc(txt)}${clase === 'rojo' ? ' · no se manda nada' : ''}</span>
+    ${clase === 'verde' || clase === 'gris' ? '' : '<button type="button" class="etq-chip" onclick="etqRevisarImpresora()">Revisar otra vez</button>'}`;
+}
+// Repinta solo el aviso y los botones (sin redibujar la pantalla ni perder lo escrito).
+function etqPintarFoco() {
+  const c = document.getElementById('etq-foco');
+  if (c) c.innerHTML = etqFocoHtml();
+  etqPintarN();
+  const mala = etqImpresoraMala();
+  document.querySelectorAll('.etq-necesita-impresora').forEach(b => { b.disabled = mala || etq.ocupado; });
+  const br = document.getElementById('etq-btn-reponer');
+  if (br) br.disabled = mala || !etq.reponer || !etq.reponer.size;
+}
+// Mientras la pantalla de etiquetas está abierta, revisa cada 6 segundos.
+function etqVigilarImpresora() {
+  if (etqImp.reloj || !etqTieneImpresora()) return;
+  etqRevisarImpresora();
+  etqImp.reloj = setInterval(() => {
+    const v = document.getElementById('view-etiquetas');
+    if (!v || !v.classList.contains('active')) { clearInterval(etqImp.reloj); etqImp.reloj = null; return; }
+    if (document.visibilityState === 'visible' && !etq.ocupado) etqRevisarImpresora();
+  }, 6000);
+}
+
 function etqSinImpresoraHtml() {
   return `<div class="etq-aviso">${etqIco('imprimir')}<span>Aquí solo se ve la cuenta. Las etiquetas se imprimen en la <strong>computadora del taller</strong>, que es la que tiene la impresora.</span></div>`;
 }
@@ -282,6 +368,7 @@ function etqListaHtml() {
       <span class="etq-barra"><i style="width:${totB ? totI * 100 / totB : 0}%"></i></span></div>` : ''}
     ${p && !p.codigo_mined ? etqFaltaCodigoHtml(p) : ''}
     ${etq.recien ? etqRecienHtml() : ''}
+    <div id="etq-foco" class="etq-foco-caja"></div>
     <div class="etq-buscar">
       <span class="etq-buscar-caja">${etqIco('buscar')}
         <input type="search" id="etq-busca" value="${etqEsc(etq.busca)}" placeholder="Buscar: pantalón 16" autocomplete="off" enterkeyhint="go"
@@ -401,10 +488,11 @@ function etqTallaHtml(f) {
       <span class="etq-barra"><i style="width:${pct}%"></i></span></div>
     ${etq.recien ? etqRecienHtml() : ''}
     <div id="etq-vista" class="etq-vista" aria-label="Así sale la etiqueta que sigue"></div>
+    <div id="etq-foco" class="etq-foco-caja"></div>
     ${etq.recien || etq.reponer ? '' : imprimir}
     ${etq.recien ? '' : (etq.reponer ? etqReponerHtml(f) : `
     <div class="etq-enlaces">
-      ${puedeReponer ? `<button type="button" onclick="etqReponerAbrir()">${etqIco('recargar')} Reponer una</button>` : ''}
+      ${puedeReponer ? `<button type="button" class="etq-necesita-impresora" onclick="etqReponerAbrir()">${etqIco('recargar')} Reponer una</button>` : ''}
       ${etq.hist.length ? `<button type="button" onclick="etqVerHist()">${etqIco('lista')} ${etq.verHist ? 'Ocultar' : 'Ver'} lo impreso</button>` : ''}
     </div>`)}
     ${hist}
@@ -476,7 +564,7 @@ function etqRecienHtml() {
     <div class="etq-recien problema" role="status">
       <span><strong>¿Qué pasó?</strong> ${etqEsc(r.titulo)} · ${cuales}</span>
       <div class="etq-pie">
-        <button type="button" class="btn btn-ghost" onclick="etqMandarDeNuevo()">Mandar otra vez</button>
+        <button type="button" class="btn btn-ghost etq-necesita-impresora" onclick="etqMandarDeNuevo()">Mandar otra vez</button>
         <button type="button" class="btn btn-ghost" onclick="etqCorregir('${r.id}', null)">No salió ninguna</button>
         <button type="button" class="btn btn-ghost" onclick="etqRecienVolver()">Volver</button>
       </div>
@@ -531,7 +619,7 @@ function etqPintarN() {
   const tit = document.getElementById('etq-btn-tit'), sub = document.getElementById('etq-btn-sub');
   if (!tit || !sub) return;
   const n = etq.n;
-  btn.disabled = !n || etq.ocupado;
+  btn.disabled = !n || etq.ocupado || etqImpresoraMala();
   if (etq.ocupado) { tit.textContent = 'Mandando a la impresora…'; sub.textContent = ''; }
   else if (!n) { tit.textContent = `Escribí de 1 a ${etqTope()}`; sub.textContent = ''; }
   else {
@@ -550,6 +638,7 @@ async function etqImprimirSiguientes() {
   if (etq.recien) { showToast('Primero decí si la tanda anterior salió bien', 'warn'); return; }
   etq.ocupado = true; etqPintarN();
   try {
+    if (!(await etqRevisarAhora())) { showToast((etqImp.mensaje || 'La impresora no está lista') + '. No se mandó nada.', 'error', 8000); return; }
     const r = await supaFetch('rpc/etiqueta_bolsa_imprimir', 'POST', {
       p_temporada: etq.temporadaId, p_proveedor: f.proveedor_id,
       p_prenda: f.prenda, p_color: f.color, p_talla: f.talla, p_n: n,
@@ -586,6 +675,7 @@ async function etqReponer() {
   const nums = [...etq.reponer].sort((a, b) => a - b);
   etq.ocupado = true;
   try {
+    if (!(await etqRevisarAhora())) { showToast((etqImp.mensaje || 'La impresora no está lista') + '. No se mandó nada.', 'error', 8000); return; }
     const r = await supaFetch('rpc/etiqueta_bolsa_reponer', 'POST', {
       p_temporada: etq.temporadaId, p_proveedor: f.proveedor_id,
       p_prenda: f.prenda, p_color: f.color, p_talla: f.talla, p_controles: nums,
@@ -609,6 +699,7 @@ function etqRecienTocar(c) { if (etq.recien) { etq.recien.ultimaBuena = etq.reci
 async function etqMandarDeNuevo() {
   const r = etq.recien;
   if (!r) return;
+  if (!(await etqRevisarAhora())) { showToast((etqImp.mensaje || 'La impresora no está lista') + '. No se mandó nada.', 'error', 8000); return; }
   try { await etqMandarAImpresora(r.fila, r.nums); r.problema = false; etqRender(); }
   catch (e) { showToast('No se pudo imprimir: ' + e.message, 'error'); }
 }
