@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-27 14:54 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-27 15:14 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -27649,27 +27649,22 @@ function etqRender() {
 }
 
 // ── ¿Este aparato tiene la impresora? ──
-// La Brother está por USB en la computadora del taller. En un celular no se
-// imprime ni se anota nada: solo se ve la cuenta. Se puede cambiar a mano
-// (queda guardado en ese aparato).
-function etqTieneImpresora() {
-  let v = null;
-  try { v = localStorage.getItem('etq-impresora'); } catch (_) { /* sin almacenamiento */ }
-  if (v === '1') return true;
-  if (v === '0') return false;
+// Imprime SOLO el aparato donde contesta el ayudante de etiquetas (la compu del
+// taller, que tiene la Brother por USB). Un celular no lo tiene: ahí solo se ve
+// la cuenta y el estado de la impresora del taller, y no se anota nada.
+// A los celulares ni se les pregunta (evita el aviso de «red local»).
+function etqPuedeTenerImpresora() {
   return !/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
 }
-function etqPonerImpresora(si) {
-  try { localStorage.setItem('etq-impresora', si ? '1' : '0'); } catch (_) { /* nada */ }
-  etq.reponer = null;
-  etqRender();
+function etqTieneImpresora() {
+  return etqPuedeTenerImpresora() && etqImp.directo && !!etqImp.estado && etqImp.estado !== 'sin_ayudante';
 }
 // ── ¿La impresora está lista? ──
 // Una página web no puede ver las impresoras. En la compu del taller corre un
 // ayudante (herramientas/ayudante_etiquetas) que lee el estado que da Windows
 // y contesta en http://127.0.0.1:17651/estado. Si dice que la impresora está
 // apagada, desconectada o con error, NO se manda nada ni se anota ningún
-// número. Si el ayudante no contesta, se avisa y se deja imprimir como antes.
+// número. Si el ayudante no contesta, este aparato no imprime.
 const ETQ_AYUDANTE = 'http://127.0.0.1:17651/estado';
 const ETQ_AYUDANTE_IMPRIMIR = 'http://127.0.0.1:17651/imprimir';
 const ETQ_TANDA_DIRECTA = 100;   // etiquetas por envío al ayudante
@@ -27700,8 +27695,9 @@ async function etqPreguntarAyudante() {
 // Revisa la impresora y repinta el aviso. Devuelve true si se puede imprimir.
 // Si ya hay una revisión en camino se espera esa (no se cruzan respuestas).
 function etqRevisarImpresora() {
-  if (!etqTieneImpresora()) return Promise.resolve(false);
+  if (!etqPuedeTenerImpresora()) return Promise.resolve(false);
   if (etqImp.enCurso) return etqImp.enCurso;
+  const antes = etqTieneImpresora(), primera = !etqImp.estado;
   etqImp.enCurso = (async () => {
     let nuevo;
     try {
@@ -27714,8 +27710,9 @@ function etqRevisarImpresora() {
     }
     etqImp.estado = nuevo.estado; etqImp.mensaje = nuevo.mensaje; etqImp.t = Date.now();
     etqImp.enCurso = null;
-    etqPintarFoco();
-    return !etqImpresoraMala();
+    if ((etqTieneImpresora() !== antes || primera) && !etq.ocupado && !etq.reponer) etqRender();
+    else etqPintarFoco();
+    return etqTieneImpresora() && !etqImpresoraMala();
   })();
   return etqImp.enCurso;
 }
@@ -27753,10 +27750,9 @@ async function etqRevisarAhora() {
 }
 function etqFocoHtml() {
   const e = etqImp.estado;
-  if (!etqTieneImpresora() || e === 'sin_ayudante') {
+  if (!etqTieneImpresora()) {
     const r = etqRemotoTexto();
-    const sinAyudante = etqTieneImpresora() ? ' · esta compu no pudo revisarla sola' : '';
-    return `<span class="etq-foco ${r.clase}"><i aria-hidden="true"></i>${etqEsc(r.txt)}${etqEsc(sinAyudante)}</span>
+    return `<span class="etq-foco ${r.clase}"><i aria-hidden="true"></i>${etqEsc(r.txt)}</span>
       <button type="button" class="etq-chip" onclick="etqRevisarTodo()">Revisar</button>`;
   }
   const clase = !e ? 'gris' : e === 'lista' ? 'verde' : 'rojo';
@@ -27764,7 +27760,7 @@ function etqFocoHtml() {
   return `<span class="etq-foco ${clase}"><i aria-hidden="true"></i>${etqEsc(txt)}${clase === 'rojo' ? ' · no se manda nada' : ''}</span>
     ${clase === 'rojo' ? '<button type="button" class="etq-chip" onclick="etqRevisarTodo()">Revisar otra vez</button>' : ''}`;
 }
-function etqRevisarTodo() { etqLeerRemoto(); if (etqTieneImpresora()) etqRevisarImpresora(); }
+function etqRevisarTodo() { etqLeerRemoto(); if (etqPuedeTenerImpresora()) etqRevisarImpresora(); }
 // Repinta solo el aviso y los botones (sin redibujar la pantalla ni perder lo escrito).
 function etqPintarFoco() {
   const c = document.getElementById('etq-foco');
@@ -27785,18 +27781,16 @@ function etqVigilarImpresora() {
     if (!v || !v.classList.contains('active')) { clearInterval(etqImp.reloj); etqImp.reloj = null; return; }
     if (document.visibilityState !== 'visible' || etq.ocupado) return;
     vuelta++;
-    if (etqTieneImpresora()) etqRevisarImpresora();
+    if (etqPuedeTenerImpresora()) etqRevisarImpresora();
     if (vuelta % 3 === 0 || !etqTieneImpresora()) { if (Date.now() - etqRem.t > 18000) etqLeerRemoto(); else etqPintarFoco(); }
   }, 6000);
 }
 
 function etqSinImpresoraHtml() {
-  return `<div class="etq-aviso">${etqIco('imprimir')}<span>Aquí solo se ve la cuenta. Las etiquetas se imprimen en la <strong>computadora del taller</strong>, que es la que tiene la impresora.</span></div>`;
-}
-function etqCambioImpresoraHtml() {
-  return etqTieneImpresora()
-    ? `<button type="button" class="etq-cambio" onclick="etqPonerImpresora(false)">Este aparato no tiene la impresora de etiquetas</button>`
-    : `<button type="button" class="etq-cambio" onclick="etqPonerImpresora(true)">Este aparato sí tiene la impresora de etiquetas</button>`;
+  const txt = etqPuedeTenerImpresora() && !etqImp.estado
+    ? 'Buscando la impresora en esta computadora…'
+    : 'Aquí solo se ve la cuenta. Las etiquetas se imprimen en la <strong>computadora del taller</strong>, que es la que tiene la impresora.';
+  return `<div class="etq-aviso">${etqIco('imprimir')}<span>${txt}</span></div>`;
 }
 
 // ── Vista 1: empresa y sus prendas ──
@@ -27976,8 +27970,7 @@ function etqTallaHtml(f) {
       ${puedeReponer ? `<button type="button" class="etq-necesita-impresora" onclick="etqReponerAbrir()">${etqIco('recargar')} Reponer una</button>` : ''}
       ${etq.hist.length ? `<button type="button" onclick="etqVerHist()">${etqIco('lista')} ${etq.verHist ? 'Ocultar' : 'Ver'} lo impreso</button>` : ''}
     </div>`)}
-    ${hist}
-    ${etq.recien || etq.reponer ? '' : etqCambioImpresoraHtml()}`;
+    ${hist}`;
 }
 
 // Reponer: se tocan los números ya impresos.
@@ -28114,7 +28107,7 @@ async function etqImprimirSiguientes() {
   const f = etqFila();
   if (!f || etq.ocupado) return;
   const n = etq.n;
-  if (!etqTieneImpresora()) { showToast('Las etiquetas se imprimen en la computadora del taller', 'warn'); return; }
+  if (!etqTieneImpresora()) { showToast('Las etiquetas se imprimen en la computadora del taller, que es la que tiene la impresora', 'warn'); return; }
   if (!n) { showToast('Poné cuántas etiquetas', 'warn'); return; }
   if (etq.recien) { showToast('Primero decí si la tanda anterior salió bien', 'warn'); return; }
   etq.ocupado = true; etqPintarN();
@@ -28160,7 +28153,7 @@ function etqReponerTocar(c, btn) {
 async function etqReponer() {
   const f = etqFila();
   if (!f || etq.ocupado || !etq.reponer || !etq.reponer.size) return;
-  if (!etqTieneImpresora()) { showToast('Las etiquetas se imprimen en la computadora del taller', 'warn'); return; }
+  if (!etqTieneImpresora()) { showToast('Las etiquetas se imprimen en la computadora del taller, que es la que tiene la impresora', 'warn'); return; }
   const nums = [...etq.reponer].sort((a, b) => a - b);
   etq.ocupado = true;
   try {
@@ -28252,10 +28245,15 @@ function etqHojaHtml(fila, nums) {
 }
 
 // Manda las etiquetas a la Brother. Si el ayudante de la compu del taller
-// contesta, van DIRECTO (sin cuadro de imprimir ni elegir papel). Si no, se
-// abre el cuadro de imprimir del navegador como respaldo.
+// contesta, van DIRECTO (sin cuadro de imprimir ni elegir papel). Si no
+// contesta, no se manda nada.
 function etqMandarAImpresora(fila, nums) {
-  return etqImp.directo && etqImp.estado !== 'sin_ayudante' ? etqMandarDirecto(fila, nums) : etqMandarPorNavegador(fila, nums);
+  if (!etqTieneImpresora()) {
+    const err = new Error('Esta computadora no tiene la impresora de etiquetas');
+    err.directo = true; err.enviadas = 0;
+    return Promise.reject(err);
+  }
+  return etqMandarDirecto(fila, nums);
 }
 // Directo: imágenes de 382 × 156 al ayudante, de a 100. Si falla a medias,
 // el error dice cuántas alcanzaron a mandarse (err.enviadas).
@@ -28280,31 +28278,6 @@ async function etqMandarDirecto(fila, nums) {
     throw err;
   }
   etqRevisarImpresora();
-}
-function etqMandarPorNavegador(fila, nums) {
-  return new Promise((resolve, reject) => {
-    let viejo = document.getElementById('etq-iframe');
-    if (viejo) viejo.remove();
-    const iframe = document.createElement('iframe');
-    iframe.id = 'etq-iframe';
-    iframe.setAttribute('aria-hidden', 'true');
-    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
-    document.body.appendChild(iframe);
-    let html;
-    try { html = etqHojaHtml(fila, nums); } catch (e) { reject(e); return; }
-    const doc = iframe.contentWindow.document;
-    doc.open(); doc.write(html); doc.close();
-    const imprimir = () => {
-      try {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-        resolve();
-      } catch (e) { reject(e); }
-    };
-    const imgs = [...doc.images];
-    Promise.all(imgs.map(i => i.complete ? null : new Promise(ok => { i.onload = i.onerror = ok; })))
-      .then(() => setTimeout(imprimir, 150));
-  });
 }
 
 // +++++++++++++++++++ atras.js +++++++++++++++++++

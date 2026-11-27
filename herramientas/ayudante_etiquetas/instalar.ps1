@@ -15,6 +15,12 @@ $inicio = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 $ajustes = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
 Register-ScheduledTask -TaskName $tarea -Action $accion -Trigger $inicio -Settings $ajustes -Description 'Le dice a la app de uniformes si la impresora de etiquetas está lista (solo lectura, solo esta computadora).' -Force | Out-Null
 Stop-ScheduledTask -TaskName $tarea -ErrorAction SilentlyContinue
+# Al actualizar: esperar a que el ayudante viejo suelte el puerto (si no, el
+# nuevo cree que «ya está corriendo» y se cierra).
+for ($i = 0; $i -lt 40; $i++) {
+  if (-not (Get-NetTCPConnection -LocalPort $Puerto -State Listen -ErrorAction SilentlyContinue)) { break }
+  Start-Sleep -Milliseconds 500
+}
 Start-ScheduledTask -TaskName $tarea
 Start-Sleep -Seconds 3
 try {
