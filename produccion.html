@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-27 12:27 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-27 12:35 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1029,9 +1029,14 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
 .etq-guia { font-size: 12px; color: #778; margin: 8px 0 4px; }
 .etq-nota { font-size: 12px; color: #778; margin-top: 8px; }
 .etq-punto { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid #8A94A3; flex: none; margin-right: 6px; vertical-align: -1px; }
-.etq-ren { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-top: 1px solid #EEF1F4; }
-.etq-ren-nom { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; }
-.etq-ren-tallas { display: flex; gap: 6px; flex: none; }
+.etq-ren { border-top: 1px solid #EEF1F4; }
+.etq-ren-nom { width: 100%; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 2px; }
+.etq-ren-nom > span { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; }
+.etq-ren-nom small { font-size: 13px; color: #667; }
+.etq-flecha { width: 8px; height: 8px; border-right: 2px solid #8A94A3; border-bottom: 2px solid #8A94A3; transform: rotate(45deg); margin: 0 4px 3px 2px; flex: none; }
+.etq-ren.abierta .etq-flecha { transform: rotate(-135deg); margin-bottom: -3px; }
+.etq-ren.abierta { background: #F6F9FC; }
+.etq-ren-tallas { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 2px 8px 20px; }
 .etq-t { border: 1px solid #C9D3DE; background: white; border-radius: 8px; font: inherit; font-size: 13px; color: #556; min-width: 78px; min-height: 40px; padding: 0 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: space-between; gap: 6px; }
 .etq-t b { font-size: 15px; color: var(--azul); }
 .etq-t.empezada { background: #FFF4D6; border-color: #E0A526; }
@@ -1066,6 +1071,14 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
 .etq-si, .etq-no { border-radius: 8px; font: inherit; font-size: 15px; font-weight: 700; min-height: 44px; padding: 0 18px; cursor: pointer; }
 .etq-si { border: 0; background: #12A150; color: white; }
 .etq-no { background: white; color: #B42318; border: 1px solid #E3A29B; }
+.etq-buscar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 6px 0 4px; }
+.etq-buscar-caja { flex: 1; min-width: 170px; display: flex; align-items: center; gap: 6px; border: 1px solid #C9D3DE; border-radius: 8px; padding: 0 8px; background: white; color: #778; }
+.etq-buscar-caja:focus-within { border-color: var(--azul2); box-shadow: 0 0 0 3px rgba(46,117,182,0.15); }
+.etq-buscar-caja input { border: 0 !important; box-shadow: none !important; outline: none; padding: 0; height: 38px; flex: 1; min-width: 0; font-size: 15px; background: transparent; }
+.etq-tipos { display: flex; gap: 4px; flex-wrap: wrap; }
+.etq-seguir { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 6px 0; font-size: 12px; color: #778; }
+.etq-seguir button { border: 1px solid #E0A526; background: #FFF4D6; border-radius: 8px; font: inherit; font-size: 13px; color: #2B3A4A; min-height: 36px; padding: 0 10px; cursor: pointer; }
+.etq-seguir button b { color: var(--azul); }
 
 </style>
 </head>
@@ -27429,6 +27442,9 @@ let etq = {
   n: null,            // cuántas se van a imprimir
   reponer: null,      // números tocados para reponer (null = cerrado)
   verHist: false,
+  busca: '',          // lo escrito en el buscador
+  tipo: null,         // selector de prenda: CAMISA, PANTALÓN, FALDA, SHORT (null = todas)
+  abierta: null,      // prenda desplegada en la lista (una a la vez)
   ocupado: false,
 };
 
@@ -27611,30 +27627,41 @@ function etqRender() {
 }
 
 // ── Vista 1: empresa y sus prendas ──
-// Compacta: una línea por prenda, con sus tallas al lado.
+// Compacta: buscador + selector de prenda arriba; una línea por prenda con
+// sus tallas al lado.
+function etqSinTilde(t) { return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+function etqTipo(f) { return f.prenda.split(' ')[0]; }   // CAMISA, PANTALÓN, FALDA, SHORT
+// Tallas de la empresa elegida que pasan el selector y lo escrito en el buscador.
+// «pan 16» → pantalones talla 16. Un número solo busca esa talla exacta.
+function etqFiltradas() {
+  const palabras = etqSinTilde(etq.busca).split(/\s+/).filter(Boolean);
+  return etq.cuenta.filter(f => {
+    if (f.proveedor_id !== etq.emp || !f.activo) return false;
+    if (etq.tipo && etqTipo(f) !== etq.tipo) return false;
+    const texto = etqSinTilde(`${f.prenda} ${f.color}`), num = f.talla.replace(/\D/g, '');
+    return palabras.every(w => /^t?\d+$/.test(w) ? w.replace('t', '') === num : texto.includes(w));
+  });
+}
+
 function etqListaHtml() {
   const p = etqProv();
   const filas = etq.cuenta.filter(f => f.proveedor_id === etq.emp);
   const activas = filas.filter(f => f.activo), pend = filas.filter(f => !f.activo);
   const totB = activas.reduce((s, f) => s + f.bolsas, 0), totI = activas.reduce((s, f) => s + f.ultimo, 0);
   const ayuda = typeof ayudaHtml === 'function'
-    ? ayudaHtml('etiquetas', 'Cada bolsa lleva una etiqueta con su número. Tocá la empresa y después la talla de la prenda: ahí se imprimen las que faltan y se repone la que se dañó o se perdió. El número al lado de la talla es cuántas faltan. Se imprime desde la computadora del taller, que es la que tiene la impresora de etiquetas.')
+    ? ayudaHtml('etiquetas', 'Cada bolsa lleva una etiqueta con su número. Elegí la empresa, y buscá la prenda: escribí por ejemplo «pantalón 16» o tocá Camisa, Pantalón, Falda o Short. Después tocá la talla: ahí se imprimen las que faltan y se repone la que se dañó o se perdió. El número al lado de la talla es cuántas faltan. Se imprime desde la computadora del taller, que es la que tiene la impresora de etiquetas.')
     : '';
 
   const empresas = etq.provs.map(x => `<button type="button" class="${x.id === etq.emp ? 'activa' : ''}" aria-pressed="${x.id === etq.emp}"
       onclick="etqElegirEmpresa('${x.id}')">${etqEsc(ETQ_EMPRESA[x.codigo] || x.codigo)}</button>`).join('');
 
-  const grupos = new Map();
-  for (const f of activas) {
-    const k = `${f.prenda}|${f.color}`;
-    if (!grupos.has(k)) grupos.set(k, []);
-    grupos.get(k).push(f);
-  }
-  const renglones = [...grupos.values()].map(g => `
-    <div class="etq-ren">
-      <span class="etq-ren-nom">${etqPunto(g[0].color)}${etqEsc(g[0].prenda)} ${etqEsc(g[0].color)}</span>
-      <span class="etq-ren-tallas">${g.map(etqTallaBtnHtml).join('')}</span>
-    </div>`).join('');
+  const tipos = [...new Set(activas.map(etqTipo))];
+  if (etq.tipo && !tipos.includes(etq.tipo)) etq.tipo = null;
+  const selector = tipos.length > 1 ? `
+    <span class="etq-tipos" role="group" aria-label="Prenda">
+      <button type="button" class="etq-chip${!etq.tipo ? ' sel' : ''}" onclick="etqElegirTipo('')">Todas</button>
+      ${tipos.map(t => `<button type="button" class="etq-chip${etq.tipo === t ? ' sel' : ''}" onclick="etqElegirTipo('${etqEsc(t)}')">${etqEsc(t.charAt(0) + t.slice(1).toLowerCase())}</button>`).join('')}
+    </span>` : '';
 
   const pendientes = pend.length
     ? `<div class="etq-nota">Todavía no se imprimen: ${[...new Set(pend.map(f => f.nota || `${f.prenda} ${f.color}`))].map(etqEsc).join(' · ')}</div>` : '';
@@ -27649,10 +27676,68 @@ function etqListaHtml() {
       <span class="etq-barra"><i style="width:${totB ? totI * 100 / totB : 0}%"></i></span></div>` : ''}
     ${p && !p.codigo_mined ? etqFaltaCodigoHtml(p) : ''}
     ${etq.recien ? etqRecienHtml() : ''}
-    <div class="etq-guia">Tocá la talla · el número es lo que falta</div>
-    ${renglones || '<div class="text-muted" style="padding:12px">Esta empresa no tiene prendas en el pedido.</div>'}
+    <div class="etq-buscar">
+      <span class="etq-buscar-caja">${etqIco('buscar')}
+        <input type="search" id="etq-busca" value="${etqEsc(etq.busca)}" placeholder="Buscar: pantalón 16" autocomplete="off" enterkeyhint="go"
+          aria-label="Buscar prenda y talla" oninput="etqBuscar(this.value)" onkeydown="if (event.key === 'Enter') etqBuscarAbrir()"></span>
+      ${selector}
+    </div>
+    <div id="etq-renglones">${etqRenglonesHtml()}</div>
     ${pendientes}`;
 }
+
+// Los renglones (se repintan solos al escribir en el buscador).
+function etqRenglonesHtml() {
+  const lista = etqFiltradas();
+  const filtrando = !!(etq.tipo || etq.busca.trim());
+  if (!lista.length) {
+    return `<div class="etq-nota" style="padding:10px 0">${filtrando ? 'No hay ninguna prenda así en esta empresa.' : 'Esta empresa no tiene prendas en el pedido.'}
+      ${filtrando ? '<button type="button" class="etq-chip" onclick="etqLimpiarFiltro()">Ver todas</button>' : ''}</div>`;
+  }
+  // Atajo: lo que ya está empezado y no se ha terminado.
+  const empezadas = filtrando ? [] : lista.filter(f => f.ultimo > 0 && f.ultimo < f.bolsas);
+  const seguir = empezadas.length ? `
+    <div class="etq-seguir"><span>Seguir con</span>
+      ${empezadas.map(f => `<button type="button" onclick="etqAbrir('${etqEsc(etqClave(f))}')">${etqPunto(f.color)}${etqEsc(f.prenda)} <b>${etqEsc(f.talla)}</b> · faltan ${etqNum(f.bolsas - f.ultimo)}</button>`).join('')}
+    </div>` : '';
+  const grupos = new Map();
+  for (const f of lista) {
+    const k = `${f.prenda}|${f.color}`;
+    if (!grupos.has(k)) grupos.set(k, []);
+    grupos.get(k).push(f);
+  }
+  // Lista plegable: cada prenda es un renglón; al tocarla se abren sus tallas.
+  // Buscando o con una prenda elegida, se muestran abiertas.
+  return seguir + [...grupos.entries()].map(([k, g]) => {
+    const faltan = g.reduce((t, f) => t + (f.bolsas - f.ultimo), 0);
+    const abierta = filtrando || etq.abierta === k;
+    return `
+    <div class="etq-ren${abierta ? ' abierta' : ''}">
+      <button type="button" class="etq-ren-nom" aria-expanded="${abierta}" onclick="etqPlegar('${etqEsc(k)}')">
+        <span>${etqPunto(g[0].color)}${etqEsc(g[0].prenda)} ${etqEsc(g[0].color)}</span>
+        <small>${faltan > 0 ? `faltan ${etqNum(faltan)}` : '✔ completa'}</small><i class="etq-flecha" aria-hidden="true"></i>
+      </button>
+      ${abierta ? `<div class="etq-ren-tallas">${g.map(etqTallaBtnHtml).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+function etqPlegar(k) {
+  etq.abierta = etq.abierta === k ? null : k;
+  const c = document.getElementById('etq-renglones');
+  if (c) c.innerHTML = etqRenglonesHtml();
+}
+function etqBuscar(txt) {
+  etq.busca = txt;
+  const c = document.getElementById('etq-renglones');
+  if (c) c.innerHTML = etqRenglonesHtml();
+}
+// Enter en el buscador: si quedó una sola talla, la abre.
+function etqBuscarAbrir() {
+  const lista = etqFiltradas();
+  if (lista.length === 1) etqAbrir(etqClave(lista[0]));
+}
+function etqElegirTipo(t) { etq.tipo = t || null; etqRender(); }
+function etqLimpiarFiltro() { etq.tipo = null; etq.busca = ''; etqRender(); }
 
 function etqTallaBtnHtml(f) {
   const faltan = f.bolsas - f.ultimo;
@@ -27797,7 +27882,7 @@ function etqRecienHtml() {
 
 // ── Acciones ─────────────────────────────────────────────────────────────
 function etqElegirEmpresa(id) {
-  etq.emp = id; etq.sel = null; etq.hist = []; etq.reponer = null; etq.n = null;
+  etq.emp = id; etq.sel = null; etq.hist = []; etq.reponer = null; etq.n = null; etq.busca = ''; etq.tipo = null; etq.abierta = null;
   try { localStorage.setItem('etq-empresa', id); } catch (_) { /* nada */ }
   etqRender();
 }
