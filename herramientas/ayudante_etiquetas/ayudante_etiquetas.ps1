@@ -1,8 +1,10 @@
-﻿# Ayudante de etiquetas (Taller IMIS) · versión 3
+﻿# Ayudante de etiquetas (Taller IMIS) · versión 4
 # Corre en la computadora que tiene la Brother TD-4210D por USB. La app de
 # uniformes le habla SOLO desde esta misma computadora (127.0.0.1):
 #   GET  /estado    ->  { estado: lista | desconectada | error | no_instalada, ... }
 #   POST /imprimir  ->  manda etiquetas DIRECTO a la Brother (sin cuadro de imprimir)
+# Además (v4) toma de la base los pedidos mandados desde el celular
+# (cola etiqueta_trabajo) y los imprime, solo si la impresora está lista.
 #        cuerpo JSON: { "nombre": "texto del trabajo", "png": ["<base64>", ...] }
 #        cada imagen tiene que medir 382 x 156 puntos (la etiqueta de 51 x 26 mm).
 # Solo acepta pedidos de la app (origen permitido) y solo imprime si Windows
@@ -11,10 +13,11 @@ param(
   [string]$Impresora = 'Brother TD-4210D',
   [int]$Puerto = 17651,
   [string]$Papel = 'RD 51mm x 26mm',
-  [string]$ArchivoPrueba = ''      # solo para pruebas: imprime a un archivo en vez de a la impresora
+  [string]$ArchivoPrueba = '',     # solo para pruebas: imprime a un archivo en vez de a la impresora
+  [switch]$SinReporte               # solo para pruebas: no reporta el estado a la app
 )
 $ErrorActionPreference = 'Stop'
-$Version = 3
+$Version = 4
 $OrigenesPermitidos = @('https://uniformes.imeltex.com.sv', 'https://njar97.github.io')
 $AnchoPx = 382; $AltoPx = 156; $MaxEtiquetas = 150; $MaxCuerpo = 3MB
 Add-Type -AssemblyName System.Drawing
@@ -145,22 +148,51 @@ $tokenArchivo = Join-Path $PSScriptRoot 'ayudante_token.txt'
 $token = ''; if (Test-Path $tokenArchivo) { $token = (Get-Content $tokenArchivo -Raw).Trim() }
 $repHora = [datetime]::MinValue; $repRevisado = [datetime]::MinValue; $repUltimo = ''
 function Send-Reporte {
-  if (-not $token) { return }
+  if (-not $token -or $SinReporte) { return }
   if (((Get-Date) - $script:repRevisado).TotalSeconds -lt 5) { return }
   $script:repRevisado = Get-Date
   try {
     $e = Get-EstadoImpresora
     $firma = "$($e.estado)|$($e.trabajos_en_cola)"
     if ($firma -eq $script:repUltimo -and ((Get-Date) - $script:repHora).TotalSeconds -lt 30) { return }
-    $cuerpo = @{ p_token = $token; p_estado = $e.estado; p_mensaje = $e.mensaje; p_cola = [int]$e.trabajos_en_cola; p_equipo = $env:COMPUTERNAME } | ConvertTo-Json -Compress
+    $cuerpo = @{ p_token = $token; p_estado = $e.estado; p_mensaje = $e.mensaje; p_cola = [int]$e.trabajos_en_cola; p_equipo = $env:COMPUTERNAME; p_version = $Version } | ConvertTo-Json -Compress
     Invoke-RestMethod -Uri $SupaUrl -Method Post -TimeoutSec 6 -ContentType 'application/json; charset=utf-8' `
       -Headers @{ apikey = $SupaKey; Authorization = "Bearer $SupaKey" } -Body ([Text.Encoding]::UTF8.GetBytes($cuerpo)) | Out-Null
     $script:repUltimo = $firma; $script:repHora = Get-Date
   } catch { $script:repHora = (Get-Date).AddSeconds(-20) }   # falló (sin internet): reintenta en unos segundos
 }
 
+# Cola del celular: cada 4 s, si la impresora está lista, toma un envío,
+# lo imprime y avisa cómo le fue (si falla, la base corrige sola la cuenta).
+$SupaRpc = 'https://kszdievqesveluzcnzsh.supabase.co/rest/v1/rpc/'
+$colaRevisado = [datetime]::MinValue
+function Invoke-Rpc([string]$Funcion, $Cuerpo) {
+  $json = $Cuerpo | ConvertTo-Json -Compress
+  return Invoke-RestMethod -Uri ($SupaRpc + $Funcion) -Method Post -TimeoutSec 15 -ContentType 'application/json; charset=utf-8' `
+    -Headers @{ apikey = $SupaKey; Authorization = "Bearer $SupaKey" } -Body ([Text.Encoding]::UTF8.GetBytes($json))
+}
+function Receive-Cola {
+  if (-not $token) { return }
+  if (((Get-Date) - $script:colaRevisado).TotalSeconds -lt 4) { return }
+  $script:colaRevisado = Get-Date
+  try {
+    $e = Get-EstadoImpresora
+    if (-not $ArchivoPrueba -and -not $e.lista) { return }
+    $t = Invoke-Rpc 'etiqueta_trabajo_tomar' @{ p_token = $token }
+    if (-not $t -or -not $t.id) { return }
+  } catch { return }   # sin internet: se intenta en la próxima vuelta
+  $ok = $true; $msg = $null
+  try { $n = Send-Etiquetas ([string[]]@($t.png)) ("$($t.nombre)"); $msg = "Impresas $n" }
+  catch { $ok = $false; $msg = $_.Exception.Message }
+  for ($i = 0; $i -lt 3; $i++) {
+    try { Invoke-Rpc 'etiqueta_trabajo_terminar' @{ p_token = $token; p_id = "$($t.id)"; p_ok = $ok; p_mensaje = $msg } | Out-Null; break }
+    catch { Start-Sleep -Seconds 2 }
+  }
+  $script:cacheHora = [datetime]::MinValue; $script:repUltimo = ''
+}
+
 while ($true) {
-  if (-not $escucha.Pending()) { Send-Reporte; Start-Sleep -Milliseconds 150; continue }
+  if (-not $escucha.Pending()) { Send-Reporte; Receive-Cola; Start-Sleep -Milliseconds 150; continue }
   $cliente = $escucha.AcceptTcpClient()
   try {
     $cliente.ReceiveTimeout = 5000; $cliente.SendTimeout = 5000
