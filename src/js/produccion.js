@@ -267,7 +267,9 @@ async function cargarProduccion() {
       '?select=salida_id,produccion_bulto_id,tendido_id,codigo_corte,letra_corte,fecha_corte,numero_rollo,letra_talla,talla_key_salida,cod_prenda,cantidad_original,cantidad_final,sufijo_division,estado_manual,total_etapas,etapas_hechas,fecha_terminado,codigo_bulto&limit=2000');
     produccionData = filtrarCortesVigentes(produccionData, 'fecha_corte');
 
-    // Auto-crear produccion_bulto para salidas sin seguimiento aún
+    // Los bultos nacen en la base al guardar el tendido (v3.53) y la base no
+    // acepta dos para la misma salida. Esto queda solo de respaldo: si faltara
+    // alguno se crea, y si otro teléfono lo creó primero se toma ese.
     const sinRegistro = produccionData.filter(b => !b.produccion_bulto_id);
     for (const b of sinRegistro) {
       try {
@@ -278,7 +280,12 @@ async function cargarProduccion() {
         b.produccion_bulto_id = nuevo.id;
         b.estado = 'pendiente';
       } catch(e) {
-        console.warn('No se pudo crear produccion_bulto:', e.message);
+        try {
+          const ya = await supaFetch('produccion_bulto','GET',null,
+            `?select=id&tendido_rollo_salida_id=eq.${b.salida_id}&bulto_origen_id=is.null&limit=1`);
+          if (ya && ya[0]) b.produccion_bulto_id = ya[0].id;
+        } catch(_) {}
+        if (!b.produccion_bulto_id) console.warn('No se pudo crear produccion_bulto:', e.message);
       }
     }
 
@@ -794,37 +801,37 @@ async function terminarBulto(produccionBultoId, cantidadOriginal) {
   if (cantStr === null) return;
   const cantidadFinal = parseInt(cantStr) || cantidadOriginal;
 
-  let observaciones = null;
+  // La nota que ya tenga el bulto (rebaja, casi listo…) se conserva: esto solo agrega.
+  let nota = null;
   if (cantidadFinal !== cantidadOriginal) {
-    observaciones = await pedirTexto(`Hubo diferencia (${cantidadFinal} vs ${cantidadOriginal}). ¿Qué pasó? (opcional)`) || null;
+    nota = await pedirTexto(`Hubo diferencia (${cantidadFinal} vs ${cantidadOriginal}). ¿Qué pasó? (opcional)`) || null;
   }
 
+  const b = produccionData.find(x => x.produccion_bulto_id === produccionBultoId);
   try {
-    await supaUpdate('produccion_bulto', produccionBultoId, {
-      estado: 'terminado',
-      fecha_terminado: hoyLocal(),
-      cantidad_final: cantidadFinal,
-      observaciones,
-      actualizado_en: new Date().toISOString(),
+    // Terminar y entrar a bodega es UN solo paso en la base: o quedan las dos
+    // cosas o ninguna. Si el bulto ya entró, la base lo rechaza y se avisa.
+    await supaFetch('rpc/terminar_bulto', 'POST', {
+      p_id: produccionBultoId,
+      p_cantidad: cantidadFinal,
+      p_nombre_prenda: (b && (b.nombre_prenda || (typeof prendaCanon === 'function' ? prendaCanon(b.cod_prenda) : null))) || null,
+      p_nota: nota,
     });
-    const b = produccionData.find(x => x.produccion_bulto_id === produccionBultoId);
+  } catch (e) {
+    const ya = /ya est[áa] (en bodega|terminado)/i.test(e.message || '');
+    alert(ya
+      ? 'Ese bulto ya está en bodega. No se anotó otra vez.'
+      : 'No se pudo terminar el bulto: no se guardó nada, ni en el bulto ni en bodega.\n\nRevise la señal y pruebe otra vez.\n\n(' + e.message + ')');
+    if (ya) cargarProduccion().catch(() => {});
+    return;
+  }
+  try {
     if (b) {
       b.estado = 'terminado';
       b.estado_manual = 'terminado';
       b.fecha_terminado = hoyLocal();
       b.cantidad_final = cantidadFinal;
-      b.observaciones = observaciones;
-    }
-    // Hook: registrar entrada a bodega (si la función existe)
-    if (typeof registrarEntradaBodegaPorBulto === 'function' && b) {
-      await registrarEntradaBodegaPorBulto({
-        id: b.produccion_bulto_id,
-        codigo_bulto: b.codigo_bulto,
-        cod_prenda: b.cod_prenda,
-        nombre_prenda: b.nombre_prenda,
-        talla_salida: b.talla_key_salida,
-        cantidad_final: cantidadFinal,
-      });
+      if (nota) b.observaciones = [b.observaciones, nota].filter(Boolean).join(' · ');
     }
     renderProduccion();
     // 2026 (por cantidades): sin demanda por alumno ni «apartar para escuelas»
@@ -990,20 +997,12 @@ async function confirmarAutoAcaparar(escId, nombrePrenda, tallaKey) {
 async function revertirBulto(produccionBultoId) {
   if (!await confirmar('¿Revertir a pendiente?\n\nEl bulto vuelve a costura y sus piezas salen de bodega.')) return;
   try {
-    await supaUpdate('produccion_bulto', produccionBultoId, {
-      estado: 'pendiente',
-      fecha_terminado: null,
-      cantidad_final: null,
-      actualizado_en: new Date().toISOString(),
-    });
-    // Al terminar, el bulto metió sus piezas a bodega (ENTRADA_PRODUCCION).
-    // Si se revierte hay que sacar esa entrada; si no, la bodega queda con
-    // piezas de más y al volver a terminarlo se contarían dos veces.
-    await supaFetch('bodega_movimiento', 'DELETE', null,
-      `?produccion_bulto_id=eq.${produccionBultoId}&tipo=eq.ENTRADA_PRODUCCION`);
+    // Un solo paso en la base: el bulto vuelve a costura Y sus piezas salen de
+    // bodega, o no pasa ninguna de las dos cosas.
+    await supaFetch('rpc/revertir_bulto', 'POST', { p_id: produccionBultoId });
     await cargarProduccion();
   } catch(e) {
-    alert('Error: ' + e.message);
+    alert('No se pudo revertir: no se cambió nada.\n\n(' + e.message + ')');
   }
 }
 
