@@ -205,72 +205,54 @@ function etqRender() {
 }
 
 // ── Vista 1: empresa y sus prendas ──
+// Compacta: una línea por prenda, con sus tallas al lado.
 function etqListaHtml() {
   const p = etqProv();
   const filas = etq.cuenta.filter(f => f.proveedor_id === etq.emp);
   const activas = filas.filter(f => f.activo), pend = filas.filter(f => !f.activo);
+  const totB = activas.reduce((s, f) => s + f.bolsas, 0), totI = activas.reduce((s, f) => s + f.ultimo, 0);
   const ayuda = typeof ayudaHtml === 'function'
-    ? ayudaHtml('etiquetas', 'Cada bolsa lleva una etiqueta con su número. Tocá la empresa y después la talla de la prenda: ahí se imprimen las que faltan y se repone la que se dañó o se perdió. Se imprime desde la computadora del taller, que es la que tiene la impresora de etiquetas.')
+    ? ayudaHtml('etiquetas', 'Cada bolsa lleva una etiqueta con su número. Tocá la empresa y después la talla de la prenda: ahí se imprimen las que faltan y se repone la que se dañó o se perdió. El número al lado de la talla es cuántas faltan. Se imprime desde la computadora del taller, que es la que tiene la impresora de etiquetas.')
     : '';
 
-  const empresas = etq.provs.map(x => {
-    const suyas = etq.cuenta.filter(f => f.proveedor_id === x.id && f.activo);
-    const b = suyas.reduce((s, f) => s + f.bolsas, 0), i = suyas.reduce((s, f) => s + f.ultimo, 0);
-    return `
-    <button type="button" class="etq-emp-btn${x.id === etq.emp ? ' activa' : ''}" aria-pressed="${x.id === etq.emp}" onclick="etqElegirEmpresa('${x.id}')">
-      <strong>${etqEsc(ETQ_EMPRESA[x.codigo] || x.codigo)}</strong>
-      <small>${b ? Math.floor(i * 100 / b) : 0} %</small>
-      <span class="etq-barra"><i style="width:${b ? i * 100 / b : 0}%"></i></span>
-    </button>`;
-  }).join('');
+  const empresas = etq.provs.map(x => `<button type="button" class="${x.id === etq.emp ? 'activa' : ''}" aria-pressed="${x.id === etq.emp}"
+      onclick="etqElegirEmpresa('${x.id}')">${etqEsc(ETQ_EMPRESA[x.codigo] || x.codigo)}</button>`).join('');
 
-  // Una tarjeta por prenda + color; adentro, un botón por talla.
   const grupos = new Map();
   for (const f of activas) {
     const k = `${f.prenda}|${f.color}`;
     if (!grupos.has(k)) grupos.set(k, []);
     grupos.get(k).push(f);
   }
-  const tarjetas = [...grupos.values()].map(g => {
-    const faltan = g.reduce((s, f) => s + (f.bolsas - f.ultimo), 0);
-    return `
-    <section class="etq-prenda">
-      <header>${etqPunto(g[0].color)}<strong>${etqEsc(g[0].prenda)} ${etqEsc(g[0].color)}</strong>
-        <span>${faltan > 0 ? `faltan ${etqNum(faltan)}` : 'completa'}</span></header>
-      <div class="etq-tallas">${g.map(etqTallaBtnHtml).join('')}</div>
-    </section>`;
-  }).join('');
+  const renglones = [...grupos.values()].map(g => `
+    <div class="etq-ren">
+      <span class="etq-ren-nom">${etqPunto(g[0].color)}${etqEsc(g[0].prenda)} ${etqEsc(g[0].color)}</span>
+      <span class="etq-ren-tallas">${g.map(etqTallaBtnHtml).join('')}</span>
+    </div>`).join('');
 
-  const pendientes = pend.length ? `
-    <section class="etq-prenda etq-pend">
-      <header><strong>Todavía no se imprimen</strong></header>
-      ${[...new Set(pend.map(f => f.nota || `${f.prenda} ${f.color}`))].map(n => `<div>${etqEsc(n)}</div>`).join('')}
-      <small>${pend.map(f => `${etqEsc(f.talla)}: ${etqNum(f.bolsas)} bolsas`).join(' · ')}</small>
-    </section>` : '';
+  const pendientes = pend.length
+    ? `<div class="etq-nota">Todavía no se imprimen: ${[...new Set(pend.map(f => f.nota || `${f.prenda} ${f.color}`))].map(etqEsc).join(' · ')}</div>` : '';
 
   return `
     ${ayuda}
-    <div class="etq-titulo">${etqIco('etiqueta')} Etiquetas de bolsa</div>
-    <div class="etq-paso">1 · ¿De qué empresa?</div>
-    <div class="etq-empresas">${empresas}</div>
-    ${p ? `<div class="etq-emp-dato">${etqEsc(p.nombre_etiqueta || p.nombre)} · código <strong>${etqEsc(p.codigo_mined || 'falta')}</strong></div>` : ''}
+    <div class="etq-top">
+      <strong>Etiquetas de bolsa</strong>
+      <span class="etq-seg" role="group" aria-label="Empresa">${empresas}</span>
+    </div>
+    ${p ? `<div class="etq-linea"><span>Código <strong>${etqEsc(p.codigo_mined || 'falta')}</strong> · ${etqNum(totI)} de ${etqNum(totB)} bolsas</span>
+      <span class="etq-barra"><i style="width:${totB ? totI * 100 / totB : 0}%"></i></span></div>` : ''}
     ${p && !p.codigo_mined ? etqFaltaCodigoHtml(p) : ''}
     ${etq.recien ? etqRecienHtml() : ''}
-    <div class="etq-paso">2 · Tocá la talla</div>
-    ${tarjetas || '<div class="text-muted" style="padding:12px">Esta empresa no tiene prendas en el pedido.</div>'}
+    <div class="etq-guia">Tocá la talla · el número es lo que falta</div>
+    ${renglones || '<div class="text-muted" style="padding:12px">Esta empresa no tiene prendas en el pedido.</div>'}
     ${pendientes}`;
 }
 
 function etqTallaBtnHtml(f) {
-  const faltan = f.bolsas - f.ultimo, pct = f.bolsas ? f.ultimo * 100 / f.bolsas : 0;
+  const faltan = f.bolsas - f.ultimo;
   const estado = faltan <= 0 ? 'lista' : f.ultimo > 0 ? 'empezada' : 'nueva';
-  return `
-    <button type="button" class="etq-talla-btn ${estado}" onclick="etqAbrir('${etqEsc(etqClave(f))}')"
-      aria-label="${etqEsc(f.prenda)} ${etqEsc(f.color)} ${etqEsc(f.talla)}: ${faltan > 0 ? 'faltan ' + faltan : 'completa'}">
-      <strong>${etqEsc(f.talla)}</strong>
-      <small>${faltan > 0 ? `faltan ${etqNum(faltan)}` : '✔ lista'}</small>
-      <span class="etq-barra"><i style="width:${pct}%"></i></span>
-    </button>`;
+  return `<button type="button" class="etq-t ${estado}" onclick="etqAbrir('${etqEsc(etqClave(f))}')"
+      aria-label="${etqEsc(f.prenda)} ${etqEsc(f.color)} ${etqEsc(f.talla)}: ${faltan > 0 ? 'faltan ' + faltan : 'completa'}"><b>${etqEsc(f.talla)}</b>${faltan > 0 ? etqNum(faltan) : '✔'}</button>`;
 }
 
 function etqFaltaCodigoHtml(p) {
@@ -297,46 +279,36 @@ function etqTallaHtml(f) {
     ? '<div class="etq-ok">✔ Ya están todas las etiquetas de este pedido.</div>'
     : sinCodigo ? '<div class="alert alert-error">Falta el código de proveedor: se pone en la pantalla anterior.</div>'
     : `
-    <div class="etq-bloque">
-      <div class="etq-paso">¿Cuántas imprimo?</div>
-      <div class="etq-contador">
-        <button type="button" class="etq-mm" onclick="etqCambiarN(-10)" aria-label="Quitar 10">−10</button>
-        <button type="button" class="etq-mm" onclick="etqCambiarN(-1)" aria-label="Quitar 1">−</button>
-        <input type="number" id="etq-n" min="1" max="${tope}" value="${etq.n}" inputmode="numeric" aria-label="Cuántas etiquetas" oninput="etqEscribirN(this.value)">
-        <button type="button" class="etq-mm" onclick="etqCambiarN(1)" aria-label="Agregar 1">+</button>
-        <button type="button" class="etq-mm" onclick="etqCambiarN(10)" aria-label="Agregar 10">+10</button>
-      </div>
-      <div class="etq-rapidas">
-        ${rapidas.map(n => `<button type="button" class="etq-chip" data-n="${n}" onclick="etqFijarN(${n})">${n}</button>`).join('')}
-        <button type="button" class="etq-chip" data-n="${tope}" onclick="etqFijarN(${tope})">Todas · ${etqNum(tope)}</button>
-      </div>
-      <button type="button" class="etq-btn-imprimir" id="etq-btn-imprimir" onclick="etqImprimirSiguientes()">
-        ${etqIco('imprimir')}<span><strong id="etq-btn-tit"></strong><small id="etq-btn-sub"></small></span>
-      </button>
-    </div>`;
+    <div class="etq-cuantas">
+      <button type="button" class="etq-mm" onclick="etqCambiarN(-1)" aria-label="Una menos">−</button>
+      <input type="number" id="etq-n" min="1" max="${tope}" value="${etq.n}" inputmode="numeric" aria-label="Cuántas etiquetas" oninput="etqEscribirN(this.value)">
+      <button type="button" class="etq-mm" onclick="etqCambiarN(1)" aria-label="Una más">+</button>
+      ${rapidas.map(n => `<button type="button" class="etq-chip" data-n="${n}" onclick="etqFijarN(${n})">${n}</button>`).join('')}
+      <button type="button" class="etq-chip" data-n="${tope}" onclick="etqFijarN(${tope})">Todas</button>
+    </div>
+    <button type="button" class="etq-btn-imprimir" id="etq-btn-imprimir" onclick="etqImprimirSiguientes()">
+      ${etqIco('imprimir')}<strong id="etq-btn-tit"></strong><small id="etq-btn-sub"></small>
+    </button>`;
 
-  const reponer = f.ultimo > 0 && !sinCodigo ? (etq.reponer ? etqReponerHtml(f) : `
-    <button type="button" class="etq-btn-sec" onclick="etqReponerAbrir()">${etqIco('recargar')} Volver a sacar una que se dañó o se perdió</button>`) : '';
-
-  const hist = etq.hist.length ? `
-    <details class="etq-hist-caja"${etq.verHist ? ' open' : ''} ontoggle="etq.verHist = this.open">
-      <summary>Lo que se ha impreso (${etq.hist.length})</summary>
-      ${etq.hist.map(h => etqHistFilaHtml(h, f)).join('')}
-    </details>` : '';
+  const puedeReponer = f.ultimo > 0 && !sinCodigo;
+  const hist = etq.verHist && etq.hist.length ? `<div class="etq-hist-caja">${etq.hist.map(h => etqHistFilaHtml(h, f)).join('')}</div>` : '';
 
   return `
-    <button type="button" class="etq-volver" onclick="etqCerrar()">${etqIco('volver')} Otra prenda</button>
-    <div class="etq-cabeza">${etqPunto(f.color)}<span><small>${etqEsc(ETQ_EMPRESA[(p || {}).codigo] || '')}</small>
-      <strong>${etqEsc(f.prenda)} ${etqEsc(f.color)}</strong></span><b>${etqEsc(f.talla)}</b></div>
+    <div class="etq-top">
+      <button type="button" class="etq-volver" onclick="etqCerrar()" aria-label="Volver a las prendas">${etqIco('volver')}</button>
+      <strong>${etqPunto(f.color)}${etqEsc(f.prenda)} ${etqEsc(f.color)} ${etqEsc(f.talla)}</strong>
+      <span class="etq-emp-chico">${etqEsc(ETQ_EMPRESA[(p || {}).codigo] || '')}</span>
+    </div>
+    <div class="etq-linea"><span><strong>${etqNum(f.ultimo)}</strong> de ${etqNum(f.bolsas)} bolsas · faltan <strong class="falta">${etqNum(faltan)}</strong>${impar ? ` · la ${etqCtl(f.bolsas)} lleva 1` : ''}</span>
+      <span class="etq-barra"><i style="width:${pct}%"></i></span></div>
     ${etq.recien ? etqRecienHtml() : ''}
     <div id="etq-vista" class="etq-vista" aria-label="Así sale la etiqueta que sigue"></div>
-    <div class="etq-avance">
-      <span class="etq-barra grande"><i style="width:${pct}%"></i></span>
-      <div><span><strong>${etqNum(f.ultimo)}</strong> impresas</span><span>de <strong>${etqNum(f.bolsas)}</strong> bolsas</span><span class="falta"><strong>${etqNum(faltan)}</strong> faltan</span></div>
-      <small>${etqNum(f.piezas)} prendas, 2 por bolsa${impar ? ` · la última bolsa (${etqCtl(f.bolsas)}) lleva 1` : ''}</small>
-    </div>
     ${etq.recien || etq.reponer ? '' : imprimir}
-    ${etq.recien ? '' : reponer}
+    ${etq.recien ? '' : (etq.reponer ? etqReponerHtml(f) : `
+    <div class="etq-enlaces">
+      ${puedeReponer ? `<button type="button" onclick="etqReponerAbrir()">${etqIco('recargar')} Reponer una</button>` : ''}
+      ${etq.hist.length ? `<button type="button" onclick="etqVerHist()">${etqIco('lista')} ${etq.verHist ? 'Ocultar' : 'Ver'} lo impreso</button>` : ''}
+    </div>`)}
     ${hist}`;
 }
 
@@ -348,14 +320,11 @@ function etqReponerHtml(f) {
     botones += `<button type="button" class="etq-num${sel.has(c) ? ' sel' : ''}" aria-pressed="${sel.has(c)}" onclick="etqReponerTocar(${c}, this)">${etqCtl(c)}</button>`;
   }
   return `
-    <div class="etq-bloque etq-reponer">
-      <div class="etq-paso">Tocá las que hay que volver a sacar</div>
-      <div class="solo-asistencia" style="font-size:12px;color:#667;margin-bottom:6px">Salen con su mismo número y la cuenta no cambia.</div>
-      <div class="etq-nums">${botones}</div>
-      <div class="etq-reponer-pie">
-        <button type="button" class="btn btn-ghost" onclick="etqReponerCerrar()">Cancelar</button>
-        <button type="button" class="btn btn-primary" id="etq-btn-reponer" onclick="etqReponer()" ${sel.size ? '' : 'disabled'}>${etqReponerTxt()}</button>
-      </div>
+    <div class="etq-guia">Tocá las que hay que volver a sacar (salen con su mismo número)</div>
+    <div class="etq-nums">${botones}</div>
+    <div class="etq-pie">
+      <button type="button" class="btn btn-ghost" onclick="etqReponerCerrar()">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="etq-btn-reponer" onclick="etqReponer()" ${sel.size ? '' : 'disabled'}>${etqReponerTxt()}</button>
     </div>`;
 }
 function etqReponerTxt() {
@@ -366,13 +335,12 @@ function etqReponerTxt() {
 function etqHistFilaHtml(h, f) {
   const fecha = new Date(h.creado_en).toLocaleString('es-SV', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
   const que = h.tipo === 'nueva'
-    ? `${etqCtl(h.desde)}${h.hasta > h.desde ? ' a ' + etqCtl(h.hasta) : ''} <small class="en-linea">(${etqNum(h.hasta - h.desde + 1)})</small>`
+    ? `${etqCtl(h.desde)}${h.hasta > h.desde ? ' a ' + etqCtl(h.hasta) : ''} (${etqNum(h.hasta - h.desde + 1)})`
     : `Repuestas: ${etqResumirLista(h.controles)}`;
   const esUltima = h.tipo === 'nueva' && !h.anulada && h.hasta === f.ultimo;
   return `
     <div class="etq-hist${h.anulada ? ' anulada' : ''}">
-      <div><strong>${que}</strong>${h.anulada ? ' · anulada' : ''}
-        <small>${etqEsc(fecha)} · ${etqEsc(String(h.usuario || '').split('@')[0])}${h.nota ? ' · ' + etqEsc(h.nota) : ''}</small></div>
+      <div><strong>${que}</strong>${h.anulada ? ' · anulada' : ''}<small>${etqEsc(fecha)} · ${etqEsc(String(h.usuario || '').split('@')[0])}${h.nota ? ' · ' + etqEsc(h.nota) : ''}</small></div>
       ${esUltima && !etq.recien ? `<button type="button" class="btn btn-ghost btn-sm" onclick="etqCorregirDesdeHistorial('${h.id}')">No salió bien</button>` : ''}
     </div>`;
 }
@@ -392,16 +360,13 @@ function etqResumirLista(nums) {
 // Después de mandar una tanda: ¿salió bien? Si no, se toca la última buena.
 function etqRecienHtml() {
   const r = etq.recien, cuantas = r.hasta - r.desde + 1, varias = cuantas > 1;
-  const cuales = varias ? `${cuantas} etiquetas · de la ${etqCtl(r.desde)} a la ${etqCtl(r.hasta)}` : `la etiqueta ${etqCtl(r.desde)}`;
+  const cuales = varias ? `${etqCtl(r.desde)} a ${etqCtl(r.hasta)}` : etqCtl(r.desde);
   if (!r.problema) {
     return `
     <div class="etq-recien" role="status">
-      <div class="etq-recien-tit">¿${varias ? 'Salieron bien' : 'Salió bien'}?</div>
-      <div class="etq-recien-sub">${etqEsc(r.titulo)} · ${cuales}</div>
-      <div class="etq-recien-btns">
-        <button type="button" class="etq-si" onclick="etqRecienListo()">✔ Sí${varias ? ', todas' : ''}</button>
-        <button type="button" class="etq-no" onclick="etqRecienProblema()">✖ No</button>
-      </div>
+      <span><strong>¿${varias ? 'Salieron bien' : 'Salió bien'}?</strong> ${etqEsc(r.titulo)} · ${cuales}</span>
+      <button type="button" class="etq-si" onclick="etqRecienListo()">✔ Sí</button>
+      <button type="button" class="etq-no" onclick="etqRecienProblema()">No</button>
     </div>`;
   }
   let botones = '';
@@ -410,16 +375,17 @@ function etqRecienHtml() {
   }
   return `
     <div class="etq-recien problema" role="status">
-      <div class="etq-recien-tit">¿Qué pasó?</div>
-      <div class="etq-recien-sub">${etqEsc(r.titulo)} · ${cuales}</div>
-      <button type="button" class="etq-btn-sec" onclick="etqMandarDeNuevo()">${etqIco('imprimir')} Mandar otra vez a la impresora</button>
-      <button type="button" class="etq-btn-sec" onclick="etqCorregir('${r.id}', null)">✖ No salió ninguna</button>
+      <span><strong>¿Qué pasó?</strong> ${etqEsc(r.titulo)} · ${cuales}</span>
+      <div class="etq-pie">
+        <button type="button" class="btn btn-ghost" onclick="etqMandarDeNuevo()">Mandar otra vez</button>
+        <button type="button" class="btn btn-ghost" onclick="etqCorregir('${r.id}', null)">No salió ninguna</button>
+        <button type="button" class="btn btn-ghost" onclick="etqRecienVolver()">Volver</button>
+      </div>
       ${varias ? `
-      <div class="etq-paso" style="margin-top:12px">Salieron solo algunas: tocá la ÚLTIMA que salió bien</div>
+      <div class="etq-guia">¿Salieron solo algunas? Tocá la ÚLTIMA que salió bien</div>
       <div class="etq-nums">${botones}</div>
-      ${r.ultimaBuena ? `<button type="button" class="etq-btn-imprimir" onclick="etqCorregir('${r.id}', ${r.ultimaBuena})"><span><strong>Anotar: salió hasta la ${etqCtl(r.ultimaBuena)}</strong>
-        <small>La que sigue será la ${etqCtl(r.ultimaBuena + 1)}</small></span></button>` : ''}` : ''}
-      <button type="button" class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="etqRecienVolver()">Volver</button>
+      ${r.ultimaBuena ? `<button type="button" class="etq-btn-imprimir" onclick="etqCorregir('${r.id}', ${r.ultimaBuena})">
+        <strong>Anotar: salió hasta la ${etqCtl(r.ultimaBuena)}</strong><small>sigue la ${etqCtl(r.ultimaBuena + 1)}</small></button>` : ''}` : ''}
     </div>`;
 }
 
@@ -437,6 +403,7 @@ async function etqAbrir(clave) {
   try { await etqCargarHistorial(); etqRender(); }
   catch (e) { showToast('No se pudo cargar lo impreso: ' + e.message, 'error'); }
 }
+function etqVerHist() { etq.verHist = !etq.verHist; etqRender(); }
 function etqCerrar() {
   etq.sel = null; etq.hist = []; etq.reponer = null; etq.n = null;
   etqRender();
@@ -469,8 +436,8 @@ function etqPintarN() {
   if (etq.ocupado) { tit.textContent = 'Mandando a la impresora…'; sub.textContent = ''; }
   else if (!n) { tit.textContent = `Escribí de 1 a ${etqTope()}`; sub.textContent = ''; }
   else {
-    tit.textContent = n === 1 ? 'Imprimir 1 etiqueta' : `Imprimir ${etqNum(n)} etiquetas`;
-    sub.textContent = n === 1 ? `la ${etqCtl(f.ultimo + 1)}` : `de la ${etqCtl(f.ultimo + 1)} a la ${etqCtl(f.ultimo + n)}`;
+    tit.textContent = `Imprimir ${etqNum(n)}`;
+    sub.textContent = n === 1 ? `· la ${etqCtl(f.ultimo + 1)}` : `· de la ${etqCtl(f.ultimo + 1)} a la ${etqCtl(f.ultimo + n)}`;
   }
   document.querySelectorAll('.etq-chip').forEach(c => c.classList.toggle('sel', Number(c.dataset.n) === n));
 }
