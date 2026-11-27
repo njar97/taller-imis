@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-27 13:46 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-27 14:16 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -27661,8 +27661,10 @@ function etqPonerImpresora(si) {
 // apagada, desconectada o con error, NO se manda nada ni se anota ningún
 // número. Si el ayudante no contesta, se avisa y se deja imprimir como antes.
 const ETQ_AYUDANTE = 'http://127.0.0.1:17651/estado';
+const ETQ_AYUDANTE_IMPRIMIR = 'http://127.0.0.1:17651/imprimir';
+const ETQ_TANDA_DIRECTA = 100;   // etiquetas por envío al ayudante
 const ETQ_IMP_MALA = ['desconectada', 'error', 'no_instalada'];
-let etqImp = { estado: null, mensaje: '', t: 0, reloj: null, enCurso: null, modo: null };
+let etqImp = { estado: null, mensaje: '', t: 0, reloj: null, enCurso: null, modo: null, directo: false, cola: 0 };
 function etqImpresoraMala() { return ETQ_IMP_MALA.includes(etqImp.estado); }
 // Formas de pedirle al ayudante: Chrome nuevo exige decir que la dirección es
 // de esta misma computadora. Se recuerda la que funcionó.
@@ -27695,8 +27697,10 @@ function etqRevisarImpresora() {
     try {
       const j = await etqPreguntarAyudante();
       nuevo = { estado: j.estado || 'error', mensaje: j.mensaje || '' };
+      etqImp.directo = !!j.imprime; etqImp.cola = Number(j.trabajos_en_cola) || 0;
     } catch (_) {
       nuevo = { estado: 'sin_ayudante', mensaje: 'No se pudo revisar la impresora' };
+      etqImp.directo = false; etqImp.cola = 0;
     }
     etqImp.estado = nuevo.estado; etqImp.mensaje = nuevo.mensaje; etqImp.t = Date.now();
     etqImp.enCurso = null;
@@ -27705,19 +27709,52 @@ function etqRevisarImpresora() {
   })();
   return etqImp.enCurso;
 }
+// ── La impresora vista desde lejos ──
+// La compu del taller reporta a la base cada 30 s (tabla etiqueta_impresora_estado).
+// En el celular, o si el ayudante local no contesta, el aviso sale de ahí.
+let etqRem = { fila: null, t: 0, enCurso: false };
+async function etqLeerRemoto() {
+  if (etqRem.enCurso) return;
+  etqRem.enCurso = true;
+  try {
+    const r = await supaFetch('etiqueta_impresora_estado', 'GET', null, '?id=eq.brother&select=estado,mensaje,trabajos_en_cola,actualizado_en');
+    etqRem.fila = r[0] || null; etqRem.t = Date.now();
+  } catch (_) { /* sin red: se queda con lo último */ }
+  finally { etqRem.enCurso = false; }
+  etqPintarFoco();
+}
+// { clase, txt } según lo último que reportó la compu del taller.
+function etqRemotoTexto() {
+  const f = etqRem.fila;
+  if (!f) return etqRem.t ? { clase: 'gris', txt: 'La compu del taller todavía no reporta la impresora' } : { clase: 'gris', txt: 'Revisando la impresora del taller…' };
+  const seg = Math.max(0, Math.round((Date.now() - new Date(f.actualizado_en).getTime()) / 1000));
+  if (seg > 120) {
+    const hace = seg < 3600 ? `${Math.round(seg / 60)} min` : seg < 172800 ? `${Math.round(seg / 3600)} h` : `${Math.round(seg / 86400)} días`;
+    return { clase: 'gris', txt: `La compu del taller no reporta desde hace ${hace} (apagada o sin internet)` };
+  }
+  if (f.estado === 'lista') return { clase: 'verde', txt: f.trabajos_en_cola > 0 ? 'Impresora del taller: imprimiendo…' : 'Impresora del taller: conectada y lista' };
+  return { clase: 'rojo', txt: 'Impresora del taller: ' + (f.mensaje || 'no está lista') };
+}
+
 // Revisión fresca justo antes de mandar algo.
 async function etqRevisarAhora() {
   if (etqImp.enCurso) await etqImp.enCurso;
   return etqRevisarImpresora();
 }
 function etqFocoHtml() {
-  if (!etqTieneImpresora()) return '';
   const e = etqImp.estado;
-  const clase = !e ? 'gris' : e === 'lista' ? 'verde' : e === 'sin_ayudante' ? 'ambar' : 'rojo';
-  const txt = !e ? 'Revisando la impresora…' : e === 'lista' ? 'Impresora lista' : etqImp.mensaje || 'La impresora no está lista';
+  if (!etqTieneImpresora() || e === 'sin_ayudante') {
+    const r = etqRemotoTexto();
+    const sinAyudante = etqTieneImpresora() ? ' · esta compu no pudo revisarla sola' : '';
+    return `<span class="etq-foco ${r.clase}"><i aria-hidden="true"></i>${etqEsc(r.txt)}${etqEsc(sinAyudante)}</span>
+      <button type="button" class="etq-chip" onclick="etqRevisarTodo()">Revisar</button>`;
+  }
+  const clase = !e ? 'gris' : e === 'lista' ? 'verde' : 'rojo';
+  const txt = !e ? 'Revisando la impresora…' : e === 'lista' ? (etqImp.cola > 0 ? 'Imprimiendo…' : 'Impresora conectada y lista') : etqImp.mensaje || 'La impresora no está lista';
   return `<span class="etq-foco ${clase}"><i aria-hidden="true"></i>${etqEsc(txt)}${clase === 'rojo' ? ' · no se manda nada' : ''}</span>
-    ${clase === 'verde' || clase === 'gris' ? '' : '<button type="button" class="etq-chip" onclick="etqRevisarImpresora()">Revisar otra vez</button>'}`;
+    ${clase === 'rojo' ? '<button type="button" class="etq-chip" onclick="etqRevisarTodo()">Revisar otra vez</button>' : ''}`;
 }
+function etqRevisarTodo() { etqLeerRemoto(); if (etqTieneImpresora()) etqRevisarImpresora(); }
 // Repinta solo el aviso y los botones (sin redibujar la pantalla ni perder lo escrito).
 function etqPintarFoco() {
   const c = document.getElementById('etq-foco');
@@ -27730,12 +27767,16 @@ function etqPintarFoco() {
 }
 // Mientras la pantalla de etiquetas está abierta, revisa cada 6 segundos.
 function etqVigilarImpresora() {
-  if (etqImp.reloj || !etqTieneImpresora()) return;
-  etqRevisarImpresora();
+  if (etqImp.reloj) return;
+  etqRevisarTodo();
+  let vuelta = 0;
   etqImp.reloj = setInterval(() => {
     const v = document.getElementById('view-etiquetas');
     if (!v || !v.classList.contains('active')) { clearInterval(etqImp.reloj); etqImp.reloj = null; return; }
-    if (document.visibilityState === 'visible' && !etq.ocupado) etqRevisarImpresora();
+    if (document.visibilityState !== 'visible' || etq.ocupado) return;
+    vuelta++;
+    if (etqTieneImpresora()) etqRevisarImpresora();
+    if (vuelta % 3 === 0 || !etqTieneImpresora()) { if (Date.now() - etqRem.t > 18000) etqLeerRemoto(); else etqPintarFoco(); }
   }, 6000);
 }
 
@@ -28079,7 +28120,15 @@ async function etqImprimirSiguientes() {
     const fila = { ...f, bolsas: r.bolsas, piezas: r.piezas };
     etq.recien = { id: r.id, desde: r.desde, hasta: r.hasta, titulo: `${f.prenda} ${f.color} ${f.talla}`, fila, nums };
     etq.n = null;
-    await etqMandarAImpresora(fila, nums);
+    try { await etqMandarAImpresora(fila, nums); }
+    catch (e) {
+      if (!e.directo) throw e;
+      // No salieron todas: se anota hasta donde se mandó (o se anula si no se mandó ninguna).
+      const hasta = e.enviadas > 0 ? r.desde + e.enviadas - 1 : null;
+      await supaFetch('rpc/etiqueta_bolsa_corregir', 'POST', { p_id: r.id, p_salio_hasta: hasta, p_motivo: 'Falló el envío a la impresora' });
+      etq.recien = hasta ? { ...etq.recien, hasta, nums: nums.slice(0, e.enviadas) } : null;
+      showToast(`${e.message}. ${hasta ? `Se mandó solo hasta la ${etqCtl(hasta)}.` : 'No se mandó ninguna y no se anotó nada.'}`, 'error', 10000);
+    }
     await etqCargar();
   } catch (e) {
     showToast('No se imprimió: ' + e.message, 'error', 8000);
@@ -28110,7 +28159,12 @@ async function etqReponer() {
       p_temporada: etq.temporadaId, p_proveedor: f.proveedor_id,
       p_prenda: f.prenda, p_color: f.color, p_talla: f.talla, p_controles: nums,
     });
-    await etqMandarAImpresora({ ...f, bolsas: r.bolsas, piezas: r.piezas }, r.controles);
+    try { await etqMandarAImpresora({ ...f, bolsas: r.bolsas, piezas: r.piezas }, r.controles); }
+    catch (e) {
+      // Reposición que no se mandó completa: se anula lo anotado.
+      if (e.directo) await supaFetch('rpc/etiqueta_bolsa_corregir', 'POST', { p_id: r.id, p_salio_hasta: null, p_motivo: 'Falló el envío a la impresora' });
+      throw e;
+    }
     showToast(`Mandadas otra vez: ${etqResumirLista(r.controles)}`, 'success');
     etq.reponer = null;
     await etqCargar();
@@ -28187,7 +28241,37 @@ function etqHojaHtml(fila, nums) {
   </style></head><body>${paginas}</body></html>`;
 }
 
+// Manda las etiquetas a la Brother. Si el ayudante de la compu del taller
+// contesta, van DIRECTO (sin cuadro de imprimir ni elegir papel). Si no, se
+// abre el cuadro de imprimir del navegador como respaldo.
 function etqMandarAImpresora(fila, nums) {
+  return etqImp.directo && etqImp.estado !== 'sin_ayudante' ? etqMandarDirecto(fila, nums) : etqMandarPorNavegador(fila, nums);
+}
+// Directo: imágenes de 382 × 156 al ayudante, de a 100. Si falla a medias,
+// el error dice cuántas alcanzaron a mandarse (err.enviadas).
+async function etqMandarDirecto(fila, nums) {
+  let enviadas = 0;
+  try {
+    for (let i = 0; i < nums.length; i += ETQ_TANDA_DIRECTA) {
+      const parte = nums.slice(i, i + ETQ_TANDA_DIRECTA);
+      const png = parte.map(c => etqDibujar(etqDatos(fila, c)).toDataURL('image/png').split(',')[1]);
+      const nombre = `Etiquetas bolsa ${fila.prenda} ${fila.color} ${fila.talla} ${etqCtl(parte[0])}-${etqCtl(parte[parte.length - 1])}`;
+      const r = await fetch(ETQ_AYUDANTE_IMPRIMIR, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, png }), ...ETQ_MODOS[etqImp.modo || 0],
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(j.mensaje || 'La computadora del taller no pudo imprimir');
+      enviadas += parte.length;
+    }
+  } catch (e) {
+    const err = new Error(e.message || 'No se pudo mandar a la impresora');
+    err.directo = true; err.enviadas = enviadas;
+    throw err;
+  }
+  etqRevisarImpresora();
+}
+function etqMandarPorNavegador(fila, nums) {
   return new Promise((resolve, reject) => {
     let viejo = document.getElementById('etq-iframe');
     if (viejo) viejo.remove();
