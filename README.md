@@ -57,7 +57,6 @@ git push origin main
 ```
 taller-imis/
 ├── produccion.html              ← generado, NO editar a mano
-├── produccion_v18_backup.html   ← backup del original
 ├── build.ps1                    ← genera produccion.html
 ├── deploy.ps1                   ← build + git push
 ├── instalar.ps1                 ← solo primera vez
