@@ -207,6 +207,31 @@ function etqRender() {
   etqPintarN();
 }
 
+// ── ¿Este aparato tiene la impresora? ──
+// La Brother está por USB en la computadora del taller. En un celular no se
+// imprime ni se anota nada: solo se ve la cuenta. Se puede cambiar a mano
+// (queda guardado en ese aparato).
+function etqTieneImpresora() {
+  let v = null;
+  try { v = localStorage.getItem('etq-impresora'); } catch (_) { /* sin almacenamiento */ }
+  if (v === '1') return true;
+  if (v === '0') return false;
+  return !/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+}
+function etqPonerImpresora(si) {
+  try { localStorage.setItem('etq-impresora', si ? '1' : '0'); } catch (_) { /* nada */ }
+  etq.reponer = null;
+  etqRender();
+}
+function etqSinImpresoraHtml() {
+  return `<div class="etq-aviso">${etqIco('imprimir')}<span>Aquí solo se ve la cuenta. Las etiquetas se imprimen en la <strong>computadora del taller</strong>, que es la que tiene la impresora.</span></div>`;
+}
+function etqCambioImpresoraHtml() {
+  return etqTieneImpresora()
+    ? `<button type="button" class="etq-cambio" onclick="etqPonerImpresora(false)">Este aparato no tiene la impresora de etiquetas</button>`
+    : `<button type="button" class="etq-cambio" onclick="etqPonerImpresora(true)">Este aparato sí tiene la impresora de etiquetas</button>`;
+}
+
 // ── Vista 1: empresa y sus prendas ──
 // Compacta: buscador + selector de prenda arriba; una línea por prenda con
 // sus tallas al lado.
@@ -230,7 +255,7 @@ function etqListaHtml() {
   const activas = filas.filter(f => f.activo), pend = filas.filter(f => !f.activo);
   const totB = activas.reduce((s, f) => s + f.bolsas, 0), totI = activas.reduce((s, f) => s + f.ultimo, 0);
   const ayuda = typeof ayudaHtml === 'function'
-    ? ayudaHtml('etiquetas', 'Cada bolsa lleva una etiqueta con su número. Elegí la empresa, y buscá la prenda: escribí por ejemplo «pantalón 16» o tocá Camisa, Pantalón, Falda o Short. Después tocá la talla: ahí se imprimen las que faltan y se repone la que se dañó o se perdió. El número al lado de la talla es cuántas faltan. Se imprime desde la computadora del taller, que es la que tiene la impresora de etiquetas.')
+    ? ayudaHtml('etiquetas', 'Cada bolsa lleva una etiqueta con su número. Elegí la empresa, y buscá la prenda: escribí por ejemplo «pantalón 16» o tocá Camisa, Pantalón, Falda o Short. Después tocá la talla: ahí se imprimen las que faltan y se repone la que se dañó o se perdió. El número al lado de la talla es cuántas faltan. Se imprime desde la computadora del taller, que es la que tiene la impresora de etiquetas; en el celular solo se ve la cuenta.')
     : '';
 
   const empresas = etq.provs.map(x => `<button type="button" class="${x.id === etq.emp ? 'activa' : ''}" aria-pressed="${x.id === etq.emp}"
@@ -349,6 +374,7 @@ function etqTallaHtml(f) {
 
   const imprimir = faltan <= 0
     ? '<div class="etq-ok">✔ Ya están todas las etiquetas de este pedido.</div>'
+    : !etqTieneImpresora() ? etqSinImpresoraHtml()
     : sinCodigo ? '<div class="alert alert-error">Falta el código de proveedor: se pone en la pantalla anterior.</div>'
     : `
     <div class="etq-cuantas">
@@ -362,7 +388,7 @@ function etqTallaHtml(f) {
       ${etqIco('imprimir')}<strong id="etq-btn-tit"></strong><small id="etq-btn-sub"></small>
     </button>`;
 
-  const puedeReponer = f.ultimo > 0 && !sinCodigo;
+  const puedeReponer = f.ultimo > 0 && !sinCodigo && etqTieneImpresora();
   const hist = etq.verHist && etq.hist.length ? `<div class="etq-hist-caja">${etq.hist.map(h => etqHistFilaHtml(h, f)).join('')}</div>` : '';
 
   return `
@@ -381,7 +407,8 @@ function etqTallaHtml(f) {
       ${puedeReponer ? `<button type="button" onclick="etqReponerAbrir()">${etqIco('recargar')} Reponer una</button>` : ''}
       ${etq.hist.length ? `<button type="button" onclick="etqVerHist()">${etqIco('lista')} ${etq.verHist ? 'Ocultar' : 'Ver'} lo impreso</button>` : ''}
     </div>`)}
-    ${hist}`;
+    ${hist}
+    ${etq.recien || etq.reponer ? '' : etqCambioImpresoraHtml()}`;
 }
 
 // Reponer: se tocan los números ya impresos.
@@ -518,6 +545,7 @@ async function etqImprimirSiguientes() {
   const f = etqFila();
   if (!f || etq.ocupado) return;
   const n = etq.n;
+  if (!etqTieneImpresora()) { showToast('Las etiquetas se imprimen en la computadora del taller', 'warn'); return; }
   if (!n) { showToast('Poné cuántas etiquetas', 'warn'); return; }
   if (etq.recien) { showToast('Primero decí si la tanda anterior salió bien', 'warn'); return; }
   etq.ocupado = true; etqPintarN();
@@ -554,6 +582,7 @@ function etqReponerTocar(c, btn) {
 async function etqReponer() {
   const f = etqFila();
   if (!f || etq.ocupado || !etq.reponer || !etq.reponer.size) return;
+  if (!etqTieneImpresora()) { showToast('Las etiquetas se imprimen en la computadora del taller', 'warn'); return; }
   const nums = [...etq.reponer].sort((a, b) => a - b);
   etq.ocupado = true;
   try {
