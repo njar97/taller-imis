@@ -335,7 +335,7 @@ function etqTallaHtml(f) {
       <div><span><strong>${etqNum(f.ultimo)}</strong> impresas</span><span>de <strong>${etqNum(f.bolsas)}</strong> bolsas</span><span class="falta"><strong>${etqNum(faltan)}</strong> faltan</span></div>
       <small>${etqNum(f.piezas)} prendas, 2 por bolsa${impar ? ` · la última bolsa (${etqCtl(f.bolsas)}) lleva 1` : ''}</small>
     </div>
-    ${etq.recien ? '' : imprimir}
+    ${etq.recien || etq.reponer ? '' : imprimir}
     ${etq.recien ? '' : reponer}
     ${hist}`;
 }
