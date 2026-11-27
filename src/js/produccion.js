@@ -266,7 +266,7 @@ async function cargarProduccion() {
     document.getElementById('prod-cortes-container').innerHTML = '';
 
     produccionData = await supaFetch('vw_produccion_estado','GET',null,
-      '?select=salida_id,produccion_bulto_id,tendido_id,codigo_corte,letra_corte,fecha_corte,numero_rollo,letra_talla,talla_key_salida,talla_key_corte,cod_prenda,cantidad_original,cantidad_final,sufijo_division,estado_manual,total_etapas,etapas_hechas,fecha_terminado,codigo_bulto&limit=2000');
+      '?select=salida_id,produccion_bulto_id,tendido_id,codigo_corte,letra_corte,fecha_corte,numero_rollo,letra_talla,talla_key_salida,talla_key_corte,anulado,observaciones,cod_prenda,cantidad_original,cantidad_final,sufijo_division,estado_manual,total_etapas,etapas_hechas,fecha_terminado,codigo_bulto&limit=2000');
     produccionData = filtrarCortesVigentes(produccionData, 'fecha_corte');
 
     // Los bultos nacen en la base al guardar el tendido (v3.53) y la base no
@@ -422,12 +422,14 @@ function renderProduccion() {
   // Función local: calcular estado efectivo
   const estadoEf = prodEstadoEfectivo;
 
-  const terminadosHoy = produccionData.filter(b => b.fecha_terminado === hoy && estadoEf(b) === 'terminado');
+  // Los bultos anulados (duplicados) se ven en gris pero no suman en ninguna cuenta.
+  const cuentan = produccionData.filter(b => !b.anulado);
+  const terminadosHoy = cuentan.filter(b => b.fecha_terminado === hoy && estadoEf(b) === 'terminado');
   const piezasHoy = terminadosHoy.reduce((s,b) => s + (b.cantidad_final || b.cantidad_original || 0), 0);
-  const totalBultos = produccionData.length;
-  const totalTerminados = produccionData.filter(b => estadoEf(b) === 'terminado').length;
-  const totalPiezasOrig = produccionData.reduce((s,b) => s + (b.cantidad_original || 0), 0);
-  const totalPiezasTerm = produccionData.filter(b => estadoEf(b) === 'terminado').reduce((s,b) => s + (b.cantidad_final || b.cantidad_original || 0), 0);
+  const totalBultos = cuentan.length;
+  const totalTerminados = cuentan.filter(b => estadoEf(b) === 'terminado').length;
+  const totalPiezasOrig = cuentan.reduce((s,b) => s + (b.cantidad_original || 0), 0);
+  const totalPiezasTerm = cuentan.filter(b => estadoEf(b) === 'terminado').reduce((s,b) => s + (b.cantidad_final || b.cantidad_original || 0), 0);
   const pctGeneral = totalPiezasOrig > 0 ? Math.round(100 * totalPiezasTerm / totalPiezasOrig) : 0;
 
   document.getElementById('prod-resumen-hoy').innerHTML = `
@@ -535,10 +537,11 @@ function renderProduccion() {
 
   cont.innerHTML = franjaTalla + keys.map(k => {
     const grupo = porKey[k];
-    const total = grupo.bultos.length;
-    const terminados = grupo.bultos.filter(b => estadoEf(b) === 'terminado').length;
-    const piezasOrig = grupo.bultos.reduce((s,b) => s + (b.cantidad_original || 0), 0);
-    const piezasTerm = grupo.bultos.filter(b => estadoEf(b) === 'terminado').reduce((s,b) => s + (b.cantidad_final || b.cantidad_original || 0), 0);
+    const cuentanG = grupo.bultos.filter(b => !b.anulado);
+    const total = cuentanG.length;
+    const terminados = cuentanG.filter(b => estadoEf(b) === 'terminado').length;
+    const piezasOrig = cuentanG.reduce((s,b) => s + (b.cantidad_original || 0), 0);
+    const piezasTerm = cuentanG.filter(b => estadoEf(b) === 'terminado').reduce((s,b) => s + (b.cantidad_final || b.cantidad_original || 0), 0);
     const pct = piezasOrig > 0 ? Math.round(100 * piezasTerm / piezasOrig) : 0;
     const expandido = cortesExpandidos.has(k);
 
@@ -630,9 +633,11 @@ function renderProdBulto(b) {
   // Estado efectivo: si Fase 2 ON y hay etapas, se deriva
   const estadoEfectivo = prodEstadoEfectivo(b);
 
-  const clase = estadoEfectivo === 'terminado' ? 'terminado' : (estadoEfectivo === 'en_proceso' ? 'proceso' : '');
+  const anulado = !!b.anulado;   // duplicado: se ve en gris, no suma y no se puede revertir
+  const clase = anulado ? '' : estadoEfectivo === 'terminado' ? 'terminado' : (estadoEfectivo === 'en_proceso' ? 'proceso' : '');
   const cantActual = b.cantidad_original;
-  const cantFinal = b.cantidad_final && b.cantidad_final !== cantActual
+  const cantFinal = anulado ? `no cuenta (decía ${cantActual})`
+    : b.cantidad_final && b.cantidad_final !== cantActual
     ? `${b.cantidad_final} de ${cantActual} piezas`
     : `${cantActual} piezas`;
 
@@ -667,6 +672,11 @@ function renderProdBulto(b) {
     `;
   }
 
+  if (anulado) {
+    progresoHtml = '<div style="margin-top:4px;font-size:14px;font-weight:700;color:#6B7280">Anulado · no suma en ninguna cuenta</div>';
+    pasosFila = ''; botonPaso = '';
+  }
+
   // Badges de trazabilidad
   let badges = '';
   if (b.sufijo_division) {
@@ -696,7 +706,7 @@ function renderProdBulto(b) {
   let terminarEnMas = '';
   let terminarTodo = false;   // va al final de «⋯», aparte y en rojo
   if (estadoEfectivo === 'terminado') {
-    acciones = `<button class="prod-btn-accion prod-btn-revertir" onclick="revertirBulto('${b.produccion_bulto_id}')">↶ Revertir</button>`;
+    acciones = anulado ? '' : `<button class="prod-btn-accion prod-btn-revertir" onclick="revertirBulto('${b.produccion_bulto_id}')">↶ Revertir</button>`;
   } else if (conEtapas && b.etapas_hechas >= b.total_etapas) {
     // Todas las operaciones hechas y todavía sin entrar a bodega
     acciones = `<button class="prod-btn-accion prod-btn-terminar" onclick="terminarBulto('${b.produccion_bulto_id}', ${cantActual})">✓ Terminar · pasar a bodega</button>`;
@@ -753,7 +763,7 @@ function renderProdBulto(b) {
   }
 
   const fechaInfo = estadoEfectivo === 'terminado' && b.fecha_terminado ? ` · ${b.fecha_terminado}` : '';
-  const obsInfo = b.observaciones ? `<div style="font-size:11px;color:#856404;margin-top:4px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-alerta"/></svg> ${b.observaciones}</div>` : '';
+  const obsInfo = b.observaciones ? `<div style="font-size:13px;color:#856404;margin-top:4px"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-alerta"/></svg> ${_prodEsc(b.observaciones)}</div>` : '';
 
   if (prodSoloBulto === b.produccion_bulto_id) {
     return `
@@ -765,7 +775,7 @@ function renderProdBulto(b) {
     </div>`;
   }
   return `
-    <div class="prod-bulto-row ${clase}" id="bulto-row-${b.produccion_bulto_id}" style="flex-wrap:wrap">
+    <div class="prod-bulto-row ${clase}" id="bulto-row-${b.produccion_bulto_id}" style="flex-wrap:wrap${anulado ? ';background:#F3F4F6;color:#6B7280' : ''}">
       <div style="flex:1;min-width:0${porPasos && !guardado ? ';cursor:pointer' : ''}"${porPasos && !guardado ? ` onclick="prodTogglePasos('${b.produccion_bulto_id}')"` : ''}>
         <div>
           <span class="prod-bulto-nombre">Rollo ${b.numero_rollo ?? '?'}${b.sufijo_division ? ' (' + b.sufijo_division + ')' : ''} · ${cantFinal}</span>
@@ -2023,7 +2033,7 @@ async function initCaptura() {
   // Cargar bultos
   if (!produccionData || produccionData.length === 0) {
     produccionData = await supaFetch('vw_produccion_estado','GET',null,
-      '?select=salida_id,produccion_bulto_id,tendido_id,codigo_corte,letra_corte,fecha_corte,numero_rollo,letra_talla,talla_key_salida,talla_key_corte,cod_prenda,cantidad_original,cantidad_final,sufijo_division,estado_manual,total_etapas,etapas_hechas,fecha_terminado,codigo_bulto&limit=2000');
+      '?select=salida_id,produccion_bulto_id,tendido_id,codigo_corte,letra_corte,fecha_corte,numero_rollo,letra_talla,talla_key_salida,talla_key_corte,anulado,observaciones,cod_prenda,cantidad_original,cantidad_final,sufijo_division,estado_manual,total_etapas,etapas_hechas,fecha_terminado,codigo_bulto&limit=2000');
     produccionData = filtrarCortesVigentes(produccionData, 'fecha_corte');
   }
   const selBulto = document.getElementById('cap-bulto');
