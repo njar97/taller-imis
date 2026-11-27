@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-27 07:13 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-27 07:37 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -12447,6 +12447,8 @@ function prodQuitarSoloBulto() {
 function _prodFranjaSoloBulto(b) {
   const nombre = (b.cod_prenda && CATALOGO[b.cod_prenda]?.nombre) || b.cod_prenda || '';
   const t26 = prodTalla2026(b.cod_prenda, b.talla_key_salida);
+  // Bulto pasado a otra talla (rebaja): se avisa con qué talla se cortó.
+  const tCorte = (b.talla_key_corte && b.talla_key_corte !== b.talla_key_salida) ? prodTalla2026(b.cod_prenda, b.talla_key_corte) : null;
   const codigo = String(b.codigo_bulto || '').split('-')[0];
   const cant = Number(b.cantidad_final || b.cantidad_original) || 0;
   const bt = 'flex:none;min-height:44px;padding:8px 12px;border:1px solid #9CA3AF;border-radius:10px;background:#fff;font-size:15px;font-weight:700;cursor:pointer';
@@ -12455,7 +12457,7 @@ function _prodFranjaSoloBulto(b) {
       <button type="button" style="${bt}" onclick="prodQuitarSoloBulto()">← Todos</button>
       <div style="flex:1;min-width:0;line-height:1.2">
         <div style="font-size:20px;font-weight:700;overflow-wrap:anywhere">${_prodEsc(codigo)}</div>
-        <div style="font-size:14px;color:#1F2937">${_prodEsc(nombre)}${t26 ? ' ' + _prodEsc(t26) : ''} · ${cant}</div>
+        <div style="font-size:14px;color:#1F2937">${_prodEsc(nombre)}${t26 ? ' ' + _prodEsc(t26) : ''}${tCorte ? ` <span style="color:#B45309;font-weight:700">(se cortó como ${_prodEsc(tCorte)})</span>` : ''} · ${cant}</div>
       </div>
       <button type="button" style="${bt};font-size:20px" onclick="toggleMasBulto('${b.produccion_bulto_id}')" aria-label="Opciones del bulto">⋯</button>
     </div>`;
@@ -12588,7 +12590,7 @@ async function cargarProduccion() {
     document.getElementById('prod-cortes-container').innerHTML = '';
 
     produccionData = await supaFetch('vw_produccion_estado','GET',null,
-      '?select=salida_id,produccion_bulto_id,tendido_id,codigo_corte,letra_corte,fecha_corte,numero_rollo,letra_talla,talla_key_salida,cod_prenda,cantidad_original,cantidad_final,sufijo_division,estado_manual,total_etapas,etapas_hechas,fecha_terminado,codigo_bulto&limit=2000');
+      '?select=salida_id,produccion_bulto_id,tendido_id,codigo_corte,letra_corte,fecha_corte,numero_rollo,letra_talla,talla_key_salida,talla_key_corte,cod_prenda,cantidad_original,cantidad_final,sufijo_division,estado_manual,total_etapas,etapas_hechas,fecha_terminado,codigo_bulto&limit=2000');
     produccionData = filtrarCortesVigentes(produccionData, 'fecha_corte');
 
     // Los bultos nacen en la base al guardar el tendido (v3.53) y la base no
@@ -14345,7 +14347,7 @@ async function initCaptura() {
   // Cargar bultos
   if (!produccionData || produccionData.length === 0) {
     produccionData = await supaFetch('vw_produccion_estado','GET',null,
-      '?select=salida_id,produccion_bulto_id,tendido_id,codigo_corte,letra_corte,fecha_corte,numero_rollo,letra_talla,talla_key_salida,cod_prenda,cantidad_original,cantidad_final,sufijo_division,estado_manual,total_etapas,etapas_hechas,fecha_terminado,codigo_bulto&limit=2000');
+      '?select=salida_id,produccion_bulto_id,tendido_id,codigo_corte,letra_corte,fecha_corte,numero_rollo,letra_talla,talla_key_salida,talla_key_corte,cod_prenda,cantidad_original,cantidad_final,sufijo_division,estado_manual,total_etapas,etapas_hechas,fecha_terminado,codigo_bulto&limit=2000');
     produccionData = filtrarCortesVigentes(produccionData, 'fecha_corte');
   }
   const selBulto = document.getElementById('cap-bulto');
