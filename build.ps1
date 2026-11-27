@@ -59,6 +59,7 @@ $jsOrder = @(
     'auditoria.js',
     'config.js',
     'escanear_qr.js',
+    'etiquetas_bolsa.js',
     'atras.js'
 )
 
@@ -74,6 +75,7 @@ $viewsOrder = @(
     'registro.html',
     'bodega.html',
     'empaque.html',
+    'etiquetas.html',
     'auditoria.html',
     'config.html'
 )

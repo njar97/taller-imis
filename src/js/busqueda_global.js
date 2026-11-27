@@ -34,6 +34,8 @@ const HERRAMIENTAS = [
     ir: () => { _herrTab('estadistica'); _herrLuego(() => switchSubEst('pronostico')); } },
   { icono:'🧺', nombre:'Sesión de empaque', kw:'empacar empaque sesion piezas alumnos marcar bolsas entregar',
     ir: () => _herrTab('empaque') },
+  { icono:'🏷', nombre:'Etiquetas de bolsa (imprimir y reponer)', kw:'etiquetas bolsa imprimir reponer brother sticker control codigo proveedor',
+    ir: () => _herrTab('etiquetas') },
   { icono:'🔒', nombre:'Reservar tallas para una escuela', kw:'reservar reserva acaparar apartar bloquear stock tallas escuela',
     ir: () => { if (typeof emqAbrirReserva === 'function') emqAbrirReserva(); } },
   { icono:'📦', nombre:'Stock de bodega / entradas y salidas', kw:'bodega stock inventario entrada salida movimientos kardex',
