@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-27 23:26 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-27 23:38 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1201,7 +1201,7 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
       <button type="button" class="menumas-btn" onclick="abrirPestana('config')"><span class="tj-ico tj-gris"><svg class="ico" aria-hidden="true"><use href="#i-ajustes"/></svg></span><span><strong>Ajustes</strong><small class="solo-asistencia">Configuración de la app</small></span></button>
     </div>
   </div>
-  <div class="app-version" style="text-align:center;font-size:12px;color:#999;margin:18px 0 8px">Versión del 27-nov · 11:26 p. m.</div>
+  <div class="app-version" style="text-align:center;font-size:12px;color:#999;margin:18px 0 8px">Versión del 27-nov · 11:38 p. m.</div>
 </div>
 
 <!-- ═══ CORTE ═══ unifica Nuevo (Trazo/Tendido/Bulto) + Historial -->
@@ -20305,7 +20305,7 @@ async function emqCargarCant(escuelaId) {
   const [pedido, acap, stock, eq, plan] = await Promise.all([
     contratoIds.length
       ? supaFetchAll('pedido', `?contrato_id=in.(${contratoIds.join(',')})${escF}` +
-          '&select=id,escuela_id,nivel,cod_prenda,nombre_prenda,talla_key,cantidad_solicitada,cantidad_entregada&order=id')
+          '&select=id,escuela_id,contrato_id,nivel,cod_prenda,nombre_prenda,talla_key,cantidad_solicitada,cantidad_entregada&order=id')
       : Promise.resolve([]),
     supaFetchAll('escuela_acaparado',
       '?select=id,escuela_id,cod_prenda,nombre_prenda,talla_key,cantidad_acaparada,cantidad_consumida,creado_en,bodega_movimiento(pedido_id)' +
@@ -20653,12 +20653,17 @@ async function emqAnularEntrega(id, piezas, fecha) {
 
 // ── Cantidades con − / + ─────────────────────────────────────────────
 
+// Empacar ('emp') y Reservar ('remp') arrancan en 0: quien empaca escribe lo
+// que de verdad metió en la bolsa. Entregar ('ent', 'bent') arranca con todo
+// lo empacado, que es lo normal al entregar.
+const _EMQ_ARRANCA_EN_CERO = new Set(['emp', 'remp']);
 function emqSelInit(grupo, pares, reset) {
   const prev = (!reset && emqState.sel[grupo]) || new Map();
   const sel = new Map(), max = new Map();
+  const cero = _EMQ_ARRANCA_EN_CERO.has(grupo);
   for (const [k, tope] of pares) {
     max.set(k, tope);
-    sel.set(k, prev.has(k) ? Math.max(0, Math.min(tope, prev.get(k))) : tope);
+    sel.set(k, prev.has(k) ? Math.max(0, Math.min(tope, prev.get(k))) : (cero ? 0 : tope));
   }
   emqState.sel[grupo] = sel;
   emqState.selMax[grupo] = max;
@@ -20687,6 +20692,12 @@ function emqStepHtml(grupo, k) {
   </span>`;
 }
 function emqStep(grupo, k, d) { emqStepSet(grupo, k, emqSelGet(grupo, k) + d); }
+// «Todo lo que hay» / «Poner en 0» de un toque (cada línea respeta su tope)
+function emqSelTodo(grupo, lleno) {
+  const max = emqState.selMax[grupo];
+  if (!max) return;
+  for (const [k, tope] of max) emqStepSet(grupo, k, lleno ? tope : 0);
+}
 function emqStepSet(grupo, k, v) {
   if (!emqState.sel[grupo]) return;
   const max = (emqState.selMax[grupo] && emqState.selMax[grupo].get(k)) || 0;
@@ -20795,7 +20806,12 @@ function emqPaso2CantHtml() {
         <button class="btn btn-ghost btn-sm" onclick="initEmpaque(emqState.escuelaId)" title="Refrescar pedido y bodega"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-recargar"/></svg></button>
       </div>
       ${s.empacado > 0 ? `<div style="margin-top:8px"><button class="btn btn-primary btn-sm" onclick="emqState.ultimoEmpaque=null;emqState.sel.ent=null;emqState.paso=3;renderEmpaque()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-camion"/></svg> Entregar lo empacado (${s.empacado})</button></div>` : ''}
-      <div style="font-size:11px;color:#888;margin-top:6px">Empacar = sale de bodega y queda apartado para esta escuela. Ajustá la cantidad con − / + o escribila.</div>
+      <div style="font-size:11px;color:#888;margin-top:6px">Empacar = sale de bodega y queda apartado para esta escuela. Arranca en 0: poné con − / + (o escribí) lo que metiste en la bolsa.</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn btn-ghost btn-sm" onclick="emqSelTodo('emp',true)">Poner todo lo que hay</button>
+        <button class="btn btn-ghost btn-sm" onclick="emqSelTodo('emp',false)">Poner en 0</button>
+        <button class="btn btn-ghost btn-sm" onclick="emqHojaEntrega()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> Hoja de entrega</button>
+      </div>
       ${s.entregado > 0 ? `<div style="margin-top:8px"><a href="#" style="font-size:12.5px;font-weight:600" onclick="event.preventDefault();emqVerEntregas()">Entregas hechas (${s.entregado} piezas) ›</a><div id="emq-entregas"></div></div>` : ''}
     </div>
     <div class="card" style="padding:0;overflow:hidden;margin-bottom:74px">${emqTablaCantHtml(lineas, 'emp', 'sesion')}</div>
@@ -20854,11 +20870,91 @@ function emqPaso3CantHtml() {
         <div style="font-size:11px;color:#888;margin-top:6px">Se suma a lo entregado del pedido y queda el registro con fecha y quién recibió. Bodega no cambia: ya salió al empacar.</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+        <button class="btn btn-ghost" onclick="emqHojaEntrega()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> Hoja de entrega (para firmar)</button>
         <button class="btn btn-ghost" onclick="emqState.paso=2;renderEmpaque()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-lista"/></svg> Seguir en esta escuela</button>
         <button class="btn btn-ghost" onclick="emqVolverEscuelas();renderEmpaque()"><svg class="ico" aria-hidden="true" width="1em" height="1em"><use href="#i-caja"/></svg> Otra escuela</button>
         ${u ? '<button class="btn btn-ghost" style="color:var(--rojo)" onclick="emqDeshacer()">↩️ Deshacer este empaque</button>' : ''}
       </div>
     </div>`;
+}
+
+// ── Hoja de entrega (para que firme quien recibe) ────────────────────
+// Sale del pedido de la escuela y de lo que está empacado ahora mismo.
+// «Esta entrega» = lo empacado sin entregar; se puede corregir a mano.
+function emqHojaEntregaHtml(esc, lineas, contrato, fecha) {
+  const E = emqEsc;
+  const filas = lineas.filter(L => L.pedido > 0);
+  const s = emqSumar(filas);
+  const tr = filas.map(L => `
+    <tr>
+      <td>${E(prendaBonita(L.prenda))}</td>
+      <td class="c b">${E(tallaPedidoBonita(L.talla))}</td>
+      <td class="c">${L.pedido}</td>
+      <td class="c">${L.entregado || ''}</td>
+      <td class="c b">${L.empacado || ''}</td>
+      <td class="c">${Math.max(0, L.pedido - L.entregado - L.empacado) || ''}</td>
+    </tr>`).join('');
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Hoja de entrega - ${E(esc.nombre)}</title>
+    <style>
+      @page { size: letter; margin: 12mm; }
+      body { font-family: Arial, sans-serif; font-size: 11pt; color: #000; margin: 0; }
+      h1 { font-size: 15pt; margin: 0 0 4px; }
+      .dato { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 10pt; margin-top: 3px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+      th, td { border: 1px solid #000; padding: 4px 6px; }
+      th { background: #DDD; font-size: 9.5pt; }
+      .c { text-align: center; } .b { font-weight: bold; }
+      tfoot td { font-weight: bold; background: #F2F2F2; }
+      .nota { font-size: 9pt; margin-top: 8px; }
+      .firmas { margin-top: 46px; display: flex; justify-content: space-between; gap: 30px; }
+      .firma { flex: 1; border-top: 1px solid #000; padding-top: 4px; text-align: center; font-size: 10pt; }
+      @media print { .no-print { display: none; } }
+    </style></head><body>
+    <h1>Hoja de entrega de uniformes</h1>
+    <div class="dato"><div><strong>Centro escolar:</strong> ${E(esc.nombre)}</div><div><strong>Código:</strong> ${E(esc.codigo_cde || '')}</div><div><strong>Fecha:</strong> ${E(fecha)}</div></div>
+    <div class="dato"><div><strong>Director(a):</strong> ${E(esc.director || '') || '______________________________'}</div><div><strong>Contrato:</strong> ${E(contrato.codigo || '')}</div><div><strong>Proveedor:</strong> ${E(contrato.proveedor || '')}</div></div>
+    <table>
+      <thead><tr><th>Prenda</th><th>Talla</th><th>Pedido</th><th>Ya entregado</th><th>Esta entrega</th><th>Queda pendiente</th></tr></thead>
+      <tbody>${tr}</tbody>
+      <tfoot><tr><td colspan="2">Total</td><td class="c">${s.pedido}</td><td class="c">${s.entregado || ''}</td><td class="c">${s.empacado || ''}</td><td class="c">${Math.max(0, s.pedido - s.entregado - s.empacado) || ''}</td></tr></tfoot>
+    </table>
+    <div class="nota">«Esta entrega» es lo empacado para la escuela a la fecha. Si al contar no coincide, se corrige a mano y se anota aquí: ____________________________________________</div>
+    <div class="firmas"><div class="firma">Entrega (nombre y firma)</div><div class="firma">Recibe (nombre, firma y sello)</div></div>
+    <div class="no-print" style="margin-top:20px;text-align:center">
+      <button onclick="window.print()" style="padding:10px 20px;font-size:14pt">Imprimir</button>
+      <button onclick="window.close()" style="padding:10px 20px;font-size:14pt">Cerrar</button>
+    </div>
+    </body></html>`;
+}
+function prendaBonita(nombre) {
+  const t = String(nombre || '').replace(/_/g, ' ').toLowerCase();
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : '';
+}
+async function emqHojaEntrega() {
+  const escId = emqState.escuelaId;
+  const lineas = emqLineasEscuela(emqState.cant, escId);
+  if (!lineas.length) { alert('Esta escuela no tiene pedido cargado.'); return; }
+  // La ventana se abre YA (si se abre después de consultar, el teléfono la bloquea)
+  const win = window.open('', '_blank');
+  if (!win) { alert('El navegador bloqueó la ventana. Permita ventanas emergentes y vuelva a tocar.'); return; }
+  win.document.write('<p style="font-family:Arial">Preparando la hoja…</p>');
+  try {
+    const fila = lineas.map(L => L.filas[0]).find(f => f && f.contrato_id);
+    const [escRows, conRows] = await Promise.all([
+      supaFetch('escuela', 'GET', null, `?id=eq.${escId}&select=nombre,codigo_cde,director&limit=1`),
+      fila ? supaFetch('contrato', 'GET', null, `?id=eq.${fila.contrato_id}&select=codigo,proveedor(nombre)&limit=1`).catch(() => []) : [],
+    ]);
+    const esc = (escRows && escRows[0]) || { nombre: emqNombreEscuela(escId) };
+    const c = (conRows && conRows[0]) || {};
+    const d = new Date();
+    const fecha = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    const html = emqHojaEntregaHtml(esc, lineas, { codigo: c.codigo, proveedor: c.proveedor && c.proveedor.nombre }, fecha);
+    win.document.open(); win.document.write(html); win.document.close();
+  } catch (e) {
+    win.close();
+    alert('No se pudo armar la hoja: ' + e.message);
+  }
 }
 
 // ── Acciones de pantalla ─────────────────────────────────────────────
@@ -28257,7 +28353,7 @@ _atrasArmar();
   }
 
   // Sello de esta página; el sw.js nuevo trae el mismo si la página ya está al día.
-  window.APP_BUILD = 'v20261127-232642';
+  window.APP_BUILD = 'v20261127-233809';
   let refreshing = false;
   let pwaSinRecarga = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
