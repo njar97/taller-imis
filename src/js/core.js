@@ -4,6 +4,7 @@ let SUPA_KEY = localStorage.getItem('supa_key') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6
 // Cliente Supabase (SDK cargado por CDN en head.html). Maneja sesión + refresh de tokens.
 let supaClient = null;
 let supaSession = null;
+let salidaPedida = false;   // true mientras la persona sale a propósito
 function initSupaClient() {
   if (supaClient || typeof supabase === 'undefined') return supaClient;
   supaClient = supabase.createClient(SUPA_URL, SUPA_KEY, {
@@ -12,6 +13,8 @@ function initSupaClient() {
   supaClient.auth.onAuthStateChange((event, session) => {
     supaSession = session;
     renderUserChip();
+    // La sesión se cayó sola (venció y no se pudo renovar): pedir entrar.
+    if (event === 'SIGNED_OUT') { if (!salidaPedida) pedirEntrar(); return; }
     // Recovery: user vuelve desde "olvidé contraseña". Supabase emite
     // PASSWORD_RECOVERY y deja una sesión temporal lista para updateUser.
     if (event === 'PASSWORD_RECOVERY') {
@@ -39,6 +42,16 @@ function urlHashIndicatesInvite() {
     if (h.includes('type=invite')) return true;
     return sessionStorage.getItem('taller-imis-invite-pending') === '1';
   } catch (_e) { return false; }
+}
+
+// Sesión caída: en vez de dejar la app vacía, mostrar la pantalla de entrada
+// con un aviso claro. Lo que estaba en pantalla queda detrás, sin perderse.
+function pedirEntrar() {
+  const ov = document.getElementById('auth-overlay');
+  if (!ov || ov.classList.contains('active')) return;
+  const al = document.getElementById('auth-alert');
+  if (al) al.innerHTML = '<div class="alert alert-warn">Su sesión se cerró. Entre de nuevo para seguir.</div>';
+  showAuthOverlay(true);
 }
 
 function authToken() {
@@ -733,7 +746,14 @@ async function supaFetch(table, method = 'GET', body = null, params = '') {
     if (body) o.body = JSON.stringify(body);
     return o;
   };
-  let res = await fetch(url, armar(await authTokenFresh()));
+  const tok0 = await authTokenFresh();
+  // Hay app con cuentas pero no hay sesión: antes se consultaba con la llave
+  // pública y todo salía vacío sin avisar. Ahora se pide entrar.
+  if (!tok0 && supaClient) {
+    pedirEntrar();
+    throw new Error('Su sesión se cerró. Entre de nuevo para seguir.');
+  }
+  let res = await fetch(url, armar(tok0));
   // 401 con sesión: antes de sacar a la persona, renovar la sesión y reintentar una vez.
   if (res.status === 401 && authToken()) {
     const nuevo = await authRenovar();
@@ -1093,8 +1113,10 @@ async function doSetNewPassword(ev) {
 async function doLogout() {
   try {
     const cli = initSupaClient();
+    salidaPedida = true;
     if (cli) await cli.auth.signOut({ scope: 'local' });
   } catch (e) { /* ignore */ }
+  salidaPedida = false;
   // Limpiar cache local de datos para que el próximo login no vea
   // info del usuario anterior (en caso de uso compartido del browser).
   if (typeof tiCacheClearAll === 'function') tiCacheClearAll();

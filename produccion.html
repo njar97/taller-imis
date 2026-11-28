@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-27 18:10 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-27 22:08 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1217,7 +1217,7 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
       <button type="button" class="menumas-btn" onclick="abrirPestana('config')"><span class="tj-ico tj-gris"><svg class="ico" aria-hidden="true"><use href="#i-ajustes"/></svg></span><span><strong>Ajustes</strong><small class="solo-asistencia">Configuración de la app</small></span></button>
     </div>
   </div>
-  <div class="app-version" style="text-align:center;font-size:12px;color:#999;margin:18px 0 8px">Versión del 27-nov · 6:10 p. m.</div>
+  <div class="app-version" style="text-align:center;font-size:12px;color:#999;margin:18px 0 8px">Versión del 27-nov · 10:08 p. m.</div>
 </div>
 
 <!-- ═══ CORTE ═══ unifica Nuevo (Trazo/Tendido/Bulto) + Historial -->
@@ -3491,6 +3491,7 @@ let SUPA_KEY = localStorage.getItem('supa_key') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6
 // Cliente Supabase (SDK cargado por CDN en head.html). Maneja sesión + refresh de tokens.
 let supaClient = null;
 let supaSession = null;
+let salidaPedida = false;   // true mientras la persona sale a propósito
 function initSupaClient() {
   if (supaClient || typeof supabase === 'undefined') return supaClient;
   supaClient = supabase.createClient(SUPA_URL, SUPA_KEY, {
@@ -3499,6 +3500,8 @@ function initSupaClient() {
   supaClient.auth.onAuthStateChange((event, session) => {
     supaSession = session;
     renderUserChip();
+    // La sesión se cayó sola (venció y no se pudo renovar): pedir entrar.
+    if (event === 'SIGNED_OUT') { if (!salidaPedida) pedirEntrar(); return; }
     // Recovery: user vuelve desde "olvidé contraseña". Supabase emite
     // PASSWORD_RECOVERY y deja una sesión temporal lista para updateUser.
     if (event === 'PASSWORD_RECOVERY') {
@@ -3526,6 +3529,16 @@ function urlHashIndicatesInvite() {
     if (h.includes('type=invite')) return true;
     return sessionStorage.getItem('taller-imis-invite-pending') === '1';
   } catch (_e) { return false; }
+}
+
+// Sesión caída: en vez de dejar la app vacía, mostrar la pantalla de entrada
+// con un aviso claro. Lo que estaba en pantalla queda detrás, sin perderse.
+function pedirEntrar() {
+  const ov = document.getElementById('auth-overlay');
+  if (!ov || ov.classList.contains('active')) return;
+  const al = document.getElementById('auth-alert');
+  if (al) al.innerHTML = '<div class="alert alert-warn">Su sesión se cerró. Entre de nuevo para seguir.</div>';
+  showAuthOverlay(true);
 }
 
 function authToken() {
@@ -4220,7 +4233,14 @@ async function supaFetch(table, method = 'GET', body = null, params = '') {
     if (body) o.body = JSON.stringify(body);
     return o;
   };
-  let res = await fetch(url, armar(await authTokenFresh()));
+  const tok0 = await authTokenFresh();
+  // Hay app con cuentas pero no hay sesión: antes se consultaba con la llave
+  // pública y todo salía vacío sin avisar. Ahora se pide entrar.
+  if (!tok0 && supaClient) {
+    pedirEntrar();
+    throw new Error('Su sesión se cerró. Entre de nuevo para seguir.');
+  }
+  let res = await fetch(url, armar(tok0));
   // 401 con sesión: antes de sacar a la persona, renovar la sesión y reintentar una vez.
   if (res.status === 401 && authToken()) {
     const nuevo = await authRenovar();
@@ -4580,8 +4600,10 @@ async function doSetNewPassword(ev) {
 async function doLogout() {
   try {
     const cli = initSupaClient();
+    salidaPedida = true;
     if (cli) await cli.auth.signOut({ scope: 'local' });
   } catch (e) { /* ignore */ }
+  salidaPedida = false;
   // Limpiar cache local de datos para que el próximo login no vea
   // info del usuario anterior (en caso de uso compartido del browser).
   if (typeof tiCacheClearAll === 'function') tiCacheClearAll();
@@ -28508,7 +28530,7 @@ _atrasArmar();
   }
 
   // Sello de esta página; el sw.js nuevo trae el mismo si la página ya está al día.
-  window.APP_BUILD = 'v20261127-181051';
+  window.APP_BUILD = 'v20261127-220820';
   let refreshing = false;
   let pwaSinRecarga = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
