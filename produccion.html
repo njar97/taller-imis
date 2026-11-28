@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-27 23:38 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-27 23:40 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1201,7 +1201,7 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
       <button type="button" class="menumas-btn" onclick="abrirPestana('config')"><span class="tj-ico tj-gris"><svg class="ico" aria-hidden="true"><use href="#i-ajustes"/></svg></span><span><strong>Ajustes</strong><small class="solo-asistencia">Configuración de la app</small></span></button>
     </div>
   </div>
-  <div class="app-version" style="text-align:center;font-size:12px;color:#999;margin:18px 0 8px">Versión del 27-nov · 11:38 p. m.</div>
+  <div class="app-version" style="text-align:center;font-size:12px;color:#999;margin:18px 0 8px">Versión del 27-nov · 11:40 p. m.</div>
 </div>
 
 <!-- ═══ CORTE ═══ unifica Nuevo (Trazo/Tendido/Bulto) + Historial -->
@@ -4365,6 +4365,16 @@ async function supaUpdate(table, id, data) {
 // ══════════════════════════════════════════════════════════════════════
 // AUTH (Supabase Auth + login overlay)
 // ══════════════════════════════════════════════════════════════════════
+// Al entrar: si se llegó escaneando la etiqueta de un bulto, primero se abre
+// ESE bulto y los números de Inicio (más de 30 consultas) se cargan después,
+// para que no le quiten el paso. Sin etiqueta, Inicio carga de una vez.
+function arrancarInicio() {
+  if (typeof initDashboard !== 'function') return;
+  const porEtiqueta = !!(window._prodHintBulto || window._prodHintCodigo);
+  if (porEtiqueta) setTimeout(initDashboard, 4000);
+  else initDashboard();
+}
+
 function showAuthOverlay(show) {
   const ov = document.getElementById('auth-overlay');
   if (!ov) return;
@@ -4472,7 +4482,7 @@ async function doLogin(ev) {
     showAuthOverlay(false);
     renderUserChip();
     document.getElementById('auth-pass').value = '';
-    if (typeof initDashboard === 'function') initDashboard();
+    arrancarInicio();
     if (typeof initAuditRoleTab === 'function') initAuditRoleTab();
     if (typeof prodEntrarPorEnlace === 'function') prodEntrarPorEnlace();
   } catch (e) {
@@ -4628,7 +4638,7 @@ async function bootApp() {
   aplicarModoTemporada();   // con lo de la última vez; Inicio lo confirma al cargar
   aplicarAyudas();
   await gateApp();
-  if (supaSession && typeof initDashboard === 'function') initDashboard();
+  if (supaSession) arrancarInicio();
   if (supaSession && typeof initAuditRoleTab === 'function') initAuditRoleTab();
   if (supaSession && typeof prodEntrarPorEnlace === 'function') prodEntrarPorEnlace();
 }
@@ -28353,7 +28363,7 @@ _atrasArmar();
   }
 
   // Sello de esta página; el sw.js nuevo trae el mismo si la página ya está al día.
-  window.APP_BUILD = 'v20261127-233809';
+  window.APP_BUILD = 'v20261127-234022';
   let refreshing = false;
   let pwaSinRecarga = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
