@@ -87,9 +87,10 @@ async function cargarLoQueSigue() {
     }
     const ids = pend.map(p => p.id).join(',');
     const trazos = await supaFetch('trazo', 'GET', null,
-      `?id=in.(${ids})&select=id,codigo_corte,fecha,capas,largo_cm,tallas_tendido,foto_url`);
-    // Orden natural por nombre: Plan T1, Plan T2 … Plan T10
-    trazos.sort((a, b) => String(a.codigo_corte || '').localeCompare(String(b.codigo_corte || ''), 'es', { numeric: true }));
+      `?id=in.(${ids})&select=id,codigo_corte,fecha,capas,largo_cm,tallas_tendido,foto_url,orden`);
+    // Primero el orden que fijó Javier; los demás por nombre (Plan T1, T2 … T10)
+    trazos.sort(ordenPlanes);
+    _sigueOrden = trazos.map(t => t.id);
 
     cont.innerHTML = trazos.map((t, i) => {
       const datos = [
@@ -108,12 +109,39 @@ async function cargarLoQueSigue() {
             <div class="sigue-botones">
               <button class="btn ${primero ? 'btn-success' : 'btn-ghost'} btn-sm" onclick="tenderTrazo('${t.id}')"><svg class="ico" aria-hidden="true"><use href="#i-tijera"/></svg> Tender este</button>
               <button class="btn btn-ghost btn-sm" onclick="verDetalle('trazo','${t.id}')">Ver ficha</button>
+              ${i > 0 ? `<button class="btn btn-ghost btn-sm dato-sensible" onclick="corteMoverPlan('${t.id}',-1)" title="Tender antes">▲ Antes</button>` : ''}
+              ${i < trazos.length - 1 ? `<button class="btn btn-ghost btn-sm dato-sensible" onclick="corteMoverPlan('${t.id}',1)" title="Tender después">▼ Después</button>` : ''}
             </div>
           </div>
         </div>`;
     }).join('') + hechos;
   } catch (e) {
     cont.innerHTML = `<div class="alert alert-error">Error: ${corteEsc(e.message)}</div>`;
+  }
+}
+
+// Mover un plan en la lista «Sigue». Guarda el orden de todos los pendientes
+// (1, 2, 3…) para que Inicio, Corte y Tendido digan lo mismo.
+let _sigueOrden = [];
+let _sigueMoviendo = false;
+async function corteMoverPlan(id, dir) {
+  if (_sigueMoviendo) return;
+  const lista = _sigueOrden.slice();
+  const i = lista.indexOf(id), j = i + dir;
+  if (i < 0 || j < 0 || j >= lista.length) return;
+  [lista[i], lista[j]] = [lista[j], lista[i]];
+  _sigueMoviendo = true;
+  try {
+    for (let k = 0; k < lista.length; k++) {
+      await supaUpdate('trazo', lista[k], { orden: k + 1 });
+    }
+    if (typeof _hoySigue !== 'undefined') _hoySigue.t = 0;   // Inicio vuelve a preguntar
+    showToast('Orden guardado', 'success');
+  } catch (e) {
+    showToast('No se pudo guardar el orden: ' + e.message, 'error');
+  } finally {
+    _sigueMoviendo = false;
+    cargarLoQueSigue();
   }
 }
 

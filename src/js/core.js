@@ -496,6 +496,15 @@ function hoyLocal() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// Orden de los planes de corte: primero el número que fijó Javier
+// (trazo.orden, menor primero); los que no tienen, después y por nombre.
+function ordenPlanes(a, b) {
+  const oa = a.orden == null ? Infinity : Number(a.orden);
+  const ob = b.orden == null ? Infinity : Number(b.orden);
+  if (oa !== ob) return oa < ob ? -1 : 1;
+  return String(a.codigo_corte || '').localeCompare(String(b.codigo_corte || ''), 'es', { numeric: true });
+}
+
 // ── Cortes de antes de la temporada (pruebas de abril, SIM-DEMO) ──────
 // No se borran: se esconden de las listas de Corte y Producción. Quien
 // quiera verlos toca «Ver» (queda guardado en ese aparato).
