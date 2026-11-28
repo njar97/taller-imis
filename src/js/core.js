@@ -932,6 +932,16 @@ async function supaUpdate(table, id, data) {
 // ══════════════════════════════════════════════════════════════════════
 // AUTH (Supabase Auth + login overlay)
 // ══════════════════════════════════════════════════════════════════════
+// Al entrar: si se llegó escaneando la etiqueta de un bulto, primero se abre
+// ESE bulto y los números de Inicio (más de 30 consultas) se cargan después,
+// para que no le quiten el paso. Sin etiqueta, Inicio carga de una vez.
+function arrancarInicio() {
+  if (typeof initDashboard !== 'function') return;
+  const porEtiqueta = !!(window._prodHintBulto || window._prodHintCodigo);
+  if (porEtiqueta) setTimeout(initDashboard, 4000);
+  else initDashboard();
+}
+
 function showAuthOverlay(show) {
   const ov = document.getElementById('auth-overlay');
   if (!ov) return;
@@ -1039,7 +1049,7 @@ async function doLogin(ev) {
     showAuthOverlay(false);
     renderUserChip();
     document.getElementById('auth-pass').value = '';
-    if (typeof initDashboard === 'function') initDashboard();
+    arrancarInicio();
     if (typeof initAuditRoleTab === 'function') initAuditRoleTab();
     if (typeof prodEntrarPorEnlace === 'function') prodEntrarPorEnlace();
   } catch (e) {
@@ -1195,7 +1205,7 @@ async function bootApp() {
   aplicarModoTemporada();   // con lo de la última vez; Inicio lo confirma al cargar
   aplicarAyudas();
   await gateApp();
-  if (supaSession && typeof initDashboard === 'function') initDashboard();
+  if (supaSession) arrancarInicio();
   if (supaSession && typeof initAuditRoleTab === 'function') initAuditRoleTab();
   if (supaSession && typeof prodEntrarPorEnlace === 'function') prodEntrarPorEnlace();
 }
