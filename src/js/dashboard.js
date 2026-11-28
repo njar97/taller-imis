@@ -65,7 +65,10 @@ const TAREAS_INICIO = [
 // Texto vivo debajo de cada paso («Sigue Plan T1 · faltan 6»…).
 function tareaSubtitulo(id, txt) {
   const el = document.getElementById('tarea-sub-' + id);
-  if (el && txt) el.textContent = txt;
+  if (el && txt) {
+    el.textContent = txt;
+    el.classList.remove('solo-asistencia');   // es un dato, no ayuda: siempre a la vista
+  }
 }
 
 function tareasInicioHtml() {
@@ -179,7 +182,7 @@ function _tareaIr(id) {
 //   (cantidad_acaparada − cantidad_consumida), con la clave de BODEGA
 //   (P1181, C17, B12…). Se pasa a la talla 2026 con talla_equivalencia,
 //   igual que vw_bodega_equivalente / vw_plan_produccion.
-// Lo usan Inicio y el globito de 📦 Bodega (nav_badges.js).
+// Lo usa Inicio.
 // ══════════════════════════════════════════════════════════════════════
 
 function dashEsc(s) {
@@ -565,7 +568,9 @@ function renderDashboard() {
     // Pantalla única: sin cartel ni cuadritos; todo eso va dentro de «Cómo vamos».
     dashboardCache.cvTot = tot;
     dashboardCache.cvAvance = r.avance;
-    comoVamos = (_dashEmpresa ? '' : _renderPlazo(r.plan, r.avance, r.avanceDia, r.plazoCfg, new Date(), r.planchado, r.plazoOps))
+    // El cuadro del plazo se guarda para volver a pintarlo al abrir Detalle o Tela.
+    dashboardCache.cvPlazo = _dashEmpresa ? '' : _renderPlazo(r.plan, r.avance, r.avanceDia, r.plazoCfg, new Date(), r.planchado, r.plazoOps);
+    comoVamos = dashboardCache.cvPlazo
       + (_renderComoVamos(r.plan, r.produccionHoy, tot))
       || `<div class="card" style="padding:12px;margin-bottom:10px">${dashEsc(sel?.nombre || '')}: ${dashNum(tot.sol)} piezas pedidas · ${dashNum(tot.emp)} empacadas · ${dashNum(tot.ent)} entregadas</div>`;
     banner = ''; kpis = ''; verStock = false;
@@ -687,7 +692,7 @@ function cvToggle(cod) {
   else if (_cvAbiertas.has(cod)) _cvAbiertas.delete(cod); else _cvAbiertas.add(cod);
   const r = dashboardCache.resumen || {};
   const cv = document.getElementById('dash-como-vamos');
-  if (cv) cv.innerHTML = _renderComoVamos(r.plan, r.produccionHoy, dashboardCache.cvTot);
+  if (cv) cv.innerHTML = (dashboardCache.cvPlazo || '') + _renderComoVamos(r.plan, r.produccionHoy, dashboardCache.cvTot);
 }
 // Nombre corto de escuela para tablas angostas (sin «Centro Escolar», etc.).
 function dashEscuelaCorta(e) {
@@ -820,7 +825,7 @@ function cvTelaToggle() {
   _cvTelaAbierta = !_cvTelaAbierta;
   const r = dashboardCache.resumen || {};
   const cv = document.getElementById('dash-como-vamos');
-  if (cv) cv.innerHTML = _renderComoVamos(r.plan, r.produccionHoy, dashboardCache.cvTot);
+  if (cv) cv.innerHTML = (dashboardCache.cvPlazo || '') + _renderComoVamos(r.plan, r.produccionHoy, dashboardCache.cvTot);
 }
 function _cvTela() {
   const r = dashboardCache.resumen || {};

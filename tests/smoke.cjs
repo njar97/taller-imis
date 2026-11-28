@@ -72,7 +72,7 @@ const ESPERADAS = [
   'async function descargarEtiquetasBolsaPDF',
   // Features recientes
   'function initTallasResumen', 'function initHistorico',
-  'function buscadorOnInput', 'function actualizarBadgeEscuelasEsperando',
+  'function buscadorOnInput', 'function refrescarBadgeEsperando',
   'function cachedFetch', 'function invalidarCache',
   // Registro 2026 (pedido por cantidades + tallas especiales)
   'async function initRegistroCantidad', 'async function tespGuardar',
