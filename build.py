@@ -113,7 +113,12 @@ def main() -> int:
     head_filled = head_tpl.replace("@@CSS_INLINE@@", css)
     footer_filled = footer_tpl.replace("@@MODALS@@", modals).replace("@@JS_INLINE@@", js_combined)
 
-    build_date = datetime.now().strftime("%Y-%m-%d %H:%M")
+    ahora = datetime.now()
+    build_date = ahora.strftime("%Y-%m-%d %H:%M")
+    nueva_ver = "v" + ahora.strftime("%Y%m%d-%H%M%S")
+    meses = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+    hora12 = ahora.hour % 12 or 12
+    version_txt = f"{ahora.day}-{meses[ahora.month - 1]} · {hora12}:{ahora.minute:02d} {'a. m.' if ahora.hour < 12 else 'p. m.'}"
 
     html = (
         f"<!-- Generado: {build_date} | Build: src/ -> produccion.html -->\r\n"
@@ -124,6 +129,8 @@ def main() -> int:
     )
 
     html = re.sub(r"(\r?\n){3,}", "\r\n\r\n", html)
+    # Versión a la vista (Inicio) y sello que la app compara con el sw.js
+    html = html.replace("@@VERSION@@", version_txt).replace("@@BUILD@@", nueva_ver)
 
     OUT.write_text(html, encoding="utf-8", newline="")
 
@@ -135,7 +142,6 @@ def main() -> int:
     sw_path = ROOT / "sw.js"
     if sw_path.exists():
         sw = sw_path.read_text(encoding="utf-8")
-        nueva_ver = "v" + datetime.now().strftime("%Y%m%d-%H%M%S")
         sw_nuevo = re.sub(
             r"^const CACHE_VERSION = '[^']*';",
             f"const CACHE_VERSION = '{nueva_ver}';",

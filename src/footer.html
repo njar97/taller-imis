@@ -26,8 +26,12 @@
     return;
   }
 
+  // Sello de esta página; el sw.js nuevo trae el mismo si la página ya está al día.
+  window.APP_BUILD = '@@BUILD@@';
   let refreshing = false;
+  let pwaSinRecarga = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (pwaSinRecarga) { pwaSinRecarga = false; return; }
     if (refreshing) return;
     refreshing = true;
     window.location.reload();
@@ -65,7 +69,20 @@
     return ![...document.querySelectorAll('.modal, .modal-overlay, [id$="-modal"], [id$="-overlay"]')]
       .some(m => { const st = getComputedStyle(m); return st.display !== 'none' && st.visibility !== 'hidden' && m.offsetParent !== null && m.id !== 'auth-overlay'; });
   }
+  // La página ahora se pide primero a internet, así que casi siempre ya es la
+  // nueva cuando llega el aviso: en ese caso no se recarga ni se molesta.
   function showPwaUpdate(worker) {
+    fetch('sw.js', { cache: 'no-store' }).then(r => r.text()).then(t => {
+      const m = t.match(/CACHE_VERSION = '([^']+)'/);
+      if (m && m[1] === window.APP_BUILD) {
+        pwaSinRecarga = true;
+        worker.postMessage({ type: 'SKIP_WAITING' });
+      } else {
+        avisarPwaUpdate(worker);
+      }
+    }).catch(() => avisarPwaUpdate(worker));
+  }
+  function avisarPwaUpdate(worker) {
     if (!pwaEscribio && pwaEnInicio()) {
       try { sessionStorage.setItem('pwa_actualizada', '1'); } catch (_) {}
       worker.postMessage({ type: 'SKIP_WAITING' });
