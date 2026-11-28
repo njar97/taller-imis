@@ -220,7 +220,7 @@ async function initTendido() {
       document.getElementById('td-trazo-info').innerHTML = '<div class="alert alert-warn">No hay trazos pendientes de tender. Registrá un trazo primero.</div>';
       return;
     }
-    trazos.sort((a, b) => String(a.codigo_corte || '').localeCompare(String(b.codigo_corte || ''), 'es', { numeric: true }));
+    trazos.sort(ordenPlanes);
     sel.innerHTML = '<option value="">— Elegir un trazo —</option>' + 
       trazos.map(t => `<option value="${t.id}">${t.codigo_corte} · ${t.fecha} · ${t.n_tallas_marcadas} talla(s)</option>`).join('');
     if (preId && trazos.some(t => t.id === preId)) {

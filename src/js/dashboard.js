@@ -98,7 +98,7 @@ async function cargarHoySigue() {
   if (_hoySigue.t && Date.now() - _hoySigue.t < 60000) { pintar(); return; }
   try {
     const [pend, bultos] = await Promise.all([
-      supaFetch('vw_trazos_sin_tendido', 'GET', null, '?select=id,codigo_corte&limit=50').catch(() => null),
+      supaFetch('vw_trazos_sin_tendido', 'GET', null, '?select=id,codigo_corte,orden&limit=50').catch(() => null),
       supaFetch('vw_produccion_estado', 'GET', null, '?select=fecha_corte,estado_manual,cantidad_original&limit=2000').catch(() => null),
     ]);
     // null = la consulta falló: se dice, no se muestra como «no hay nada».
@@ -107,7 +107,7 @@ async function cargarHoySigue() {
     let txtCorte = falloCorte ? 'No se pudo cargar · tocá para ver' : 'No hay tendidos pendientes';
     let txtBulto = falloBulto ? 'No se pudo cargar · tocá para ver' : 'No hay bultos en costura';
     if (pendOk.length) {
-      pendOk.sort((a, b) => String(a.codigo_corte || '').localeCompare(String(b.codigo_corte || ''), 'es', { numeric: true }));
+      pendOk.sort(ordenPlanes);
       txtCorte = `Sigue ${pendOk[0].codigo_corte} · ${pendOk.length === 1 ? 'es el último' : 'faltan ' + pendOk.length}`;
     }
     const desde = typeof CORTES_DESDE === 'string' ? CORTES_DESDE : '';

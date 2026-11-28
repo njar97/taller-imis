@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-27 23:03 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-27 23:07 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1201,7 +1201,7 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
       <button type="button" class="menumas-btn" onclick="abrirPestana('config')"><span class="tj-ico tj-gris"><svg class="ico" aria-hidden="true"><use href="#i-ajustes"/></svg></span><span><strong>Ajustes</strong><small class="solo-asistencia">Configuración de la app</small></span></button>
     </div>
   </div>
-  <div class="app-version" style="text-align:center;font-size:12px;color:#999;margin:18px 0 8px">Versión del 27-nov · 11:03 p. m.</div>
+  <div class="app-version" style="text-align:center;font-size:12px;color:#999;margin:18px 0 8px">Versión del 27-nov · 11:07 p. m.</div>
 </div>
 
 <!-- ═══ CORTE ═══ unifica Nuevo (Trazo/Tendido/Bulto) + Historial -->
@@ -3967,6 +3967,15 @@ function hoyLocal() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// Orden de los planes de corte: primero el número que fijó Javier
+// (trazo.orden, menor primero); los que no tienen, después y por nombre.
+function ordenPlanes(a, b) {
+  const oa = a.orden == null ? Infinity : Number(a.orden);
+  const ob = b.orden == null ? Infinity : Number(b.orden);
+  if (oa !== ob) return oa < ob ? -1 : 1;
+  return String(a.codigo_corte || '').localeCompare(String(b.codigo_corte || ''), 'es', { numeric: true });
+}
+
 // ── Cortes de antes de la temporada (pruebas de abril, SIM-DEMO) ──────
 // No se borran: se esconden de las listas de Corte y Producción. Quien
 // quiera verlos toca «Ver» (queda guardado en ese aparato).
@@ -4829,7 +4838,7 @@ async function cargarHoySigue() {
   if (_hoySigue.t && Date.now() - _hoySigue.t < 60000) { pintar(); return; }
   try {
     const [pend, bultos] = await Promise.all([
-      supaFetch('vw_trazos_sin_tendido', 'GET', null, '?select=id,codigo_corte&limit=50').catch(() => null),
+      supaFetch('vw_trazos_sin_tendido', 'GET', null, '?select=id,codigo_corte,orden&limit=50').catch(() => null),
       supaFetch('vw_produccion_estado', 'GET', null, '?select=fecha_corte,estado_manual,cantidad_original&limit=2000').catch(() => null),
     ]);
     // null = la consulta falló: se dice, no se muestra como «no hay nada».
@@ -4838,7 +4847,7 @@ async function cargarHoySigue() {
     let txtCorte = falloCorte ? 'No se pudo cargar · tocá para ver' : 'No hay tendidos pendientes';
     let txtBulto = falloBulto ? 'No se pudo cargar · tocá para ver' : 'No hay bultos en costura';
     if (pendOk.length) {
-      pendOk.sort((a, b) => String(a.codigo_corte || '').localeCompare(String(b.codigo_corte || ''), 'es', { numeric: true }));
+      pendOk.sort(ordenPlanes);
       txtCorte = `Sigue ${pendOk[0].codigo_corte} · ${pendOk.length === 1 ? 'es el último' : 'faltan ' + pendOk.length}`;
     }
     const desde = typeof CORTES_DESDE === 'string' ? CORTES_DESDE : '';
@@ -6524,9 +6533,10 @@ async function cargarLoQueSigue() {
     }
     const ids = pend.map(p => p.id).join(',');
     const trazos = await supaFetch('trazo', 'GET', null,
-      `?id=in.(${ids})&select=id,codigo_corte,fecha,capas,largo_cm,tallas_tendido,foto_url`);
-    // Orden natural por nombre: Plan T1, Plan T2 … Plan T10
-    trazos.sort((a, b) => String(a.codigo_corte || '').localeCompare(String(b.codigo_corte || ''), 'es', { numeric: true }));
+      `?id=in.(${ids})&select=id,codigo_corte,fecha,capas,largo_cm,tallas_tendido,foto_url,orden`);
+    // Primero el orden que fijó Javier; los demás por nombre (Plan T1, T2 … T10)
+    trazos.sort(ordenPlanes);
+    _sigueOrden = trazos.map(t => t.id);
 
     cont.innerHTML = trazos.map((t, i) => {
       const datos = [
@@ -6545,12 +6555,39 @@ async function cargarLoQueSigue() {
             <div class="sigue-botones">
               <button class="btn ${primero ? 'btn-success' : 'btn-ghost'} btn-sm" onclick="tenderTrazo('${t.id}')"><svg class="ico" aria-hidden="true"><use href="#i-tijera"/></svg> Tender este</button>
               <button class="btn btn-ghost btn-sm" onclick="verDetalle('trazo','${t.id}')">Ver ficha</button>
+              ${i > 0 ? `<button class="btn btn-ghost btn-sm dato-sensible" onclick="corteMoverPlan('${t.id}',-1)" title="Tender antes">▲ Antes</button>` : ''}
+              ${i < trazos.length - 1 ? `<button class="btn btn-ghost btn-sm dato-sensible" onclick="corteMoverPlan('${t.id}',1)" title="Tender después">▼ Después</button>` : ''}
             </div>
           </div>
         </div>`;
     }).join('') + hechos;
   } catch (e) {
     cont.innerHTML = `<div class="alert alert-error">Error: ${corteEsc(e.message)}</div>`;
+  }
+}
+
+// Mover un plan en la lista «Sigue». Guarda el orden de todos los pendientes
+// (1, 2, 3…) para que Inicio, Corte y Tendido digan lo mismo.
+let _sigueOrden = [];
+let _sigueMoviendo = false;
+async function corteMoverPlan(id, dir) {
+  if (_sigueMoviendo) return;
+  const lista = _sigueOrden.slice();
+  const i = lista.indexOf(id), j = i + dir;
+  if (i < 0 || j < 0 || j >= lista.length) return;
+  [lista[i], lista[j]] = [lista[j], lista[i]];
+  _sigueMoviendo = true;
+  try {
+    for (let k = 0; k < lista.length; k++) {
+      await supaUpdate('trazo', lista[k], { orden: k + 1 });
+    }
+    if (typeof _hoySigue !== 'undefined') _hoySigue.t = 0;   // Inicio vuelve a preguntar
+    showToast('Orden guardado', 'success');
+  } catch (e) {
+    showToast('No se pudo guardar el orden: ' + e.message, 'error');
+  } finally {
+    _sigueMoviendo = false;
+    cargarLoQueSigue();
   }
 }
 
@@ -10114,7 +10151,7 @@ async function initTendido() {
       document.getElementById('td-trazo-info').innerHTML = '<div class="alert alert-warn">No hay trazos pendientes de tender. Registrá un trazo primero.</div>';
       return;
     }
-    trazos.sort((a, b) => String(a.codigo_corte || '').localeCompare(String(b.codigo_corte || ''), 'es', { numeric: true }));
+    trazos.sort(ordenPlanes);
     sel.innerHTML = '<option value="">— Elegir un trazo —</option>' + 
       trazos.map(t => `<option value="${t.id}">${t.codigo_corte} · ${t.fecha} · ${t.n_tallas_marcadas} talla(s)</option>`).join('');
     if (preId && trazos.some(t => t.id === preId)) {
@@ -28389,7 +28426,7 @@ _atrasArmar();
   }
 
   // Sello de esta página; el sw.js nuevo trae el mismo si la página ya está al día.
-  window.APP_BUILD = 'v20261127-230351';
+  window.APP_BUILD = 'v20261127-230752';
   let refreshing = false;
   let pwaSinRecarga = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
