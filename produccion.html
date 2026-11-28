@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-27 22:08 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-27 23:03 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -402,7 +402,6 @@
   .nav-tab.active { background: rgba(255,255,255,0.16); color: white; border-bottom: none; }
   .nav-tab-ico { font-size: 21px; margin: 0; line-height: 1.1; }
   .nav-tab-lbl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-  .nav-badge { position: absolute; top: 0; right: 10%; margin-left: 0; }
 
   /* Dejar aire abajo para que el contenido no quede tapado por el nav */
   body { padding-bottom: calc(66px + env(safe-area-inset-bottom)); }
@@ -410,21 +409,6 @@
   /* Banner de update y toasts: por ENCIMA del bottom nav */
   #pwa-update-banner { bottom: calc(76px + env(safe-area-inset-bottom)) !important; }
   #toast-container { bottom: calc(76px + env(safe-area-inset-bottom)) !important; }
-}
-
-/* ─── Badge en el nav (escuelas esperando empaque, etc) ─────────────── */
-.nav-badge {
-  display: inline-block;
-  background: #c44;
-  color: white;
-  border-radius: 10px;
-  padding: 1px 6px;
-  font-size: 10px;
-  font-weight: 700;
-  margin-left: 4px;
-  vertical-align: middle;
-  min-width: 16px;
-  text-align: center;
 }
 
 /* ─── Tabla Conteo Bodega: card-view en móvil ───────────────────────── */
@@ -1177,7 +1161,7 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
     <div class="nav-tab active" onclick="switchTab('inicio',this)"><span class="nav-tab-ico">🏠</span><span class="nav-tab-lbl">Inicio</span></div>
     <div class="nav-tab" id="tab-corte" onclick="switchTab('corte',this)"><span class="nav-tab-ico">✂️</span><span class="nav-tab-lbl">Corte</span></div>
     <div class="nav-tab" id="tab-produccion" onclick="switchTab('produccion',this)"><span class="nav-tab-ico">🏭</span><span class="nav-tab-lbl">Producción</span></div>
-    <div class="nav-tab" onclick="switchTab('bodega',this)"><span class="nav-tab-ico">📦</span><span class="nav-tab-lbl">Bodega</span><span id="nav-badge-bodega" class="nav-badge" style="display:none"></span></div>
+    <div class="nav-tab" onclick="switchTab('bodega',this)"><span class="nav-tab-ico">📦</span><span class="nav-tab-lbl">Bodega</span></div>
     <div class="nav-tab" onclick="switchTab('empaque',this)"><span class="nav-tab-ico">🧺</span><span class="nav-tab-lbl">Empaque</span></div>
     <div class="nav-tab" onclick="switchTab('registro',this)"><span class="nav-tab-ico">📋</span><span class="nav-tab-lbl">Registro</span></div>
     <div class="nav-tab" onclick="switchTab('estadistica',this)"><span class="nav-tab-ico">📊</span><span class="nav-tab-lbl">Estadística</span></div>
@@ -1217,7 +1201,7 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
       <button type="button" class="menumas-btn" onclick="abrirPestana('config')"><span class="tj-ico tj-gris"><svg class="ico" aria-hidden="true"><use href="#i-ajustes"/></svg></span><span><strong>Ajustes</strong><small class="solo-asistencia">Configuración de la app</small></span></button>
     </div>
   </div>
-  <div class="app-version" style="text-align:center;font-size:12px;color:#999;margin:18px 0 8px">Versión del 27-nov · 10:08 p. m.</div>
+  <div class="app-version" style="text-align:center;font-size:12px;color:#999;margin:18px 0 8px">Versión del 27-nov · 11:03 p. m.</div>
 </div>
 
 <!-- ═══ CORTE ═══ unifica Nuevo (Trazo/Tendido/Bulto) + Historial -->
@@ -4676,9 +4660,6 @@ async function bootApp() {
   if (supaSession && typeof initDashboard === 'function') initDashboard();
   if (supaSession && typeof initAuditRoleTab === 'function') initAuditRoleTab();
   if (supaSession && typeof prodEntrarPorEnlace === 'function') prodEntrarPorEnlace();
-  if (supaSession && typeof actualizarBadgeEscuelasEsperando === 'function') {
-    actualizarBadgeEscuelasEsperando();
-  }
 }
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', bootApp);
@@ -4815,7 +4796,10 @@ const TAREAS_INICIO = [
 // Texto vivo debajo de cada paso («Sigue Plan T1 · faltan 6»…).
 function tareaSubtitulo(id, txt) {
   const el = document.getElementById('tarea-sub-' + id);
-  if (el && txt) el.textContent = txt;
+  if (el && txt) {
+    el.textContent = txt;
+    el.classList.remove('solo-asistencia');   // es un dato, no ayuda: siempre a la vista
+  }
 }
 
 function tareasInicioHtml() {
@@ -4929,7 +4913,7 @@ function _tareaIr(id) {
 //   (cantidad_acaparada − cantidad_consumida), con la clave de BODEGA
 //   (P1181, C17, B12…). Se pasa a la talla 2026 con talla_equivalencia,
 //   igual que vw_bodega_equivalente / vw_plan_produccion.
-// Lo usan Inicio y el globito de 📦 Bodega (nav_badges.js).
+// Lo usa Inicio.
 // ══════════════════════════════════════════════════════════════════════
 
 function dashEsc(s) {
@@ -5315,7 +5299,9 @@ function renderDashboard() {
     // Pantalla única: sin cartel ni cuadritos; todo eso va dentro de «Cómo vamos».
     dashboardCache.cvTot = tot;
     dashboardCache.cvAvance = r.avance;
-    comoVamos = (_dashEmpresa ? '' : _renderPlazo(r.plan, r.avance, r.avanceDia, r.plazoCfg, new Date(), r.planchado, r.plazoOps))
+    // El cuadro del plazo se guarda para volver a pintarlo al abrir Detalle o Tela.
+    dashboardCache.cvPlazo = _dashEmpresa ? '' : _renderPlazo(r.plan, r.avance, r.avanceDia, r.plazoCfg, new Date(), r.planchado, r.plazoOps);
+    comoVamos = dashboardCache.cvPlazo
       + (_renderComoVamos(r.plan, r.produccionHoy, tot))
       || `<div class="card" style="padding:12px;margin-bottom:10px">${dashEsc(sel?.nombre || '')}: ${dashNum(tot.sol)} piezas pedidas · ${dashNum(tot.emp)} empacadas · ${dashNum(tot.ent)} entregadas</div>`;
     banner = ''; kpis = ''; verStock = false;
@@ -5437,7 +5423,7 @@ function cvToggle(cod) {
   else if (_cvAbiertas.has(cod)) _cvAbiertas.delete(cod); else _cvAbiertas.add(cod);
   const r = dashboardCache.resumen || {};
   const cv = document.getElementById('dash-como-vamos');
-  if (cv) cv.innerHTML = _renderComoVamos(r.plan, r.produccionHoy, dashboardCache.cvTot);
+  if (cv) cv.innerHTML = (dashboardCache.cvPlazo || '') + _renderComoVamos(r.plan, r.produccionHoy, dashboardCache.cvTot);
 }
 // Nombre corto de escuela para tablas angostas (sin «Centro Escolar», etc.).
 function dashEscuelaCorta(e) {
@@ -5570,7 +5556,7 @@ function cvTelaToggle() {
   _cvTelaAbierta = !_cvTelaAbierta;
   const r = dashboardCache.resumen || {};
   const cv = document.getElementById('dash-como-vamos');
-  if (cv) cv.innerHTML = _renderComoVamos(r.plan, r.produccionHoy, dashboardCache.cvTot);
+  if (cv) cv.innerHTML = (dashboardCache.cvPlazo || '') + _renderComoVamos(r.plan, r.produccionHoy, dashboardCache.cvTot);
 }
 function _cvTela() {
   const r = dashboardCache.resumen || {};
@@ -8804,146 +8790,19 @@ document.addEventListener('keydown', (ev) => {
 });
 
 // +++++++++++++++++++ nav_badges.js +++++++++++++++++++
-// ══════════════════════════════════════════════════════════════════════
-// NAV BADGES — indicadores en los tabs del nav
-// Actualiza el badge "X escuelas esperan empaque" sobre el tab Bodega.
-// Una escuela "espera" si tiene al menos una pieza por empacar y en
-// bodega hay con qué empacarla.
-//
-// Temporada por cantidades (2026): por escuela × prenda × talla 2026,
-//   falta = pedido − entregado − empacado (escuela_acaparado), y "hay
-//   con qué" = el plan de producción toma piezas de bodega para esa
-//   prenda y talla (vw_plan_produccion.de_bodega > 0: mismas tallas
-//   equivalentes, largo que alcanza y bodega contada).
-// Temporada con alumnos (2025): pieza pendiente del alumno con pool de
-//   su escuela o stock libre (lógica de siempre, filtrada por temporada).
-// Helpers de temporada/pedido: dashboard.js.
-// ══════════════════════════════════════════════════════════════════════
-
-let _navBadgesCache = { ultimoCalculo: 0 };
-
-async function actualizarBadgeEscuelasEsperando() {
-  // Throttle: no más de 1 vez cada 5s para evitar carga
-  const ahora = Date.now();
-  if (ahora - _navBadgesCache.ultimoCalculo < 5000) return;
-  _navBadgesCache.ultimoCalculo = ahora;
-
-  const badge = document.getElementById('nav-badge-bodega');
-  if (!badge) return;
-
-  try {
-    const temp = temporadaActivaDe(await temporadasLista());
-    const ped = temp ? await pedidoDeTemporada(temp.id) : { pedido: [] };
-    const porPedido = ped.pedido.length > 0;
-    const esperan = porPedido
-      ? await _escuelasEsperanPorPedido(ped.pedido)
-      : await _escuelasEsperanPorAlumnos(temp && temp.id);
-
-    const n = esperan.size;
-    if (n === 0) {
-      badge.style.display = 'none';
-    } else {
-      badge.textContent = n;
-      badge.style.display = '';
-      badge.title = porPedido
-        ? `${n} escuela(s) tienen piezas por empacar que ya hay en bodega`
-        : `${n} escuela(s) tienen alumnos pendientes con stock o pool disponible para empacar`;
-    }
-  } catch(e) {
-    console.warn('Badge esperando:', e.message);
-  }
-}
-
-// Temporada por cantidades: escuelas con algo por empacar que bodega cubre
-async function _escuelasEsperanPorPedido(pedido) {
-  const [acaparado, equiv, plan] = await Promise.all([
-    acaparadoTodo(),
-    tallaEquivalencias(),
-    cachedFetch('badge-plan',
-      () => supaFetch('vw_plan_produccion', 'GET', null, '?select=cod_prenda,talla_2026,de_bodega'),
-      { ttl: 30_000, group: 'bodega' }),
-  ]);
-  const hayEnBodega = new Set(plan
-    .filter(f => (Number(f.de_bodega) || 0) > 0)
-    .map(f => f.cod_prenda + '|' + f.talla_2026));
-  const esperan = new Set();
-  for (const l of avancePedidoTemporada(pedido, acaparado, equiv)) {
-    if (l.pend > 0 && hayEnBodega.has(l.cod + '|' + l.talla)) esperan.add(l.escuela_id);
-  }
-  return esperan;
-}
-
-// Temporada con alumnos (2025): pieza pendiente + pool de su escuela o stock libre
-async function _escuelasEsperanPorAlumnos(temporadaId) {
-  const filtroTemp = temporadaId ? `&temporada_id=eq.${temporadaId}` : '';
-  const [alumnos, stock, pool] = await Promise.all([
-    cachedFetch('badge-alumnos-' + (temporadaId || 'todas'),
-      () => supaFetchAll('alumno', `?activo=eq.true${filtroTemp}&select=escuela_id,prenda_top,talla_top_key,estado_top,prenda_bottom,talla_bottom_key,estado_bottom`),
-      { ttl: 60_000, group: 'alumnos' }),
-    cachedFetch('badge-stock',
-      () => supaFetchAll('vw_bodega_stock', '?select=nombre_prenda,cod_prenda,talla_key,stock_actual'),
-      { ttl: 30_000, group: 'bodega' }),
-    acaparadoTodo(),
-  ]);
-
-  // Indexar stock libre por prenda|talla
-  const stockMap = new Map();
-  for (const s of stock) {
-    const p = s.nombre_prenda
-      || (typeof prendaCanon === 'function' ? prendaCanon(s.cod_prenda) : s.cod_prenda);
-    if (!p || !s.talla_key) continue;
-    stockMap.set(p + '|' + s.talla_key, Number(s.stock_actual) || 0);
-  }
-  // Pool por escuela y total acaparado por prenda|talla (para descontar
-  // del stock libre lo reservado por otras escuelas)
-  const poolEsc = new Map();        // esc|prenda|talla → disp
-  const acapTotal = new Map();      // prenda|talla → total disp
-  for (const p of pool) {
-    const d = Math.max(0, (Number(p.cantidad_acaparada)||0) - (Number(p.cantidad_consumida)||0));
-    if (d <= 0) continue;
-    poolEsc.set(p.escuela_id + '|' + p.nombre_prenda + '|' + p.talla_key,
-      (poolEsc.get(p.escuela_id + '|' + p.nombre_prenda + '|' + p.talla_key) || 0) + d);
-    acapTotal.set(p.nombre_prenda + '|' + p.talla_key,
-      (acapTotal.get(p.nombre_prenda + '|' + p.talla_key) || 0) + d);
-  }
-
-  const esperan = new Set();
-  const evalPieza = (escId, prenda, talla, estado) => {
-    if (!escId || !prenda || !talla) return;
-    if (estado === 'empacado' || estado === 'entregado') return;
-    if (esperan.has(escId)) return;  // ya marcada
-    // ¿Pool de la escuela?
-    const kPool = escId + '|' + prenda + '|' + talla;
-    if ((poolEsc.get(kPool) || 0) > 0) { esperan.add(escId); return; }
-    // ¿Stock libre? = stock total - lo acaparado por todas las escuelas
-    const kStock = prenda + '|' + talla;
-    const stockTotal = stockMap.get(kStock) || 0;
-    const acap = acapTotal.get(kStock) || 0;
-    const libre = stockTotal - acap;
-    if (libre > 0) esperan.add(escId);
-  };
-
-  for (const a of alumnos) {
-    evalPieza(a.escuela_id, a.prenda_top, a.talla_top_key, a.estado_top);
-    evalPieza(a.escuela_id, a.prenda_bottom, a.talla_bottom_key, a.estado_bottom);
-  }
-  return esperan;
-}
-
-// Helper: forzar refresh (skip throttle) — llamar después de empacar/acaparar/entregar
+// ════════════════════════════════════════════════════
+// Antes aquí vivía el globito rojo de 📦 Bodega («N escuelas esperan
+// empaque»): nadie lo veía y consultaba la base cada minuto. Se quitó.
+// Queda solo el aviso de «cambió lo empacado», que usan Bodega y Empaque
+// para no mostrar datos guardados de hace un rato.
+// ════════════════════════════════════════════════════
 function refrescarBadgeEsperando() {
-  _navBadgesCache.ultimoCalculo = 0;
-  // Lo empacado / entregado cambió: no usar lo guardado de hace un rato
   if (typeof invalidarCache === 'function') {
     invalidarCache('pool');
     invalidarCache('pedido');
     invalidarCache('bodega');
   }
-  actualizarBadgeEscuelasEsperando();
 }
-
-// Auto-actualizar cada 60s mientras la app esté activa
-setInterval(() => actualizarBadgeEscuelasEsperando(), 60000);
 
 // +++++++++++++++++++ atajos_teclado.js +++++++++++++++++++
 // ══════════════════════════════════════════════════════════════════════
@@ -28530,7 +28389,7 @@ _atrasArmar();
   }
 
   // Sello de esta página; el sw.js nuevo trae el mismo si la página ya está al día.
-  window.APP_BUILD = 'v20261127-220820';
+  window.APP_BUILD = 'v20261127-230351';
   let refreshing = false;
   let pwaSinRecarga = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

@@ -378,7 +378,6 @@
   .nav-tab.active { background: rgba(255,255,255,0.16); color: white; border-bottom: none; }
   .nav-tab-ico { font-size: 21px; margin: 0; line-height: 1.1; }
   .nav-tab-lbl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-  .nav-badge { position: absolute; top: 0; right: 10%; margin-left: 0; }
 
   /* Dejar aire abajo para que el contenido no quede tapado por el nav */
   body { padding-bottom: calc(66px + env(safe-area-inset-bottom)); }
@@ -388,20 +387,6 @@
   #toast-container { bottom: calc(76px + env(safe-area-inset-bottom)) !important; }
 }
 
-/* ─── Badge en el nav (escuelas esperando empaque, etc) ─────────────── */
-.nav-badge {
-  display: inline-block;
-  background: #c44;
-  color: white;
-  border-radius: 10px;
-  padding: 1px 6px;
-  font-size: 10px;
-  font-weight: 700;
-  margin-left: 4px;
-  vertical-align: middle;
-  min-width: 16px;
-  text-align: center;
-}
 
 /* ─── Tabla Conteo Bodega: card-view en móvil ───────────────────────── */
 /* En pantallas chicas (<640px), la tabla con 6 columnas no entra. La
