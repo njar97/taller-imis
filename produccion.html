@@ -1,4 +1,4 @@
-<!-- Generado: 2026-11-27 15:24 | Build: src/ -> produccion.html -->
+<!-- Generado: 2026-11-27 18:10 | Build: src/ -> produccion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1217,6 +1217,7 @@ nav { background: linear-gradient(135deg, #163A5C 0%, #1F4E79 60%, #2A6AA3 100%)
       <button type="button" class="menumas-btn" onclick="abrirPestana('config')"><span class="tj-ico tj-gris"><svg class="ico" aria-hidden="true"><use href="#i-ajustes"/></svg></span><span><strong>Ajustes</strong><small class="solo-asistencia">Configuración de la app</small></span></button>
     </div>
   </div>
+  <div class="app-version" style="text-align:center;font-size:12px;color:#999;margin:18px 0 8px">Versión del 27-nov · 6:10 p. m.</div>
 </div>
 
 <!-- ═══ CORTE ═══ unifica Nuevo (Trazo/Tendido/Bulto) + Historial -->
@@ -28506,8 +28507,12 @@ _atrasArmar();
     return;
   }
 
+  // Sello de esta página; el sw.js nuevo trae el mismo si la página ya está al día.
+  window.APP_BUILD = 'v20261127-181051';
   let refreshing = false;
+  let pwaSinRecarga = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (pwaSinRecarga) { pwaSinRecarga = false; return; }
     if (refreshing) return;
     refreshing = true;
     window.location.reload();
@@ -28545,7 +28550,20 @@ _atrasArmar();
     return ![...document.querySelectorAll('.modal, .modal-overlay, [id$="-modal"], [id$="-overlay"]')]
       .some(m => { const st = getComputedStyle(m); return st.display !== 'none' && st.visibility !== 'hidden' && m.offsetParent !== null && m.id !== 'auth-overlay'; });
   }
+  // La página ahora se pide primero a internet, así que casi siempre ya es la
+  // nueva cuando llega el aviso: en ese caso no se recarga ni se molesta.
   function showPwaUpdate(worker) {
+    fetch('sw.js', { cache: 'no-store' }).then(r => r.text()).then(t => {
+      const m = t.match(/CACHE_VERSION = '([^']+)'/);
+      if (m && m[1] === window.APP_BUILD) {
+        pwaSinRecarga = true;
+        worker.postMessage({ type: 'SKIP_WAITING' });
+      } else {
+        avisarPwaUpdate(worker);
+      }
+    }).catch(() => avisarPwaUpdate(worker));
+  }
+  function avisarPwaUpdate(worker) {
     if (!pwaEscribio && pwaEnInicio()) {
       try { sessionStorage.setItem('pwa_actualizada', '1'); } catch (_) {}
       worker.postMessage({ type: 'SKIP_WAITING' });

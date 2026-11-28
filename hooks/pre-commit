@@ -35,5 +35,5 @@ else
 fi
 
 # Re-stagear produccion.html si cambió (no-op si no).
-git add produccion.html
+git add produccion.html sw.js
 echo "[pre-commit] produccion.html actualizado y re-stageado."

@@ -134,8 +134,28 @@ $footerFilled
 
 $html = $html -replace '(\r?\n){3,}', "`r`n`r`n"
 
+# --- Version a la vista (Inicio) y sello que la app compara con el sw.js ---
+$ahora = Get-Date
+$nuevaVer = 'v' + $ahora.ToString('yyyyMMdd-HHmmss')
+$meses = 'ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'
+$h12 = $ahora.Hour % 12; if ($h12 -eq 0) { $h12 = 12 }
+$ampm = if ($ahora.Hour -lt 12) { 'a. m.' } else { 'p. m.' }
+$versionTxt = '{0}-{1} {2} {3}:{4:00} {5}' -f $ahora.Day, $meses[$ahora.Month - 1], [char]0xB7, $h12, $ahora.Minute, $ampm
+$html = $html.Replace('@@VERSION@@', $versionTxt).Replace('@@BUILD@@', $nuevaVer)
+
 # --- Escribir ---
 [System.IO.File]::WriteAllText($outFile, $html, [System.Text.UTF8Encoding]::new($false))
+
+# --- sw.js: mismo sello, para que los telefonos noten la version nueva ---
+$swFile = Join-Path (Split-Path $outFile) 'sw.js'
+if (Test-Path $swFile) {
+    $sw = [System.IO.File]::ReadAllText($swFile)
+    $sw2 = [regex]::Replace($sw, "(?m)^const CACHE_VERSION = '[^']*';", "const CACHE_VERSION = '$nuevaVer';")
+    if ($sw2 -ne $sw) {
+        [System.IO.File]::WriteAllText($swFile, $sw2, [System.Text.UTF8Encoding]::new($false))
+        Write-Host "  + sw.js  CACHE_VERSION=$nuevaVer"
+    }
+}
 
 $size = (Get-Item $outFile).Length
 $lines = ($html -split "`n").Count

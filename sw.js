@@ -1,13 +1,13 @@
 /* Taller IMIS — Service Worker
  * Estrategia:
- *  - Same-origin (HTML/CSS/JS/iconos): stale-while-revalidate. App abre instantánea,
- *    se actualiza en background. Cuando hay versión nueva, el cliente muestra banner.
+ *  - La página (HTML): primero internet, con 4 s de espera; sin señal, la guardada.
+ *  - Iconos y demás same-origin: stale-while-revalidate.
  *  - CDN externos (jsdelivr/cdnjs): cache-first.
  *  - Supabase API: nunca cachear (datos siempre en vivo).
  *  - Update flow: SW nuevo queda en "waiting" hasta que el cliente lo libera
  *    via postMessage SKIP_WAITING (botón "Actualizar" del banner).
  */
-const CACHE_VERSION = 'v20261127-152025';
+const CACHE_VERSION = 'v20261127-181051';
 const CACHE_NAME = `taller-imis-${CACHE_VERSION}`;
 const PRECACHE_URLS = [
   './',
@@ -69,11 +69,33 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Same-origin: stale-while-revalidate
+  // Same-origin: la página se pide primero a internet (siempre la última
+  // versión); si no hay señal o tarda, se usa la guardada. Lo demás (iconos),
+  // guardado primero.
   if (url.origin === self.location.origin) {
-    event.respondWith(staleWhileRevalidate(req));
+    const esPagina = req.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/');
+    event.respondWith(esPagina ? redPrimero(req) : staleWhileRevalidate(req));
   }
 });
+
+async function redPrimero(req) {
+  const cache = await caches.open(CACHE_NAME);
+  const guardada = async () =>
+    (await cache.match(req, { ignoreSearch: true })) || (await cache.match('produccion.html'));
+  try {
+    const ctrl = new AbortController();
+    const reloj = setTimeout(() => ctrl.abort(), 4000);
+    const res = await fetch(req.url, { cache: 'no-cache', signal: ctrl.signal });
+    clearTimeout(reloj);
+    if (res && res.ok && res.type === 'basic') {
+      cache.put(req, res.clone());
+      return res;
+    }
+    return (await guardada()) || res;
+  } catch (err) {
+    return (await guardada()) || Response.error();
+  }
+}
 
 async function cacheFirst(req) {
   const cache = await caches.open(CACHE_NAME);
