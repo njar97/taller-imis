@@ -100,5 +100,19 @@ if (closes > opens) {
 }
 ok(`Paridad <script>/</script> OK (${opens} aperturas / ${closes} cierres)`);
 
+// 5) Cada pantalla abre y cierra las mismas cajas. Un </div> de más saca del
+//    marco a todas las pantallas que vienen después (pasó con Registro).
+const dirVistas = path.join(__dirname, '..', 'src', 'views');
+if (fs.existsSync(dirVistas)) {
+  const malas = [];
+  for (const f of fs.readdirSync(dirVistas).filter(x => x.endsWith('.html'))) {
+    const v = fs.readFileSync(path.join(dirVistas, f), 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+    const a = (v.match(/<div\b/gi) || []).length, c = (v.match(/<\/div\s*>/gi) || []).length;
+    if (a !== c) malas.push(`${f}: ${a} <div> y ${c} </div>`);
+  }
+  if (malas.length) fail('Cajas descuadradas en ' + malas.join(' · '));
+  ok('Cada pantalla cierra las mismas cajas que abre');
+}
+
 console.log('\n✓ Smoke tests pasaron OK');
 process.exit(0);
